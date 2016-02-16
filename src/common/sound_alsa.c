@@ -249,7 +249,10 @@ int sound_get_inbuffer(void *inst)
 
 	rc = snd_pcm_delay(sound->phandle, &delay);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
+		if (rc == -32)
+			PDEBUG(DSOUND, DEBUG_ERROR, "Buffer underrun: Please use higher latency and enable real time scheduling\n");
+		else
+			PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE)
 			snd_pcm_prepare(sound->phandle);
 		return rc;

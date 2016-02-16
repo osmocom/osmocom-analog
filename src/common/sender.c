@@ -30,6 +30,7 @@
 
 sender_t *sender_head = NULL;
 static sender_t **sender_tailp = &sender_head;
+int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
 int sender_create(sender_t *sender, const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume, int use_pilot_signal)
@@ -139,7 +140,7 @@ static void gen_pilotton(sender_t *sender, int16_t *samples, int length)
 }
 
 /* Handle audio streaming of one transceiver. */
-void process_sender(sender_t *sender, int latspl)
+void process_sender(sender_t *sender, int *quit, int latspl)
 {
 	int16_t samples[latspl], pilot[latspl];
 	int rc, count;
@@ -147,8 +148,15 @@ void process_sender(sender_t *sender, int latspl)
 	count = sound_get_inbuffer(sender->sound);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
-		if (count == -EPIPE)
+		if (count == -EPIPE) {
+			if (cant_recover) {
+cant_recover:
+				PDEBUG(DSENDER, DEBUG_ERROR, "Cannot recover due to measurements, quitting!\n");
+				*quit = 1;
+				return;
+			}
 			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
+		}
 		return;
 	}
 	if (count < latspl) {
@@ -189,8 +197,11 @@ void process_sender(sender_t *sender, int latspl)
 		}
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
-			if (rc == -EPIPE)
+			if (rc == -EPIPE) {
+				if (cant_recover)
+					goto cant_recover;
 				PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
+			}
 			return;
 		}
 		if (sender->loopback == 1) {
@@ -204,8 +215,11 @@ void process_sender(sender_t *sender, int latspl)
 //printf("count=%d time= %.4f\n", count, (double)count * 1000 / sender->samplerate);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
-		if (count == -EPIPE)
+		if (count == -EPIPE) {
+			if (cant_recover)
+				goto cant_recover;
 			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
+		}
 		return;
 	}
 	if (count) {
@@ -236,7 +250,7 @@ void main_loop(int *quit, int latency)
 		sender = sender_head;
 		while (sender) {
 			latspl = sender->samplerate * latency / 1000;
-			process_sender(sender, latspl);
+			process_sender(sender, quit, latspl);
 			sender = sender->next;
 		}
 

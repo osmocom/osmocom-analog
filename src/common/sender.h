@@ -50,6 +50,7 @@ typedef struct sender {
 
 /* list of all senders */
 extern sender_t *sender_head;
+extern int cant_recover;
 
 int sender_create(sender_t *sender, const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume, int use_pilot_signal);
 void sender_destroy(sender_t *sender);

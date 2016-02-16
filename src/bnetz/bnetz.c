@@ -635,7 +635,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality,
 				PDEBUG(DBNETZ, DEBUG_INFO, "Setup call to network.\n");
 				rc = call_in_setup(callref, bnetz->station_id, dialing);
 				if (rc < 0) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", rc);
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
 					bnetz_release(bnetz);
 					return;
 				}

@@ -31,6 +31,7 @@ AC_OUTPUT(
     src/common/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
+    src/cnetz/Makefile
     src/nmt/Makefile
     src/test/Makefile
     src/Makefile
