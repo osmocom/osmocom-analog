@@ -10,8 +10,10 @@
 #define DAUDIO		3
 #define DANETZ		4
 #define DBNETZ		5
-#define DCALL		6
-#define DMNCC		7
+#define DNMT		6
+#define DFRAME		7
+#define DCALL		8
+#define DMNCC		9
 
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, fmt, ## arg)
 void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...);
