@@ -1,0 +1,11 @@
+This software implements base station protocol of classic mobile phones. With
+radio transmitter and receiver connected to one sound card and a headset
+connected to another sound card, it is possible to make and receive calls to
+and from mobile phone. Currently supported networks:
+
+ * A-Netz base station
+ * B-Netz (ATF-1) base station
+
+
+USE AT YOUR OWN RISK!
+

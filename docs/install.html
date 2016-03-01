@@ -1,0 +1,59 @@
+<html>
+<head>
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table border='0' cellspacing='0' cellpadding='0' width='816'><tr><td><font face="ARIAL" size='5'>
+
+<h2><center>Software installation</center></h2>
+
+<p align='justify'>
+To run this software, you need a linux PC with development environment (gcc compiler).
+At least one Alsa sound interfaces is required.
+Two sound interfaces are required to talk and listen trough the base station using a headset with microphone.
+</p>
+
+<p align='justify'>
+If you want to install from GIT repository, run 'autoreconf -if' inside GIT repository first:
+</p>
+
+<font size='4'><pre>
+# autoreconf -if
+</pre></font>
+
+<p align='justify'>
+Unpack the archive and change to its directory. Then compile:
+</p>
+
+<font size='4'><pre>
+# ./configure
+# make
+</pre></font>
+
+<p align='justify'>
+At your option:
+</p>
+
+<font size='4'><pre>
+# make install
+</pre></font>
+
+<p align='justify'>
+Now you are ready for a quick test:
+</p>
+
+<font size='4'><pre>
+# src/bnetz/bnetz -k 1 -L 2
+bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
+Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter using pilot tone to 153.370 MHz
+</pre></font>
+
+<p align='justify'>
+Do you hear the whisteling sound on your speaker/headset? Now you can continue with the radio setup.
+</p>
+
+[<a href="index.html">Back to main page</a>]
+</font></td></tr></table></center>
+</body>
+</html>

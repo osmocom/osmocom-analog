@@ -1,0 +1,109 @@
+<html>
+<head>
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table border='0' cellspacing='0' cellpadding='0' width='816'><tr><td><font face="ARIAL" size='5'>
+
+<h2><center>B-Netz</center></h2>
+
+<center><img src="b-netz.jpg"/></center>
+
+<p align='justify'>
+Before testing this software, power on your B-Netz.
+Refer to the manual how to dial a number.
+Start dialing and after some seconds you should hear a busy signal.
+This means that the phone sweeps over all channels to find a base startion.
+If no free base station is found, you will get a busy signal.
+</p>
+
+<center><img src="b-netz-display.jpg"/></center>
+
+<p align='justify'>
+Now run your base station on channel 1.
+Tune the transmitter to 153.010 MHz and the receiver to 148.410.
+You should tune the receiver to 153.010 first, to check if you hear the idle signal from the base station.
+Then tune to actually uplink frequency 148.410 MHz.
+</p>
+
+<font size='4'><pre>
+# src/bnetz/bnetz -k 1
+...
+bnetz.c:316 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
+Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
+on-hook: ..... (enter 0..9 or d=dial)
+</pre></font>
+
+<p align='justify'>
+Now dial again on the phone and watch the base station receiving the call:
+</p>
+
+<font size='4'><pre>
+bnetz.c:471 info   : Received signal 'Kanalbelegung' from mobile station, sending signal 'Wahlabruf'.
+bnetz.c:561 info   : Received station id from mobile phone: 50993
+bnetz.c:569 info   : Received number from mobile phone: 800330100
+bnetz.c:571 info   : Sending station id back to phone: 50993.
+bnetz.c:631 info   : Dialing complete 50993-&gt;0800330100, call established.
+bnetz.c:637 info   : Setup call to network.
+call.c:574 info   : Incomming call from '50993' to '0800330100'
+bnetz.c:669 notice : Received 'Schlusssignal' from mobile station
+bnetz.c:352 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
+call.c:695 info   : Call has been released with cause=16
+</pre></font>
+
+<p align='justify'>
+The first thing the phone does is to find the channel 1.
+Then it transmits a signal tone, called 'Kanalbelegung'.
+The base station responds and sends a signal tone, called 'Wahlabruf'.
+Then the phone sends caller ID + number.
+The base station replies the caller ID to prevent false transmissions.
+After establishment, you can use the headset, if present, for speech communication with the phone.
+If you hangup the phone, the call gets released by a message, called 'Schlusssignal'.
+The base station returns to idle.
+</p>
+
+<p align='justify'>
+In order to call the phone from the base station, you need to transmit channel 19.
+Your transmitter must tune to 153.370 MHz in order to page the phone.
+The phones listens to incomming signals from the base station.
+In order to transmit on channel 19, you may use a second transmitter or re-tune your single transmitter.
+There are many ways todo that, but it is actually up to your own how to couple it and how to control your transmitter.
+I use an optocoupler to tell my transmitter to switch to channel 19.
+</p>
+
+<center><img src="trigger-1.jpg"/></center>
+<br>
+<center><img src="trigger-2.jpg"/><img src="trigger-3.jpg"/></center>
+
+<p align='justify'>
+I measure about 3 Volts peak on the ouput of the USB chip I use.
+Since my optocoupler triggers at arround 1 Volts, I have two Volts on the Resistor, which results in 10 mA current.
+In order to check and change the voltage, use '-P positive' or '-P negative' option to select trigger level on one audio channel.
+Run the base station and enter a 5 digit number.
+Measure the voltage on both audio output channels.
+Once you press 'd' for dialing, the base station triggers the channel using positive or negative level.
+See if and where the voltage changes.
+The trigger is just about two seconds long, so check your meter quickly after pressing 'd'.
+Once the base station timed out, press 'h' for hangup and try again.
+</p>
+
+<font size='4'><pre>
+./bnetz/bnetz -k 1 -P positive
+...
+on-hook: 55555 (enter 0..9 or d=dial)
+call.c:437 info   : Outgoing call to 55555
+bnetz.c:757 info   : Call to mobile station, paging station id '55555'
+bnetz.c:375 info   : Entering paging state (try 1), sending 'Selektivruf' to '55555'.
+bnetz.c:411 info   : Paging mobile station 55555 complete, waiting for answer.
+</pre></font>
+
+<p align='justify'>
+Now again it is up to your own to make the transmitter switch to channel 19 on trigger level.
+If you use a second transmitter, use the tigger to press the PTT button.
+</p>
+
+[<a href="index.html">Back to main page</a>]
+</font></td></tr></table></center>
+</body>
+</html>
