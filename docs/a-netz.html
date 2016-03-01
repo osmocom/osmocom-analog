@@ -35,9 +35,10 @@ Or if you can't increase the audio level on the transmitter, do it with 'alsamix
 </p>
 
 <font size='4'><pre>
-anetz.c:244 info   : Received 1750 Hz calling signal from mobile station, sending 1750 Hz acknowledge signal.
-anetz.c:256 info   : 1750 Hz signal from mobile station is gone, stopping acknowledge signal.
+anetz.c:244 info   : Received 1750 Hz calling signal from mobile station, removing idle signal.
+anetz.c:256 info   : 1750 Hz signal from mobile station is gone, setup call.
 call.c:574 info   : Incomming call from '' to 'operator'
+... after hangup...
 anetz.c:272 info   : Received 1750 Hz release signal from mobile station, sending idle signal.
 anetz.c:201 info   : Entering IDLE state, sending 2280 Hz tone.
 call.c:695 info   : Call has been released with cause=16
@@ -46,11 +47,11 @@ call disconnected: hangup (enter h=hangup)
 
 <p align='justify'>
 When you pick up the phone, the phone transmits a 1750 Hz calling tone.
-On reception, the base station then transmits a 1750 Hz acknowledge ton.
+On reception at the base station, the base station removes the 2280 Hz idle tone.
 After that the call is establised.
 After establishment, you can use the headset, if present, for speech communication with the phone.
 On hangup, the phone transmit a 1750 Hz hangup tone.
-Then the base station returns to idle again.
+Then the base station returns to idle again and sends the 2280 Hz idle tone.
 Be sure that the phone turns off the transmitter and indicates the (green) light.
 </p>
 
@@ -58,10 +59,10 @@ Be sure that the phone turns off the transmitter and indicates the (green) light
 To call to the phone, be sure that your transmitter transmits loud enough to send 4 sine waves at once.
 Enter the last 5 digits of the phone's number and press 'd' to dial.
 If you listen to the transmit signal, you should hear 4 low pitched tones at once.
-The phone should now stop the idle light and indicate an incomming call.
+The phone should now turn off the green light and indicate an incomming call with a yellow light and a buzzer sound.
 There is no acknowledgement from the phone until you pick up the call.
 If the phone does not indicate an incomming call, increase the volume of the transmit signal, but be sure not to overdrive it.
-Also be sure that you are actually dialing the right number, so the base station generates the correct paging tones.
+Also be sure that you are actually dialing the right number, so the base station generates the correct paging tones for your phone.
 </p>
 
 <p align='justify'>
@@ -69,9 +70,10 @@ Instead of transmitting all 4 tones at once, they can be transmitted after each 
 Each tone is playes for a short time.
 After the last tone has been played, base station starts again with the first tone.
 My phone also responds to a call, even if the tones cycle rather than sent simultaniously.
-In this case the level of each tone is four times highter (+6 dB).
+In this case the level of each tone is two times highter (+3 dB), but the peak level is two times lower (-3 dB) than the peak level of 4 simultanious tones.
 Add command line option "-P 50" to send each tone for 50 milliseconds.
 Try something between 20-100 milliseconds, if the phone still doesn't ring.
+Be sure to check: Does your transmitter has enough frequency deviation (15 KHz is suggested)? Do you really send the correct number of your phone, check the frequencies of your phone and use "-D 0" option to see what 4 frequencies the base station actually transmits.
 </p>
 
 [<a href="index.html">Back to main page</a>]
