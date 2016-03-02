@@ -33,6 +33,7 @@
 #include "../common/besetztton.h"
 #include "anetz.h"
 #include "dsp.h"
+#include "stations.h"
 #include "image.h"
 
 /* settings */
@@ -43,6 +44,10 @@ void print_help(const char *arg0)
 {
 	print_help_common(arg0, "");
 	/*      -                                                                             - */
+	printf(" -g --geo <lat>,<lon>\n");
+	printf("        Give your coordinates of your location, to find closest base station.\n");
+	printf("	(e.g. '--geo 51.186959,7.080194') Or use '--geo list' to get a list of\n");
+	printf("        all base station locations.\n");
 	printf(" -P --page-sequence 0 | <ms>\n");
 	printf("        Cycle paging tones, rather than sending simultaniously.\n");
 	printf("        (default = '%d')\n", page_sequence);
@@ -56,14 +61,16 @@ void print_help(const char *arg0)
 static int handle_options(int argc, char **argv)
 {
 	int skip_args = 0;
+	char *p;
 
 	static struct option long_options_special[] = {
+		{"geo", 1, 0, 'g'},
 		{"page-sequence", 1, 0, 'P'},
 		{"loss", 1, 0, '0'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("P:0:", long_options_special);
+	set_options_common("g:P:0:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -74,6 +81,18 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
+		case 'g':
+			if (!strcasecmp(optarg, "list")) {
+				station_list();
+				exit(0);
+			}
+			if ((p = strchr(optarg, ','))) {
+				get_station_by_coordinates(atof(optarg), atof(p + 1));
+				exit(0);
+			}
+			fprintf(stderr, "Invalid geo parameter\n");
+			exit(0);
+			break;
 		case 'P':
 			page_sequence = atoi(optarg);
 			skip_args += 2;

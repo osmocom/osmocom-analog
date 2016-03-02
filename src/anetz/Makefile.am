@@ -6,6 +6,7 @@ bin_PROGRAMS = \
 anetz_SOURCES = \
 	anetz.c \
 	dsp.c \
+	stations.c \
 	image.c \
 	main.c
 anetz_LDADD = \

@@ -33,6 +33,7 @@
 #include "../common/besetztton.h"
 #include "bnetz.h"
 #include "dsp.h"
+#include "stations.h"
 #include "image.h"
 #include "ansage.h"
 
@@ -45,8 +46,11 @@ void print_help(const char *arg0)
 {
 	print_help_common(arg0, "");
 	/*      -                                                                             - */
-	printf(" -g --gfs <gruppenfreisignal>\n");
+	printf(" -g --gfs <gruppenfreisignal> | <lat>,<lon>\n");
 	printf("        Gruppenfreisignal\" 1..9 | 19 | 10..18 (default = '%d')\n", gfs);
+	printf("        Alternative give your coordinates of your location, to find closest\n");
+	printf("        base station. (e.g. '--gfs 54.487291,9.069993') Or use '--gfs list' to\n");
+	printf("        get a list of all base station locations.\n");
 	printf(" -P --pilot tone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");
@@ -67,6 +71,7 @@ void print_help(const char *arg0)
 static int handle_options(int argc, char **argv)
 {
 	int skip_args = 0;
+	char *p;
 
 	static struct option long_options_special[] = {
 		{"gfs", 1, 0, 'g'},
@@ -87,7 +92,16 @@ static int handle_options(int argc, char **argv)
 
 		switch (c) {
 		case 'g':
-			gfs = atoi(optarg);
+			if (!strcasecmp(optarg, "list")) {
+				station_list();
+				exit(0);
+			}
+			if ((p = strchr(optarg, ','))) {
+				gfs = get_station_by_coordinates(atof(optarg), atof(p + 1));
+				if (gfs == 0)
+					exit(0);
+			} else
+				gfs = atoi(optarg);
 			skip_args += 2;
 			break;
 		case 'P':
