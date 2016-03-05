@@ -331,6 +331,7 @@ static void fsk_tone(bnetz_t *bnetz, int16_t *samples, int length, int tone)
 static int fsk_telegramm(bnetz_t *bnetz, int16_t *samples, int length)
 {
 	int16_t *spl;
+	const char *telegramm;
 	int i, j;
 	double phaseshift, phase;
 	int count, max;
@@ -339,17 +340,18 @@ next_telegramm:
 	if (!bnetz->telegramm) {
 		/* request telegramm */
 //		PDEBUG(DFSK, DEBUG_DEBUG, "Request new 'Telegramm'.\n");
-		bnetz->telegramm = bnetz_get_telegramm(bnetz);
-		if (!bnetz->telegramm) {
+		telegramm = bnetz_get_telegramm(bnetz);
+		if (!telegramm) {
 			PDEBUG(DFSK, DEBUG_DEBUG, "Stop sending 'Telegramm'.\n");
 			return length;
 		}
+		bnetz->telegramm = 1;
 		bnetz->telegramm_pos = 0;
 		spl = bnetz->telegramm_spl;
 		/* render telegramm */
 		phase = bnetz->phase256;
 		for (i = 0; i < 16; i++) {
-			phaseshift = bnetz->phaseshift256[bnetz->telegramm[i] == '1'];
+			phaseshift = bnetz->phaseshift256[telegramm[i] == '1'];
 			for (j = 0; j < bnetz->samples_per_bit; j++) {
 				*spl++ = dsp_sine[((uint8_t)phase) & 0xff];
 				phase += phaseshift;
@@ -372,7 +374,7 @@ next_telegramm:
 	bnetz->telegramm_pos += count;
 	/* check for end of telegramm */
 	if (bnetz->telegramm_pos == max) {
-		bnetz->telegramm = NULL;
+		bnetz->telegramm = 0;
 		/* we need more ? */
 		if (length)
 			goto next_telegramm;
@@ -412,5 +414,13 @@ again:
 		}
 		break;
 	}
+}
+
+void bnetz_set_dsp_mode(bnetz_t *bnetz, enum dsp_mode mode)
+{
+	/* reset telegramm */
+	if (mode == DSP_MODE_TELEGRAMM && bnetz->dsp_mode != mode)
+		bnetz->telegramm = 0;
+	bnetz->dsp_mode = mode;
 }
 

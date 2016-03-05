@@ -70,7 +70,7 @@ typedef struct bnetz {
 	int			fsk_filter_pos;		/* current sample position in filter_spl */
 	int			fsk_filter_step;	/* number of samples for each analyzation */
 	int			fsk_filter_bit;		/* last bit, so we detect a bit change */
-	int			fsk_filter_sample;	/* sample counter for shifting receive bits */
+	int			fsk_filter_sample;	/* count until it is time to sample bit */
 	uint16_t		fsk_filter_telegramm;	/* rx shift register for receiveing telegramm */
 	double			fsk_filter_quality[16];	/* quality of each bit in telegramm */
 	double			fsk_filter_level[16];	/* level of each bit in telegramm */
@@ -79,7 +79,7 @@ typedef struct bnetz {
 	int			tone_count;		/* how long has that tone been detected */
 	double			phaseshift256[2];	/* how much the phase of sine wave changes per sample */
 	double			phase256;		/* current phase */
-	const char		*telegramm;		/* current telegramm sequence */
+	int			telegramm;		/* set, if there is a valid telegram */
 	int16_t			*telegramm_spl;		/* 16 * samples_per_bit */
 	int			telegramm_pos;		/* current sample position in telegramm_spl */
 

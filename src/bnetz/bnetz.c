@@ -350,7 +350,7 @@ static void bnetz_go_idle(bnetz_t *bnetz)
 
 	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state, sending 'Gruppenfreisignal' %d.\n", bnetz->gfs);
 	bnetz->state = BNETZ_FREI;
-	bnetz->dsp_mode = DSP_MODE_TELEGRAMM;
+	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 	switch_channel_19(bnetz, 0);
 	bnetz->station_id[0] = '\0';
 }
@@ -362,7 +362,7 @@ static void bnetz_release(bnetz_t *bnetz)
 
 	PDEBUG(DBNETZ, DEBUG_INFO, "Entering release state, sending 'Trennsignal'.\n");
 	bnetz->state = BNETZ_TRENNEN;
-	bnetz->dsp_mode = DSP_MODE_TELEGRAMM;
+	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 	switch_channel_19(bnetz, 0);
 	bnetz->trenn_count = 0;
 	bnetz->station_id[0] = '\0';
@@ -373,7 +373,7 @@ static void bnetz_page(bnetz_t *bnetz, const char *dial_string, int try)
 {
 	PDEBUG(DBNETZ, DEBUG_INFO, "Entering paging state (try %d), sending 'Selektivruf' to '%s'.\n", try, dial_string);
 	bnetz->state = BNETZ_SELEKTIVRUF;
-	bnetz->dsp_mode = DSP_MODE_0;
+	bnetz_set_dsp_mode(bnetz, DSP_MODE_0);
 	bnetz->page_mode = PAGE_MODE_NUMBER;
 	bnetz->page_try = try;
 	strcpy(bnetz->station_id, dial_string);
@@ -400,7 +400,7 @@ const char *bnetz_get_telegramm(bnetz_t *bnetz)
 		break;
 	case BNETZ_WAHLABRUF:
 		if (bnetz->station_id_pos == 5) {
-			bnetz->dsp_mode = DSP_MODE_1;
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
 			return NULL;
 		}
 		it = bnetz_telegramm(bnetz->station_id[bnetz->station_id_pos++]);
@@ -409,7 +409,7 @@ const char *bnetz_get_telegramm(bnetz_t *bnetz)
 		if (bnetz->page_mode == PAGE_MODE_KANALBEFEHL) {
 			PDEBUG(DBNETZ, DEBUG_INFO, "Paging mobile station %s complete, waiting for answer.\n", bnetz->station_id);
 			bnetz->state = BNETZ_RUFBESTAETIGUNG;
-			bnetz->dsp_mode = DSP_MODE_SILENCE;
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_SILENCE);
 			switch_channel_19(bnetz, 0);
 			timer_start(&bnetz->timer, PAGING_TO);
 			return NULL;
@@ -470,8 +470,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			PDEBUG(DBNETZ, DEBUG_INFO, "Received signal 'Kanalbelegung' from mobile station, sending signal 'Wahlabruf'.\n");
 			bnetz->state = BNETZ_WAHLABRUF;
 			bnetz->dial_mode = DIAL_MODE_START;
-			bnetz->telegramm = NULL;
-			bnetz->dsp_mode = DSP_MODE_1;
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
 			timer_start(&bnetz->timer, DIALING_TO);
 			break;
 		}
@@ -481,7 +480,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			PDEBUG(DBNETZ, DEBUG_INFO, "Received signal 'Rufbestaetigung' from mobile station, call is ringing.\n");
 			timer_stop(&bnetz->timer);
 			bnetz->state = BNETZ_RUFHALTUNG;
-			bnetz->dsp_mode = DSP_MODE_1;
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
 			call_in_alerting(bnetz->sender.callref);
 			timer_start(&bnetz->timer, ALERTING_TO);
 			break;
@@ -492,7 +491,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			PDEBUG(DBNETZ, DEBUG_INFO, "Received signal 'Beginnsignal' from mobile station, call establised.\n");
 			timer_stop(&bnetz->timer);
 			bnetz->state = BNETZ_GESPRAECH;
-			bnetz->dsp_mode = DSP_MODE_AUDIO;
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
 			call_in_answer(bnetz->sender.callref, bnetz->station_id);
 			break;
 		}
@@ -568,7 +567,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality,
 				PDEBUG(DBNETZ, DEBUG_INFO, "Received number from mobile phone: %s\n", bnetz->dial_number);
 				bnetz->dial_mode = DIAL_MODE_START2;
 				PDEBUG(DBNETZ, DEBUG_INFO, "Sending station id back to phone: %s.\n", bnetz->station_id);
-				bnetz->dsp_mode = DSP_MODE_TELEGRAMM;
+				bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 				bnetz->station_id_pos = 0;
 				break;
 			}
@@ -629,7 +628,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality,
 				}
 				PDEBUG(DBNETZ, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", bnetz->station_id, dialing);
 				timer_stop(&bnetz->timer);
-				bnetz->dsp_mode = DSP_MODE_AUDIO;
+				bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
 				bnetz->state = BNETZ_GESPRAECH;
 
 				/* setup call */
@@ -689,7 +688,7 @@ static void bnetz_timeout(struct timer *timer)
 		break;
 	case BNETZ_SELEKTIVRUF:
 		PDEBUG(DBNETZ, DEBUG_DEBUG, "Transmitter switched to channel 19, starting paging telegramms.\n");
-		bnetz->dsp_mode = DSP_MODE_TELEGRAMM;
+		bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 		break;
 	case BNETZ_RUFBESTAETIGUNG:
 		if (bnetz->page_try == PAGE_TRIES) {
