@@ -7,7 +7,6 @@ extern int latency;
 extern int use_mncc_sock;
 extern int send_patterns;
 extern int loopback;
-extern double lossdetect;
 extern int rt_prio;
 
 void print_help(const char *arg0);

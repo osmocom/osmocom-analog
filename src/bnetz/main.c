@@ -36,6 +36,7 @@
 
 int gfs = 2;
 const char *pilot = "tone";
+double lossdetect = 0;
 
 void print_help(const char *arg0)
 {
@@ -53,6 +54,9 @@ void print_help(const char *arg0)
 	printf("        Example: /sys/class/gpio/gpio17/value=1:0 writes a '1' to\n");
 	printf("        /sys/class/gpio/gpio17/value to switching to channel 19 and a '0' to\n");
 	printf("        switch back. (default = %s)\n", pilot);
+	printf(" -0 --loss <volume>\n");
+	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
+	printf("        percent. (disabled by default)\n");
 	printf("\nstation-id: Give 5 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 }
@@ -64,10 +68,11 @@ static int handle_options(int argc, char **argv)
 	static struct option long_options_special[] = {
 		{"gfs", 1, 0, 'g'},
 		{"pilot", 1, 0, 'P'},
+		{"loss", 1, 0, '0'},
 		{0, 0, 0, 0},
 	};
 
-	set_options_common("g:P:", long_options_special);
+	set_options_common("g:P:0:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -84,6 +89,10 @@ static int handle_options(int argc, char **argv)
 			break;
 		case 'P':
 			pilot = strdup(optarg);
+			skip_args += 2;
+			break;
+		case '0':
+			lossdetect = atoi(optarg);
 			skip_args += 2;
 			break;
 		default:

@@ -35,7 +35,6 @@ int latency = 50;
 int use_mncc_sock = 0;
 int send_patterns = 1;
 int loopback = 0;
-double lossdetect = 0;
 int rt_prio = 0;
 
 void print_help_common(const char *arg0)
@@ -55,9 +54,6 @@ void print_help_common(const char *arg0)
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
 	printf(" -l --latency <delay>\n");
 	printf("        How many milliseconds processed in advance  (default = '%d')\n", latency);
-	printf(" -0 --loss <volume>\n");
-	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
-	printf("        percent. (disabled by default)\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
@@ -78,7 +74,6 @@ static struct option long_options_common[] = {
 	{"call-device", 1, 0, 'c'},
 	{"samplerate", 1, 0, 's'},
 	{"latency", 1, 0, 'l'},
-	{"loss", 1, 0, '0'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"send-patterns", 0, 0, 'p'},
 	{"loopback", 1, 0, 'L'},
@@ -86,7 +81,7 @@ static struct option long_options_common[] = {
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:l:0:mp:L:r:";
+const char *optstring_common = "hD:k:d:s:c:l:mp:L:r:";
 
 struct option *long_options;
 char *optstring;
@@ -138,10 +133,6 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		break;
 	case 'l':
 		latency = atoi(optarg);
-		*skip_args += 2;
-		break;
-	case '0':
-		lossdetect = atoi(optarg);
 		*skip_args += 2;
 		break;
 	case 'm':
