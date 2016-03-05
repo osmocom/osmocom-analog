@@ -131,6 +131,7 @@ int anetz_init(void)
 }
 
 static void anetz_timeout(struct timer *timer);
+static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
 int anetz_create(const char *sounddev, int samplerate, int kanal, int loopback, double loss_volume)
@@ -165,11 +166,10 @@ int anetz_create(const char *sounddev, int samplerate, int kanal, int loopback, 
 		goto error;
 	}
 
-	/* go into idle state */
-	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state, sending 2280 Hz tone.\n");
-	anetz->state = ANETZ_FREI;
-	anetz->dsp_mode = DSP_MODE_TONE;
 	timer_init(&anetz->timer, anetz_timeout, anetz);
+
+	/* go into idle state */
+	anetz_go_idle(anetz);
 
 	return 0;
 

@@ -239,6 +239,7 @@ int bnetz_init(void)
 }
 
 static void bnetz_timeout(struct timer *timer);
+static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
 int bnetz_create(const char *sounddev, int samplerate, int kanal, int gfs, int loopback, double loss_factor, const char *pilot)
@@ -312,16 +313,14 @@ error_pilot:
 		goto error;
 	}
 
-	/* go into idle state */
-	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state, sending 'Gruppenfreisignal' %d on channel %d.\n", gfs, kanal);
-	bnetz->state = BNETZ_FREI;
-	bnetz->dsp_mode = DSP_MODE_TELEGRAMM;
 	bnetz->gfs = gfs;
 	strncpy(bnetz->pilot_file, pilot_file, sizeof(bnetz->pilot_file) - 1);
 	strncpy(bnetz->pilot_on, pilot_on, sizeof(bnetz->pilot_on) - 1);
 	strncpy(bnetz->pilot_off, pilot_off, sizeof(bnetz->pilot_off) - 1);
 	timer_init(&bnetz->timer, bnetz_timeout, bnetz);
-	switch_channel_19(bnetz, 0);
+
+	/* go into idle state */
+	bnetz_go_idle(bnetz);
 
 	return 0;
 
