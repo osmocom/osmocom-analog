@@ -29,6 +29,8 @@
 #include "../common/timer.h"
 #include "../common/call.h"
 #include "../common/mncc_sock.h"
+#include "../common/freiton.h"
+#include "../common/besetztton.h"
 #include "anetz.h"
 #include "dsp.h"
 #include "image.h"
@@ -39,7 +41,7 @@ double lossdetect = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0);
+	print_help_common(arg0, "");
 	/*      -                                                                             - */
 	printf(" -P --page-sequence 0 | <ms>\n");
 	printf("        Cycle paging tones, rather than sending simultaniously.\n");
@@ -96,6 +98,10 @@ int main(int argc, char *argv[])
 	int skip_args;
 	const char *station_id = "";
 
+	/* init common tones */
+	init_freiton();
+	init_besetzton();
+
 	skip_args = handle_options(argc, argv);
 	argc -= skip_args;
 	argv += skip_args;
@@ -129,7 +135,7 @@ int main(int argc, char *argv[])
 	}
 	dsp_init();
 	anetz_init();
-	rc = call_init(station_id, call_sounddev, samplerate, latency, loopback);
+	rc = call_init(station_id, call_sounddev, samplerate, latency, 5, loopback);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		goto fail;

@@ -74,6 +74,7 @@ void timer_start(struct timer *timer, double duration)
 
 	gettimeofday(&tv, NULL);
 
+	timer->duration = duration;
 	timer->timeout = get_time() + duration;
 }
 

@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "ansage-27.h"
+#include "ansage.h"
 
 static int16_t pattern[] = {
 	0xffd1, 0x0011, 0x0031, 0x002d, 0x0016, 0x000d, 0x002f, 0xffea,
@@ -4991,13 +4991,15 @@ static int16_t pattern[] = {
 	0x0006, 0x000e, 0xfffd, 0x000b, 0xfffc, 0x000b, 0x000e, 0xfffb,
 };
 
-extern int16_t *ansage_27_spl;
-extern int ansage_27_size;
+extern int16_t *outoforder_spl;
+extern int outoforder_size;
+extern int outoforder_max;
 
-void init_ansage_27(void)
+void init_ansage(void)
 {
-	ansage_27_spl = pattern;
-	ansage_27_size = sizeof(pattern) / sizeof(pattern[0]);
+	outoforder_spl = pattern;
+	outoforder_size = sizeof(pattern) / sizeof(pattern[0]);
+	outoforder_max = outoforder_size;
 }
 
 

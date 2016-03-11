@@ -10,7 +10,7 @@ extern int loopback;
 extern int rt_prio;
 
 void print_help(const char *arg0);
-void print_help_common(const char *arg0);
+void print_help_common(const char *arg0, const char *ext_usage);
 extern struct option *long_options;
 extern char *optstring;
 void set_options_common(const char *optstring_special, struct option *long_options_special);

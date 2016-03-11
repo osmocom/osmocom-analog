@@ -2,6 +2,7 @@
 struct timer {
 	struct timer *next;
 	int linked; /* set is timer is initialized and linked */
+	double duration;
 	double timeout;
 	void (*fn)(struct timer *timer);
 	void *priv;

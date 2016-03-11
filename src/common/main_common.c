@@ -37,9 +37,9 @@ int send_patterns = 1;
 int loopback = 0;
 int rt_prio = 0;
 
-void print_help_common(const char *arg0)
+void print_help_common(const char *arg0, const char *ext_usage)
 {
-	printf("Usage: %s -k kanal [options] [station-id]\n", arg0);
+	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
 	printf("\noptions:\n");
 	/*      -                                                                             - */
 	printf(" -h --help\n");

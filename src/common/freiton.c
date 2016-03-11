@@ -1061,13 +1061,15 @@ static int16_t pattern[] = {
 	0x0095, 0x0042, 0x0006, 0x0036, 0x0000, 0x003a, 0x00a9, 0xfffa,
 };
 
-extern int16_t *freiton_spl;
-extern int freiton_size;
+extern int16_t *ringback_spl;
+extern int ringback_size;
+extern int ringback_max;
 
 void init_freiton(void)
 {
-	freiton_spl = pattern;
-	freiton_size = sizeof(pattern) / sizeof(pattern[0]);
+	ringback_spl = pattern;
+	ringback_size = sizeof(pattern) / sizeof(pattern[0]);
+	ringback_max = 8 * 5000;
 }
 
 

@@ -84,13 +84,13 @@ int dsp_init_sender(bnetz_t *bnetz)
 	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per bit duration.\n", bnetz->samples_per_bit);
 	bnetz->fsk_filter_step = bnetz->sender.samplerate * FILTER_STEP;
 	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per filter step.\n", bnetz->fsk_filter_step);
-	spl = calloc(16, bnetz->samples_per_bit << 1);
+	spl = calloc(16, bnetz->samples_per_bit * sizeof(*spl));
 	if (!spl) {
 		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	bnetz->telegramm_spl = spl;
-	spl = calloc(1, bnetz->samples_per_bit << 1);
+	spl = calloc(1, bnetz->samples_per_bit * sizeof(*spl));
 	if (!spl) {
 		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
@@ -204,7 +204,7 @@ char *show_level(int value)
 /* Filter one chunk of audio an detect tone, quality and loss of signal.
  * The chunk is a window of 10ms. This window slides over audio stream
  * and is processed every 1ms. (one step) */
-void fsk_decode_step(bnetz_t *bnetz, int pos)
+static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 {
 	double level, result[2], softbit, quality;
 	int max;

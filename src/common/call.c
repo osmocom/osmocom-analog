@@ -30,19 +30,23 @@
 #include "cause.h"
 #include "call.h"
 #include "mncc_sock.h"
-#include "freiton.h"
-#include "besetztton.h"
 
 extern int use_mncc_sock;
 extern int send_patterns;
 
 /* stream patterns/announcements */
-int16_t *ansage_27_spl = NULL;
-int16_t *freiton_spl = NULL;
-int16_t *besetztton_spl = NULL;
-int ansage_27_size = 0;
-int freiton_size = 0;
-int besetztton_size = 0;
+int16_t *outoforder_spl = NULL;
+int16_t *ringback_spl = NULL;
+int16_t *busy_spl = NULL;
+int16_t *congestion_spl = NULL;
+int outoforder_size = 0;
+int ringback_size = 0;
+int busy_size = 0;
+int congestion_size = 0;
+int outoforder_max = 0;
+int ringback_max = 0;
+int busy_max = 0;
+int congestion_max = 0;
 
 enum call_state {
 	CALL_IDLE = 0,
@@ -57,8 +61,44 @@ enum audio_pattern {
 	PATTERN_NONE = 0,
 	PATTERN_RINGBACK,
 	PATTERN_BUSY,
+	PATTERN_CONGESTION,
 	PATTERN_OUTOFORDER,
 };
+
+void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pattern)
+{
+	*spl = NULL;
+	*size = 0;
+	*max = 0;
+
+	switch (pattern) {
+	case PATTERN_RINGBACK:
+		*spl = ringback_spl;
+		*size = ringback_size;
+		*max = ringback_max;
+		break;
+	case PATTERN_BUSY:
+		*spl = busy_spl;
+		*size = busy_size;
+		*max = busy_max;
+		break;
+	case PATTERN_CONGESTION:
+no_outoforder:
+		*spl = congestion_spl;
+		*size = congestion_size;
+		*max = congestion_max;
+		break;
+	case PATTERN_OUTOFORDER:
+		if (!outoforder_spl)
+			goto no_outoforder;
+		*spl = outoforder_spl;
+		*size = outoforder_size;
+		*max = outoforder_max;
+		break;
+	default:
+		;
+	}
+}
 
 static int new_callref = 0; /* toward mobile */
 
@@ -66,15 +106,16 @@ static int new_callref = 0; /* toward mobile */
 typedef struct call {
 	int callref;
 	enum call_state state;
-	int disc_cause; /* cause that has been sent by transceiver instance for release */
-	char station_id[6];
+	int disc_cause;		/* cause that has been sent by transceiver instance for release */
+	char station_id[16];
 	char dialing[16];
-	void *sound; /* headphone interface */
-	int latspl; /* sample latency at sound interface */
-	samplerate_t srstate; /* patterns/announcement upsampling */
-	jitter_t audio; /* headphone audio dejittering */
-	int audio_pos; /* position when playing patterns */
-	int loopback; /* loopback test for echo */
+	void *sound;		/* headphone interface */
+	int latspl;		/* sample latency at sound interface */
+	samplerate_t srstate;	/* patterns/announcement upsampling */
+	jitter_t audio;		/* headphone audio dejittering */
+	int audio_pos;		/* position when playing patterns */
+	int dial_digits;	/* number of digits to be dialed */
+	int loopback;		/* loopback test for echo */
 } call_t;
 
 static call_t call;
@@ -87,31 +128,10 @@ static void call_new_state(enum call_state state)
 
 static void get_call_patterns(int16_t *samples, int length, enum audio_pattern pattern)
 {
-	const int16_t *spl = NULL;
-	int size = 0, max = 0, pos;
+	const int16_t *spl;
+	int size, max, pos;
 
-	switch (pattern) {
-	case PATTERN_RINGBACK:
-		spl = freiton_spl;
-		size = freiton_size;
-		max = 8 * 5000;
-		break;
-	case PATTERN_BUSY:
-busy:
-		spl = besetztton_spl;
-		size = besetztton_size;
-		max = 8 * 750;
-		break;
-	case PATTERN_OUTOFORDER:
-		spl = ansage_27_spl;
-		size = ansage_27_size;
-		if (!spl || !size)
-			goto busy;
-		max = size;
-		break;
-	default:
-		return;
-	}
+	get_pattern(&spl, &size, &max, pattern);
 
 	/* stream sample */
 	pos = call.audio_pos;
@@ -131,11 +151,14 @@ static enum audio_pattern cause2pattern(int cause)
 	int pattern;
 
 	switch (cause) {
+	case CAUSE_BUSY:
+		pattern = PATTERN_BUSY;
+		break;
 	case CAUSE_OUTOFORDER:
 		pattern = PATTERN_OUTOFORDER;
 		break;
 	default:
-		pattern = PATTERN_BUSY;
+		pattern = PATTERN_CONGESTION;
 	}
 
 	return pattern;
@@ -290,28 +313,10 @@ static int is_process_pattern(int callref)
 
 static void get_process_patterns(process_t *process, int16_t *samples, int length)
 {
-	const int16_t *spl = NULL;
-	int size = 0, max = 0, pos;
+	const int16_t *spl;
+	int size, max, pos;
 
-	switch (process->pattern) {
-	case PATTERN_RINGBACK:
-		spl = freiton_spl;
-		size = freiton_size;
-		max = 8 * 5000;
-		break;
-	case PATTERN_BUSY:
-		spl = besetztton_spl;
-		size = besetztton_size;
-		max = 8 * 750;
-		break;
-	case PATTERN_OUTOFORDER:
-		spl = ansage_27_spl;
-		size = ansage_27_size;
-		max = size;
-		break;
-	default:
-		return;
-	}
+	get_pattern(&spl, &size, &max, process->pattern);
 
 	/* stream sample */
 	pos = process->audio_pos;
@@ -328,14 +333,10 @@ static void get_process_patterns(process_t *process, int16_t *samples, int lengt
 
 static struct termios term_orig;
 
-int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int loopback)
+int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int dial_digits, int loopback)
 {
 	struct termios term;
 	int rc = 0;
-
-	/* init common tones */
-	init_freiton();
-	init_besetzton();
 
 	if (use_mncc_sock)
 		return 0;
@@ -352,6 +353,7 @@ int call_init(const char *station_id, const char *sounddev, int samplerate, int 
 	memset(&call, 0, sizeof(call));
 	strncpy(call.station_id, station_id, sizeof(call.station_id) - 1);
 	call.latspl = latency * samplerate / 1000;
+	call.dial_digits = dial_digits;
 	call.loopback = loopback;
 
 	if (!sounddev[0])
@@ -433,13 +435,13 @@ static int process_ui(void)
 	switch (call.state) {
 	case CALL_IDLE:
 		if (c > 0) {
-			if (c >= '0' && c <= '9' && strlen(call.station_id) < 5) {
+			if (c >= '0' && c <= '9' && strlen(call.station_id) < call.dial_digits) {
 				call.station_id[strlen(call.station_id) + 1] = '\0';
 				call.station_id[strlen(call.station_id)] = c;
 			}
 			if ((c == 8 || c == 127) && strlen(call.station_id))
 				call.station_id[strlen(call.station_id) - 1] = '\0';
-			if (c == 'd' && strlen(call.station_id) == 5) {
+			if (c == 'd' && strlen(call.station_id) == call.dial_digits) {
 				int rc;
 				int callref = ++new_callref;
 
@@ -456,7 +458,7 @@ static int process_ui(void)
 				}
 			}
 		}
-		printf("on-hook: %s%s (enter 0..9 or d=dial)\r", call.station_id, "....." + strlen(call.station_id));
+		printf("on-hook: %s%s (enter 0..9 or d=dial)\r", call.station_id, "..............." + 15 - call.dial_digits + strlen(call.station_id));
 		break;
 	case CALL_SETUP_MO:
 	case CALL_SETUP_MT:
@@ -624,8 +626,8 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 	call.callref = callref;
 	call_new_state(CALL_CONNECT);
 	if (callerid[0]) {
-		strncpy(call.station_id, callerid, 5);
-		call.station_id[5] = '\0';
+		strncpy(call.station_id, callerid, call.dial_digits);
+		call.station_id[call.dial_digits] = '\0';
 	}
 	strncpy(call.dialing, dialing, sizeof(call.dialing) - 1);
 	call.dialing[sizeof(call.dialing) - 1] = '\0';
@@ -694,8 +696,8 @@ void call_in_answer(int callref, const char *connectid)
 		return;
 	}
 	call_new_state(CALL_CONNECT);
-	strncpy(call.station_id, connectid, 5);
-	call.station_id[5] = '\0';
+	strncpy(call.station_id, connectid, call.dial_digits);
+	call.station_id[call.dial_digits] = '\0';
 }
 
 /* Transceiver indicates release. */

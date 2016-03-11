@@ -7,7 +7,7 @@ bnetz_SOURCES = \
 	bnetz.c \
 	dsp.c \
 	image.c \
-	ansage-27.c \
+	ansage.c \
 	main.c
 bnetz_LDADD = \
 	$(COMMON_LA) \

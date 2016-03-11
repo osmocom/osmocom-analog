@@ -173,13 +173,23 @@ static int16_t pattern[] = {
 	0x008f, 0x0099, 0x001c, 0xffa8, 0xff93, 0xff52, 0xff9a, 0x0060,
 };
 
-extern int16_t *besetztton_spl;
-extern int besetztton_size;
+extern int16_t *busy_spl;
+extern int busy_size;
+extern int busy_max;
+
+extern int16_t *congestion_spl;
+extern int congestion_size;
+extern int congestion_max;
 
 void init_besetzton(void)
 {
-	besetztton_spl = pattern;
-	besetztton_size = sizeof(pattern) / sizeof(pattern[0]);
+	busy_spl = pattern;
+	busy_size = sizeof(pattern) / sizeof(pattern[0]);
+	busy_max = 8 * 750;
+
+	congestion_spl = pattern;
+	congestion_size = sizeof(pattern) / sizeof(pattern[0]);
+	congestion_max = 8 * 750;
 }
 
 

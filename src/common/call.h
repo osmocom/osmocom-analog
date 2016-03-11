@@ -1,5 +1,5 @@
 
-int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int loopback);
+int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int dial_digits, int loopback);
 void call_cleanup(void);
 int process_call(void);
 
