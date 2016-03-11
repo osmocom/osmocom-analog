@@ -37,6 +37,7 @@ static int new_callref = 0x40000000;
 
 /* Timers */
 #define PAGING_TO	30	/* Nach dieser Zeit ist der Operator genervt... */
+#define RELEASE_TO	3	/* Release time, so station keeps blocked for a while */
 
 /* Convert channel number to frequency number of base station.
    Set 'unterband' to 1 to get frequency of mobile station. */
@@ -205,6 +206,18 @@ static void anetz_go_idle(anetz_t *anetz)
 	anetz->station_id[0] = '\0';
 }
 
+/* Release connection towards mobile station by sending idle tone for a while. */
+static void anetz_release(anetz_t *anetz)
+{
+	timer_stop(&anetz->timer);
+
+	PDEBUG(DANETZ, DEBUG_INFO, "Sending 2280 Hz release tone.\n");
+	anetz->state = ANETZ_AUSLOESEN;
+	anetz->dsp_mode = DSP_MODE_TONE;
+	anetz->station_id[0] = '\0';
+	timer_start(&anetz->timer, RELEASE_TO);
+}
+
 /* Enter paging state and transmit 4 paging tones. */
 static void anetz_page(anetz_t *anetz, const char *dial_string, double *freq)
 {
@@ -221,7 +234,7 @@ void anetz_loss_indication(anetz_t *anetz)
 {
 	if (anetz->state == ANETZ_GESPRAECH) {
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Detected loss of signal, releasing.\n");
-		anetz_go_idle(anetz);
+		anetz_release(anetz);
 		call_in_release(anetz->sender.callref, CAUSE_TEMPFAIL);
 		anetz->sender.callref = 0;
 	}
@@ -259,8 +272,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
 				rc = call_in_setup(callref, anetz->station_id, "0");
 				if (rc < 0) {
-					PDEBUG(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
-					anetz_go_idle(anetz);
+					PDEBUG(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
+					anetz_release(anetz);
 					break;
 				}
 				anetz->sender.callref = callref;
@@ -272,8 +285,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		}
 		/* release call */
 		if (tone == 1) {
-			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending idle signal.\n");
-			anetz_go_idle(anetz);
+			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
+			anetz_release(anetz);
 			call_in_release(anetz->sender.callref, CAUSE_NORMAL);
 			anetz->sender.callref = 0;
 			break;
@@ -304,6 +317,9 @@ static void anetz_timeout(struct timer *timer)
 	 	anetz_go_idle(anetz);
 		call_in_release(anetz->sender.callref, CAUSE_NOANSWER);
 		anetz->sender.callref = 0;
+		break;
+	case ANETZ_AUSLOESEN:
+	 	anetz_go_idle(anetz);
 		break;
 	default:
 		break;
@@ -425,8 +441,8 @@ void call_out_release(int callref, int cause)
 
 	switch (anetz->state) {
 	case ANETZ_GESPRAECH:
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing release, during call, going idle!\n");
-	 	anetz_go_idle(anetz);
+		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing release, during call, sending release tone!\n");
+	 	anetz_release(anetz);
 		break;
 	case ANETZ_ANRUF:
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing release, during alerting, going idle!\n");

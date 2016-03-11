@@ -11,6 +11,7 @@ enum anetz_state {
 	ANETZ_FREI,		/* sending 2280 Hz tone */
 	ANETZ_GESPRAECH,	/* during conversation */
 	ANETZ_ANRUF,		/* phone is paged */
+	ANETZ_AUSLOESEN,	/* releasing towards phone */
 };
 
 typedef struct anetz {
