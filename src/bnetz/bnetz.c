@@ -720,6 +720,8 @@ int call_out_setup(int callref, char *dialing)
 	int i;
 
 	/* 1. check if number is invalid, return INVALNUMBER */
+	if (strlen(dialing) == 7 && dialing[0] == '0' && dialing[1] == '5')
+		dialing += 2;
 	if (strlen(dialing) != 5) {
 inval:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
