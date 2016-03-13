@@ -17,6 +17,7 @@ libcommon_a_SOURCES = \
 	../common/besetztton.c \
 	../common/mncc_sock.c \
 	../common/cause.c \
+	../common/compander.c \
 	../common/sender.c \
 	../common/main_common.c
 
