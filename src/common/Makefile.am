@@ -10,6 +10,7 @@ libcommon_a_SOURCES = \
 	../common/jitter.c \
 	../common/loss.c \
 	../common/filter.c \
+	../common/dtmf.c \
 	../common/samplerate.c \
 	../common/call.c \
 	../common/freiton.c \
