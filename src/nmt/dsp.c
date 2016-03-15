@@ -68,7 +68,7 @@ void dsp_init(void)
 	int i;
 	double s;
 
-	PDEBUG(DFSK, DEBUG_DEBUG, "Generating sine table for supervisory signal.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for supervisory signal.\n");
 	for (i = 0; i < 256; i++) {
 		s = sin((double)i / 256.0 * 2.0 * PI);
 		dsp_sine_super[i] = (int)(s * TX_PEAK_SUPER);
@@ -86,29 +86,29 @@ int dsp_init_sender(nmt_t *nmt)
 	init_compander(&nmt->cstate, 8000, 3.0, 13.5);
 
 	if ((nmt->sender.samplerate % (BIT_RATE * STEPS_PER_BIT))) {
-		PDEBUG(DFSK, DEBUG_ERROR, "Sample rate must be a multiple of %d bits per second.\n", BIT_RATE * STEPS_PER_BIT);
+		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be a multiple of %d bits per second.\n", BIT_RATE * STEPS_PER_BIT);
 		return -EINVAL;
 	}
 
 	/* this should not happen. it is implied by previous check */
 	if (nmt->supervisory && nmt->sender.samplerate < 12000) {
-		PDEBUG(DFSK, DEBUG_ERROR, "Sample rate must be at least 12000 Hz to process supervisory signal.\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 12000 Hz to process supervisory signal.\n");
 		return -EINVAL;
 	}
 
-	PDEBUG(DFSK, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* allocate sample for 2 bits with 2 polarities */
 	nmt->samples_per_bit = nmt->sender.samplerate / BIT_RATE;
-	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per bit duration.\n", nmt->samples_per_bit);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per bit duration.\n", nmt->samples_per_bit);
 	nmt->fsk_filter_step = nmt->samples_per_bit / STEPS_PER_BIT;
-	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per filter step.\n", nmt->fsk_filter_step);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per filter step.\n", nmt->fsk_filter_step);
 	nmt->fsk_sine[0][0] = calloc(4, nmt->samples_per_bit * sizeof(int16_t));
 	nmt->fsk_sine[0][1] = nmt->fsk_sine[0][0] + nmt->samples_per_bit;
 	nmt->fsk_sine[1][0] = nmt->fsk_sine[0][1] + nmt->samples_per_bit;
 	nmt->fsk_sine[1][1] = nmt->fsk_sine[1][0] + nmt->samples_per_bit;
 	if (!nmt->fsk_sine[0][0]) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
@@ -123,7 +123,7 @@ int dsp_init_sender(nmt_t *nmt)
 	/* allocate ring buffers, one bit duration */
 	spl = calloc(1, nmt->samples_per_bit * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	nmt->fsk_filter_spl = spl;
@@ -132,7 +132,7 @@ int dsp_init_sender(nmt_t *nmt)
 	/* allocate transmit buffer for a complete frame */
 	spl = calloc(166, nmt->samples_per_bit * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	nmt->frame_spl = spl;
@@ -141,7 +141,7 @@ int dsp_init_sender(nmt_t *nmt)
 	nmt->super_samples = (int)((double)nmt->sender.samplerate * SUPER_DURATION + 0.5);
 	spl = calloc(166, nmt->super_samples * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	nmt->super_filter_spl = spl;
@@ -150,18 +150,18 @@ int dsp_init_sender(nmt_t *nmt)
 	for (i = 0; i < 2; i++) {
 		coeff = 2.0 * cos(2.0 * PI * fsk_bits[i] / (double)nmt->sender.samplerate);
 		nmt->fsk_coeff[i] = coeff * 32768.0;
-		PDEBUG(DFSK, DEBUG_DEBUG, "coeff[%d] = %d\n", i, (int)nmt->fsk_coeff[i]);
+		PDEBUG(DDSP, DEBUG_DEBUG, "coeff[%d] = %d\n", i, (int)nmt->fsk_coeff[i]);
 	}
 
 	/* count supervidory tones */
 	for (i = 0; i < 5; i++) {
 		coeff = 2.0 * cos(2.0 * PI * super_freq[i] / (double)nmt->sender.samplerate);
 		nmt->super_coeff[i] = coeff * 32768.0;
-		PDEBUG(DFSK, DEBUG_DEBUG, "supervisory coeff[%d] = %d\n", i, (int)nmt->super_coeff[i]);
+		PDEBUG(DDSP, DEBUG_DEBUG, "supervisory coeff[%d] = %d\n", i, (int)nmt->super_coeff[i]);
 
 		if (i < 4) {
 			nmt->super_phaseshift256[i] = 256.0 / ((double)nmt->sender.samplerate / super_freq[i]);
-			PDEBUG(DFSK, DEBUG_DEBUG, "phaseshift_super[%d] = %.4f\n", i, nmt->super_phaseshift256[i]);
+			PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift_super[%d] = %.4f\n", i, nmt->super_phaseshift256[i]);
 		}
 	}
 	super_reset(nmt);
@@ -178,7 +178,7 @@ int dsp_init_sender(nmt_t *nmt)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(nmt_t *nmt)
 {
-	PDEBUG(DFSK, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (nmt->frame_spl) {
 		free(nmt->frame_spl);
@@ -348,14 +348,14 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 		quality = 0;
 
 	if (nmt->sender.loopback)
-		PDEBUG(DFSK, DEBUG_NOTICE, "Supervisory level %.2f%% quality %.0f%%\n", result[0] / 0.63662 * 100.0, quality * 100.0);
+		PDEBUG(DDSP, DEBUG_NOTICE, "Supervisory level %.2f%% quality %.0f%%\n", result[0] / 0.63662 * 100.0, quality * 100.0);
 	if (quality > 0.5) {
 		if (nmt->super_detected == 0) {
 			nmt->super_detect_count++;
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 1;
 				nmt->super_detect_count = 0;
-				PDEBUG(DFSK, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality * 100.0);
+				PDEBUG(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality * 100.0);
 				nmt_rx_super(nmt, 1, quality);
 			}
 		} else
@@ -366,7 +366,7 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 0;
 				nmt->super_detect_count = 0;
-				PDEBUG(DFSK, DEBUG_DEBUG, "Supervisory signal lost.\n");
+				PDEBUG(DDSP, DEBUG_DEBUG, "Supervisory signal lost.\n");
 				nmt_rx_super(nmt, 0, 0.0);
 			}
 		} else
@@ -377,7 +377,7 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 /* Reset supervisory detection states, so ongoing tone will be detected again. */
 void super_reset(nmt_t *nmt)
 {
-	PDEBUG(DFSK, DEBUG_DEBUG, "Supervisory detector reset.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Supervisory detector reset.\n");
 	nmt->super_detected = 0;
 	nmt->super_detect_count = 0;
 }
@@ -464,7 +464,7 @@ next_frame:
 		/* request frame */
 		frame = nmt_get_frame(nmt);
 		if (!frame) {
-			PDEBUG(DFSK, DEBUG_DEBUG, "Stop sending frames.\n");
+			PDEBUG(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
 			return length;
 		}
 		nmt->frame = 1;

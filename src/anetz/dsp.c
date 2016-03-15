@@ -60,7 +60,7 @@ void dsp_init(void)
 {
 	int i;
 
-	PDEBUG(DFSK, DEBUG_DEBUG, "Generating sine table.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table.\n");
 	for (i = 0; i < 256; i++) {
 		dsp_sine[i] = (int)(sin((double)i / 256.0 * 2.0 * PI) * TX_PEAK);
 	}
@@ -78,15 +78,15 @@ int dsp_init_sender(anetz_t *anetz)
 	double coeff;
 	int detect_tone = (anetz->sender.loopback) ? 0 : 1;
 
-	PDEBUG(DFSK, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
 	audio_init_loss(&anetz->sender.loss, LOSS_INTERVAL, anetz->sender.loss_volume, LOSS_TIME);
 
 	anetz->samples_per_chunk = anetz->sender.samplerate * CHUNK_DURATION;
-	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per chunk duration.\n", anetz->samples_per_chunk);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per chunk duration.\n", anetz->samples_per_chunk);
 	spl = calloc(1, anetz->samples_per_chunk << 1);
 	if (!spl) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	anetz->fsk_filter_spl = spl;
@@ -95,9 +95,9 @@ int dsp_init_sender(anetz_t *anetz)
 
 	coeff = 2.0 * cos(2.0 * PI * fsk_tones[detect_tone] / (double)anetz->sender.samplerate);
 	anetz->fsk_tone_coeff = coeff * 32768.0;
-	PDEBUG(DFSK, DEBUG_DEBUG, "RX %.0f Hz coeff = %d\n", fsk_tones[detect_tone], (int)anetz->fsk_tone_coeff);
+	PDEBUG(DDSP, DEBUG_DEBUG, "RX %.0f Hz coeff = %d\n", fsk_tones[detect_tone], (int)anetz->fsk_tone_coeff);
 	anetz->tone_phaseshift256 = 256.0 / ((double)anetz->sender.samplerate / fsk_tones[0]);
-	PDEBUG(DFSK, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", fsk_tones[0], anetz->tone_phaseshift256);
+	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", fsk_tones[0], anetz->tone_phaseshift256);
 
 	return 0;
 }
@@ -105,7 +105,7 @@ int dsp_init_sender(anetz_t *anetz)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(anetz_t *anetz)
 {
-	PDEBUG(DFSK, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (anetz->fsk_filter_spl) {
 		free(anetz->fsk_filter_spl);
@@ -119,7 +119,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || tone != anetz->tone_detected) {
 		if (anetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG(DFSK, DEBUG_DEBUG, "Lost %.0f Hz tone after %d ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
+			PDEBUG(DDSP, DEBUG_DEBUG, "Lost %.0f Hz tone after %d ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
 			anetz_receive_tone(anetz, -1);
 		}
 		if (goodtone)
@@ -136,7 +136,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	if (anetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&anetz->sender.loss);
 	if (anetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DFSK, DEBUG_DEBUG, "Detecting continous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100));
+		PDEBUG(DDSP, DEBUG_DEBUG, "Detecting continous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100));
 		anetz_receive_tone(anetz, anetz->tone_detected);
 	}
 }
@@ -156,7 +156,7 @@ static void fsk_decode_chunk(anetz_t *anetz, int16_t *spl, int max)
 	/* show quality of tone */
 	if (anetz->sender.loopback) {
 		/* adjust level, so we get peak of sine curve */
-		PDEBUG(DFSK, DEBUG_NOTICE, "Quality Tone:%3.0f%% Level:%3.0f%%\n", result / level * 100.0, level / 0.63662 * 100.0);
+		PDEBUG(DDSP, DEBUG_NOTICE, "Quality Tone:%3.0f%% Level:%3.0f%%\n", result / level * 100.0, level / 0.63662 * 100.0);
 	}
 
 	/* adjust level, so we get peak of sine curve */

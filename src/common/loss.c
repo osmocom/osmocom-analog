@@ -44,7 +44,7 @@ void audio_init_loss(loss_t *loss, int interval, double threshold, int seconds)
 void audio_reset_loss(loss_t *loss)
 {
 	if (loss->interval_count > 0) {
-		PDEBUG(DAUDIO, DEBUG_DEBUG, "Signal is recovered (loss is gone).\n");
+		PDEBUG(DDSP, DEBUG_DEBUG, "Signal is recovered (loss is gone).\n");
 		loss->interval_count = 0;
 	}
 	loss->level = 0;
@@ -71,7 +71,7 @@ int audio_detect_loss(loss_t *loss, double level)
 	/* normalize level */
 	loss->level = loss->level / loss->level_count;
 
-	PDEBUG(DAUDIO, DEBUG_DEBUG, "Noise level = %.0f%%\n", loss->level * 100);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Noise level = %.0f%%\n", loss->level * 100);
 
 	diff = loss->level / loss->level_last;
 	if (diff < 1.0)
@@ -81,7 +81,7 @@ int audio_detect_loss(loss_t *loss, double level)
 	loss->level_count = 0;
 	if (diff < LOSS_MAX_DIFF && loss->level_last > loss->threshold) {
 		loss->interval_count++;
-		PDEBUG(DAUDIO, DEBUG_DEBUG, "Detected signal loss %d for intervals level change %.0f%% (below %.0f%%).\n", loss->interval_count, diff * 100 - 100, LOSS_MAX_DIFF * 100 - 100);
+		PDEBUG(DDSP, DEBUG_DEBUG, "Detected signal loss %d for intervals level change %.0f%% (below %.0f%%).\n", loss->interval_count, diff * 100 - 100, LOSS_MAX_DIFF * 100 - 100);
 	} else if (loss->interval_count > 0) {
 		audio_reset_loss(loss);
 	}

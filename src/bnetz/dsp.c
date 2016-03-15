@@ -58,7 +58,7 @@ void dsp_init(void)
 {
 	int i;
 
-	PDEBUG(DFSK, DEBUG_DEBUG, "Generating sine table.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table.\n");
 	for (i = 0; i < 256; i++) {
 		dsp_sine[i] = (int)(sin((double)i / 256.0 * 2.0 * PI) * TX_PEAK);
 	}
@@ -72,27 +72,27 @@ int dsp_init_sender(bnetz_t *bnetz)
 	int i;
 
 	if ((bnetz->sender.samplerate % 1000)) {
-		PDEBUG(DFSK, DEBUG_ERROR, "Samples rate must be a multiple of 1000 bits per second.\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "Samples rate must be a multiple of 1000 bits per second.\n");
 		return -EINVAL;
 	}
 
-	PDEBUG(DFSK, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
 	audio_init_loss(&bnetz->sender.loss, LOSS_INTERVAL, bnetz->sender.loss_volume, LOSS_TIME);
 
 	bnetz->samples_per_bit = bnetz->sender.samplerate * BIT_DURATION;
-	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per bit duration.\n", bnetz->samples_per_bit);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per bit duration.\n", bnetz->samples_per_bit);
 	bnetz->fsk_filter_step = bnetz->sender.samplerate * FILTER_STEP;
-	PDEBUG(DFSK, DEBUG_DEBUG, "Using %d samples per filter step.\n", bnetz->fsk_filter_step);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per filter step.\n", bnetz->fsk_filter_step);
 	spl = calloc(16, bnetz->samples_per_bit * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	bnetz->telegramm_spl = spl;
 	spl = calloc(1, bnetz->samples_per_bit * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DFSK, DEBUG_ERROR, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	bnetz->fsk_filter_spl = spl;
@@ -104,10 +104,10 @@ int dsp_init_sender(bnetz_t *bnetz)
 	for (i = 0; i < 2; i++) {
 		coeff = 2.0 * cos(2.0 * PI * fsk_bits[i] / (double)bnetz->sender.samplerate);
 		bnetz->fsk_coeff[i] = coeff * 32768.0;
-		PDEBUG(DFSK, DEBUG_DEBUG, "coeff[%d] = %d (must be -3601 and 2573 at 8000hz)\n", i, (int)bnetz->fsk_coeff[i]);
+		PDEBUG(DDSP, DEBUG_DEBUG, "coeff[%d] = %d (must be -3601 and 2573 at 8000hz)\n", i, (int)bnetz->fsk_coeff[i]);
 
 		bnetz->phaseshift256[i] = 256.0 / ((double)bnetz->sender.samplerate / fsk_bits[i]);
-		PDEBUG(DFSK, DEBUG_DEBUG, "phaseshift[%d] = %.4f (must be arround 64 at 8000hz)\n", i, bnetz->phaseshift256[i]);
+		PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift[%d] = %.4f (must be arround 64 at 8000hz)\n", i, bnetz->phaseshift256[i]);
 	}
 
 	return 0;
@@ -116,7 +116,7 @@ int dsp_init_sender(bnetz_t *bnetz)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(bnetz_t *bnetz)
 {
-	PDEBUG(DFSK, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (bnetz->telegramm_spl) {
 		free(bnetz->telegramm_spl);
@@ -134,7 +134,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || bit != bnetz->tone_detected) {
 		if (bnetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG(DFSK, DEBUG_DEBUG, "Lost %.0f Hz tone after %d ms.\n", fsk_bits[bnetz->tone_detected], bnetz->tone_count);
+			PDEBUG(DDSP, DEBUG_DEBUG, "Lost %.0f Hz tone after %d ms.\n", fsk_bits[bnetz->tone_detected], bnetz->tone_count);
 			bnetz_receive_tone(bnetz, -1);
 		}
 		if (goodtone)
@@ -151,7 +151,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 	if (bnetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&bnetz->sender.loss);
 	if (bnetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DFSK, DEBUG_DEBUG, "Detecting continous %.0f Hz tone. (level = %d%%)\n", fsk_bits[bnetz->tone_detected], (int)(level * 100));
+		PDEBUG(DDSP, DEBUG_DEBUG, "Detecting continous %.0f Hz tone. (level = %d%%)\n", fsk_bits[bnetz->tone_detected], (int)(level * 100));
 		bnetz_receive_tone(bnetz, bnetz->tone_detected);
 	}
 }
@@ -339,10 +339,10 @@ static int fsk_telegramm(bnetz_t *bnetz, int16_t *samples, int length)
 next_telegramm:
 	if (!bnetz->telegramm) {
 		/* request telegramm */
-//		PDEBUG(DFSK, DEBUG_DEBUG, "Request new 'Telegramm'.\n");
+//		PDEBUG(DDSP, DEBUG_DEBUG, "Request new 'Telegramm'.\n");
 		telegramm = bnetz_get_telegramm(bnetz);
 		if (!telegramm) {
-			PDEBUG(DFSK, DEBUG_DEBUG, "Stop sending 'Telegramm'.\n");
+			PDEBUG(DDSP, DEBUG_DEBUG, "Stop sending 'Telegramm'.\n");
 			return length;
 		}
 		bnetz->telegramm = 1;

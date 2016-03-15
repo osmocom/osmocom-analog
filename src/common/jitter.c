@@ -31,7 +31,7 @@ int jitter_create(jitter_t *jitter, int length)
 	memset(jitter, 0, sizeof(jitter));
 	jitter->spl = calloc(length * sizeof(int16_t), 1);
 	if (!jitter->spl) {
-		PDEBUG(DAUDIO, DEBUG_ERROR, "No memory for jitter buffer.\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory for jitter buffer.\n");
 		return -ENOMEM;
 	}
 	jitter->len = length;
