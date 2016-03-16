@@ -441,7 +441,7 @@ static int match_area(nmt_t *nmt, frame_t *frame)
 
 	traffic_area = ((frame->area_info & 0x3) << 4) | frame->traffic_area;
 	if (nmt->sysinfo.traffic_area != 0 && (nmt->sysinfo.traffic_area & 0x3f) != traffic_area) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Received traffic 6 bits of traffic area (0x%02x) does not match the 6 bits of base station's traffic area (0x%02x), ignoring.\n", nmt->sysinfo.traffic_area & 0x3f, traffic_area);
+		PDEBUG(DNMT, DEBUG_NOTICE, "Received 6 bits of traffic area (0x%02x) does not match the 6 bits of base station's traffic area (0x%02x), ignoring.\n", nmt->sysinfo.traffic_area & 0x3f, traffic_area);
 		return 0;
 	}
 skip_area:

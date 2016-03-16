@@ -83,6 +83,7 @@ int dsp_init_sender(nmt_t *nmt)
 	int16_t *spl;
 	int i;
 
+	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
 	init_compander(&nmt->cstate, 8000, 3.0, 13.5);
 
 	if ((nmt->sender.samplerate % (BIT_RATE * STEPS_PER_BIT))) {
