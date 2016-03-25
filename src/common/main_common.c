@@ -36,6 +36,8 @@ int use_mncc_sock = 0;
 int send_patterns = 1;
 int loopback = 0;
 int rt_prio = 0;
+const char *read_wave = NULL;
+const char *write_wave = NULL;
 
 void print_help_common(const char *arg0, const char *ext_usage)
 {
@@ -64,6 +66,10 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");
 	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
+	printf(" -W --write-wave <file>\n");
+	printf("        Write received audio to given wav audio file.\n");
+	printf(" -R --read-wave <file>\n");
+	printf("        Replace received audio by given wav audio file.\n");
 }
 
 static struct option long_options_common[] = {
@@ -78,10 +84,12 @@ static struct option long_options_common[] = {
 	{"send-patterns", 0, 0, 'p'},
 	{"loopback", 1, 0, 'L'},
 	{"realtime", 1, 0, 'r'},
+	{"write-wave", 1, 0, 'W'},
+	{"read-wave", 1, 0, 'R'},
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:l:mp:L:r:";
+const char *optstring_common = "hD:k:d:s:c:l:mp:L:r:W:R:";
 
 struct option *long_options;
 char *optstring;
@@ -149,6 +157,14 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		break;
 	case 'r':
 		rt_prio = atoi(optarg);
+		*skip_args += 2;
+		break;
+	case 'W':
+		write_wave = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case 'R':
+		read_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
 	default:

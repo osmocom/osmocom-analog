@@ -32,7 +32,7 @@ sender_t *sender_head = NULL;
 static sender_t **sender_tailp = &sender_head;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, const char *sounddev, int samplerate, int kanal, int loopback, double loss_volume, int use_pilot_signal)
+int sender_create(sender_t *sender, const char *sounddev, int samplerate, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume, int use_pilot_signal)
 {
 	int rc = 0;
 
@@ -65,6 +65,21 @@ int sender_create(sender_t *sender, const char *sounddev, int samplerate, int ka
 		goto error;
 	}
 
+	if (write_wave) {
+		rc = wave_create_record(&sender->wave_rec, write_wave, samplerate);
+		if (rc < 0) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			goto error;
+		}
+	}
+	if (read_wave) {
+		rc = wave_create_playback(&sender->wave_play, read_wave, samplerate);
+		if (rc < 0) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			goto error;
+		}
+	}
+
 	*sender_tailp = sender;
 	sender_tailp = &sender->next;
 
@@ -89,6 +104,9 @@ void sender_destroy(sender_t *sender)
 
 	if (sender->sound)
 		sound_close(sender->sound);
+
+	wave_destroy_record(&sender->wave_rec);
+	wave_destroy_playback(&sender->wave_play);
 
 	jitter_destroy(&sender->audio);
 }
@@ -167,8 +185,11 @@ void process_sender(sender_t *sender, int latspl)
 				PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
 			return;
 		}
-		if (sender->loopback == 1)
+		if (sender->loopback == 1) {
+			if (sender->wave_rec.fp)
+				wave_write(&sender->wave_rec, samples, count);
 			sender_receive(sender, samples, count);
+		}
 	}
 
 	count = sound_read(sender->sound, samples, latspl);
@@ -180,8 +201,13 @@ void process_sender(sender_t *sender, int latspl)
 		return;
 	}
 	if (count) {
-		if (sender->loopback != 1)
+		if (sender->wave_play.fp)
+			wave_read(&sender->wave_play, samples, count);
+		if (sender->loopback != 1) {
+			if (sender->wave_rec.fp)
+				wave_write(&sender->wave_rec, samples, count);
 			sender_receive(sender, samples, count);
+		}
 		if (sender->loopback == 3) {
 			jitter_save(&sender->audio, samples, count);
 		}

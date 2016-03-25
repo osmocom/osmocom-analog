@@ -8,6 +8,8 @@ extern int use_mncc_sock;
 extern int send_patterns;
 extern int loopback;
 extern int rt_prio;
+extern const char *read_wave;
+extern const char *write_wave;
 
 void print_help(const char *arg0);
 void print_help_common(const char *arg0, const char *ext_usage);

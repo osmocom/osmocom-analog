@@ -6,6 +6,7 @@ libcommon_a_SOURCES = \
 	../common/debug.c \
 	../common/timer.c \
 	../common/sound_alsa.c \
+	../common/wave.c \
 	../common/goertzel.c \
 	../common/jitter.c \
 	../common/loss.c \

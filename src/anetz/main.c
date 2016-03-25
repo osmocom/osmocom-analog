@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* create transceiver instance */
-	rc = anetz_create(sounddev, samplerate, kanal, loopback, lossdetect / 100.0);
+	rc = anetz_create(sounddev, samplerate, write_wave, read_wave, kanal, loopback, lossdetect / 100.0);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 		goto fail;
