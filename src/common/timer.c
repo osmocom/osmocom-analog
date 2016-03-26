@@ -57,8 +57,9 @@ void timer_exit(struct timer *timer)
 	timer_tail_p = &timer_head;
 	while (*timer_tail_p) {
 		if (timer == *timer_tail_p)
-			*timer_tail_p = timer->next;
-		timer_tail_p = &timer->next;
+			*timer_tail_p = (*timer_tail_p)->next;
+		else
+			timer_tail_p = &((*timer_tail_p)->next);
 	}
 	timer->linked = 0;
 }
