@@ -191,6 +191,7 @@ int main(int argc, char *argv[])
 	int rc;
 	int skip_args;
 	const char *station_id = "";
+	int mandatory = 0;
 
 	/* init common tones */
 	init_nmt_tones();
@@ -204,13 +205,16 @@ int main(int argc, char *argv[])
 		station_id = argv[1];
 
 	if (!kanal) {
-		printf("No channel (\"Kanal\") is specified, I suggest channel 1.\n\n");
-		print_help(argv[0]);
-		return 0;
+		printf("No channel (\"Kanal\") is specified, I suggest channel 1 (-k 1).\n\n");
+		mandatory = 1;
 	}
 
 	if (!traffic_area[0]) {
-		printf("No traffic area is specified, I suggest to use 'SE' for Sweden and set the phone's roaming to 'SE' also.\n\n");
+		printf("No traffic area is specified, I suggest to use Sweden (-y SE,1) and set the phone's roaming to 'SE' also.\n\n");
+		mandatory = 1;
+	}
+
+	if (mandatory) {
 		print_help(argv[0]);
 		return 0;
 	}

@@ -258,7 +258,7 @@ void nmt_country_list(void)
 	printf("TA\tShort\tCountry (Provider)\n");
 	printf("------------------------------------------------------------------------\n");
 	for (i = 0; nmt_country[i].short_name; i++) {
-		if (nmt_country[i].short_name[0])
+		if (nmt_country[i].long_name[0])
 			printf("%d\t%s\t%s (%s)\n", nmt_country[i].y, nmt_country[i].short_name, nmt_country[i].long_name, nmt_country[i].provider_name);
 		else
 			printf("%d\t%s\n", nmt_country[i].y, nmt_country[i].short_name);
