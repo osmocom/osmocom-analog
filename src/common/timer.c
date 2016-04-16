@@ -89,6 +89,16 @@ void timer_stop(struct timer *timer)
 	timer->timeout = 0;
 }
 
+int timer_running(struct timer *timer)
+{
+	if (!timer->linked) {
+		fprintf(stderr, "Timer is not initialized, aborting!\n");
+		abort();
+	}
+
+	return (timer->timeout != 0);
+}
+
 void process_timer(void)
 {
 	struct timer *timer = timer_head;
