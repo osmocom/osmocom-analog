@@ -1450,7 +1450,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		return;
 
 	if (nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF) {
-		int16_t up[count * nmt->sender.srstate.factor];
+		int16_t up[(int)((double)count * nmt->sender.srstate.factor + 0.5) + 10];
 		if (nmt->compander)
 			compress_audio(&nmt->cstate, samples, count);
 		count = samplerate_upsample(&nmt->sender.srstate, samples, count, up);

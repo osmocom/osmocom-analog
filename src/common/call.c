@@ -524,18 +524,18 @@ int process_call(void)
 		return 0;
 	}
 	if (count < call.latspl) {
-		int16_t up[count];
+		int16_t up[count + 10];
 		count = call.latspl - count;
 		switch(call.state) {
 		case CALL_ALERTING:
-			count = count / call.srstate.factor;
+			count = (int)((double)count / call.srstate.factor + 0.5);
 			get_call_patterns(samples, count, PATTERN_RINGBACK);
 			count = samplerate_upsample(&call.srstate, samples, count, up);
 			/* prevent click after hangup */
 			jitter_clear(&call.audio);
 			break;
 		case CALL_DISCONNECTED:
-			count = count / call.srstate.factor;
+			count = (int)((double)count / call.srstate.factor + 0.5);
 			get_call_patterns(samples, count, cause2pattern(call.disc_cause));
 			count = samplerate_upsample(&call.srstate, samples, count, up);
 			/* prevent click after hangup */
@@ -766,7 +766,7 @@ void call_tx_audio(int callref, int16_t *samples, int count)
 
 	/* save audio from transceiver to jitter buffer */
 	if (call.sound) {
-		int16_t up[count * call.srstate.factor];
+		int16_t up[(int)((double)count * call.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&call.srstate, samples, count, up);
 		jitter_save(&call.audio, up, count);
 	}

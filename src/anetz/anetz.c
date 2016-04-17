@@ -468,7 +468,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		return;
 
 	if (anetz->dsp_mode == DSP_MODE_AUDIO) {
-		int16_t up[count * anetz->sender.srstate.factor];
+		int16_t up[(int)((double)count * anetz->sender.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&anetz->sender.srstate, samples, count, up);
 		jitter_save(&anetz->sender.audio, up, count);
 	}
