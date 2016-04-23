@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* create transceiver instance */
-	rc = bnetz_create(sounddev, samplerate, write_wave, read_wave, kanal, gfs, loopback, (double)lossdetect / 100.0, pilot);
+	rc = bnetz_create(sounddev, samplerate, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, kanal, gfs, loopback, (double)lossdetect / 100.0, pilot);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 		goto fail;

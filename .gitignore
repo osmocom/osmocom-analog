@@ -24,3 +24,4 @@ src/anetz/anetz
 src/bnetz/bnetz
 src/nmt/nmt
 test/test_compander
+test/test_emphasis

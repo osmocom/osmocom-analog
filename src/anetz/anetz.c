@@ -137,7 +137,7 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(const char *sounddev, int samplerate, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume)
+int anetz_create(const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume)
 {
 	anetz_t *anetz;
 	int rc;
@@ -156,7 +156,7 @@ int anetz_create(const char *sounddev, int samplerate, const char *write_wave, c
 	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&anetz->sender, sounddev, samplerate, write_wave, read_wave, kanal, loopback, loss_volume, -1);
+	rc = sender_create(&anetz->sender, sounddev, samplerate, pre_emphasis, de_emphasis, write_wave, read_wave, kanal, loopback, loss_volume, -1);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

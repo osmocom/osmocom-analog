@@ -283,7 +283,7 @@ static void nmt_timeout(struct timer *timer);
 static void nmt_go_idle(nmt_t *nmt);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(const char *sounddev, int samplerate, const char *write_wave, const char *read_wave, int channel, enum nmt_chan_type chan_type, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback)
+int nmt_create(const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int channel, enum nmt_chan_type chan_type, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -324,7 +324,7 @@ int nmt_create(const char *sounddev, int samplerate, const char *write_wave, con
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, sounddev, samplerate, write_wave, read_wave, channel, loopback, 0, -1);
+	rc = sender_create(&nmt->sender, sounddev, samplerate, pre_emphasis, de_emphasis, write_wave, read_wave, channel, loopback, 0, -1);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

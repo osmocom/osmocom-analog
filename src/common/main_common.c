@@ -36,6 +36,8 @@ int use_mncc_sock = 0;
 int send_patterns = 1;
 int loopback = 0;
 int rt_prio = 0;
+int do_pre_emphasis = 0;
+int do_de_emphasis = 0;
 const char *read_wave = NULL;
 const char *write_wave = NULL;
 
@@ -66,6 +68,12 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");
 	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
+	printf(" -E --pre-emphasis\n");
+	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
+	printf("        transmitter. (No pre-emphasis done by the transmitter.)\n");
+	printf(" -e --de-emphasis\n");
+	printf("        Enable de-emphasis, if you directly connect to the discriminator of\n");
+	printf("        the receiver. (No de-emphasis done by the receiver.)\n");
 	printf(" -W --write-wave <file>\n");
 	printf("        Write received audio to given wav audio file.\n");
 	printf(" -R --read-wave <file>\n");
@@ -84,12 +92,14 @@ static struct option long_options_common[] = {
 	{"send-patterns", 0, 0, 'p'},
 	{"loopback", 1, 0, 'L'},
 	{"realtime", 1, 0, 'r'},
+	{"pre-emphasis", 0, 0, 'E'},
+	{"de-emphasis", 0, 0, 'e'},
 	{"write-wave", 1, 0, 'W'},
 	{"read-wave", 1, 0, 'R'},
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:l:mp:L:r:W:R:";
+const char *optstring_common = "hD:k:d:s:c:l:mp:L:r:EeW:R:";
 
 struct option *long_options;
 char *optstring;
@@ -158,6 +168,14 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'r':
 		rt_prio = atoi(optarg);
 		*skip_args += 2;
+		break;
+	case 'E':
+		do_pre_emphasis = 1;
+		*skip_args += 1;
+		break;
+	case 'e':
+		do_de_emphasis = 1;
+		*skip_args += 1;
 		break;
 	case 'W':
 		write_wave = strdup(optarg);

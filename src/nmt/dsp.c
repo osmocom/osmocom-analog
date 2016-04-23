@@ -33,7 +33,7 @@
 #define PI			M_PI
 
 /* signalling */
-#define TX_AUDIO_0dBm0		16384	/* works quite well */
+#define TX_AUDIO_0dBm0		32767	/* works quite well */
 #define TX_PEAK_FSK		16384.0	/* peak amplitude of signalling FSK */
 #define TX_PEAK_SUPER		1638.0	/* peak amplitude of supervisory signal */
 #define BIT_RATE		1200	/* baud rate */
@@ -467,8 +467,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		spl = nmt->sender.rxbuf;
 		pos = nmt->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {
-#warning hacking: remove after preemphasis implementation
-			spl[pos++] = down[i] / 2;
+			spl[pos++] = down[i];
 			if (pos == 160) {
 				call_tx_audio(nmt->sender.callref, spl, 160);
 				pos = 0;

@@ -32,13 +32,15 @@ sender_t *sender_head = NULL;
 static sender_t **sender_tailp = &sender_head;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, const char *sounddev, int samplerate, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume, int use_pilot_signal)
+int sender_create(sender_t *sender, const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int kanal, int loopback, double loss_volume, int use_pilot_signal)
 {
 	int rc = 0;
 
 	PDEBUG(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
 
 	sender->samplerate = samplerate;
+	sender->pre_emphasis = pre_emphasis;
+	sender->de_emphasis = de_emphasis;
 	sender->kanal = kanal;
 	sender->loopback = loopback;
 	sender->loss_volume = loss_volume;
@@ -79,6 +81,10 @@ int sender_create(sender_t *sender, const char *sounddev, int samplerate, const 
 			goto error;
 		}
 	}
+
+	rc = init_emphasis(&sender->estate, samplerate);
+	if (rc < 0)
+		goto error;
 
 	*sender_tailp = sender;
 	sender_tailp = &sender->next;
@@ -151,6 +157,8 @@ void process_sender(sender_t *sender, int latspl)
 			jitter_load(&sender->audio, samples, count);
 		else
 			sender_send(sender, samples, count);
+		if (sender->pre_emphasis)
+			pre_emphasis(&sender->estate, samples, count);
 		switch (sender->use_pilot_signal) {
 		case 2:
 			/* tone if pilot signal is on */
@@ -201,6 +209,8 @@ void process_sender(sender_t *sender, int latspl)
 		return;
 	}
 	if (count) {
+		if (sender->de_emphasis)
+			de_emphasis(&sender->estate, samples, count);
 		if (sender->wave_play.fp)
 			wave_read(&sender->wave_play, samples, count);
 		if (sender->loopback != 1) {

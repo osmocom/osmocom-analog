@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* create transceiver instance */
-	rc = nmt_create(sounddev, samplerate, write_wave, read_wave, kanal, (loopback) ? CHAN_TYPE_TEST : chan_type, ms_power, nmt_digits2value(traffic_area, 2), area_no, compander, supervisory, loopback);
+	rc = nmt_create(sounddev, samplerate, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, kanal, (loopback) ? CHAN_TYPE_TEST : chan_type, ms_power, nmt_digits2value(traffic_area, 2), area_no, compander, supervisory, loopback);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 		goto fail;
