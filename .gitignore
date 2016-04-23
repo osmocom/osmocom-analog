@@ -23,3 +23,4 @@ src/common/libcommon.a
 src/anetz/anetz
 src/bnetz/bnetz
 src/nmt/nmt
+test/test_compander

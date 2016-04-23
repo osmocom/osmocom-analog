@@ -33,8 +33,9 @@
 #define PI			M_PI
 
 /* signalling */
-#define TX_PEAK_FSK		16384	/* peak amplitude of signalling FSK */
-#define TX_PEAK_SUPER		1638	/* peak amplitude of supervisory signal */
+#define TX_AUDIO_0dBm0		16384	/* works quite well */
+#define TX_PEAK_FSK		16384.0	/* peak amplitude of signalling FSK */
+#define TX_PEAK_SUPER		1638.0	/* peak amplitude of supervisory signal */
 #define BIT_RATE		1200	/* baud rate */
 #define STEPS_PER_BIT		10	/* step every 1/12000 sec */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
@@ -84,7 +85,7 @@ int dsp_init_sender(nmt_t *nmt)
 	int i;
 
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
-	init_compander(&nmt->cstate, 8000, 3.0, 13.5);
+	init_compander(&nmt->cstate, 8000, 3.0, 13.5, TX_AUDIO_0dBm0);
 
 	if ((nmt->sender.samplerate % (BIT_RATE * STEPS_PER_BIT))) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be a multiple of %d bits per second.\n", BIT_RATE * STEPS_PER_BIT);
@@ -238,7 +239,8 @@ static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 
 	/* send telegramm */
 	frames_elapsed = (double)(nmt->rx_sample_count_current - nmt->rx_sample_count_last) / (double)(nmt->samples_per_bit * 166);
-	nmt_receive_frame(nmt, nmt->fsk_filter_frame, nmt->fsk_filter_qualitysum / 140.0, nmt->fsk_filter_levelsum / 140.0, frames_elapsed);
+	/* convert level so that received level at TX_PEAK_FSK results in 1.0 (100%) */
+	nmt_receive_frame(nmt, nmt->fsk_filter_frame, nmt->fsk_filter_qualitysum / 140.0, nmt->fsk_filter_levelsum / 140.0 * 32768.0 / TX_PEAK_FSK, frames_elapsed);
 }
 
 char *show_level(int value)
@@ -339,8 +341,8 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 
 #if 0
 	/* normalize levels */
-	result[0] *= 32768.0 / (double)TX_PEAK_SUPER / 0.63662;
-	result[1] *= 32768.0 / (double)TX_PEAK_SUPER / 0.63662;
+	result[0] *= 32768.0 / TX_PEAK_SUPER / 0.63662;
+	result[1] *= 32768.0 / TX_PEAK_SUPER / 0.63662;
 	printf("signal=%.4f noise=%.4f\n", result[0], result[1]);
 #endif
 
@@ -412,7 +414,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	spl = nmt->fsk_filter_spl;
 	for (i = 0; i < length; i++) {
 #ifdef DEBUG_MODULATOR
-		printf("|%s|\n", show_level((int)((samples[i] / (double)TX_PEAK_FSK) * 50)+50));
+		printf("|%s|\n", show_level((int)((samples[i] / TX_PEAK_FSK) * 50)+50));
 #endif
 		spl[pos++] = samples[i];
 		if (nmt->fsk_filter_mute) {
@@ -441,7 +443,8 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		spl = nmt->sender.rxbuf;
 		pos = nmt->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {
-			spl[pos++] = down[i];
+#warning hacking: remove after preemphasis implementation
+			spl[pos++] = down[i] / 2;
 			if (pos == 160) {
 				call_tx_audio(nmt->sender.callref, spl, 160);
 				pos = 0;

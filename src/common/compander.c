@@ -17,42 +17,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include "compander.h"
 
-/* this is the 0 DB level that stays 0 DB after compression / espansion */
-#define ZERO_DB_LEVEL	16384.0
+//#define db2level(db)			pow(10, (double)db / 20.0)
 
-/* what factor shall the gain raise and fall after given attack/recovery time */
-#define ATTACK_FACTOR	1.5
-#define RECOVERY_FACTOR	0.75
+/* factor is the gain (raise and fall) after given attack/recovery time */
+#define COMPRESS_ATTACK_FACTOR		1.83		/* about 1.5 after 12 dB step up */
+#define COMPRESS_RECOVERY_FACTOR	0.44		/* about 0.75 after 12 dB step down */
+#define EXPAND_ATTACK_FACTOR		1.145		/* about 0.57 after 6 dB step up */
+#define EXPAND_RECOVERY_FACTOR		0.753		/* about 1.51 after 6 dB step down */
 
 /* Minimum level value to keep state */
-#define ENVELOP_MIN	0.001
+#define ENVELOPE_MIN	0.001
 
 static double sqrt_tab[10000];
 
 /*
- * Generate companding tables according to NMT specification
+ * Init compander according to ITU-T G.162 specification
  *
  * Hopefully this is correct
  *
  */
-void init_compander(compander_t *state, int samplerate, double attack_ms, double recovery_ms)
+void init_compander(compander_t *state, int samplerate, double attack_ms, double recovery_ms, int unaffected_level)
 {
 	int i;
 
 	memset(state, 0, sizeof(*state));
 
-	state->envelop_e = 1.0;
-	state->envelop_c = 1.0;
-	/* ITU-T G.162: 1.5 times the steady state after attack_ms */
-	state->step_up = pow(ATTACK_FACTOR, 1000.0 / attack_ms / (double)samplerate);
-
-	/* ITU-T G.162: 0.75 times the steady state after recovery_ms */
-	state->step_down = pow(RECOVERY_FACTOR, 1000.0 / recovery_ms / (double)samplerate);
+	state->c.peak = 1.0;
+	state->c.envelope = 1.0;
+	state->e.peak = 1.0;
+	state->e.envelope = 1.0;
+	state->c.step_up = pow(COMPRESS_ATTACK_FACTOR, 1000.0 / attack_ms / (double)samplerate);
+	state->c.step_down = pow(COMPRESS_RECOVERY_FACTOR, 1000.0 / recovery_ms / (double)samplerate);
+	state->e.step_up = pow(EXPAND_ATTACK_FACTOR, 1000.0 / attack_ms / (double)samplerate);
+	state->e.step_down = pow(EXPAND_RECOVERY_FACTOR, 1000.0 / recovery_ms / (double)samplerate);
+	state->c.unaffected = unaffected_level;
+	state->e.unaffected = unaffected_level;
 
 	// FIXME: make global, not at instance
 	for (i = 0; i < 10000; i++)
@@ -62,64 +67,85 @@ void init_compander(compander_t *state, int samplerate, double attack_ms, double
 void compress_audio(compander_t *state, int16_t *samples, int num)
 {
 	int32_t sample;
-	double value, envelop, step_up, step_down;
+	double value, peak, envelope, step_up, step_down, unaffected;
 	int i;
 
-	step_up = state->step_up;
-	step_down = state->step_down;
-	envelop = state->envelop_c;
+	step_up = state->c.step_up;
+	step_down = state->c.step_down;
+	peak = state->c.peak;
+	envelope = state->c.envelope;
+	unaffected = state->c.unaffected;
 
-//	printf("envelop=%.4f\n", envelop);
+//	printf("envelope=%.4f\n", envelope);
 	for (i = 0; i < num; i++) {
-		/* normalize sample value to 0 DB level */
-		value = (double)(*samples) / ZERO_DB_LEVEL;
+		/* normalize sample value to unaffected level */
+		value = (double)(*samples) / unaffected;
 
-		if (fabs(value) > envelop)
-			envelop *= step_up;
+		/* 'peak' is the level that raises directly with the signal
+		 * level, but falls with specified recovery rate. */
+		if (fabs(value) > peak)
+			peak = fabs(value);
 		else
-			envelop *= step_down;
-		if (envelop < ENVELOP_MIN)
-			envelop = ENVELOP_MIN;
+			peak *= step_down;
+		/* 'evelope' is the level that raises with the specified attack
+		 * rate to 'peak', but falls with specified recovery rate. */
+		if (peak > envelope)
+			envelope *= step_up;
+		else
+			envelope = peak;
+		if (envelope < ENVELOPE_MIN)
+			envelope = ENVELOPE_MIN;
 
-		value = value / sqrt_tab[(int)(envelop / 0.001)];
+		value = value / sqrt_tab[(int)(envelope / 0.001)];
+//if (i > 47000.0 && i < 48144)
+//printf("time=%.4f envelope=%.4fdb, value=%.4f\n", (double)i/48000.0, 20*log10(envelope), value);
 
 		/* convert back from 0 DB level to sample value */
-		sample = (int)(value * ZERO_DB_LEVEL);
+		sample = (int)(value * unaffected);
 		if (sample > 32767)
 			sample = 32767;
 		else if (sample < -32768)
 			sample = -32768;
 		*samples++ = sample;
 	}
+//exit(0);
 
-	state->envelop_c = envelop;
+	state->c.envelope = envelope;
+	state->c.peak = peak;
 }
 
 void expand_audio(compander_t *state, int16_t *samples, int num)
 {
 	int32_t sample;
-	double value, envelop, step_up, step_down;
+	double value, peak, envelope, step_up, step_down, unaffected;
 	int i;
 
-	step_up = state->step_up;
-	step_down = state->step_down;
-	envelop = state->envelop_e;
+	step_up = state->e.step_up;
+	step_down = state->e.step_down;
+	peak = state->e.peak;
+	envelope = state->e.envelope;
+	unaffected = state->e.unaffected;
 
 	for (i = 0; i < num; i++) {
 		/* normalize sample value to 0 DB level */
-		value = (double)(*samples) / ZERO_DB_LEVEL;
+		value = (double)(*samples) / unaffected;
 
-		if (fabs(value) > envelop)
-			envelop *= step_up;
+		/* for comments: see compress_audio() */
+		if (fabs(value) > peak)
+			peak = fabs(value);
 		else
-			envelop *= step_down;
-		if (envelop < ENVELOP_MIN)
-			envelop = ENVELOP_MIN;
+			peak *= step_down;
+		if (peak > envelope)
+			envelope *= step_up;
+		else
+			envelope = peak;
+		if (envelope < ENVELOPE_MIN)
+			envelope = ENVELOPE_MIN;
 
-		value = value * envelop;
+		value = value * envelope;
 
 		/* convert back from 0 DB level to sample value */
-		sample = (int)(value * ZERO_DB_LEVEL);
+		sample = (int)(value * unaffected);
 		if (sample > 32767)
 			sample = 32767;
 		else if (sample < -32768)
@@ -127,6 +153,7 @@ void expand_audio(compander_t *state, int16_t *samples, int num)
 		*samples++ = sample;
 	}
 
-	state->envelop_e = envelop;
+	state->e.envelope = envelope;
+	state->e.peak = peak;
 }
 
