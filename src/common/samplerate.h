@@ -3,13 +3,12 @@
 typedef struct samplerate {
 	double factor;
 	struct {
-		double sum;
-		double sum_count;
 		biquad_low_pass_t bq;
+		double in_index;
 	} down;
 	struct {
-		double last_sample;
 		biquad_low_pass_t bq;
+		double in_index;
 	} up;
 } samplerate_t;
 

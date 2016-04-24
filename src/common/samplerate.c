@@ -46,9 +46,9 @@ int init_samplerate(samplerate_t *state, double samplerate)
 /* convert input sample rate to 8000 Hz */
 int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, int16_t *output)
 {
-	int output_num, i;
-	double factor = state->factor, step;
-	double spl[input_num + 10]; /* add some safety */
+	int output_num = 0, i, idx;
+	double factor = state->factor, in_index;
+	double spl[input_num];
 	int32_t value;
 
 	/* convert samples to double */
@@ -57,21 +57,36 @@ int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, in
 
 	/* filter down */
 	biquad_process(&state->down.bq, spl, input_num, 1);
-	output_num = (int)((double)input_num / factor);
 
 	/* resample filtered result */
-	for (i = 0, step = 0.5 / (double)output_num; i < output_num; i++, step += factor) {
-		value = spl[(int)step] * 32768.0;
+	in_index = state->down.in_index;
+
+	for (i = 0; ; i++) {
+		/* convert index to int */
+		idx = (int)in_index;
+		/* if index is outside input sample range, we are done */
+		if (idx >= input_num)
+			break;
+		/* copy value from input to output */
+		value = spl[idx] * 32768.0;
 		if (value < -32768)
 			value = -32768;
 		else if (value > 32767)
 			value = 32767;
 		*output++ = value;
+		/* count output number */
+		output_num++;
+		/* increment input index */
+		in_index += factor;
 	}
-	if ((int)(step - factor) >= input_num) {
-		fprintf(stderr, "Error: input_num is %d, so step should be close to 0.5 below that, but it is %.4f. Please fix!\n", input_num, step);
-		abort();
-	}
+
+	/* remove number of input samples from index */
+	in_index -= (double)input_num;
+	/* in_index cannot be negative, excpet due to rounding error, so... */
+	if ((int)in_index < 0)
+		in_index = 0.0;
+
+	state->down.in_index = in_index;
 
 	return output_num;
 }
@@ -79,20 +94,35 @@ int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, in
 /* convert 8000 Hz sample rate to output sample rate */
 int samplerate_upsample(samplerate_t *state, int16_t *input, int input_num, int16_t *output)
 {
-	int output_num, i;
-	double factor = 1.0 / state->factor, step;
+	int output_num = 0, i, idx;
+	double factor = 1.0 / state->factor, in_index;
 	double spl[(int)((double)input_num / factor + 0.5) + 10]; /* add some fafety */
 	int32_t value;
 
-	output_num = (int)((double)input_num / factor + 0.5);
-
 	/* resample input */
-	for (i = 0, step = 0.5 / (double)output_num; i < output_num; i++, step += factor)
-		spl[i] = input[(int)step] / 32768.0;
-	if ((int)(step - factor) >= input_num) {
-		fprintf(stderr, "Error: input_num is %d, so step should be close to 0.5 below that, but it is %.4f. Please fix!\n", input_num, step);
-		abort();
+	in_index = state->up.in_index;
+
+	for (i = 0; ; i++) {
+		/* convert index to int */
+		idx = (int)in_index;
+		/* if index is outside input sample range, we are done */
+		if (idx >= input_num)
+			break;
+		/* copy value */
+		spl[i] = input[idx] / 32768.0;
+		/* count output number */
+		output_num++;
+		/* increment input index */
+		in_index += factor;
 	}
+
+	/* remove number of input samples from index */
+	in_index -= (double)input_num;
+	/* in_index cannot be negative, excpet due to rounding error, so... */
+	if ((int)in_index < 0)
+		in_index = 0.0;
+
+	state->up.in_index = in_index;
 
 	/* filter up */
 	biquad_process(&state->up.bq, spl, output_num, 1);
