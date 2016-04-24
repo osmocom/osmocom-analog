@@ -200,15 +200,33 @@ void dsp_cleanup_sender(nmt_t *nmt)
 static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 {
 	double frames_elapsed;
+	int i;
 
 //	printf("bit=%d quality=%.4f\n", bit, quality);
 	if (!nmt->fsk_filter_in_sync) {
 		nmt->fsk_filter_sync = (nmt->fsk_filter_sync << 1) | bit;
 
+		/* level and quality */
+		nmt->fsk_filter_level[nmt->fsk_filter_count & 0xff] = level;
+		nmt->fsk_filter_quality[nmt->fsk_filter_count & 0xff] = quality;
+		nmt->fsk_filter_count++;
+
 		/* check if pattern 1010111100010010 matches */
 		if (nmt->fsk_filter_sync != 0xaf12)
 			return;
-//		printf("sync\n");
+
+		/* average level and quality */
+		level = quality = 0;
+		for (i = 0; i < 16; i++) {
+			level += nmt->fsk_filter_level[(nmt->fsk_filter_count - 1 - i) & 0xff];
+			quality += nmt->fsk_filter_quality[(nmt->fsk_filter_count - 1 - i) & 0xff];
+		}
+		level /= 16.0; quality /= 16.0;
+//		printf("sync (level = %.2f, quality = %.2f\n", level, quality);
+
+		/* do not accept garbage */
+		if (quality < 0.65)
+			return;
 
 		/* sync time */
 		nmt->rx_sample_count_last = nmt->rx_sample_count_current;
@@ -218,8 +236,6 @@ static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 		nmt->fsk_filter_sync = 0;
 		nmt->fsk_filter_in_sync = 1;
 		nmt->fsk_filter_count = 0;
-		nmt->fsk_filter_levelsum = 0;
-		nmt->fsk_filter_qualitysum = 0;
 
 		/* set muting of receive path */
 		nmt->fsk_filter_mute = (int)((double)nmt->sender.samplerate * MUTE_DURATION);
@@ -227,20 +243,28 @@ static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 	}
 
 	/* read bits */
-	nmt->fsk_filter_frame[nmt->fsk_filter_count++] = bit + '0';
-	nmt->fsk_filter_levelsum += level;
-	nmt->fsk_filter_qualitysum += quality;
-	if (nmt->fsk_filter_count != 140)
+	nmt->fsk_filter_frame[nmt->fsk_filter_count] = bit + '0';
+	nmt->fsk_filter_level[nmt->fsk_filter_count] = level;
+	nmt->fsk_filter_quality[nmt->fsk_filter_count] = quality;
+	if (++nmt->fsk_filter_count != 140)
 		return;
 
 	/* end of frame */
 	nmt->fsk_filter_frame[140] = '\0';
 	nmt->fsk_filter_in_sync = 0;
 
+	/* average level and quality */
+	level = quality = 0;
+	for (i = 0; i < 140; i++) {
+		level += nmt->fsk_filter_level[i];
+		quality += nmt->fsk_filter_quality[i];
+	}
+	level /= 140.0; quality /= 140.0;
+
 	/* send telegramm */
 	frames_elapsed = (double)(nmt->rx_sample_count_current - nmt->rx_sample_count_last) / (double)(nmt->samples_per_bit * 166);
 	/* convert level so that received level at TX_PEAK_FSK results in 1.0 (100%) */
-	nmt_receive_frame(nmt, nmt->fsk_filter_frame, nmt->fsk_filter_qualitysum / 140.0, nmt->fsk_filter_levelsum / 140.0 * 32768.0 / TX_PEAK_FSK, frames_elapsed);
+	nmt_receive_frame(nmt, nmt->fsk_filter_frame, quality, level * 32768.0 / TX_PEAK_FSK, frames_elapsed);
 }
 
 char *show_level(int value)

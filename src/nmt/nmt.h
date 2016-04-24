@@ -108,8 +108,8 @@ typedef struct nmt {
 	int			fsk_filter_mute;	/* mute count down after sync */
 	char			fsk_filter_frame[141];	/* receive frame (one extra byte to terminate string) */
 	int			fsk_filter_count;	/* next bit to receive */
-	double			fsk_filter_levelsum;	/* sum of 140 level infos */
-	double			fsk_filter_qualitysum;	/* sum of 140 quality infos */
+	double			fsk_filter_level[256];	/* level infos */
+	double			fsk_filter_quality[256];/* quality infos */
 	int16_t			*super_filter_spl;	/* array with sample buffer for supervisory detection */
 	int			super_filter_pos;	/* current sample position in filter_spl */
 	double			super_phaseshift256[4];	/* how much the phase of sine wave changes per sample */
