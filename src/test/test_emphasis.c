@@ -52,6 +52,8 @@ int main(void)
 	emphasis_t estate;
 	int16_t samples[SAMPLERATE];
 
+	printf("1000 Hz shall be close to 0 dB, that is no significant change in volume.\n\n");
+
 	/* generate sweep 0..4khz */
 	gen_samples(samples);
 

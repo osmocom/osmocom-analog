@@ -35,11 +35,11 @@ int init_emphasis(emphasis_t *state, int samplerate)
 		return -1;
 	}
 
-	factor = 0.95;
+	factor = 0.97;
 	state->p.factor = factor;
-	state->p.amp = samplerate / 48000.0 * 4.0; /* mysterious 48000 */
+	state->p.amp = samplerate / 6350.0;
 	state->d.factor = factor;
-	state->d.amp = 1.0 / (samplerate / 48000.0 * 4.0); /* mysterious 48000 */
+	state->d.amp = 1.0 / (samplerate / 6350.0);
 
 	return 0;
 }
