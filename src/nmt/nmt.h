@@ -85,6 +85,10 @@ typedef struct nmt {
 	char			dialing[33];		/* dialed digits */
 	int			page_try;		/* number of paging try */
 
+	/* special state for paging on different CC */
+	struct nmt		*page_for_nmt;		/* only page and assign channel for nmt instance as set */
+	int			mt_channel;		/* channel to use */
+
 	/* features */
 	int			compander;		/* if compander shall be used */
 	int			supervisory;		/* if set, use supervisory signal 1..4 */
@@ -134,7 +138,7 @@ const char *chan_type_long_name(enum nmt_chan_type chan_type);
 double nmt_channel2freq(int channel, int uplink);
 void nmt_country_list(void);
 uint8_t nmt_country_by_short_name(const char *short_name);
-int nmt_create(const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int channel, enum nmt_chan_type chan_type, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback);
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback);
 void nmt_destroy(sender_t *sender);
 void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);
 const char *nmt_get_frame(nmt_t *nmt);

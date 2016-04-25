@@ -37,7 +37,8 @@
 #include "announcement.h"
 
 /* settings */
-enum nmt_chan_type chan_type = CHAN_TYPE_CC_TC;
+int num_chan_type = 0;
+enum nmt_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
 int ms_power = 1; /* 1..3 */
 char traffic_area[3] = "";
 char area_no = 0;
@@ -49,7 +50,7 @@ void print_help(const char *arg0)
 	print_help_common(arg0, "-y <traffic area> | list ");
 	/*      -                                                                             - */
 	printf(" -t --channel-type <channel type> | list\n");
-	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type));
+	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station 1..3. (default = '%d')\n", ms_power);
 	printf("        3 = 15 W / 7 W (handheld), 2 = 1.5 W, 1 = 150 mW\n");
@@ -99,7 +100,6 @@ static int handle_options(int argc, char **argv)
 
 		switch (c) {
 		case 't':
-
 			if (!strcmp(optarg, "list")) {
 				nmt_channel_list();
 				exit(0);
@@ -109,7 +109,7 @@ static int handle_options(int argc, char **argv)
 				fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", optarg);
 				exit(0);
 			}
-			chan_type = rc;
+			OPT_ARRAY(num_chan_type, chan_type, rc)
 			skip_args += 2;
 			break;
 		case 'P':
@@ -192,6 +192,7 @@ int main(int argc, char *argv[])
 	int skip_args;
 	const char *station_id = "";
 	int mandatory = 0;
+	int i;
 
 	/* init common tones */
 	init_nmt_tones();
@@ -204,9 +205,21 @@ int main(int argc, char *argv[])
 	if (argc > 1)
 		station_id = argv[1];
 
-	if (!kanal) {
+	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel 1 (-k 1).\n\n");
 		mandatory = 1;
+	}
+	if (num_kanal == 1 && num_sounddev == 0)
+		num_sounddev = 1; /* use defualt */
+	if (num_kanal != num_sounddev) {
+		fprintf(stdout, "You need to specify as many sound devices as you have channels.\n");
+		exit(0);
+	}
+	if (num_kanal == 1 && num_chan_type == 0)
+		num_chan_type = 1; /* use defualt */
+	if (num_kanal != num_chan_type) {
+		fprintf(stdout, "You need to specify as many channel types as you have channels.\n");
+		exit(0);
 	}
 
 	if (!traffic_area[0]) {
@@ -239,19 +252,17 @@ int main(int argc, char *argv[])
 	}
 
 	/* create transceiver instance */
-	rc = nmt_create(sounddev, samplerate, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, kanal, (loopback) ? CHAN_TYPE_TEST : chan_type, ms_power, nmt_digits2value(traffic_area, 2), area_no, compander, supervisory, loopback);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
-		goto fail;
-	}
-	if (kanal > 200) {
-		printf("Base station ready, please tune transmitter to %.4f MHz and receiver "
-			"to %.4f MHz.\n", nmt_channel2freq(kanal, 0),
-			nmt_channel2freq(kanal, 1));
-	} else {
-		printf("Base station ready, please tune transmitter to %.3f MHz and receiver "
-			"to %.3f MHz.\n", nmt_channel2freq(kanal, 0),
-			nmt_channel2freq(kanal, 1));
+	for (i = 0; i < num_kanal; i++) {
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compander, supervisory, loopback);
+		if (rc < 0) {
+			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
+			goto fail;
+		}
+		if (kanal[i] > 200) {
+			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0), nmt_channel2freq(kanal[i], 1));
+		} else {
+			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0), nmt_channel2freq(kanal[i], 1));
+		}
 	}
 
 	signal(SIGINT,sighandler);

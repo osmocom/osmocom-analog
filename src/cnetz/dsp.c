@@ -542,7 +542,8 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	return;
 #endif
 
-	fsk_fm_demod(&cnetz->fsk_demod, samples, length);
+	if (cnetz->dsp_mode != DSP_MODE_OFF)
+		fsk_fm_demod(&cnetz->fsk_demod, samples, length);
 	return;
 }
 
@@ -558,7 +559,7 @@ static int fsk_telegramm(cnetz_t *cnetz, int16_t *samples, int length)
 
 again:
 	/* there must be length, otherwise we would skip blocks */
-	if (!length)
+	if (count == length)
 		return count;
 
 	pos = cnetz->fsk_tx_buffer_pos;
@@ -567,8 +568,43 @@ again:
 	/* start new telegramm, so we generate one */
 	if (pos == 0) {
 		/* measure actual signal speed */
-		if (cnetz->sched_ts == 0 && cnetz->sched_r_m == 0)
+		if (cnetz->sched_ts == 0 && cnetz->sched_r_m == 0) {
 			calc_clock_speed(cnetz, cnetz->sender.samplerate * 24 / 10, 1, 1);
+			/* sync TX */
+			if (cnetz->sender.slave) {
+				/* we are master, so we store sample count and phase */
+				cnetz->frame_last_count = count;
+				cnetz->frame_last_phase = cnetz->fsk_tx_phase;
+			}
+			if (cnetz->sender.master) {
+				/* we are slave, so we sync to sample count and phase */
+				cnetz_t *master = (cnetz_t *)cnetz->sender.master;
+				/* if we are still in sync with the sample count, we adjust the phase */
+				if (master->frame_last_count == count) {
+					PDEBUG(DDSP, DEBUG_DEBUG, "Sync slave to master: phase(master) = %.15f, phase(slave) = %.15f\n", master->frame_last_phase, cnetz->frame_last_phase);
+					cnetz->frame_last_phase = master->frame_last_phase;
+				}
+				/* only sync, if we do not hit the border of the sample chunk.
+				 * this way we have slave and master sync at the same sample chunk. */
+				if (master->frame_last_count > 0 && master->frame_last_count < length - 1 && count > 0 && count < length - 1) {
+					/* if the sample count is one sample ahead, we go back one sample */
+					if (count == master->frame_last_count + 1) {
+						PDEBUG(DDSP, DEBUG_INFO, "Sync slave to master by going back one sample: phase(master) = %.15, phase(slave) = %.15\n", master->frame_last_phase, cnetz->frame_last_phase);
+						count--;
+						samples--;
+						cnetz->frame_last_phase = master->frame_last_phase;
+					}
+					/* if the sample count is one sample behind, we go forward one sample */
+					if (count == master->frame_last_count - 1) {
+						PDEBUG(DDSP, DEBUG_INFO, "Sync slave to master by going forth one sample: phase(master) = %.15, phase(slave) = %.15\n", master->frame_last_phase, cnetz->frame_last_phase);
+						count++;
+						*samples = samples[-1];
+						samples++;
+						cnetz->frame_last_phase = master->frame_last_phase;
+					}
+				}
+			}
+		}
 
 		/* switch to speech channel */
 		if (cnetz->sched_switch_mode && cnetz->sched_r_m == 0) {
@@ -606,6 +642,7 @@ again:
 			bits = cnetz_encode_telegramm(cnetz);
 			fsk_distributed_encode(cnetz, bits);
 			break;
+		case DSP_MODE_OFF:
 		default:
 			fsk_nothing_encode(cnetz);
 		}
@@ -627,8 +664,8 @@ again:
 	}
 
 	copy = cnetz->fsk_tx_buffer_length - pos;
-	if (length < copy)
-		copy = length;
+	if (length - count < copy)
+		copy = length - count;
 	for (i = 0; i < copy; i++) {
 		if (*spl == -32768) {
 			/* marker found to insert new chunk of audio */
@@ -654,7 +691,6 @@ again:
 	cnetz->dsp_speech_pos = speech_pos;
 	pos += copy;
 	count += copy;
-	length -= copy;
 	if (pos == cnetz->fsk_tx_buffer_length) {
 		cnetz->fsk_tx_buffer_pos = 0;
 		goto again;
@@ -686,5 +722,15 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 		printf("this shall not happen, so please fix!\n");
 		exit(0);
 	}
+
+#if 0
+	#warning check phase between slave and master process
+	/* check for sync to master */
+	if (sender->master) {
+		if (((cnetz_t *)(sender->master))->fsk_tx_phase != cnetz->fsk_tx_phase) {
+			printf("phase between master and slave differs: %.10f vs %.10f!\n", ((cnetz_t *)(sender->master))->fsk_tx_phase, cnetz->fsk_tx_phase);
+		}
+	}
+#endif
 }
 

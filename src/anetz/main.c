@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
 	int rc;
 	int skip_args;
 	const char *station_id = "";
+	int i;
 
 	/* init common tones */
 	init_freiton();
@@ -116,10 +117,16 @@ int main(int argc, char *argv[])
 			station_id += strlen(station_id) - 5;
 	}
 
-	if (!kanal) {
+	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel 30.\n\n");
 		print_help(argv[-skip_args]);
 		return 0;
+	}
+	if (num_kanal == 1 && num_sounddev == 0)
+		num_sounddev = 1; /* use defualt */
+	if (num_kanal != num_sounddev) {
+		fprintf(stdout, "You need to specify as many sound devices as you have channels.\n");
+		exit(0);
 	}
 
 	if (!loopback)
@@ -142,14 +149,14 @@ int main(int argc, char *argv[])
 	}
 
 	/* create transceiver instance */
-	rc = anetz_create(sounddev, samplerate, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, kanal, loopback, lossdetect / 100.0);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
-		goto fail;
+	for (i = 0; i < num_kanal; i++) {
+		rc = anetz_create(kanal[i], sounddev[i], samplerate, cross_channels, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback, lossdetect / 100.0);
+		if (rc < 0) {
+			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
+			goto fail;
+		}
+		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], anetz_kanal2freq(kanal[i], 0), anetz_kanal2freq(kanal[i], 1));
 	}
-	printf("Base station ready, please tune transmitter to %.3f MHz and receiver "
-		"to %.3f MHz.\n", anetz_kanal2freq(kanal, 0),
-		anetz_kanal2freq(kanal, 1));
 
 	signal(SIGINT,sighandler);
 	signal(SIGHUP,sighandler);

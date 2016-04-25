@@ -203,18 +203,17 @@ int sound_write(void *inst, int16_t *samples_left, int16_t *samples_right, int n
 	return rc;
 }
 
-int sound_read(void *inst, int16_t *samples, int num)
+int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int num)
 {
 	sound_t *sound = (sound_t *)inst;
 	int16_t buff[num << 1];
-	int32_t s32;
 	int rc;
 	int i, ii;
 
 	if (sound->cchannels == 2)
 		rc = snd_pcm_readi(sound->chandle, buff, num);
 	else
-		rc = snd_pcm_readi(sound->chandle, samples, num);
+		rc = snd_pcm_readi(sound->chandle, samples_left, num);
 
 	if (rc < 0) {
 		if (errno == EAGAIN)
@@ -228,11 +227,11 @@ int sound_read(void *inst, int16_t *samples, int num)
 
 	if (sound->cchannels == 2) {
 		for (i = 0, ii = 0; i < rc; i++) {
-			s32 = buff[ii++];
-			s32 += buff[ii++];
-			*samples++ = s32 >> 1;
+			*samples_right++ = buff[ii++];
+			*samples_left++ = buff[ii++];
 		}
-	}
+	} else
+		memcpy(samples_right, samples_left, num << 1);
 
 	return rc;
 }
@@ -259,5 +258,23 @@ int sound_get_inbuffer(void *inst)
 	}
 
 	return delay;
+}
+
+int sound_is_stereo_capture(void *inst)
+{
+	sound_t *sound = (sound_t *)inst;
+
+	if (sound->cchannels == 2)
+		return 1;
+	return 0;
+}
+
+int sound_is_stereo_playback(void *inst)
+{
+	sound_t *sound = (sound_t *)inst;
+
+	if (sound->pchannels == 2)
+		return 1;
+	return 0;
 }
 

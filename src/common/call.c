@@ -552,7 +552,7 @@ int process_call(void)
 			return 0;
 		}
 	}
-	count = sound_read(call.sound, samples, call.latspl);
+	count = sound_read(call.sound, samples, samples, call.latspl);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)

@@ -1,9 +1,12 @@
 
-extern int kanal;
-extern const char *sounddev;
+extern int num_kanal;
+extern int kanal[];
+extern int num_sounddev;
+extern const char *sounddev[];
 extern const char *call_sounddev;
 extern int samplerate;
 extern int latency;
+extern int cross_channels;
 extern int use_mncc_sock;
 extern int send_patterns;
 extern int loopback;
@@ -20,6 +23,14 @@ extern char *optstring;
 void set_options_common(const char *optstring_special, struct option *long_options_special);
 void opt_switch_common(int c, char *arg0, int *skip_args);
 
+#define OPT_ARRAY(num_name, name, value) \
+{ \
+	if (num_name == MAX_SENDER) { \
+		fprintf(stderr, "Too many channels defined!\n"); \
+		exit(0); \
+	} \
+	name[num_name++] = value; \
+}
 
 extern int quit;
 void sighandler(int sigset);

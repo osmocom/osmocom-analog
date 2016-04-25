@@ -8,13 +8,21 @@
 /* dsp modes of transmission */
 enum dsp_mode {
 	DSP_SCHED_NONE = 0,	/* use for sheduling: nothing to shedule */
+	DSP_MODE_OFF,		/* send nothing on unused SpK */
 	DSP_MODE_OGK,		/* send "Telegramm" on OgK */
 	DSP_MODE_SPK_K,		/* send concentrated "Telegramm" SpK */
 	DSP_MODE_SPK_V,		/* send distributed "Telegramm" SpK */
 };
 
+enum cnetz_chan_type {
+	CHAN_TYPE_OGK,		/* pure standard organization channel (channel 131) */
+	CHAN_TYPE_SPK,		/* pure traffic channel */
+	CHAN_TYPE_OGK_SPK,	/* combined OGK + SPK; note: some phones may reject SPK on channel 131 */
+};
+
 /* current state of c-netz sender */
 enum cnetz_state {
+	CNETZ_NULL,		/* before power on */
 	CNETZ_IDLE,		/* broadcasting LR/MLR on Ogk */
 	CNETZ_BUSY,		/* currently processing a call, no other transaction allowed */
 };
@@ -85,6 +93,7 @@ struct clock_speed {
 /* instance of cnetz sender */
 typedef struct cnetz {
 	sender_t		sender;
+	enum cnetz_chan_type	chan_type;		/* channel type */
 	scrambler_t		scrambler_tx;		/* mirror what we transmit to MS */
 	scrambler_t		scrambler_rx;		/* mirror what we receive from MS */
 	compander_t		cstate;
@@ -125,6 +134,9 @@ typedef struct cnetz {
 	int			dsp_speech_length;	/* number of samples */
 	int			dsp_speech_pos;		/* current position in buffer */
 
+	int			frame_last_count;	/* master's count position of last frame sync */
+	double			frame_last_phase;	/* master's bit phase of last frame sync */
+
 	/* audio offset removal */
 	double			offset_removal_factor;	/* how much to remove every sample */
 	int16_t			offset_last_sample;	/* last sample of last audio chunk */
@@ -137,8 +149,12 @@ typedef struct cnetz {
 } cnetz_t;
 
 double cnetz_kanal2freq(int kanal, int unterband);
+void cnetz_channel_list(void);
+int cnetz_channel_by_short_name(const char *short_name);
+const char *chan_type_short_name(enum cnetz_chan_type chan_type);
+const char *chan_type_long_name(enum cnetz_chan_type chan_type);
 int cnetz_init(void);
-int cnetz_create(const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int kanal, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int loopback);
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
 const struct telegramm *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz);

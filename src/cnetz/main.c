@@ -39,6 +39,8 @@
 #include "ansage.h"
 
 /* settings */
+int num_chan_type = 0;
+enum cnetz_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_OGK_SPK };
 int measure_speed = 0;
 double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
@@ -50,13 +52,16 @@ void print_help(const char *arg0)
 {
 	print_help_common(arg0, "");
 	/*      -                                                                             - */
+	printf(" -t --channel-type <channel type> | list\n");
+	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
 	printf(" -M --measure-speed\n");
-	printf("        Measures clock speed. See documentation!\n");
+	printf("        Measures clock speed. THIS IS REQUIRED! See documentation!\n");
 	printf(" -S --clock-speed <rx ppm>,<tx ppm>\n");
 	printf("        Correct speed of sound card's clock. Use '-M' to measure speed for\n");
 	printf("        some hours after temperature has settled. The use these results to\n");
 	printf("	correct signal processing speed. After adjustment, the clock must match\n");
-	printf("	+- 1ppm or better. See documentation on how to measure correct value.\n");
+	printf("	+- 1ppm or better. CORRECTING CLOCK SPEED IS REQUIRED! See\n");
+	printf("        documentation on how to measure correct value.\n");
 	printf(" -F --flip-polarity\n");
 	printf("	Adjust, so the transmitter increases frequency, when positive levels\n");
 	printf("	are sent to sound device\n");
@@ -74,9 +79,11 @@ void print_help(const char *arg0)
 static int handle_options(int argc, char **argv)
 {
 	int skip_args = 0;
+	int rc;
 	const char *p;
 
 	static struct option long_options_special[] = {
+		{"channel-type", 1, 0, 't'},
 		{"measure-speed", 0, 0, 'M'},
 		{"clock-speed", 1, 0, 'S'},
 		{"flip-polarity", 0, 0, 'F'},
@@ -86,7 +93,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("MS:FN:P:A", long_options_special);
+	set_options_common("t:MS:FN:P:A", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -97,6 +104,19 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
+		case 't':
+			if (!strcmp(optarg, "list")) {
+				cnetz_channel_list();
+				exit(0);
+			}
+			rc = cnetz_channel_by_short_name(optarg);
+			if (rc < 0) {
+				fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", optarg);
+				exit(0);
+			}
+			OPT_ARRAY(num_chan_type, chan_type, rc)
+			skip_args += 2;
+			break;
 		case 'M':
 			measure_speed = 1;
 			skip_args++;
@@ -148,6 +168,7 @@ int main(int argc, char *argv[])
 	int skip_args;
 	const char *station_id = "";
 	int mandatory = 0;
+	int i;
 
 	/* init common tones */
 	init_freiton();
@@ -161,9 +182,21 @@ int main(int argc, char *argv[])
 	if (argc > 1) {
 	}
 
-	if (!kanal) {
+	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", CNETZ_OGK_KANAL);
 		mandatory = 1;
+	}
+	if (num_kanal == 1 && num_sounddev == 0)
+		num_sounddev = 1; /* use defualt */
+	if (num_kanal != num_sounddev) {
+		fprintf(stdout, "You need to specify as many sound devices as you have channels.\n");
+		exit(0);
+	}
+	if (num_kanal == 1 && num_chan_type == 0)
+		num_chan_type = 1; /* use defualt */
+	if (num_kanal != num_chan_type) {
+		fprintf(stdout, "You need to specify as many channel types as you have channels.\n");
+		exit(0);
 	}
 
 	if (!set_clock_speed && !measure_speed) {
@@ -199,15 +232,33 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
-	/* create transceiver instance */
-	rc = cnetz_create(sounddev, samplerate, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, kanal, auth, ms_power, measure_speed, clock_speed, deviation, noise, loopback);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
+	/* check for mandatory OgK */
+	for (i = 0; i < num_kanal; i++) {
+		if (chan_type[i] == CHAN_TYPE_OGK || chan_type[i] == CHAN_TYPE_OGK_SPK)
+			break;
+	}
+	if (i == num_kanal) {
+		fprintf(stderr, "You must define at least one OgK (control) or OgK/SPK (control/speech) channel type. Quitting!\n");
 		goto fail;
 	}
-	printf("Base station ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", cnetz_kanal2freq(CNETZ_OGK_KANAL, 0), cnetz_kanal2freq(CNETZ_OGK_KANAL, 1));
-	if (kanal != CNETZ_OGK_KANAL)
-		printf("When switching to speech channel %d, be sure that transmitter switches to %.3f MHz and receiver to %.3f MHz. (using pilot signal)\n", kanal, cnetz_kanal2freq(kanal, 0), cnetz_kanal2freq(kanal, 1));
+
+	/* check for mandatory OgK */
+	for (i = 0; i < num_kanal; i++) {
+		if (chan_type[i] == CHAN_TYPE_SPK || chan_type[i] == CHAN_TYPE_OGK_SPK)
+			break;
+	}
+	if (i == num_kanal)
+		fprintf(stderr, "You did not define any SpK (speech) channel. You will not be able to make any call.\n");
+
+	/* create transceiver instance */
+	for (i = 0; i < num_kanal; i++) {
+		rc = cnetz_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, deviation, noise, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback);
+		if (rc < 0) {
+			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
+			goto fail;
+		}
+		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], cnetz_kanal2freq(kanal[i], 0), cnetz_kanal2freq(kanal[i], 1));
+	}
 
 	signal(SIGINT,sighandler);
 	signal(SIGHUP,sighandler);

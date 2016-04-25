@@ -25,13 +25,17 @@
 #include <signal.h>
 #include "main.h"
 #include "debug.h"
+#include "../common/sender.h"
 
 /* common settings */
-int kanal = 0;
-const char *sounddev = "hw:0,0";
+int num_kanal = 0;
+int kanal[MAX_SENDER];
+int num_sounddev = 0;
+const char *sounddev[MAX_SENDER] = { "hw:0,0" };
 const char *call_sounddev = "";
 int samplerate = 48000;
 int latency = 50;
+int cross_channels = 0;
 int use_mncc_sock = 0;
 int send_patterns = 1;
 int loopback = 0;
@@ -51,13 +55,16 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -D --debug <level>\n");
 	printf("        Debug level:  0 = debug | 1 = info | 2 = notice (default = '%d')\n", debuglevel);
 	printf(" -k --kanal <channel>\n");
-	printf("        Channel number of \"Sender\" (default = '%d')\n", kanal);
+	printf("        Channel number of \"Sender\"\n");
 	printf(" -d --device hw:<card>,<device>\n");
-	printf("        Sound card and device number (default = '%s')\n", sounddev);
+	printf("        Sound card and device number (default = '%s')\n", sounddev[0]);
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
 	printf(" -l --latency <delay>\n");
 	printf("        How many milliseconds processed in advance  (default = '%d')\n", latency);
+	printf(" -x --cross\n");
+	printf("        Cross channels on sound card. 1st channel (right) is swapped with\n");
+	printf("        second channel (left)\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
@@ -88,6 +95,7 @@ static struct option long_options_common[] = {
 	{"call-device", 1, 0, 'c'},
 	{"samplerate", 1, 0, 's'},
 	{"latency", 1, 0, 'l'},
+	{"cross", 0, 0, 'x'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"send-patterns", 0, 0, 'p'},
 	{"loopback", 1, 0, 'L'},
@@ -99,7 +107,7 @@ static struct option long_options_common[] = {
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:l:mp:L:r:EeW:R:";
+const char *optstring_common = "hD:k:d:s:c:l:xmp:L:r:EeW:R:";
 
 struct option *long_options;
 char *optstring;
@@ -134,11 +142,11 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		*skip_args += 2;
 		break;
 	case 'k':
-		kanal = atoi(optarg);
+		OPT_ARRAY(num_kanal, kanal, atoi(optarg))
 		*skip_args += 2;
 		break;
 	case 'd':
-		sounddev = strdup(optarg);
+		OPT_ARRAY(num_sounddev, sounddev, strdup(optarg))
 		*skip_args += 2;
 		break;
 	case 's':
@@ -152,6 +160,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'l':
 		latency = atoi(optarg);
 		*skip_args += 2;
+		break;
+	case 'x':
+		cross_channels = 1;
+		*skip_args += 1;
 		break;
 	case 'm':
 		use_mncc_sock = 1;
@@ -204,5 +216,4 @@ void sighandler(int sigset)
 
 	quit = 1;
 }
-
 

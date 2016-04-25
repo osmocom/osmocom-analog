@@ -283,7 +283,7 @@ static void nmt_timeout(struct timer *timer);
 static void nmt_go_idle(nmt_t *nmt);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(const char *sounddev, int samplerate, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int channel, enum nmt_chan_type chan_type, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback)
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -303,12 +303,12 @@ int nmt_create(const char *sounddev, int samplerate, int pre_emphasis, int de_em
 
 	if (chan_type == CHAN_TYPE_CC) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for calling only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 	}
 	if (chan_type == CHAN_TYPE_TC) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for traffic only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible on this channel.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 	}
 	if (chan_type == CHAN_TYPE_TEST && !loopback) {
@@ -324,7 +324,7 @@ int nmt_create(const char *sounddev, int samplerate, int pre_emphasis, int de_em
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, sounddev, samplerate, pre_emphasis, de_emphasis, write_wave, read_wave, channel, loopback, 0, -1);
+	rc = sender_create(&nmt->sender, channel, sounddev, samplerate, cross_channels, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, 0, -1);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -372,6 +372,7 @@ void nmt_destroy(sender_t *sender)
 static void nmt_go_idle(nmt_t *nmt)
 {
 	timer_stop(&nmt->timer);
+	nmt->page_for_nmt = NULL;
 
 	PDEBUG(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.chan_type));
 	nmt_new_state(nmt, STATE_IDLE);
@@ -395,13 +396,34 @@ static void nmt_release(nmt_t *nmt)
 /* Enter paging state and transmit phone's number on calling channel */
 static void nmt_page(nmt_t *nmt, char ms_country, const char *ms_number, int try)
 {
+	sender_t *sender;
+	nmt_t *other;
+
 	PDEBUG(DNMT, DEBUG_INFO, "Entering paging state (try %d), sending call to '%c,%s'.\n", try, ms_country, ms_number);
 	nmt->subscriber.country = ms_country;
 	strcpy(nmt->subscriber.number, ms_number);
 	nmt->page_try = try;
-	nmt_new_state(nmt, STATE_MT_PAGING);
-	nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
-	nmt->tx_frame_count = 0;
+	/* page on all CC (CC/TC) */
+	for (sender = sender_head; sender; sender = sender->next) {
+		other = (nmt_t *)sender;
+		if (nmt->sysinfo.chan_type != CHAN_TYPE_CC
+		 && nmt->sysinfo.chan_type != CHAN_TYPE_CC_TC)
+		 	continue;
+		if (nmt->state != STATE_IDLE)
+			continue;
+		if (other == nmt) {
+			/* this is us */
+			PDEBUG(DNMT, DEBUG_INFO, "Paging on our channel %d.\n", other->sender.kanal);
+		} else {
+			/* this is not us */
+			PDEBUG(DNMT, DEBUG_INFO, "Paging on other channel %d.\n", other->sender.kanal);
+			other->page_for_nmt = nmt;
+		}
+		nmt_new_state(other, STATE_MT_PAGING);
+		nmt_set_dsp_mode(other, DSP_MODE_FRAME);
+		other->tx_frame_count = 0;
+		other->mt_channel = nmt->sender.kanal; /* ! channel from us (nmt->...) */
+	}
 }
 
 /*
@@ -801,6 +823,11 @@ static void tx_mt_paging(nmt_t *nmt, frame_t *frame)
 		tx_idle(nmt, frame);
 	/* wait some time to get answer. use more than one frame due to delay of audio processing */
 	if (nmt->tx_frame_count == 5) {
+		/* if we page for different channel, we go idle on timeout */
+		if (nmt->page_for_nmt) {
+			nmt_go_idle(nmt);
+			return;
+		}
 		PDEBUG(DNMT, DEBUG_NOTICE, "No answer from mobile phone (try %d).\n", nmt->page_try);
 		if (nmt->page_try == PAGE_TRIES) {
 			PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
@@ -821,9 +848,16 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(nmt, frame))
 			break;
-		PDEBUG(DNMT, DEBUG_INFO, "Received call acknowledgement.\n");
+		PDEBUG(DNMT, DEBUG_INFO, "Received call acknowledgement on channel %d.\n", nmt->sender.kanal);
 		nmt_new_state(nmt, STATE_MT_CHANNEL);
 		nmt->tx_frame_count = 0;
+		if (nmt->page_for_nmt) {
+			PDEBUG(DNMT, DEBUG_INFO, " -> Notify initiating channel %d about this ack.\n", nmt->mt_channel);
+			/* we just send frame 2b on initiating channel, but this is ignored by the phone anyway.
+			 * it would be correct to send frame 6 on initiating channel. */
+			nmt_new_state(nmt->page_for_nmt, STATE_MT_CHANNEL);
+			nmt->page_for_nmt->tx_frame_count = 0;
+		}
 		break;
 	default:
 		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
@@ -837,8 +871,13 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 	frame->traffic_area = nmt->sysinfo.traffic_area;
 	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(nmt->subscriber.number, 6);
-	frame->tc_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->tc_no = nmt_encode_channel(nmt->mt_channel, nmt->sysinfo.ms_power);
 	PDEBUG(DNMT, DEBUG_INFO, "Send channel activation to mobile.\n");
+	/* after assigning for differnet channel, we go idle. */
+	if (nmt->page_for_nmt) {
+		nmt_go_idle(nmt);
+		return;
+	}
 	nmt_new_state(nmt, STATE_MT_IDENT);
 }
 
