@@ -1124,9 +1124,10 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	frame_t frame;
 	int rc;
 
+	PDEBUG(DFRAME, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0 + 0.5, quality * 100.0 + 0.5);
+
 	rc = decode_frame(&frame, bits, (nmt->sender.loopback) ? MTX_TO_XX : XX_TO_MTX, (nmt->state == STATE_MT_PAGING));
 	if (rc < 0) {
-		PDEBUG(DFRAME, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0, quality * 100.0);
 		PDEBUG(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received invalid frame.\n");
 		return;
 	}
@@ -1134,7 +1135,6 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	/* frame counter */
 	nmt->rx_frame_count += (int)(frames_elapsed + 0.5);
 
-	PDEBUG(DFRAME, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0, quality * 100.0);
 	PDEBUG(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received frame %s\n", nmt_frame_name(frame.index));
 
 	if (nmt->sender.loopback)

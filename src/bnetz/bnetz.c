@@ -505,11 +505,11 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality,
 {
 	int digit = 0;
 	int i;
-	int quality_percent = quality * 100;
-	int level_percent = level * 100;
+
+	PDEBUG(DFRAME, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0 + 0.5, quality * 100.0 + 0.5);
 
 	/* drop any telegramm that is too bad */
-	if (quality_percent < 20)
+	if (quality < 0.2)
 		return;
 
 	for (i = 0; impulstelegramme[i].digit; i++) {
@@ -519,9 +519,9 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality,
 		}
 	}
 	if (digit == 0)
-		PDEBUG(DBNETZ, DEBUG_DEBUG, "Received unknown telegramm '0x%04x'. (quality=%d%% level=%d%%)\n", telegramm, quality_percent, level_percent);
+		PDEBUG(DBNETZ, DEBUG_DEBUG, "Received unknown telegramm '0x%04x'.\n", telegramm);
 	else
-		PDEBUG(DBNETZ, (bnetz->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received telegramm '%s'. (quality=%d%% level=%d%%)\n", impulstelegramme[i].description, quality_percent, level_percent);
+		PDEBUG(DBNETZ, (bnetz->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received telegramm '%s'.\n", impulstelegramme[i].description);
 
 	if (bnetz->sender.loopback) {
 		if (digit >= '0' && digit <= '9') {
@@ -661,7 +661,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality,
 		break;
 	case BNETZ_GESPRAECH:
 		/* only good telegramms shall pass */
-		if (quality_percent < 70)
+		if (quality < 0.7)
 			return;
 		if (digit == 't') {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Received 'Schlusssignal' from mobile station\n");

@@ -303,41 +303,45 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 	nmt->rx_sample_count += nmt->fsk_filter_step;
 
 	level = audio_level(spl, max);
+	/* limit level to prevent division by zero */
+	if (level < 0.01)
+		level = 0.01;
 //	level = 0.63662 / 2.0;
 
 	audio_goertzel(spl, max, pos, nmt->fsk_coeff, result, 2);
 
 	/* calculate soft bit from both frequencies */
 	softbit = (result[1] / level - result[0] / level + 1.0) / 2.0;
+//printf("%.3f: %.3f\n", level, softbit);
 	/* scale it, since both filters overlap by some percent */
 #define MIN_QUALITY 0.33
 	softbit = (softbit - MIN_QUALITY) / (1.0 - MIN_QUALITY - MIN_QUALITY);
-	if (softbit > 1)
-		softbit = 1;
-	if (softbit < 0)
-		softbit = 0;
 #ifdef DEBUG_FILTER
 //	printf("|%s", show_level(result[0]/level*100));
 //	printf("|%s| low=%.3f high=%.3f level=%d\n", show_level(result[1]/level*100), result[0]/level, result[1]/level, (int)level);
 	printf("|%s| softbit=%.3f\n", show_level(softbit * 100), softbit);
 #endif
+	if (softbit > 1)
+		softbit = 1;
+	if (softbit < 0)
+		softbit = 0;
 	if (softbit > 0.5)
 		bit = 1;
 	else
 		bit = 0;
 
 	if (nmt->fsk_filter_bit != bit) {
+		/* if we have a bit change, reset sample counter to one half bit duration */
 #ifdef DEBUG_FILTER
 		puts("bit change");
 #endif
-		/* if we have a bit change, reset sample counter to one half bit duration */
 		nmt->fsk_filter_bit = bit;
 		nmt->fsk_filter_sample = 5;
 	} else if (--nmt->fsk_filter_sample == 0) {
+		/* if sample counter bit reaches 0, we reset sample counter to one bit duration */
 #ifdef DEBUG_FILTER
 		puts("sample");
 #endif
-		/* if sample counter bit reaches 0, we reset sample counter to one bit duration */
 //		quality = result[bit] / level;
 		if (softbit > 0.5)
 			quality = softbit * 2.0 - 1.0;
