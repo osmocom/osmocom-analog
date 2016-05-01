@@ -11,11 +11,12 @@
 #define DBNETZ		4
 #define DCNETZ		5
 #define DNMT		6
-#define DFRAME		7
-#define DCALL		8
-#define DMNCC		9
-#define DDB		10
-#define DTRANS		11
+#define DAMPS		7
+#define DFRAME		8
+#define DCALL		9
+#define DMNCC		10
+#define DDB		11
+#define DTRANS		12
 
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, fmt, ## arg)
 void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...);

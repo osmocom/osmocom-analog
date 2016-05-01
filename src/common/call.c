@@ -34,17 +34,26 @@ extern int use_mncc_sock;
 extern int send_patterns;
 
 /* stream patterns/announcements */
-int16_t *outoforder_spl = NULL;
 int16_t *ringback_spl = NULL;
+int16_t *hangup_spl = NULL;
 int16_t *busy_spl = NULL;
+int16_t *noanswer_spl = NULL;
+int16_t *outoforder_spl = NULL;
+int16_t *invalidnumber_spl = NULL;
 int16_t *congestion_spl = NULL;
-int outoforder_size = 0;
 int ringback_size = 0;
+int hangup_size = 0;
 int busy_size = 0;
+int noanswer_size = 0;
+int outoforder_size = 0;
+int invalidnumber_size = 0;
 int congestion_size = 0;
-int outoforder_max = 0;
 int ringback_max = 0;
+int hangup_max = 0;
 int busy_max = 0;
+int noanswer_max = 0;
+int outoforder_max = 0;
+int invalidnumber_max = 0;
 int congestion_max = 0;
 
 enum call_state {
@@ -59,9 +68,12 @@ enum call_state {
 enum audio_pattern {
 	PATTERN_NONE = 0,
 	PATTERN_RINGBACK,
+	PATTERN_HANGUP,
 	PATTERN_BUSY,
-	PATTERN_CONGESTION,
+	PATTERN_NOANSWER,
 	PATTERN_OUTOFORDER,
+	PATTERN_INVALIDNUMBER,
+	PATTERN_CONGESTION,
 };
 
 void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pattern)
@@ -76,16 +88,26 @@ void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pa
 		*size = ringback_size;
 		*max = ringback_max;
 		break;
+	case PATTERN_HANGUP:
+		if (!hangup_spl)
+			goto no_hangup;
+		*spl = hangup_spl;
+		*size = hangup_size;
+		*max = hangup_max;
+		break;
 	case PATTERN_BUSY:
+no_hangup:
+no_noanswer:
 		*spl = busy_spl;
 		*size = busy_size;
 		*max = busy_max;
 		break;
-	case PATTERN_CONGESTION:
-no_outoforder:
-		*spl = congestion_spl;
-		*size = congestion_size;
-		*max = congestion_max;
+	case PATTERN_NOANSWER:
+		if (!noanswer_spl)
+			goto no_noanswer;
+		*spl = noanswer_spl;
+		*size = noanswer_size;
+		*max = noanswer_max;
 		break;
 	case PATTERN_OUTOFORDER:
 		if (!outoforder_spl)
@@ -93,6 +115,20 @@ no_outoforder:
 		*spl = outoforder_spl;
 		*size = outoforder_size;
 		*max = outoforder_max;
+		break;
+	case PATTERN_INVALIDNUMBER:
+		if (!invalidnumber_spl)
+			goto no_invalidnumber;
+		*spl = invalidnumber_spl;
+		*size = invalidnumber_size;
+		*max = invalidnumber_max;
+		break;
+	case PATTERN_CONGESTION:
+no_outoforder:
+no_invalidnumber:
+		*spl = congestion_spl;
+		*size = congestion_size;
+		*max = congestion_max;
 		break;
 	default:
 		;
@@ -150,14 +186,26 @@ static enum audio_pattern cause2pattern(int cause)
 	int pattern;
 
 	switch (cause) {
+	case CAUSE_NORMAL:
+		pattern = PATTERN_HANGUP;
+		break;
 	case CAUSE_BUSY:
 		pattern = PATTERN_BUSY;
+		break;
+	case CAUSE_NOANSWER:
+		pattern = PATTERN_NOANSWER;
 		break;
 	case CAUSE_OUTOFORDER:
 		pattern = PATTERN_OUTOFORDER;
 		break;
-	default:
+	case CAUSE_INVALNUMBER:
+		pattern = PATTERN_INVALIDNUMBER;
+		break;
+	case CAUSE_NOCHANNEL:
 		pattern = PATTERN_CONGESTION;
+		break;
+	default:
+		pattern = PATTERN_HANGUP;
 	}
 
 	return pattern;

@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = common anetz bnetz cnetz nmt test
+SUBDIRS = common anetz bnetz cnetz nmt amps test
 

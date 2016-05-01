@@ -24,5 +24,6 @@ src/anetz/anetz
 src/bnetz/bnetz
 src/cnetz/cnetz
 src/nmt/nmt
+src/amps/amps
 src/test/test_compander
 src/test/test_emphasis

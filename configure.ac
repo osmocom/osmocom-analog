@@ -33,6 +33,7 @@ AC_OUTPUT(
     src/bnetz/Makefile
     src/cnetz/Makefile
     src/nmt/Makefile
+    src/amps/Makefile
     src/test/Makefile
     src/Makefile
     Makefile)
