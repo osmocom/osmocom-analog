@@ -32,17 +32,18 @@
 /* return average value (rectified value), that can be 0..1 */
 double audio_level(int16_t *samples, int length)
 {
-	int bias;
+	int32_t bias;
 	double level;
 	int sk;
 	int n;
 
-	/* level calculation */
+	/* calculate bias */
 	bias = 0;
 	for (n = 0; n < length; n++)
 		bias += samples[n];
 	bias = bias / length;
 
+	/* level calculation */
 	level = 0;
 	for (n = 0; n < length; n++) {
 		sk = samples[n] - bias;
@@ -71,9 +72,16 @@ double audio_level(int16_t *samples, int length)
  */
 void audio_goertzel(int16_t *samples, int length, int offset, int *coeff, double *result, int k)
 {
+	int32_t bias;
 	int32_t sk, sk1, sk2;
 	int64_t cos2pik;
 	int i, n;
+
+	/* calculate bias to remove DC */
+	bias = 0;
+	for (n = 0; n < length; n++)
+		bias += samples[n];
+	bias = bias / length;
 
 	/* we do goertzel */
 	for (i = 0; i < k; i++) {
@@ -83,7 +91,7 @@ void audio_goertzel(int16_t *samples, int length, int offset, int *coeff, double
 		cos2pik = coeff[i];
 		/* note: after 'length' cycles, offset is restored to its initial value */
 		for (n = 0; n < length; n++) {
-			sk = ((cos2pik * sk1) >> 15) - sk2 + samples[offset++];
+			sk = ((cos2pik * sk1) >> 15) - sk2 + samples[offset++] - bias;
 			sk2 = sk1;
 			sk1 = sk;
 			if (offset == length)
