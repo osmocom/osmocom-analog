@@ -248,9 +248,13 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 	else
 		PDEBUG(DANETZ, DEBUG_DEBUG, "Continuous tone is gone.\n");
 
-	if (anetz->sender.loopback) {
+	/* skip any handling in loopback mode */
+	if (anetz->sender.loopback)
 		return;
-	}
+
+	/* skip tone 2280 Hz, because it is not relevant for base station */
+	if (tone == 0)
+		return;
 
 	switch (anetz->state) {
 	case ANETZ_FREI:
