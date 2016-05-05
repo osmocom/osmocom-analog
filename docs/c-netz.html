@@ -1,0 +1,171 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>C-Netz</center></h2>
+
+<center><img src="c-netz.jpg"/></center>
+
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks">How it works</a>
+	<li><a href="#basestation">Setup of a base station</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
+</p>
+
+<p>
+*TBD*
+</p>
+
+<p class="toppic">
+<a name="howitworks"></a>
+How it works
+</p>
+
+<p>
+*TBD*
+</p>
+
+<p class="toppic">
+<a name="basestation"></a>
+Setup of a base station
+</p>
+
+<p>
+When I first started with testing early C-Netz implementation, I had great trouble getting a response from a mobile phone.
+The main problem was clock speed of the transmitted signal.
+The base stations were all synchronized with a high precision clock.
+All base stations transmit on the same control channel 131 ('Orgakanal'), but at different time slots.
+The phone expects that the time slots repeat precisely every 2.4 seconds.
+The specs say that the phone requires clock speed deviation of +- 1 PPM (Parts Per Million) or less.
+To comply with the specs, the base stations needs to have a clock deviation far below 1 PPM.
+(I guess that there is a tollerance, so maybe a few PPM deviation would make no big problem.)
+We need to calibrate the speed of our transmit signal (and receive signal as well).
+</p>
+
+<p>
+<font color="red">Importaint: We need calibrate the signal processing clock!</font>
+</p>
+
+<p>
+First of all, we need a reference clock.
+Since most systems have standard crystals, we cannot use our system clock as reference without any help.
+I decided to use the NTP daemon.
+After running the system for one day, the clock speed should be accurate enough for our needs.
+Be sure to choose a place with constant temperature.
+</p>
+
+<pre>
+
+netbook ~ # ntptime
+ntp_gettime() returns code 0 (OK)
+  time dad971f1.9e1b5c44  Sun, May  8 2016 10:06:09.617, (.617605507),
+  maximum error 238951 us, estimated error 199 us, TAI offset 0
+ntp_adjtime() returns code 0 (<font color="red">OK</font>)
+  modes 0x0 (),
+  offset 425.797 us, frequency <font color="red">15.796 ppm</font>, interval 1 s,
+  maximum error 238951 us, estimated error 199 us,
+  status 0x2001 (PLL,NANO),
+  time constant 10, precision 0.001 us, tolerance 500 ppm,
+
+</pre>
+
+<p>
+One notices that I have quite an unprecise crystal in my test machine.
+Since I have NTP running, the system clock is now far below 1 PPM.
+</p>
+
+<p>
+The second problem is the clock of our sound adapter.
+They use own crystals.
+Because they are made for audio signals (and not for high precise base stations), they can't be used without calibration.
+Cheap USB adapters may even have different clocks on TX and RX.
+I found out that the clock speed changes when the USB voltage changes.
+The USB voltage changes, when the current changes, due to different volumes on the output.
+To minimize this effect, don't use extension cables.
+</p>
+
+<p>
+Since we have precise system clock now, we can measure the speed of our sound adapter.
+Later we will use the measurement result to adjust our signal processor.
+Be sure to have your machine running for at least 24 hours (with your sound adapter attached).
+The machine must have network connection to the NTP server.
+I suggest to use 'ntp1.ptb.de' and 'ntp2.ptb.de' as reference.
+Use command line option '-M' or '--measure' to measure my sound adapter.
+Let it run for one hour.
+</p>
+
+<pre>
+
+# src/cnetz/cnetz -k 131 -M
+...
+dsp.c:218 notice : Clock: RX=4.75 TX=36.84; Signal: RX=135.38 TX=-378.58 ppm
+dsp.c:218 notice : Clock: RX=10.61 TX=31.09; Signal: RX=135.38 TX=-378.58 ppm
+dsp.c:218 notice : Clock: RX=3.01 TX=26.55; Signal: RX=135.38 TX=-378.58 ppm
+...
+dsp.c:218 notice : Clock: RX=19.46 TX=19.45; Signal: RX=19.39 TX=19.42 ppm
+dsp.c:218 notice : Clock: RX=19.45 TX=19.50; Signal: RX=19.39 TX=19.42 ppm
+dsp.c:218 notice : Clock: RX=19.48 TX=19.47; Signal: RX=19.39 TX=19.42 ppm
+dsp.c:218 notice : Clock: RX=19.44 TX=19.44; Signal: RX=19.35 TX=19.43 ppm
+dsp.c:218 notice : Clock: RX=19.44 TX=19.49; Signal: RX=19.35 TX=19.43 ppm
+
+</pre>
+
+<p>
+One can see that the measured clock from the sound card (sample rate) differs about +19.45 PPM.
+Because I did not do any correction to the signal processing, the same error applies to the signal.
+Use command line option '-S 19.45,19.45' or '--clock-speed 19.45,19.45' to compensate the clock error by adjusting the signal processor.
+Let it run again for one hour and you will see that signal is now below 1 PPM.
+(Or close to it.)
+</p>
+
+<p>
+<font color="red">Importaint: We need to connect to PLL and discriminator!</font>
+</p>
+
+<center><img src="c-netz-burst_full.png"/></center>
+
+<p>
+*TBD*
+</p>
+
+<p>
+*TBD*
+</p>
+
+<p>
+<font color="red">Importaint: We need to transmit correct polarity!</font>
+</p>
+
+<center><img src="c-netz-burst_part.png"/></center>
+
+<p>
+C-Netz uses FSK by directly modulating the carrier, rather than modulating an FM tone.
+The advantage is much higher data rate.
+A phone will only detect the correct polarity.
+The three sync words of "11100010010", is shown in the picture above.
+In the picture above, the polarity is wrong.
+The "1" points down and the "0" up.
+You must check, with what polarity your transmitter is doing a positive frequency deviation.
+Also you must check your sound card's polarity on positive value beeing sent.
+To change polarty, use command line option '-F' or '--flip-polarity'.
+(Note: don't confuse with '-P'!)
+</p>
+
+<p>
+This software does not care about what polarity it receives.
+It just checks for sync words at both polarities and chooses right polarity automatically.
+</p>
+
+[<a href="index.html">Back to main page</a>]
+</td></tr></table></center>
+</body>
+</html>

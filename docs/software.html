@@ -1,0 +1,285 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>Software usage</center></h2>
+
+<center><img src="signal.png"/></center>
+
+<p>
+To get a list of all options, run the base station software (E.g bnetz) with no parameter or '-h' or '--help'.
+</p>
+
+<p class="toppic">
+Sound interface
+</p>
+
+<p>
+Most machines have only one sound adapter installed.
+A second sound adapter is required to talk through the base station to have a conversation.
+To get a list of devices, run 'arecord -l'.
+This is how it looks, if there are two sound adapters installed:
+</p>
+
+<pre>
+
+# arecord -l
+**** List of CAPTURE Hardware Devices ****
+card 0: Intel [HDA Intel], device 0: ALC269VB Analog [ALC269VB Analog]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 2: Set [C-Media USB Headphone Set], device 0: USB Audio [USB Audio]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+</pre>
+
+<p>
+Sound card 0, device 0 is used by default.
+Run B-Netz base station on channel 1 to test if your default sound adapter works:
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1
+...
+bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
+Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
+
+</pre>
+
+<p>
+Alternatively select a different sound adapter.
+If you prefer card 2, device 0, add '-d hw:2,0' or '--device hw:2,0' to the command line:
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1 -d hw:2,0
+
+</pre>
+
+<p class="toppic">
+Basic level adjustment
+</p>
+
+<p>
+To adjust input and output levels of your sound card, run 'alsamixer'.
+</p>
+
+<center><img src="alsa.png"/></center>
+
+<p>
+To avoid echo of audio input (mic), mute the input (select item and press 'm').
+We want to capture microphone, but not echo it back to the audio output.
+Also we want audio on line/headset output and capture from microphone imput.
+Do not use input gain on the microphone.
+</p>
+
+<p>
+Now we want to calibrate transmitter and receiver audio level.
+Run the B-Netz base station in loopback test mode (-L 2).
+Even if you plan to setup A-Netz base station, use B-Netz base station for calibration.
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1 -L 2
+bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
+Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
+
+</pre>
+
+<p>
+Tune your transmitter AND reciever to 153.010 MHz.
+Press the PTT button on you transmitter and talk into it.
+Check if you hear your voice at a normal level from the receiver.
+Then connect the audio output (headphone) of your sound adapter to your transmitter, by using a variable resistor.
+You should hear now the whistle sound clearly on the receiver, once you turn up the variable resistor.
+Adjust the audio output so that the tone is not overdriven, but the volume similar to your voice when you talked into the transmitter.
+The sound must be clear without any background noise or distortion.
+</p>
+
+<p>
+Now connect the audio input (microphone) to your receiver, by using a variable resistor.
+Enable the transmitter. (PTT button)
+You should now see the signal beeing decoded by the base station:
+</p>
+
+<pre>
+
+bnetz.c:474 notice : Received telegramm 'Ziffer 2'. (quality=99% level=133%)
+bnetz.c:478 notice : Round trip delay is 0.053 seconds
+bnetz.c:474 notice : Received telegramm 'Ziffer 3'. (quality=98% level=133%)
+bnetz.c:478 notice : Round trip delay is 0.054 seconds
+bnetz.c:474 notice : Received telegramm 'Ziffer 4'. (quality=99% level=131%)
+bnetz.c:478 notice : Round trip delay is 0.053 seconds
+bnetz.c:474 notice : Received telegramm 'Ziffer 5'. (quality=97% level=130%)
+bnetz.c:478 notice : Round trip delay is 0.054 seconds
+
+</pre>
+
+<p>
+Adjust the input level so that the received signal level is arround 100%.
+If the input level cannot be ajusted up to 100%, leave it as it is.
+There is an option later in this manual to add RX gain.
+The quality should be 90% or better.
+Now you have connected the base station to your radio eqipment and roughly adjusted the levels.
+For finetuning, refer to each network description.
+</p>
+
+<p>
+Finally store the settings using "alsactl store" command.
+Do this whenever you want to keep your adjustments.
+</p>
+
+<p class="toppic">
+Channel crossing
+</p>
+
+<p>
+By default, the right channel of your sound adapter is used to connect to the radio.
+Some adapters have mono input, especially on microphone jack.
+In this case you will always receive audio, no matter if you cross the channels or not.
+If you cross the channels, the left channel of your sound adapter is used.
+I use mono cables with only one channel on the tip of the plug.
+My sound adapter uses left channel on the tip, so i need to swap channels.
+Use the command line option '-x' or '--cross':
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1 -x -L 2
+bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
+Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
+
+</pre>
+
+<p class="toppic">
+Emphasis
+</p>
+
+<p>
+Pre-emphasis is used on the transmitter and de-emphasis is used on the receiver side.
+The nature of FM causes noise amplitude to be proportional to the transmitted frequency.
+(double frequency = double noise volume)
+To compensate this, most FM radios, as well as all analog mobile networks emphasis.
+</p>
+
+<center><img src="emphasis.gif"/></center>
+
+<p>
+As depicted, a frequency of 1000 Hz passes the pre-emphasis without any change.
+The double frequency (2000 Hz) is amplified to double amplitude (+6 dB).
+The result is that higher frequencies are transmitted with more deviation (louder) than lower frequencies.
+On the receiver, the process is reversed.
+A frequency of 2000 Hz is lowered down to half of it's amplitude (-6 db), so it becomes the original amplitude again.
+</p>
+
+<p>
+Generally a transmitter is doing pre-emphasis for you.
+If you are connected directly to the PLL of your transmitter, you will also not have pre-emphasis.
+In this case you need to do it inside the base station software. Use the command line option '-E' or '--pre-emphasis':
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1 --pre-emphasis
+
+</pre>
+
+<p>
+The receiver is doing the de-emphasis for you.
+If you are connected directly to the discriminator of your receiver, you will also not have de-emphasis.
+In this case you need to do it inside the base station software. Use the command line option '-e' or '--de-emphasis':
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1 --de-emphasis
+
+</pre>
+
+<p class="toppic">
+RX-Gain
+</p>
+
+<p>
+Especially if you use discriminator output, you might have low output voltage.
+In my experiments it helps to amplify the amplitude by factor two in order adjust a received signal to 100%.
+A gain of 6 dB will amplify the amplitude by factor two.
+Also the noise of the sound adapter will be amplified by factor two, but this is not relevant at 16 bit resolution.
+Use the command line option '-G 6' or '--rx-gain 6'.
+In this example I use both, transmitter and receiver without emphasis and add extra 6 dB gain to the input from the receiver:
+</p>
+
+<pre>
+
+# src/bnetz/bnetz -k 1 -E -e -G 6
+
+</pre>
+
+<p class="toppic">
+Loopback Test
+</p>
+
+<p>
+As used before, the loopback test can be used to verify the signal process, such as level, delay and quality.
+</p>
+
+<p>
+If command line option '-L 1' or '--loopback 1' is given, a loopback inside the software is performed.
+Also the audio signal is sent to the audio adapter, but not received from it.
+This test is used to debug the software.
+It can be used to see what the output of an external loop would look like.
+</p>
+
+<pre>
+
+./bnetz/bnetz -k 1 -L 1
+bnetz.c:351 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
+Base station for channel 1 ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
+bnetz.c:509 info   : RX Level: 100% Quality=99
+bnetz.c:524 notice : Received telegramm 'Ziffer 0'.
+bnetz.c:528 notice : Round trip delay is -0.048 seconds
+bnetz.c:509 info   : RX Level: 100% Quality=98
+bnetz.c:524 notice : Received telegramm 'Ziffer 1'.
+bnetz.c:528 notice : Round trip delay is 0.000 seconds
+bnetz.c:509 info   : RX Level: 100% Quality=98
+bnetz.c:524 notice : Received telegramm 'Ziffer 2'.
+bnetz.c:528 notice : Round trip delay is 0.000 seconds
+bnetz.c:509 info   : RX Level: 100% Quality=99
+bnetz.c:524 notice : Received telegramm 'Ziffer 3'.
+bnetz.c:528 notice : Round trip delay is 0.000 seconds
+bnetz.c:509 info   : RX Level: 100% Quality=99
+bnetz.c:524 notice : Received telegramm 'Ziffer 4'.
+bnetz.c:528 notice : Round trip delay is 0.001 seconds
+
+</pre>
+
+<p>
+If command line option '-L 1' or '--loopback 2' is given, an external loopback is performed.
+The receiver needs to be tuned to transmitter, so the software receives its own signal.
+The received quality level is relevant. It should be not less than 90 for B-Netz.
+</p>
+
+<p>
+If command line option '-L 3' or '--loopback 3' is given, the audio from the input is sent back to the output.
+It can be used to check a headset.
+Everything that is spoken into the microphone should be appear in the headphone.
+</p>
+
+[<a href="index.html">Back to main page</a>]
+</td></tr></table></center>
+</body>
+</html>
+
+

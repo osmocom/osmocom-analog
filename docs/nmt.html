@@ -1,0 +1,42 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>NMT</center></h2>
+
+<center><img src="nmt.jpg"/></center>
+
+<p>
+</p>
+
+*TBD*
+
+<p>
+Now run your base station on channel 1.
+Tune the transmitter to 463.000 MHz and the receiver to 453.000.
+You should tune the receiver to 463.000 first, to check if you hear the idle signal from the base station.
+Then tune to actually uplink frequency 453.000 MHz.
+</p>
+
+<pre>
+
+# src/nmt/nmt -k 1 -y SE,1
+...
+nmt.c:376 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+Base station ready, please tune transmitter to 463.000 MHz and receiver to 453.000 MHz.
+on-hook: ....... (enter 0..9 or d=dial)
+
+</pre>
+
+<p>
+</p>
+
+
+[<a href="index.html">Back to main page</a>]
+</td></tr></table></center>
+</body>
+</html>

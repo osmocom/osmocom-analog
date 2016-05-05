@@ -1,71 +1,624 @@
 <html>
 <head>
+<link href="style.css" rel="stylesheet" type="text/css" />
 <title>osmocom-analog</title>
 </head>
 <body>
-<center><table border='0' cellspacing='0' cellpadding='0' width='816'><tr><td><font face="ARIAL" size='5'>
+<center><table><tr><td>
 
 <h2><center>B-Netz</center></h2>
 
 <center><img src="b-netz.jpg"/></center>
 
-<p align='justify'>
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks">How it works</a>
+	<li><a href="#basestation">Setup of a base station</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
+</p>
+
+<p>
+B-Netz was the second mobile telephone network in Germany.
+It was the successor of the A-Netz.
+It existed between 1972 and 1994.
+Using digital technology and later microprocessors, the phone were still as big as a suitcase.
+It used full duplex radio link.
+The call was placed by atomatic dialing in both direction, so no requirement for an operator.
+After full deployment in 1986, there were 158 base stations.
+Early devices used up to 38 voice channels. Later units used up to 75 voice channels.
+A maximum of about 27,000 subscribers were counted 1986.
+The basic charge in the beginning was 270 German Marks.
+Calls were charged like regular calls.
+The network was congested in 1979, so there was a stop for new subscribers.
+Due to congestion, in 1980, the German Federal Post Office lowered the basic charge down to 180 German Marks, but added an extra charge of about 1 German Marks per minute, no matter what direction the call was made.
+This helped to lower the channel allocation time.
+</p>
+
+<center><img src="b-netz-phone.jpg"/></center>
+
+<p>
+<ul>
+	<li>Frequency range: 153.01 - 153.73 MHz (downlink); 148.41 - 149.13 MHz (uplink)
+	<li>38 voice channels for B1-Netz
+	<li>75 voice channels for B2-Netz
+	<li>1 paging channel
+	<li>Duplex distance: 4.6 MHz
+	<li>Channel spacing: 20 KHz
+	<li>Modulation: FM
+	<li>Frequency deviation: 4 KHz
+	<li>Mobile station transmit power: 15 Watts (100 mW for special channels)
+	<li>Base station transmit power: 10..30 Watts (100 mW for special channels)
+</ul>
+</p>
+
+<p class="toppic">
+<a name="howitworks"></a>
+How it works
+</p>
+
+<p>
+Two tones are used for signalling:
+</p>
+
+<p>
+<ul>
+	<li>F0 = 2070 Hz
+	<li>F1 = 1950 Hz
+</ul>
+</p>
+
+<p>
+For continuous signals, the tones must be detected at least 70ms.
+</p>
+
+<br>
+
+<p>
+Continuous tones used by mobile station:
+
+<p>
+<ul>
+	<li>Kanalbelegung: F0 is sent by the mobile to allocate a channel for outgoing call.
+	<li>Rufbest&auml;tigung: F1 is sent by the mobile to acknowledge incomming call.
+	<li>Beginnsignal: F0 is sent by mobile to indicate answer of the mobile subscriber.
+</ul>
+</p>
+
+<p>
+Continuous tones used by base station:
+</p>
+
+<p>
+<ul>
+	<li>Wahlabruf: F1 is sent by the base station to acknowledge outging call.
+	<li>Rufhaltung: F1 is sent by the base station while the mobile station is ringing.
+</ul>
+</p>
+
+<br>
+
+<p>
+Digits are coded as 16 bits and transferred at a rate of 100 bits per second.
+Each bit consists of the signalling tones F0 and F1 and has a duration of 10 ms.
+All digit starts with sync pattern ("0 1 1 1 0").
+</p>
+
+<pre class="list">
+   Sync
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 1 1 1 0|0 1 0 0 0|1|0 0 0 1 0| Funkwahl ohne Geb&uuml;hren&uuml;bermittlung
+|0 1 1 1 0|0 0 1 0 0|1|0 0 1 0 0| Funkwahl mit Geb&uuml;hren&uuml;bermittlung
+|0 1 1 1 0|1 0 0 0 0|1|0 0 0 0 1| Funkwahlende
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Sync
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 1 1 1 0|1 1 0 0 0|0|0 0 0 1 1| Wahlziffer 0
+|0 1 1 1 0|1 0 1 0 0|0|0 0 1 0 1| Wahlziffer 1
+|0 1 1 1 0|1 0 0 1 0|0|0 1 0 0 1| Wahlziffer 2
+|0 1 1 1 0|1 0 0 0 1|0|1 0 0 0 1| Wahlziffer 3
+|0 1 1 1 0|0 1 1 0 0|0|0 0 1 1 0| Wahlziffer 4
+|0 1 1 1 0|0 1 0 1 0|0|0 1 0 1 0| Wahlziffer 5
+|0 1 1 1 0|0 1 0 0 1|0|1 0 0 1 0| Wahlziffer 6
+|0 1 1 1 0|0 0 1 1 0|0|0 1 1 0 0| Wahlziffer 7
+|0 1 1 1 0|0 0 1 0 1|0|1 0 1 0 0| Wahlziffer 8
+|0 1 1 1 0|0 0 0 1 1|0|1 1 0 0 0| Wahlziffer 9
+|0 1 1 1 0|0 0 0 1 1|0|0 1 0 0 1| Wahlziffer 2
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Sync
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 1 1 1 0|1 0 1 0 1|0|1 0 1 0 1| Trennsignal
+|0 1 1 1 0|1 0 1 0 1|0|1 0 1 0 1| Schlu&szlig;signal
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Sync
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 1 1 1 0|0 0 0 1 1|0|0 0 1 0 1| Gruppenfreisignal 1
+|0 1 1 1 0|0 0 0 1 1|0|0 1 0 0 1| Gruppenfreisignal 2
+|0 1 1 1 0|0 0 0 1 1|0|1 0 0 0 1| Gruppenfreisignal 3
+|0 1 1 1 0|0 0 0 1 1|0|0 0 1 1 0| Gruppenfreisignal 4
+|0 1 1 1 0|0 0 0 1 1|0|0 1 0 1 0| Gruppenfreisignal 5
+|0 1 1 1 0|0 0 0 1 1|0|1 0 0 1 0| Gruppenfreisignal 6
+|0 1 1 1 0|0 0 0 1 1|0|0 1 1 0 0| Gruppenfreisignal 7
+|0 1 1 1 0|0 0 0 1 1|0|1 0 1 0 0| Gruppenfreisignal 8
+|0 1 1 1 0|0 0 0 1 1|0|0 0 0 1 1| Gruppenfreisignal 9
+|0 1 1 1 0|0 0 1 0 1|0|0 0 0 1 1| Gruppenfreisignal 10
+|0 1 1 1 0|0 0 1 0 1|0|0 0 1 0 1| Gruppenfreisignal 11
+|0 1 1 1 0|0 0 1 0 1|0|0 1 0 0 1| Gruppenfreisignal 12
+|0 1 1 1 0|0 0 1 0 1|0|1 0 0 0 1| Gruppenfreisignal 13
+|0 1 1 1 0|0 0 1 0 1|0|0 0 1 1 0| Gruppenfreisignal 14
+|0 1 1 1 0|0 0 1 0 1|0|0 1 0 1 0| Gruppenfreisignal 15
+|0 1 1 1 0|0 0 1 0 1|0|1 0 0 1 0| Gruppenfreisignal 16
+|0 1 1 1 0|0 0 1 0 1|0|0 1 1 0 0| Gruppenfreisignal 17
+|0 1 1 1 0|0 0 1 0 1|0|1 0 1 0 0| Gruppenfreisignal 18
+|0 1 1 1 0|0 0 1 0 1|0|1 1 0 0 0| Gruppenfreisignal 19
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Sync
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|0 1 1 1 0|1 1 0 0 0|0|0 0 1 0 1| Kanalbefehl 1
+|0 1 1 1 0|1 1 0 0 0|0|0 1 0 0 1| Kanalbefehl 2
+|0 1 1 1 0|1 1 0 0 0|0|1 0 0 0 1| Kanalbefehl 3
+|0 1 1 1 0|1 1 0 0 0|0|0 0 1 1 0| Kanalbefehl 4
+|0 1 1 1 0|1 1 0 0 0|0|0 1 0 1 0| Kanalbefehl 5
+|0 1 1 1 0|1 1 0 0 0|0|1 0 0 1 0| Kanalbefehl 6
+|0 1 1 1 0|1 1 0 0 0|0|0 1 1 0 0| Kanalbefehl 7
+|0 1 1 1 0|1 1 0 0 0|0|1 0 1 0 0| Kanalbefehl 8
+|0 1 1 1 0|1 1 0 0 0|0|1 1 0 0 0| Kanalbefehl 9
+|0 1 1 1 0|1 0 1 0 0|0|0 0 0 1 1| Kanalbefehl 10
+|0 1 1 1 0|0 1 1 0 0|0|0 0 1 0 1| Kanalbefehl 11
+|0 1 1 1 0|1 0 1 0 0|0|0 1 0 0 1| Kanalbefehl 12
+|0 1 1 1 0|1 0 1 0 0|0|1 0 0 0 1| Kanalbefehl 13
+|0 1 1 1 0|1 0 1 0 0|0|0 0 1 1 0| Kanalbefehl 14
+|0 1 1 1 0|1 0 1 0 0|0|0 1 0 1 0| Kanalbefehl 15
+|0 1 1 1 0|1 0 1 0 0|0|1 0 0 1 0| Kanalbefehl 16
+|0 1 1 1 0|1 0 1 0 0|0|0 1 1 0 0| Kanalbefehl 17
+|0 1 1 1 0|1 0 1 0 0|0|1 0 1 0 0| Kanalbefehl 18
+|0 1 1 1 0|1 0 0 1 0|0|0 0 0 1 1| Kanalbefehl 20
+|0 1 1 1 0|1 0 0 1 0|0|0 0 1 0 1| Kanalbefehl 21
+|0 1 1 1 0|0 1 1 0 0|0|0 1 0 0 1| Kanalbefehl 22
+|0 1 1 1 0|1 0 0 1 0|0|1 0 0 0 1| Kanalbefehl 23
+|0 1 1 1 0|1 0 0 1 0|0|0 0 1 1 0| Kanalbefehl 24
+|0 1 1 1 0|1 0 0 1 0|0|0 1 0 1 0| Kanalbefehl 25
+|0 1 1 1 0|1 0 0 1 0|0|1 0 0 1 0| Kanalbefehl 26
+|0 1 1 1 0|1 0 0 1 0|0|0 1 1 0 0| Kanalbefehl 27
+|0 1 1 1 0|1 0 0 1 0|0|1 0 1 0 0| Kanalbefehl 28
+|0 1 1 1 0|1 0 0 1 0|0|1 1 0 0 0| Kanalbefehl 29
+|0 1 1 1 0|1 0 0 0 1|0|0 0 0 1 1| Kanalbefehl 30
+|0 1 1 1 0|1 0 0 0 1|0|0 0 1 0 1| Kanalbefehl 31
+|0 1 1 1 0|1 0 0 0 1|0|0 1 0 0 1| Kanalbefehl 32
+|0 1 1 1 0|0 1 1 0 0|0|1 0 0 0 1| Kanalbefehl 33
+|0 1 1 1 0|1 0 0 0 1|0|0 0 1 1 0| Kanalbefehl 34
+|0 1 1 1 0|1 0 0 0 1|0|0 1 0 1 0| Kanalbefehl 35
+|0 1 1 1 0|1 0 0 0 1|0|1 0 0 1 0| Kanalbefehl 36
+|0 1 1 1 0|1 0 0 0 1|0|0 1 1 0 0| Kanalbefehl 37
+|0 1 1 1 0|1 0 0 0 1|0|1 0 1 0 0| Kanalbefehl 38
+|0 1 1 1 0|1 0 0 0 1|0|1 1 0 0 0| Kanalbefehl 39
+|0 1 1 1 0|0 1 0 1 0|0|0 0 0 1 1| Kanalbefehl 50
+|0 1 1 1 0|0 1 0 1 0|0|0 0 1 0 1| Kanalbefehl 51
+|0 1 1 1 0|0 1 0 1 0|0|0 1 0 0 1| Kanalbefehl 52
+|0 1 1 1 0|0 1 0 1 0|0|1 0 0 0 1| Kanalbefehl 53
+|0 1 1 1 0|0 1 0 1 0|0|0 0 1 1 0| Kanalbefehl 54
+|0 1 1 1 0|0 1 1 0 0|0|0 1 0 1 0| Kanalbefehl 55
+|0 1 1 1 0|0 1 0 1 0|0|1 0 0 1 0| Kanalbefehl 56
+|0 1 1 1 0|0 1 0 1 0|0|0 1 1 0 0| Kanalbefehl 57
+|0 1 1 1 0|0 1 0 1 0|0|1 0 1 0 0| Kanalbefehl 58
+|0 1 1 1 0|0 1 0 1 0|0|1 1 0 0 0| Kanalbefehl 59
+|0 1 1 1 0|0 1 0 0 1|0|0 0 0 1 1| Kanalbefehl 60
+|0 1 1 1 0|0 1 0 0 1|0|0 0 1 0 1| Kanalbefehl 61
+|0 1 1 1 0|0 1 0 0 1|0|0 1 0 0 1| Kanalbefehl 62
+|0 1 1 1 0|0 1 0 0 1|0|1 0 0 0 1| Kanalbefehl 63
+|0 1 1 1 0|0 1 0 0 1|0|0 0 1 1 0| Kanalbefehl 64
+|0 1 1 1 0|0 1 0 0 1|0|0 1 0 1 0| Kanalbefehl 65
+|0 1 1 1 0|0 1 1 0 0|0|1 0 0 1 0| Kanalbefehl 66
+|0 1 1 1 0|0 1 0 0 1|0|0 1 1 0 0| Kanalbefehl 67
+|0 1 1 1 0|0 1 0 0 1|0|1 0 1 0 0| Kanalbefehl 68
+|0 1 1 1 0|0 1 0 0 1|0|1 1 0 0 0| Kanalbefehl 69
+|0 1 1 1 0|0 0 1 1 0|0|0 0 0 1 1| Kanalbefehl 70
+|0 1 1 1 0|0 0 1 1 0|0|0 0 1 0 1| Kanalbefehl 71
+|0 1 1 1 0|0 0 1 1 0|0|0 1 0 0 1| Kanalbefehl 72
+|0 1 1 1 0|0 0 1 1 0|0|1 0 0 0 1| Kanalbefehl 73
+|0 1 1 1 0|0 0 1 1 0|0|0 0 1 1 0| Kanalbefehl 74
+|0 1 1 1 0|0 0 1 1 0|0|0 1 0 1 0| Kanalbefehl 75
+|0 1 1 1 0|0 0 1 1 0|0|1 0 0 1 0| Kanalbefehl 76
+|0 1 1 1 0|0 1 1 0 0|0|0 1 1 0 0| Kanalbefehl 77
+|0 1 1 1 0|0 0 1 1 0|0|1 0 1 0 0| Kanalbefehl 78
+|0 1 1 1 0|0 0 1 1 0|0|1 1 0 0 0| Kanalbefehl 79
+|0 1 1 1 0|0 0 1 0 1|0|0 0 0 1 1| Kanalbefehl 80
+|0 1 1 1 0|0 0 1 0 1|0|0 0 1 0 1| Kanalbefehl 81
+|0 1 1 1 0|0 0 1 0 1|0|0 1 0 0 1| Kanalbefehl 82
+|0 1 1 1 0|0 0 1 0 1|0|1 0 0 0 1| Kanalbefehl 83
+|0 1 1 1 0|0 0 1 0 1|0|0 0 1 1 0| Kanalbefehl 84
+|0 1 1 1 0|0 0 1 0 1|0|0 1 0 1 0| Kanalbefehl 85
+|0 1 1 1 0|0 0 1 0 1|0|1 0 0 1 0| Kanalbefehl 86
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre>
+
+<br>
+
+<p>
+Digits used by mobile station:
+</p>
+
+<p>
+<ul>
+	<li>Funkwahl ohne Geb&uuml;hren&uuml;bermittlung: dialing without metering support
+	<li>Funkwahl mit Geb&uuml;hren&uuml;bermittlung: dialing with metering support
+	<li>Wahlziffer: dialing digits
+	<li>Funkwahlende: end of dialing
+	<li>Schlu&szlig;signal: hangup signal
+</ul>
+</p>
+
+<p>
+Digits used by base station:
+</p>
+
+<p>
+<ul>
+	<li>Gruppenfreisignal: idle pattern
+	<li>Wahlziffer: dialing digits
+	<li>Kanalbefehl: channel assignment
+	<li>Trennsignal: clear signal
+</ul>
+</p>
+
+<br>
+
+<p>
+Idle base station:
+</p>
+
+<p>
+When a base station transceiver is idle, it repeatingly sends one idle pattern ("Gruppenfreisignal") on downlink.
+This signal can be used by the mobile subscriber to select a particular base stations to lower call fees or to select the base station that a car is driving close to.
+If no pattern is selected, the mobile station selects any base station on mobile originated call.
+If a pattern 1..9 is selected, the mobile station selects only the base stations which sends that idle pattern.
+</p>
+
+<p>
+There is a special idle pattern that is used for reduced TX power.
+This is used in areas with many base station that are close together.
+The idle signal 19 is used.
+The mobile station will reduce TX power when selecting this base station for outgoing call.
+</p>
+
+<br>
+
+<p>
+Call from mobile station:
+</p>
+
+<p>
+The mobile station starts scanning all traffic channels one time.
+If there is a signal on the channel, the mobile station tries to decode it for 400 ms max.
+If there is no signal or if there is no idle pattern or if the idle pattern does not match the selected one, the mobile station continues with the next channel.
+If no channel is found, a busy signal is indicated to the mobile subscriber.
+</p>
+
+<p>
+If a free and suitable channel was found, the mobile station sends channel allocation signal ("Kanalbelegung") on uplink channel and waits for dial request signal ("Wahlabruf") from the base station.
+</p>
+
+<p>
+When the base station receives the channel allocation signal, it stops idle pattern and transmits dial request signal.
+</p>
+
+<p>
+If no dial request signal is received within *TBD* seconds, the mobile station will *TBD*.
+</p>
+
+<p>
+When the mobile station receives the dial request signal, it seamlessly transmits a dial string.
+The string consist of a start signal ("Funkwahl"), 5 digits ("Wahlziffern") of mobile identity, dialed digits (without 0 at the beginning) and the stop signal ("Funkwahlende"):
+</p>
+
+<p>
+<ul>
+	<li>Funkwahl
+	<li>Wahlziffer 5 (Example of mobile identity: 50993)
+	<li>Wahlziffer 0
+	<li>Wahlziffer 9
+	<li>Wahlziffer 9
+	<li>Wahlziffer 3
+	<li>Wahlziffer 3 (Example of dialing: 0310, no first digit)
+	<li>Wahlziffer 1
+	<li>Wahlziffer 0
+	<li>Funkwahlende
+</ul>
+</p>
+
+<p>
+The mobile station can send two different start signals.
+One indicates to the base station to send metering pulses.
+If metering is selected, the bandwidth is reduced from 3000 Hz down to 2700 Hz.
+The metering pulse is then sent as a 2900 Hz tone.
+The duration is *TBD* ms and the frequency deviation *TBD* KHz.
+</p>
+
+<p>
+While dialing is received by the base station, it repeats the 5 digits of mobile identy.
+This takes place after *TBD*.
+</p>
+
+<p>
+The mobile station compares the repeated identiy and *TBD* if it mismatches.
+</p>
+
+<p>
+The dial string is repeated once again by the mobile station.
+Afterwards the mobile station connects the speech path and conversation takes place.
+</p>
+
+<p>
+If the dial string is received correctly once again by the base station, it connectes the speech path and conversation takes place.
+</p>
+
+<p>
+If the base station receives different repeated dialing or different mobile identity, it sends clear signal ("Trennsignal") for 12 seconds and returns to idle state.
+</p>
+
+<p>
+If the mobile stations receives clear signal during dialing, it indicates busy signal to the subscriber and returns to idle state.
+</p>
+
+<br>
+
+<p>
+Call to mobile station:
+</p>
+
+<p>
+The calling party dials the prefix of the city where the base station is located, followed by "05", followed by the 5 digits mobile station id.
+(E.g. base station on Stollberg Hill: +49-4671-05-50993)
+</p>
+
+<p>
+The transceiver of the base station switches to channel 19 and sends a paging sequence that consists of 5 digits ("Wahlziffern") mobile identity and the channel assignment digit ("Kanalbefehl"):
+</p>
+
+<p>
+<ul>
+	<li>Wahlziffer 5 (Example of mobile identity: 50993)
+	<li>Wahlziffer 0
+	<li>Wahlziffer 9
+	<li>Wahlziffer 9
+	<li>Wahlziffer 3
+	<li>Kanalbefehl 1 (Example of channel: 1)
+</ul>
+</p>
+
+<p>
+Then the base station returns to the ordered channel and waits 2 seconds for the mobile station to send the call acknowledge signal ("Rufbest&auml;tigung").
+If it is not received, the base station repeats the paging sequence again.
+If there is still no call acknowledge signal, it returns to idle state and indicates announcenemnt to the calling party that the mobile station is (currently) not available.
+</p>
+
+<p>
+When the mobile station receives the 5 digits of mobile identity, it check if it matches with its own identity.
+If so, it switches to the indicated channel and sends call acknowledge signal.
+</p>
+
+<p>
+The base station receives the call acknowledge signal and sends the call hold signal ("Rufhaltung") and indicates ringback tone to the calling party.
+</p>
+
+<p>
+When the mobile station receives the call hold signal, it indicates ringing tone to the mobile subscriber.
+Additionally the car's siren is turned on, if the mobile subscriber is outside the car.
+</p>
+
+<p>
+If the mobile station does not receive the call hold signal within 640 ms, it returns to idle state.
+</p>
+
+<p>
+When the called mobile subscriber answers, the mobile station sends the answer signal ("Beginnsignal").
+</p>
+
+<p>
+When the base station receives the answer signal, it stops sending call hold signal and connects the speech path and conversation takes place.
+</p>
+
+<p>
+When the mobile station detects that the call hold signal is gone, it connects the speech path and conversation takes place.
+</p>
+
+<p>
+If the mobile subscriber does not answer within 60 seconds, the base station sends clear signal ("Trennsignal") for 12 seconds and returns to idle state.
+</p>
+
+<p>
+When the mobile station receives clear signal, it stops ringing tone and returns to idle state.
+</p>
+
+<br>
+
+<p>
+Release by the mobile station:
+</p>
+
+<p>
+When the mobile subscriber hangs up, the mobile station sends 4 times the hangup signal ("Schlu&szlig;signal") and returns to idle state.
+</p>
+
+<p>
+When the base station receives the hangup signal, it releases the call and returns to idle state.
+</p>
+
+<br>
+
+<p>
+Release by the base station:
+</p>
+
+<p>
+When the party on the fixed network hangs up, base station sends the clear signal ("Trennsignal") for 12 seconds and returns to idle state.
+</p>
+
+<p>
+When the mobile station receives the clear signal, it returns to idle
+state.
+</p>
+
+<br>
+
+<p>
+Signal loss:
+</p>
+
+<p>
+When the signal gets lost for more than 9,6 seconds, the mobile station will return to idle and indicates busy signal to the mobile subscriber.
+The base station will *TBD*, clears the call and returns to idle state.
+</p>
+
+<p class="toppic">
+<a name="basestation"></a>
+Setup of a base station
+</p>
+
+<p>
 Before testing this software, power on your B-Netz.
 Refer to the manual how to dial a number.
 Start dialing and after some seconds you should hear a busy signal.
 This means that the phone sweeps over all channels to find a base startion.
-If no free base station is found, you will get a busy signal.
+But you get a busy signal, that means there is no channel.
 </p>
 
-<center><img src="b-netz-display.jpg"/></center>
-
-<p align='justify'>
+<p>
 Now run your base station on channel 1.
-Tune the transmitter to 153.010 MHz and the receiver to 148.410.
+You may add '-g x' or '--gfs x' command line option to change the station ID from default to any value you like. (see help)
+Tune the transmitter to 153.010 and the receiver to 148.410.
 You should tune the receiver to 153.010 first, to check if you hear the idle signal from the base station.
 Then tune to actually uplink frequency 148.410 MHz.
+The actual level is not yet relevant.
+(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
-<font size='4'><pre>
+<pre>
+
 # src/bnetz/bnetz -k 1
 ...
 bnetz.c:316 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
 Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
 To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
 on-hook: ..... (enter 0..9 or d=dial)
-</pre></font>
 
-<p align='justify'>
-Now dial again on the phone and watch the base station receiving the call:
+</pre>
+
+<center><img src="b-netz-display.jpg"/></center>
+
+<p>
+Enter a phone number (just a few digits, like "0310") on your phone.
+Start dialing and watch the base station receiving the call.
+If there is no reaction from the base station, check the volume again.
+Also check if you can receive yourself, if you tune the receiver to the downlink channel.
+Set the selector for the base station ID ("Gruppenfreisignal") to 0.
 </p>
 
-<font size='4'><pre>
-bnetz.c:471 info   : Received signal 'Kanalbelegung' from mobile station, sending signal 'Wahlabruf'.
-bnetz.c:561 info   : Received station id from mobile phone: 50993
-bnetz.c:569 info   : Received number from mobile phone: 800330100
-bnetz.c:571 info   : Sending station id back to phone: 50993.
-bnetz.c:631 info   : Dialing complete 50993-&gt;0800330100, call established.
-bnetz.c:637 info   : Setup call to network.
-call.c:574 info   : Incomming call from '50993' to '0800330100'
-bnetz.c:669 notice : Received 'Schlusssignal' from mobile station
-bnetz.c:352 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
-call.c:695 info   : Call has been released with cause=16
-</pre></font>
+<pre>
 
-<p align='justify'>
-The first thing the phone does is to find the channel 1.
+bnetz.c:351 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
+Base station for channel 1 ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
+To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
+mncc_sock.c:137 notice : MNCC socket connected.
+dsp.c:159 info   : Detecting continous tone: 2070:Level= 80% Quality=100%
+bnetz.c:470 info   : Received signal 'Kanalbelegung' from mobile station, sending signal 'Wahlabruf'.
+bnetz.c:509 info   : Digit RX Level: 80% Quality=85
+bnetz.c:524 info   : Received telegramm digit 'Funkwahl ohne Gebuehrenuebermittlung'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 5'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=95
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 0'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=95
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 9'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=95
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 9'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=95
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 3'.
+bnetz.c:559 info   : Received station id from mobile phone: 50993
+bnetz.c:509 info   : Digit RX Level: 86% Quality=90
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 3'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 1'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 0'.
+bnetz.c:509 info   : Digit RX Level: 80% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Funkwahlende'.
+bnetz.c:567 info   : Received number from mobile phone: 310
+bnetz.c:569 info   : Sending station id back to phone: 50993.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Funkwahl ohne Gebuehrenuebermittlung'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 5'.
+bnetz.c:509 info   : Digit RX Level: 80% Quality=95
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 0'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 9'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 9'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 3'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=94
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 3'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=99
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 1'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=100
+bnetz.c:524 info   : Received telegramm digit 'Ziffer 0'.
+bnetz.c:509 info   : Digit RX Level: 81% Quality=100
+bnetz.c:524 info   : Received telegramm digit 'Funkwahlende'.
+bnetz.c:629 info   : Dialing complete 50993-&gt;0310, call established.
+bnetz.c:635 info   : Setup call to network.
+call.c:585 info   : Incomming call from '50993' to '0310'
+call.c:606 info   : Sending MNCC call towards Network
+...
+bnetz.c:509 info   : Digit RX Level: 86% Quality=98
+bnetz.c:524 info   : Received telegramm digit 'Trennsignal/Schlusssignal'.
+bnetz.c:667 notice : Received 'Schlusssignal' from mobile station
+bnetz.c:351 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
+call.c:706 info   : Call has been released with cause=16
+call.c:723 info   : Releasing MNCC call towards Network
+bnetz.c:509 info   : Digit RX Level: 86% Quality=98
+bnetz.c:524 info   : Received telegramm digit 'Trennsignal/Schlusssignal'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=98
+bnetz.c:524 info   : Received telegramm digit 'Trennsignal/Schlusssignal'.
+bnetz.c:509 info   : Digit RX Level: 86% Quality=98
+bnetz.c:524 info   : Received telegramm digit 'Trennsignal/Schlusssignal'.
+
+</pre>
+
+<p>
+The first thing the phone does is to tune to the channel.
+It sweeps through all the supported channels.
+It stops if it finds an idle base station transmitting it's 'Gruppenfreisignal'.
 Then it transmits a signal tone, called 'Kanalbelegung'.
 The base station responds and sends a signal tone, called 'Wahlabruf'.
 Then the phone sends caller ID + number.
 The base station replies the caller ID to prevent false transmissions.
 After establishment, you can use the headset, if present, for speech communication with the phone.
-If you hangup the phone, the call gets released by a message, called 'Schlusssignal'.
+If you hangup the phone, the call gets released by a message, called 'Schlu&szlig;signal'.
 The base station returns to idle.
 </p>
 
-<p align='justify'>
+<p>
+Level adjustment:
+We see a receive level of arround 85%.
+Use the variable resistor (connecting your receiver) to reduce the volume until the level matches about 100% (+- 10%).
+Then start the base station using '-L 2' option for loopback and tune receiver to the transmitter.
+The base station generates test digits and displays them after decodeing.
+Use the other variable resistor (connecting your transmitter) to match the same level of your phone.
+In this case it is the 100% you adjusted the receiver to.
+Now, whatever frequency deviation the phone transmits for signalling, so does your base station.
+</p>
+
+<p>
 In order to call the phone from the base station, you need to transmit channel 19.
-Your transmitter must tune to 153.370 MHz in order to page the phone.
+Your transmitter must temporarily tune to 153.370 MHz in order to page the phone.
 The phones listens to incomming signals from the base station.
 In order to transmit on channel 19, you may use a second transmitter or re-tune your single transmitter.
 There are many ways todo that, but it is actually up to your own how to couple it and how to control your transmitter.
@@ -76,7 +629,7 @@ I use an optocoupler to tell my transmitter to switch to channel 19.
 <br>
 <center><img src="trigger-2.jpg"/><img src="trigger-3.jpg"/></center>
 
-<p align='justify'>
+<p>
 I measure about 3 Volts peak on the ouput of the USB chip I use.
 Since my optocoupler triggers at arround 1 Volts, I have two Volts on the Resistor, which results in 10 mA current.
 In order to check and change the voltage, use '-P positive' or '-P negative' option to select trigger level on one audio channel.
@@ -88,22 +641,88 @@ The trigger is just about two seconds long, so check your meter quickly after pr
 Once the base station timed out, press 'h' for hangup and try again.
 </p>
 
-<font size='4'><pre>
-./bnetz/bnetz -k 1 -P positive
-...
-on-hook: 55555 (enter 0..9 or d=dial)
-call.c:437 info   : Outgoing call to 55555
-bnetz.c:757 info   : Call to mobile station, paging station id '55555'
-bnetz.c:375 info   : Entering paging state (try 1), sending 'Selektivruf' to '55555'.
-bnetz.c:411 info   : Paging mobile station 55555 complete, waiting for answer.
-</pre></font>
-
-<p align='justify'>
-Now again it is up to your own to make the transmitter switch to channel 19 on trigger level.
-If you use a second transmitter, use the tigger to press the PTT button.
+<p>
+Instead of using a tone or a level, the base station can write to a file. Use '-P &lt;file&gt;=&lt;on&gt;:&lt;off&gt;'.
+When switching to channel 19, the base station writes the string &lt;on&gt; to &lt;file&gt;, afterwards it writes &lt;off&gt; to &lt;file&gt;.
+You may write your own tool that uses a pipe to receive the switching information. Then set &lt;file&gt; to your pipe.
+I tried it with a Raspberry PI and used GPIO to switch: '-P /sys/class/gpio/gpio17/value=1:0'
+This writes a 1 to GPIO 17 when switchting to channel 19 and a 0 when switching back.
 </p>
 
+<pre>
+
+# ./bnetz/bnetz -k 1 -P positive
+...
+on-hook: 50993 (enter 0..9 or d=dial)
+call.c:859 info   : Outgoing call from to '50993'
+bnetz.c:757 info   : Call to mobile station, paging station id '50993'
+bnetz.c:374 info   : Entering paging state (try 1), sending 'Selektivruf' to '50993'.
+bnetz.c:410 info   : Paging mobile station 50993 complete, waiting for answer.
+dsp.c:159 info   : Detecting continous tone: 1950:Level= 105% Quality=100%
+bnetz.c:480 info   : Received signal 'Rufbestaetigung' from mobile station, sending signal 'Rufhaltung'.
+(call is ringing)
+call.c:641 info   : Call is alerting
+...
+dsp.c:159 info   : Detecting continous tone: 2070:Level= 102% Quality=99%
+bnetz.c:491 info   : Received signal 'Beginnsignal' from mobile station, call establised.
+call.c:684 info   : Call has been answered by '50993'
+dsp.c:159 info   : Detecting continous tone: 2070:Level= 104% Quality=100%
+
+</pre>
+
+<p>
+Detecting loss of carrier signal:
+We do not have any RSSI (Received Signal Strength Indicator) signal from our radio, so we cannot directly find out if the signal is lost.
+But we have a constant noise level when the signal is lost.
+Be sure to have squelch on your receiver all the way open, so that noise reaches the base station.
+In order to see this level, use command line option '-0 100 -D 0' or '--loss 100 --debug 0'.
+The noise level (relative to the sound card's input level) is shown:
+</p>
+
+<pre>
+...
+loss.c:74 debug  : Noise level = 22%
+...
+</pre>
+
+<p>
+Since we have a noise level of about 20%, we can use a threshold of 10%.
+Use command line option '-0 10' in this case.
+To see the process, keep debugging on by using command line option '-D 0'.
+Whenever the noise level is above the given percentage, loss of carrier is assumed, if the noise level is constant.
+If the noise level changes (due to speech), the noise is ignored and the loss counter is reset.
+After a system specific duration of signal loss, the call is released.
+</p>
+
+<p>
+In this example I cut the power off the phone and waited for the base station to time out.
+</p>
+
+<pre>
+...
+loss.c:74 debug  : Noise level = 1%
+loss.c:74 debug  : Noise level = 2%
+loss.c:74 debug  : Noise level = 1%
+loss.c:74 debug  : Noise level = 22%
+loss.c:74 debug  : Noise level = 21%
+loss.c:84 debug  : Detected signal loss 1 for intervals level change 6% (below 10%).
+loss.c:74 debug  : Noise level = 21%
+loss.c:84 debug  : Detected signal loss 2 for intervals level change 2% (below 10%).
+...
+loss.c:74 debug  : Noise level = 22%
+loss.c:84 debug  : Detected signal loss 11 for intervals level change 7% (below 10%).
+loss.c:74 debug  : Noise level = 21%
+loss.c:84 debug  : Detected signal loss 12 for intervals level change 3% (below 10%).
+bnetz.c:448 notice : Detected loss of signal, releasing.
+bnetz.c:363 info   : Entering release state, sending 'Trennsignal'.
+call.c:706 info   : Call has been released with cause=41
+bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
+bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
+bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
+...
+</pre>
+
 [<a href="index.html">Back to main page</a>]
-</font></td></tr></table></center>
+</td></tr></table></center>
 </body>
 </html>
