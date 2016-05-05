@@ -26,12 +26,12 @@
 /* FTZ 171 TR 60 Clause 6.2
  * Carrier frequency, that is the spectrum that is mirrored */
 #define CARRIER_HZ	3300.0
-#define FILTER_BELOW	500.0
-#define FILTER_TURNS	1
+#define FILTER_BELOW	300.0
+#define FILTER_TURNS	2
 
 /* FTZ 171 TR 60 Clause 6.3
  * How much must the carrier frequency be lower than a 1000 HZ tone that passes the inversion.
- * The filter must be tuned to get that dampening. */
+ * The filter must be tuned to get that loss. */
 #define TEST_1000HZ_DB	55.0
 
 /* sine wave for carrier to modulate to */
