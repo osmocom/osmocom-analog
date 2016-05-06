@@ -242,7 +242,7 @@ static void bnetz_timeout(struct timer *timer);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
-int bnetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, int gfs, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_factor, const char *pilot)
+int bnetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_factor, const char *pilot)
 {
 	bnetz_t *bnetz;
 	int use_pilot_tone = -1;
@@ -300,7 +300,7 @@ error_pilot:
 	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %d 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&bnetz->sender, kanal, sounddev, samplerate, cross_channels, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, loss_factor, use_pilot_tone);
+	rc = sender_create(&bnetz->sender, kanal, sounddev, samplerate, cross_channels, rx_gain, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, loss_factor, use_pilot_tone);
 	if (rc < 0) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

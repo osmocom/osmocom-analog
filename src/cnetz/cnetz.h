@@ -154,7 +154,7 @@ int cnetz_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum cnetz_chan_type chan_type);
 const char *chan_type_long_name(enum cnetz_chan_type chan_type);
 int cnetz_init(void);
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback);
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
 const struct telegramm *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz);

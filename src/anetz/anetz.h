@@ -41,7 +41,7 @@ typedef struct anetz {
 
 double anetz_kanal2freq(int kanal, int unterband);
 int anetz_init(void);
-int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume);
+int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume);
 void anetz_destroy(sender_t *sender);
 void anetz_loss_indication(anetz_t *anetz);
 void anetz_receive_tone(anetz_t *anetz, int bit);

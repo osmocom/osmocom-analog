@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], sounddev[i], samplerate, cross_channels, gfs, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
+		rc = bnetz_create(kanal[i], sounddev[i], samplerate, cross_channels, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

@@ -33,7 +33,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal)
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal)
 {
 	sender_t *master;
 	int rc = 0;
@@ -91,6 +91,7 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 
 	sender->samplerate = samplerate;
 	sender->cross_channels = cross_channels;
+	sender->rx_gain = rx_gain;
 	sender->pre_emphasis = pre_emphasis;
 	sender->de_emphasis = de_emphasis;
 	sender->kanal = kanal;
@@ -187,6 +188,21 @@ static void gen_pilotton(sender_t *sender, int16_t *samples, int length)
 	}
 
 	sender->pilotton_phase = phase;
+}
+
+static void gain_samples(int16_t *samples, int length, double gain)
+{
+	int i;
+	int32_t sample;
+
+	for (i = 0; i < length; i++) {
+		sample = (int32_t)((double)(*samples) * gain);
+		if (sample > 32767)
+			sample = 32767;
+		else if (sample < -32768)
+			sample = -32768;
+		*samples++ = sample;
+	}
 }
 
 /* Handle audio streaming of one transceiver. */
@@ -318,6 +334,9 @@ cant_recover:
 		return;
 	}
 	if (count) {
+		/* rx gain */
+		if (sender->rx_gain != 1.0)
+			gain_samples(samples, count, sender->rx_gain);
 		/* do de emphasis from radio (then write_wave/wave_read), receive audio, process echo test */
 		if (sender->de_emphasis)
 			de_emphasis(&sender->estate, samples, count);
@@ -332,6 +351,8 @@ cant_recover:
 			jitter_save(&sender->audio, samples, count);
 		/* do above for audio slave, if set */
 		if (slave) {
+			if (sender->rx_gain != 1.0)
+				gain_samples(slave_samples, count, slave->rx_gain);
 			if (slave->de_emphasis)
 				de_emphasis(&slave->estate, slave_samples, count);
 			if (slave->wave_play.fp)

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <math.h>
 #include "main.h"
 #include "debug.h"
 #include "../common/sender.h"
@@ -36,12 +37,13 @@ const char *call_sounddev = "";
 int samplerate = 48000;
 int latency = 50;
 int cross_channels = 0;
+int do_pre_emphasis = 0;
+int do_de_emphasis = 0;
+double rx_gain = 1.0;
 int use_mncc_sock = 0;
 int send_patterns = 1;
 int loopback = 0;
 int rt_prio = 0;
-int do_pre_emphasis = 0;
-int do_de_emphasis = 0;
 const char *read_wave = NULL;
 const char *write_wave = NULL;
 
@@ -65,6 +67,16 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -x --cross\n");
 	printf("        Cross channels on sound card. 1st channel (right) is swapped with\n");
 	printf("        second channel (left)\n");
+	printf(" -E --pre-emphasis\n");
+	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
+	printf("        transmitter. (No pre-emphasis done by the transmitter.)\n");
+	printf(" -e --de-emphasis\n");
+	printf("        Enable de-emphasis, if you directly connect to the discriminator of\n");
+	printf("        the receiver. (No de-emphasis done by the receiver.)\n");
+	printf(" -G --rx-gain <dB>\n");
+	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
+	printf("        level of the sound device is too low, even after setting maximum level\n");
+	printf("	with the mixer settings.\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
@@ -75,12 +87,6 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");
 	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
-	printf(" -E --pre-emphasis\n");
-	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
-	printf("        transmitter. (No pre-emphasis done by the transmitter.)\n");
-	printf(" -e --de-emphasis\n");
-	printf("        Enable de-emphasis, if you directly connect to the discriminator of\n");
-	printf("        the receiver. (No de-emphasis done by the receiver.)\n");
 	printf(" -W --write-wave <file>\n");
 	printf("        Write received audio to given wav audio file.\n");
 	printf(" -R --read-wave <file>\n");
@@ -96,18 +102,19 @@ static struct option long_options_common[] = {
 	{"samplerate", 1, 0, 's'},
 	{"latency", 1, 0, 'l'},
 	{"cross", 0, 0, 'x'},
+	{"pre-emphasis", 0, 0, 'E'},
+	{"de-emphasis", 0, 0, 'e'},
+	{"rx-gain", 0, 0, 'G'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"send-patterns", 0, 0, 'p'},
 	{"loopback", 1, 0, 'L'},
 	{"realtime", 1, 0, 'r'},
-	{"pre-emphasis", 0, 0, 'E'},
-	{"de-emphasis", 0, 0, 'e'},
 	{"write-wave", 1, 0, 'W'},
 	{"read-wave", 1, 0, 'R'},
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:l:xmp:L:r:EeW:R:";
+const char *optstring_common = "hD:k:d:s:c:l:xEeG:mp:L:r:W:R:";
 
 struct option *long_options;
 char *optstring;
@@ -129,6 +136,8 @@ void set_options_common(const char *optstring_special, struct option *long_optio
 
 void opt_switch_common(int c, char *arg0, int *skip_args)
 {
+	double gain_db;
+
 	switch (c) {
 	case 'h':
 		print_help(arg0);
@@ -165,6 +174,23 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		cross_channels = 1;
 		*skip_args += 1;
 		break;
+	case 'E':
+		do_pre_emphasis = 1;
+		*skip_args += 1;
+		break;
+	case 'e':
+		do_de_emphasis = 1;
+		*skip_args += 1;
+		break;
+	case 'G':
+		gain_db = atof(optarg);
+		if (gain_db < 0.0) {
+			fprintf(stderr, "Given gain is below 0. Tto reduce RX signal, use sound card's mixer (or resistor net)!\n");
+			exit(0);
+		}
+		rx_gain = pow(10, gain_db / 20.0);
+		*skip_args += 2;
+		break;
 	case 'm':
 		use_mncc_sock = 1;
 		*skip_args += 1;
@@ -180,14 +206,6 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'r':
 		rt_prio = atoi(optarg);
 		*skip_args += 2;
-		break;
-	case 'E':
-		do_pre_emphasis = 1;
-		*skip_args += 1;
-		break;
-	case 'e':
-		do_de_emphasis = 1;
-		*skip_args += 1;
 		break;
 	case 'W':
 		write_wave = strdup(optarg);

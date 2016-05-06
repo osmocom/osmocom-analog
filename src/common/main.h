@@ -7,12 +7,13 @@ extern const char *call_sounddev;
 extern int samplerate;
 extern int latency;
 extern int cross_channels;
+extern int do_pre_emphasis;
+extern int do_de_emphasis;
+extern double rx_gain;
 extern int use_mncc_sock;
 extern int send_patterns;
 extern int loopback;
 extern int rt_prio;
-extern int do_pre_emphasis;
-extern int do_de_emphasis;
 extern const char *read_wave;
 extern const char *write_wave;
 

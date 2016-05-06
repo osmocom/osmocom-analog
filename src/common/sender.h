@@ -25,6 +25,7 @@ typedef struct sender {
 	int			samplerate;
 	int			cross_channels;		/* swap right and left on IO */
 	samplerate_t		srstate;		/* sample rate conversion state */
+	double			rx_gain;		/* factor of level to apply on rx samples */
 	int			pre_emphasis;		/* use pre_emhasis, done by sender */
 	int			de_emphasis;		/* use de_emhasis, done by sender */
 	emphasis_t		estate;			/* pre and de emphasis */
@@ -58,7 +59,7 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal);
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal);
 void sender_destroy(sender_t *sender);
 void sender_send(sender_t *sender, int16_t *samples, int count);
 void sender_receive(sender_t *sender, int16_t *samples, int count);
