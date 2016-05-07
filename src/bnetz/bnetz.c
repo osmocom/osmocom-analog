@@ -104,7 +104,7 @@ static struct impulstelegramme {
 	{ 1016,	"0111010100010010", 0x0000, "Kanalbefehl 16" },
 	{ 1017,	"0111010100001100", 0x0000, "Kanalbefehl 17" },
 	{ 1018,	"0111010100010100", 0x0000, "Kanalbefehl 18" },
-	{ 1019,	"0111010100011000", 0x0000, "Kanalbefehl 19" },
+	{ 1019,	"0111010100011000", 0x0000, "Kanalbefehl 19 (illegal)" },
 	{ 1020,	"0111010010000011", 0x0000, "Kanalbefehl 20" },
 	{ 1021,	"0111010010000101", 0x0000, "Kanalbefehl 21" },
 	{ 1022,	"0111001100001001", 0x0000, "Kanalbefehl 22" }, /* 42 */
@@ -477,7 +477,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 		break;
 	case BNETZ_RUFBESTAETIGUNG:
 		if (bit == 1) {
-			PDEBUG(DBNETZ, DEBUG_INFO, "Received signal 'Rufbestaetigung' from mobile station, call is ringing.\n");
+			PDEBUG(DBNETZ, DEBUG_INFO, "Received signal 'Rufbestaetigung' from mobile station, sending signal 'Rufhaltung'. (call is ringing)\n");
 			timer_stop(&bnetz->timer);
 			bnetz->state = BNETZ_RUFHALTUNG;
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
