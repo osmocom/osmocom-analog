@@ -33,7 +33,7 @@
 #define PI		3.1415927
 
 /* signalling */
-#define TX_PEAK		10000.0	/* peak amplitude of sine wave */
+#define TX_PEAK_TONE	5000.0	/* peak amplitude for all tones */
 #define BIT_DURATION	0.010	/* bit length: 10 ms */
 #define FILTER_STEP	0.001	/* step every 1 ms */
 #define METERING_HZ	2900	/* metering pulse frequency */
@@ -60,7 +60,12 @@ void dsp_init(void)
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table.\n");
 	for (i = 0; i < 256; i++) {
-		dsp_sine[i] = (int)(sin((double)i / 256.0 * 2.0 * PI) * TX_PEAK);
+		dsp_sine[i] = (int)(sin((double)i / 256.0 * 2.0 * PI) * TX_PEAK_TONE);
+	}
+
+	if (TX_PEAK_TONE > 32767.0) {
+		fprintf(stderr, "TX_PEAK_TONE definition too high, please fix!\n");
+		abort();
 	}
 }
 
@@ -129,7 +134,7 @@ void dsp_cleanup_sender(bnetz_t *bnetz)
 }
 
 /* Count duration of tone and indicate detection/loss to protocol handler. */
-static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level)
+static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level, double quality)
 {
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || bit != bnetz->tone_detected) {
@@ -151,13 +156,13 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 	if (bnetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&bnetz->sender.loss);
 	if (bnetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "Detecting continous %.0f Hz tone. (level = %d%%)\n", fsk_bits[bnetz->tone_detected], (int)(level * 100));
+		PDEBUG(DDSP, DEBUG_INFO, "Detecting continous tone: %.0f:Level=%3.0f%% Quality=%3.0f%%\n", fsk_bits[bnetz->tone_detected], level * 100.0, quality * 100.0);
 		bnetz_receive_tone(bnetz, bnetz->tone_detected);
 	}
 }
 
 /* Collect 16 data bits (digit) and check for sync marc '01110'. */
-static void fsk_receive_bit(bnetz_t *bnetz, int bit, double quality, double level)
+static void fsk_receive_bit(bnetz_t *bnetz, int bit, double level, double quality)
 {
 	int i;
 
@@ -180,7 +185,7 @@ static void fsk_receive_bit(bnetz_t *bnetz, int bit, double quality, double leve
 	}
 
 	/* send telegramm */
-	bnetz_receive_telegramm(bnetz, bnetz->fsk_filter_telegramm, quality, level);
+	bnetz_receive_telegramm(bnetz, bnetz->fsk_filter_telegramm, level, quality);
 }
 
 char *show_level(int value)
@@ -239,12 +244,18 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 	else
 		bit = 0;
 
+//	quality = result[bit] / level;
+	if (softbit > 0.5)
+		quality = softbit * 2.0 - 1.0;
+	else
+		quality = 1.0 - softbit * 2.0;
+
 	// FIXME: better threshold
 	/* adjust level, so we get peak of sine curve */
 	if (level / 0.63 > 0.05 && (softbit > 0.75 || softbit < 0.25)) {
-		fsk_receive_tone(bnetz, bit, 1, level / 0.63662);
+		fsk_receive_tone(bnetz, bit, 1, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);
 	} else
-		fsk_receive_tone(bnetz, bit, 0, level / 0.63662);
+		fsk_receive_tone(bnetz, bit, 0, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);
 
 	if (bnetz->fsk_filter_bit != bit) {
 		/* if we have a bit change, reset sample counter to one half bit duration */
@@ -252,17 +263,12 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 		bnetz->fsk_filter_sample = 5;
 	} else if (--bnetz->fsk_filter_sample == 0) {
 		/* if sample counter bit reaches 0, we reset sample counter to one bit duration */
-//		quality = result[bit] / level;
-		if (softbit > 0.5)
-			quality = softbit * 2.0 - 1.0;
-		else
-			quality = 1.0 - softbit * 2.0;
 #ifdef DEBUG_QUALITY
 		printf("|%s| quality=%.2f ", show_level(softbit * 100), quality);
 		printf("|%s|\n", show_level(quality * 100));
 #endif
 		/* adjust level, so we get peak of sine curve */
-		fsk_receive_bit(bnetz, bit, quality, level / 0.63662);
+		fsk_receive_bit(bnetz, bit, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);
 		bnetz->fsk_filter_sample = 10;
 	}
 }

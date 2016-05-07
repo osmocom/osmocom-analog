@@ -94,6 +94,6 @@ int bnetz_create(const char *sounddev, int samplerate, int pre_emphasis, int de_
 void bnetz_destroy(sender_t *sender);
 void bnetz_loss_indication(bnetz_t *bnetz);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);
-void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double quality, double level);
+void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, double quality);
 const char *bnetz_get_telegramm(bnetz_t *bnetz);
 
