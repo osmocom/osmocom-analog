@@ -32,24 +32,25 @@ enum cnetz_state {
 	/* roaming to different base station/network */
 #define	TRANS_UM	(1 << 1)	/* roaming request received, sending reply */
 	/* check if phone is still on */
-#define	TRANS_MA	(1 << 2)	/* periodic online check sent, waiting for reply */
+#define	TRANS_MA	(1 << 2)	/* periodic online check, waiting for time slot to send order */
+#define	TRANS_MFT	(1 << 3)	/* periodic online check sent, waiting for reply */
 	/* mobile originated call */
-#define	TRANS_VWG	(1 << 3)	/* received dialing request, waiting for time slot to send dial order */
-#define	TRANS_WAF	(1 << 4)	/* dial order sent, waiting for dialing */
-#define	TRANS_WBP	(1 << 5)	/* dialing received, waiting for time slot to acknowledge call */
-#define	TRANS_WBN	(1 << 6)	/* dialing received, waiting for time slot to reject call */
-#define	TRANS_VAG	(1 << 7)	/* establishment of call sent, switching channel */
+#define	TRANS_VWG	(1 << 4)	/* received dialing request, waiting for time slot to send dial order */
+#define	TRANS_WAF	(1 << 5)	/* dial order sent, waiting for dialing */
+#define	TRANS_WBP	(1 << 6)	/* dialing received, waiting for time slot to acknowledge call */
+#define	TRANS_WBN	(1 << 7)	/* dialing received, waiting for time slot to reject call */
+#define	TRANS_VAG	(1 << 8)	/* establishment of call sent, switching channel */
 	/* mobile terminated call */
-#define	TRANS_VAK	(1 << 8)	/* establishment of call sent, switching channel */
+#define	TRANS_VAK	(1 << 9)	/* establishment of call sent, switching channel */
 	/* traffic channel */
-#define	TRANS_BQ	(1 << 9)	/* accnowledge channel */
-#define	TRANS_VHQ	(1 << 10)	/* hold call */
-#define	TRANS_RTA	(1 << 11)	/* hold call and make the phone ring */
-#define	TRANS_DS	(1 << 12)	/* establish speech connection */
-#define	TRANS_AHQ	(1 << 13)	/* establish speech connection after answer */
+#define	TRANS_BQ	(1 << 10)	/* accnowledge channel */
+#define	TRANS_VHQ	(1 << 11)	/* hold call */
+#define	TRANS_RTA	(1 << 12)	/* hold call and make the phone ring */
+#define	TRANS_DS	(1 << 13)	/* establish speech connection */
+#define	TRANS_AHQ	(1 << 14)	/* establish speech connection after answer */
 	/* release */
-#define	TRANS_AF	(1 << 14)	/* release connection by base station */
-#define	TRANS_AT	(1 << 15)	/* release connection by mobile station */
+#define	TRANS_AF	(1 << 15)	/* release connection by base station */
+#define	TRANS_AT	(1 << 16)	/* release connection by mobile station */
 
 /* timers */
 #define F_BQ		8		/* number of not received frames at BQ state */
@@ -81,6 +82,7 @@ typedef struct transaction {
 	struct timer		timer;			/* for varous timeouts */
 	int			mo_call;		/* flags a moile originating call */
 	int			mt_call;		/* flags a moile terminating call */
+	int			ma_failed;		/* failed to get a response from MS */
 } transaction_t;
 
 struct clock_speed {
@@ -157,6 +159,7 @@ int cnetz_init(void);
 int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
+int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
 const struct telegramm *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz);
 const struct telegramm *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz);
 void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, struct telegramm *telegramm, int block);

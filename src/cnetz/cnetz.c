@@ -28,6 +28,7 @@
 #include "../common/call.h"
 #include "../common/cause.h"
 #include "cnetz.h"
+#include "database.h"
 #include "sysinfo.h"
 #include "telegramm.h"
 #include "dsp.h"
@@ -367,7 +368,13 @@ inval:
 	futln_fuvst = dialing[1] - '0';
 	futln_rest = atoi(dialing + 2);
 
-	/* 2. check if given number is already in a call, return BUSY */
+	/* 2. check if the subscriber is attached */
+	if (!find_db(futln_nat, futln_fuvst, futln_rest)) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call to not attached subscriber, rejecting!\n");
+		return -CAUSE_OUTOFORDER;
+	}
+
+	/* 3. check if given number is already in a call, return BUSY */
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *) sender;
 		/* search transaction for this number */
@@ -386,12 +393,13 @@ inval:
 		return -CAUSE_BUSY;
 	}
 
-	/* 3. check if all senders are busy, return NOCHANNEL */
+	/* 4. check if all senders are busy, return NOCHANNEL */
 	if (!search_free_spk()) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
+	/* 5. check if we have no OgK, return NOCHANNEL */
 	cnetz = search_ogk();
 	if (!cnetz) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call, but OgK is currently busy, rejecting!\n");
@@ -400,7 +408,7 @@ inval:
 
 	PDEBUG(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
-	/* 4. trying to page mobile station */
+	/* 6. trying to page mobile station */
 	cnetz->sender.callref = callref;
 
 	trans = create_transaction(cnetz, TRANS_VAK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2));
@@ -514,6 +522,25 @@ void call_out_release(int callref, int cause)
 	}
 }
 
+int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+{
+	cnetz_t *cnetz;
+	transaction_t *trans;
+
+	cnetz = search_ogk();
+	if (!cnetz) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "'Meldeaufruf', but OgK is currently busy, rejecting!\n");
+		return -CAUSE_NOCHANNEL;
+	}
+	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest);
+	if (!trans) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
+		return -CAUSE_TEMPFAIL;
+	}
+
+	return 0;
+}
+
 /*
  * Transaction handling
  */
@@ -575,6 +602,9 @@ static transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t
 
 	link_transaction(trans, cnetz);
 
+	/* update database: now busy */
+	update_db(cnetz, futln_nat, futln_fuvst, futln_rest, 1, 0);
+
 	return trans;
 }
 
@@ -598,6 +628,9 @@ static void unlink_transaction(transaction_t *trans)
 /* destroy transaction */
 static void destroy_transaction(transaction_t *trans)
 {
+	/* update database: now idle */
+	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, 0, trans->ma_failed);
+
 	unlink_transaction(trans);
 	
 	const char *rufnummer = transaction2rufnummer(trans);
@@ -626,6 +659,24 @@ static transaction_t *search_transaction(cnetz_t *cnetz, uint32_t state_mask)
 	return NULL;
 }
 
+static transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+{
+	transaction_t *trans = cnetz->trans_list;
+
+	while (trans) {
+		if (trans->futln_nat == futln_nat
+		 && trans->futln_fuvst == futln_fuvst
+		 && trans->futln_rest == futln_rest) {
+			const char *rufnummer = transaction2rufnummer(trans);
+			PDEBUG(DCNETZ, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			return trans;
+		}
+		trans = trans->next;
+	}
+
+	return NULL;
+}
+
 static const char *trans_state_name(int state)
 {
 	switch (state) {
@@ -637,6 +688,8 @@ static const char *trans_state_name(int state)
 		return "UM";
 	case TRANS_MA:
 		return "MA";
+	case TRANS_MFT:
+		return "MFT";
 	case TRANS_VWG:
 		return "VWG";
 	case TRANS_WAF:
@@ -743,6 +796,8 @@ static void transaction_timeout(struct timer *timer)
 	case TRANS_WAF:
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
 		if (++trans->count == 3) {
+			/* no response to dialing is like MA failed */
+			trans->ma_failed = 1;
 			trans_new_state(trans, TRANS_WBN);
 			break;
 		}
@@ -784,6 +839,10 @@ static void transaction_timeout(struct timer *timer)
 		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
 		cnetz->sender.callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+		break;
+	case TRANS_MFT:
+		trans->ma_failed = 1;
+		destroy_transaction(trans);
 		break;
 	default:
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
@@ -963,7 +1022,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 	telegramm.ogk_vorschlag = CNETZ_OGK_KANAL;
 	telegramm.fuz_rest_nr = si.fuz_rest;
 
-	trans = search_transaction(cnetz, TRANS_VWG);
+	trans = search_transaction(cnetz, TRANS_VWG | TRANS_MA);
 	if (trans) {
 		switch (trans->state) {
 		case TRANS_VWG:
@@ -974,6 +1033,15 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_WAF);
 			timer_start(&trans->timer, 4.0); /* Wait two slot cycles until resending */
+			break;
+		case TRANS_MA:
+			PDEBUG(DCNETZ, DEBUG_INFO, "Sending keepalive request 'Meldeaufruf'\n");
+			telegramm.opcode = OPCODE_MA_M;
+			telegramm.futln_nationalitaet = trans->futln_nat;
+			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
+			telegramm.futln_rest_nr = trans->futln_rest;
+			trans_new_state(trans, TRANS_MFT);
+			timer_start(&trans->timer, 4.0); /* Wait two slot cycles until timeout */
 			break;
 		default:
 			; /* MLR */
@@ -1064,6 +1132,15 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		PDEBUG(DCNETZ, DEBUG_INFO, "Received dialing digits 'Wahluebertragung' message from Subscriber '%s' to Number '%s'\n", rufnummer, trans->dialing);
 		timer_stop(&trans->timer);
 		trans_new_state(trans, TRANS_WBP);
+		valid_frame = 1;
+		break;
+	case OPCODE_MFT_M:
+		trans = search_transaction_number(cnetz, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		if (!trans) {
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldun Funktelefonteilnemer' message without transaction, ignoring!\n");
+			break;
+		}
+		destroy_transaction(trans);
 		valid_frame = 1;
 		break;
 	default:

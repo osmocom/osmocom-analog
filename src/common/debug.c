@@ -43,6 +43,7 @@ struct debug_cat {
 	{ "frame", "\033[0;36m" },
 	{ "call", "\033[1;37m" },
 	{ "mncc", "\033[1;32m" },
+	{ "database", "\033[0;33m" },
 };
 
 int debuglevel = DEBUG_INFO;

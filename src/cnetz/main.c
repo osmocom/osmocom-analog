@@ -32,6 +32,7 @@
 #include "../common/freiton.h"
 #include "../common/besetztton.h"
 #include "cnetz.h"
+#include "database.h"
 #include "sysinfo.h"
 #include "dsp.h"
 #include "telegramm.h"
@@ -291,6 +292,8 @@ fail:
 	call_cleanup();
 	if (use_mncc_sock)
 		mncc_exit();
+
+	flush_db();
 
 	/* destroy transceiver instance */
 	while (sender_head)
