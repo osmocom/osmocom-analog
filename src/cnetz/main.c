@@ -43,7 +43,7 @@ int measure_speed = 0;
 double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
 double deviation = 0.5, noise = 0.0;
-int ms_power = 3; /* 0..3 */
+int ms_power = 0; /* 0..3 */
 int auth = 0;
 
 void print_help(const char *arg0)
