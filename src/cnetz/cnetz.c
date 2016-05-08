@@ -1091,7 +1091,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		trans->count = 0;
 		timer_stop(&trans->timer);
 		if (cnetz->sender.callref) {
-			call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
+			call_in_release(cnetz->sender.callref, CAUSE_NORMAL);
 			cnetz->sender.callref = 0;
 		}
 		break;
@@ -1200,7 +1200,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		trans->count = 0;
 		timer_stop(&trans->timer);
 		if (cnetz->sender.callref) {
-			call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
+			call_in_release(cnetz->sender.callref, CAUSE_NORMAL);
 			cnetz->sender.callref = 0;
 		}
 		break;
