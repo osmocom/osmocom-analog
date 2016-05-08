@@ -215,7 +215,7 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 	speed_ppm_tx[0] = ((double)cs->spl_count[1] / (double)cnetz->sender.samplerate) / (cs->last_ti[1] - cs->start_ti[1]) * 1000000.0 - 1000000.0;
 	speed_ppm_rx[1] = ((double)cs->spl_count[2] / (double)cnetz->sender.samplerate) / (cs->last_ti[2] - cs->start_ti[2]) * 1000000.0 - 1000000.0;
 	speed_ppm_tx[1] = ((double)cs->spl_count[3] / (double)cnetz->sender.samplerate) / (cs->last_ti[3] - cs->start_ti[3]) * 1000000.0 - 1000000.0;
-	PDEBUG(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: TX=%.2f RX=%.2f ppm\n", speed_ppm_rx[0], speed_ppm_tx[0], speed_ppm_rx[1], speed_ppm_tx[1]);
+	PDEBUG(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx[0], speed_ppm_tx[0], speed_ppm_rx[1], speed_ppm_tx[1]);
 }
 
 static int fsk_nothing_encode(cnetz_t *cnetz)
