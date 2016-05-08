@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mandatory) {
-		print_help(argv[0]);
+		print_help(argv[-skip_args]);
 		return 0;
 	}
 

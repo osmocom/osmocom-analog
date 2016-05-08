@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
 	if (!kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel 1.\n\n");
-		print_help(argv[0]);
+		print_help(argv[-skip_args]);
 		return 0;
 	}
 
