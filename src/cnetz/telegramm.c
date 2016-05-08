@@ -1499,7 +1499,7 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 	}
 
 	if (opcode >= 32) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used by mobie station, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+		PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used by mobile station, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 		return;
 	}
 
