@@ -125,8 +125,9 @@ void update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t 
 		timer_start(&db->timer, MELDE_INTERVAL); /* when to check avaiability (again) */
 		db->retry = 0;
 	} else {
-		if (++db->retry == MELDE_MAXIMAL) {
-			PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%d' failed.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		db->retry++;
+		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%d' failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->retry, MELDE_MAXIMAL);
+		if (db->retry == MELDE_MAXIMAL) {
 			remove_db(db);
 			return;
 		}
