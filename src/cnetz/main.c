@@ -45,7 +45,8 @@ enum cnetz_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_OGK_SPK };
 int measure_speed = 0;
 double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
-double deviation = 0.5, noise = 0.0;
+const char *flip_polarity = "auto";
+double noise = 0.0;
 int ms_power = 0; /* 0..3 */
 int auth = 0;
 
@@ -60,12 +61,15 @@ void print_help(const char *arg0)
 	printf(" -S --clock-speed <rx ppm>,<tx ppm>\n");
 	printf("        Correct speed of sound card's clock. Use '-M' to measure speed for\n");
 	printf("        some hours after temperature has settled. The use these results to\n");
-	printf("	correct signal processing speed. After adjustment, the clock must match\n");
-	printf("	+- 1ppm or better. CORRECTING CLOCK SPEED IS REQUIRED! See\n");
+	printf("        correct signal processing speed. After adjustment, the clock must match\n");
+	printf("        +- 1ppm or better. CORRECTING CLOCK SPEED IS REQUIRED! See\n");
 	printf("        documentation on how to measure correct value.\n");
-	printf(" -F --flip-polarity\n");
-	printf("	Adjust, so the transmitter increases frequency, when positive levels\n");
-	printf("	are sent to sound device\n");
+	printf(" -F --flip-polarity no | yes auto\n");
+	printf("        Flip polarity of transmitted FSK signal. If yes, the sound card\n");
+	printf("        generates a negative signal rather than a positive one. If auto, the");
+	printf("        base station generates two virtual base stations with both polarities.\n");
+	printf("        Once a mobile registers, the correct polarity is selected and used.\n");
+	printf("        (default = %s)\n", flip_polarity);
 	printf(" -N --noise 0.0 .. 1.0 (default = %.1f)\n", noise);
 	printf("	Between frames on OgK, send noise at given level. Use 0.0 for Silence.\n");
 	printf(" -P --ms-power <power level>\n");
@@ -87,14 +91,14 @@ static int handle_options(int argc, char **argv)
 		{"channel-type", 1, 0, 't'},
 		{"measure-speed", 0, 0, 'M'},
 		{"clock-speed", 1, 0, 'S'},
-		{"flip-polarity", 0, 0, 'F'},
+		{"flip-polarity", 1, 0, 'F'},
 		{"noise", 1, 0, 'N'},
 		{"ms-power", 1, 0, 'P'},
 		{"authentication", 0, 0, 'A'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:MS:FN:P:A", long_options_special);
+	set_options_common("t:MS:F:N:P:A", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -134,8 +138,17 @@ static int handle_options(int argc, char **argv)
 			skip_args += 2;
 			break;
 		case 'F':
-			deviation = -deviation;
-			skip_args += 1;
+			if (!strcasecmp(optarg, "no"))
+				flip_polarity = "no";
+			else if (!strcasecmp(optarg, "yes"))
+				flip_polarity = "yes";
+			else if (!strcasecmp(optarg, "auto"))
+				flip_polarity = "auto";
+			else {
+				fprintf(stderr, "Given polarity '%s' is illegal, see help!\n", optarg);
+				exit(0);
+			}
+			skip_args += 2;
 			break;
 		case 'N':
 			noise = strtold(optarg, NULL);
@@ -169,6 +182,7 @@ int main(int argc, char *argv[])
 	int skip_args;
 	const char *station_id = "";
 	int mandatory = 0;
+	int polarity;
 	int i;
 
 	/* init common tones */
@@ -251,9 +265,15 @@ int main(int argc, char *argv[])
 	if (i == num_kanal)
 		fprintf(stderr, "You did not define any SpK (speech) channel. You will not be able to make any call.\n");
 
+	polarity = 0; /* auto */
+	if (!strcmp(flip_polarity, "no"))
+		polarity = 1; /* positive */
+	if (!strcmp(flip_polarity, "yes"))
+		polarity = -1; /* negative */
+
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, deviation, noise, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, noise, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

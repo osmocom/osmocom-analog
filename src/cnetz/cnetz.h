@@ -110,9 +110,13 @@ typedef struct cnetz {
 	/* all cnetz states */
 	enum cnetz_state	state;			/* main state of sender */
 
+	/* cell nr selection */
+	int			cell_auto;		/* if set, cell_nr is selected automatically */
+	int			cell_nr;		/* current cell number to use (sysinfo) */
+
 	/* scheduler */
 	int			sched_ts;		/* current time slot */
-	int			last_tx_timeslot;	/* last timeslot we transmitted, so we can match MS timeslot */
+	int			sched_last_ts[2];	/* last timeslot we transmitted, so we can match MS timeslot */
 	int			sched_r_m;		/* Rufblock (0) / Meldeblock (1) */
 	int			sched_switch_mode;	/* counts slots until mode is switched */
 	enum dsp_mode		sched_dsp_mode;		/* what mode shall be switched to  */
@@ -120,7 +124,7 @@ typedef struct cnetz {
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, "Telegramm", .... */
 	fsk_fm_demod_t		fsk_demod;		/* demod process */
-	int16_t			fsk_deviation;		/* deviation used for digital signal */
+	int16_t			fsk_deviation;		/* deviation of FSK signal on sound card */
 	int16_t			fsk_ramp_up[256];	/* samples of upward ramp shape */
 	int16_t			fsk_ramp_down[256];	/* samples of downward ramp shape */
 	double			fsk_noise;		/* send static between OgK frames */
@@ -156,7 +160,7 @@ int cnetz_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum cnetz_chan_type chan_type);
 const char *chan_type_long_name(enum cnetz_chan_type chan_type);
 int cnetz_init(void);
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback);
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
 int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);

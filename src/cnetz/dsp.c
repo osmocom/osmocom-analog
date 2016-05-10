@@ -37,6 +37,7 @@
 
 #define PI		M_PI
 
+#define FSK_DEVIATION	16384
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
 
@@ -56,7 +57,6 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 {
 	double c;
         int i;
-	int16_t deviation = cnetz->fsk_deviation;
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating smooth ramp table.\n");
 	for (i = 0; i < 256; i++) {
@@ -67,13 +67,13 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 		else
 			c = sqrt(c);
 #endif
-		ramp_down[i] = (int)(c * (double)deviation);
+		ramp_down[i] = (int)(c * (double)cnetz->fsk_deviation);
 		ramp_up[i] = -ramp_down[i];
 	}
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], double deviation, double noise)
+int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], double noise)
 {
 	int rc = 0;
 	double size;
@@ -105,9 +105,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	}
 
 	/* create devation and ramp */
-	if (deviation > 1.0)
-		deviation = 1.0;
-	cnetz->fsk_deviation = (int16_t)(deviation * 32766.9); /* be sure not to overflow -32767 .. 32767 */
+	cnetz->fsk_deviation = FSK_DEVIATION; /* be sure not to overflow -32767 .. 32767 */
 	dsp_init_ramp(cnetz);
 	cnetz->fsk_noise = noise;
 
@@ -617,10 +615,20 @@ again:
 
 		switch (cnetz->dsp_mode) {
 		case DSP_MODE_OGK:
-			if (((1 << cnetz->sched_ts) & si.ogk_timeslot_mask)) {
+			/* if automatic cell selection is used, toggle between
+			 * two cells until a response for one cell is received
+			 */
+			if (cnetz->cell_auto)
+				cnetz->cell_nr = (cnetz->sched_ts & 7) >> 2;
+			/* send on timeslots depending on the cell_nr:
+			 * cell 0: 0, 8, 16, 24
+			 * cell 1: 4, 12, 20, 28
+			 */
+			if (((cnetz->sched_ts & 7) == 0 && cnetz->cell_nr == 0)
+			 || ((cnetz->sched_ts & 7) == 4 && cnetz->cell_nr == 1)) {
 				if (cnetz->sched_r_m == 0) {
 					/* set last time slot, so we can match received message from mobile station */
-					cnetz->last_tx_timeslot = cnetz->sched_ts;
+					cnetz->sched_last_ts[cnetz->cell_nr] = cnetz->sched_ts;
 					PDEBUG(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
 					bits = cnetz_encode_telegramm(cnetz);
 				} else {

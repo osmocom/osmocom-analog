@@ -112,7 +112,7 @@ static void trans_new_state(transaction_t *trans, int state);
 static void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans);
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], double deviation, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback)
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -180,7 +180,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 #endif
 
 	/* init audio processing */
-	rc = dsp_init_sender(cnetz, measure_speed, clock_speed, deviation, noise);
+	rc = dsp_init_sender(cnetz, measure_speed, clock_speed, noise);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
 		goto error;
@@ -189,6 +189,30 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 	cnetz->chan_type = chan_type;
 	cnetz->auth = auth;
 	cnetz->ms_power = ms_power;
+
+	switch (polarity) {
+	case 1:
+		/* select cell 0 for positive polarity */
+		cnetz->cell_nr = 0;
+		cnetz->cell_auto = 0;
+		if (si[cnetz->cell_nr].flip_polarity != 0) {
+			fprintf(stderr, "cell %d must have positive polarity, please fix!\n", cnetz->cell_nr);
+			abort();
+		}
+		break;
+	case 2:
+		/* select cell 1 for negative polarity */
+		cnetz->cell_nr = 1;
+		cnetz->cell_auto = 0;
+		if (si[cnetz->cell_nr].flip_polarity != 0) {
+			fprintf(stderr, "cell %d must have negative polarity, please fix!\n", cnetz->cell_nr);
+			abort();
+		}
+		break;
+	default:
+		/* send two cells and select by the first message from mobile */
+		cnetz->cell_auto = 1;
+	}
 
 	cnetz->pre_emphasis = pre_emphasis;
 	cnetz->de_emphasis = de_emphasis;
@@ -254,10 +278,7 @@ static void cnetz_go_idle(cnetz_t *cnetz)
 	}
 
 	/* set scheduler to OgK */
-	if (cnetz->sender.kanal == CNETZ_OGK_KANAL)
-		PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %d, sending 'Funkzellenkennung' %d,%d,%d.\n", cnetz->sender.kanal, si.fuz_nat, si.fuz_fuvst, si.fuz_rest);
-	else
-		PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal, si.fuz_nat, si.fuz_fuvst, si.fuz_rest);
+	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal);
 	cnetz_new_state(cnetz, CNETZ_IDLE);
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* go idle after next frame/slot */
@@ -916,24 +937,24 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 
 	telegramm.opcode = OPCODE_LR_R;
 	telegramm.max_sendeleistung = cnetz->ms_power;
-	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
+	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
 	telegramm.zeitschlitz_nr = cnetz->sched_ts;
-	telegramm.grenzwert_fuer_einbuchen_und_umbuchen = si.grenz_einbuchen;
+	telegramm.grenzwert_fuer_einbuchen_und_umbuchen = si[cnetz->cell_nr].grenz_einbuchen;
 	telegramm.authentifikationsbit = cnetz->auth;
-	telegramm.vermittlungstechnische_sperren = si.sperre;
+	telegramm.vermittlungstechnische_sperren = si[cnetz->cell_nr].sperre;
 	telegramm.ws_kennung = 0;
-	telegramm.reduzierungsfaktor = si.reduzierung;
-	telegramm.fuz_nationalitaet = si.fuz_nat;
-	telegramm.fuz_fuvst_nr = si.fuz_fuvst;
-	telegramm.fuz_rest_nr = si.fuz_rest;
-	telegramm.kennung_fufst = si.fufst_prio;
-	telegramm.nachbarschafts_prioritaets_bit = si.nachbar_prio;
-	telegramm.bewertung_nach_pegel_und_entfernung = si.bewertung;
-	telegramm.entfernungsangabe_der_fufst = si.entfernung;
-	telegramm.mittelungsfaktor_fuer_ausloesen = si.mittel_ausloesen;
-	telegramm.mittelungsfaktor_fuer_umschalten = si.mittel_umschalten;
-	telegramm.grenzwert_fuer_umschalten = si.grenz_umschalten;
-	telegramm.grenze_fuer_ausloesen = si.grenz_ausloesen;
+	telegramm.reduzierungsfaktor = si[cnetz->cell_nr].reduzierung;
+	telegramm.fuz_nationalitaet = si[cnetz->cell_nr].fuz_nat;
+	telegramm.fuz_fuvst_nr = si[cnetz->cell_nr].fuz_fuvst;
+	telegramm.fuz_rest_nr = si[cnetz->cell_nr].fuz_rest;
+	telegramm.kennung_fufst = si[cnetz->cell_nr].fufst_prio;
+	telegramm.nachbarschafts_prioritaets_bit = si[cnetz->cell_nr].nachbar_prio;
+	telegramm.bewertung_nach_pegel_und_entfernung = si[cnetz->cell_nr].bewertung;
+	telegramm.entfernungsangabe_der_fufst = si[cnetz->cell_nr].entfernung;
+	telegramm.mittelungsfaktor_fuer_ausloesen = si[cnetz->cell_nr].mittel_ausloesen;
+	telegramm.mittelungsfaktor_fuer_umschalten = si[cnetz->cell_nr].mittel_umschalten;
+	telegramm.grenzwert_fuer_umschalten = si[cnetz->cell_nr].grenz_umschalten;
+	telegramm.grenze_fuer_ausloesen = si[cnetz->cell_nr].grenz_ausloesen;
 	
 	trans = search_transaction(cnetz, TRANS_EM | TRANS_UM | TRANS_WBN | TRANS_WBP | TRANS_VAG | TRANS_VAK);
 	if (trans) {
@@ -1020,7 +1041,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 	telegramm.teilnehmersperre = 0;
 	telegramm.anzahl_gesperrter_teilnehmergruppen = 0;
 	telegramm.ogk_vorschlag = CNETZ_OGK_KANAL;
-	telegramm.fuz_rest_nr = si.fuz_rest;
+	telegramm.fuz_rest_nr = si[cnetz->cell_nr].fuz_rest;
 
 	trans = search_transaction(cnetz, TRANS_VWG | TRANS_MA);
 	if (trans) {
@@ -1061,7 +1082,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 
 	switch (opcode) {
 	case OPCODE_EM_R:
-		if (!match_fuz(telegramm))
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		if (cnetz->auth && telegramm->chipkarten_futelg_bit)
@@ -1080,7 +1101,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		valid_frame = 1;
 		break;
 	case OPCODE_UM_R:
-		if (!match_fuz(telegramm))
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		if (cnetz->auth && telegramm->chipkarten_futelg_bit)
@@ -1100,7 +1121,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		break;
 	case OPCODE_VWG_R:
 	case OPCODE_SRG_R:
-		if (!match_fuz(telegramm))
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		PDEBUG(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '%s'\n", rufnummer);
@@ -1172,15 +1193,15 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 
 	telegramm.max_sendeleistung = cnetz->ms_power;
 	telegramm.sendeleistungsanpassung = 1;
-	telegramm.entfernung = si.entfernung;
-	telegramm.fuz_nationalitaet = si.fuz_nat;
-	telegramm.fuz_fuvst_nr = si.fuz_fuvst;
-	telegramm.fuz_rest_nr = si.fuz_rest;
+	telegramm.entfernung = si[cnetz->cell_nr].entfernung;
+	telegramm.fuz_nationalitaet = si[cnetz->cell_nr].fuz_nat;
+	telegramm.fuz_fuvst_nr = si[cnetz->cell_nr].fuz_fuvst;
+	telegramm.fuz_rest_nr = si[cnetz->cell_nr].fuz_rest;
 	telegramm.futln_nationalitaet = trans->futln_nat;
 	telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 	telegramm.futln_rest_nr = trans->futln_rest;
 	telegramm.frequenz_nr = cnetz->sender.kanal;
-	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
+	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
 
 	switch (trans->state) {
 	case TRANS_BQ:
@@ -1284,7 +1305,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 
 	switch (opcode) {
 	case OPCODE_BEL_K:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1297,7 +1318,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		timer_stop(&trans->timer);
 		break;
 	case OPCODE_DSQ_K:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1311,7 +1332,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		timer_stop(&trans->timer);
 		break;
 	case OPCODE_VH_K:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1324,7 +1345,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		timer_stop(&trans->timer);
 		break;
 	case OPCODE_RTAQ_K:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1337,7 +1358,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		timer_start(&trans->timer, 0.0375 * F_RTA); /* F_RTA frames */
 		break;
 	case OPCODE_AH_K:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1355,7 +1376,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		call_in_answer(cnetz->sender.callref, transaction2rufnummer(trans));
 		break;
 	case OPCODE_AT_K:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1396,15 +1417,15 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	telegramm.sendeleistungsanpassung = 1;
 	telegramm.ankuendigung_gespraechsende = 0;
 	telegramm.gebuehren_stand = 0;
-	telegramm.fuz_nationalitaet = si.fuz_nat;
-	telegramm.fuz_fuvst_nr = si.fuz_fuvst;
-	telegramm.fuz_rest_nr = si.fuz_rest;
+	telegramm.fuz_nationalitaet = si[cnetz->cell_nr].fuz_nat;
+	telegramm.fuz_fuvst_nr = si[cnetz->cell_nr].fuz_fuvst;
+	telegramm.fuz_rest_nr = si[cnetz->cell_nr].fuz_rest;
 	telegramm.futln_nationalitaet = trans->futln_nat;
 	telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 	telegramm.futln_rest_nr = trans->futln_rest;
 	telegramm.frequenz_nr = cnetz->sender.kanal;
-	telegramm.entfernung = si.entfernung;
-	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
+	telegramm.entfernung = si[cnetz->cell_nr].entfernung;
+	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
 	telegramm.gueltigkeit_des_gebuehrenstandes = 0;
 	telegramm.ausloesegrund = trans->release_cause;
 
@@ -1449,7 +1470,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 
 	switch (opcode) {
 	case OPCODE_VH_V:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
@@ -1463,7 +1484,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		cnetz->scrambler = telegramm->betriebs_art;
 		break;
 	case OPCODE_AT_V:
-		if (!match_fuz(telegramm)) {
+		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
 		}
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {

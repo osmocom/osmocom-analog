@@ -1,6 +1,6 @@
 
 typedef struct system_information {
-	uint32_t	ogk_timeslot_mask;	/* each bit defines an assigned time slot */
+	int		flip_polarity;		/* use negative polarity for FSK transmission */
 	uint8_t		fuz_nat;		/* national network ID */
 	uint8_t		fuz_fuvst;		/* id of switching center */
 	uint8_t		fuz_rest;		/* rest of base station id */
@@ -18,7 +18,7 @@ typedef struct system_information {
 	uint8_t		reduzierung;
 } cnetz_si;
 
-extern cnetz_si si;
+extern cnetz_si si[];
 
 void init_sysinfo(void);
 

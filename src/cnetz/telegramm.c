@@ -26,6 +26,7 @@
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "cnetz.h"
+#include "dsp.h"
 #include "sysinfo.h"
 #include "telegramm.h"
 
@@ -570,12 +571,13 @@ static int encode_dialstring(uint64_t *value, const char *number)
 	return 0;
 }
 
-int match_fuz(telegramm_t *telegramm)
+int match_fuz(cnetz_t *cnetz, telegramm_t *telegramm, int cell)
 {
-	if (telegramm->fuz_nationalitaet != si.fuz_nat
-	 || telegramm->fuz_fuvst_nr != si.fuz_fuvst
-	 || telegramm->fuz_rest_nr != si.fuz_rest) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Cell 'Funkzelle' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+	if (telegramm->fuz_nationalitaet != si[cell].fuz_nat
+	 || telegramm->fuz_fuvst_nr != si[cell].fuz_fuvst
+	 || telegramm->fuz_rest_nr != si[cell].fuz_rest) {
+	 	if (!cnetz->cell_auto)
+			PDEBUG(DFRAME, DEBUG_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Cell 'Funkzelle' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 	 	return 0;
 	}
 
@@ -618,7 +620,7 @@ static void debug_parameter(char digit, uint64_t value)
 /* encode telegram to 70 bits
  * bit order MSB
  */
-static const char *assemble_telegramm(const telegramm_t *telegramm, int debug)
+static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 {
 	static char bits[71]; /* + termination char for debug */
 	char parameter;
@@ -1273,7 +1275,7 @@ int detect_sync(uint64_t bitstream)
  * input: 70 data bits MSB first
  * output: 10*15 code words (LSB first)
  * FTZ 171 TR 60 / 5.1.1.3 */
-static const char *encode(const char *input)
+static char *encode(const char *input)
 {
 	static char output[150];
 	int16_t word;
@@ -1389,7 +1391,7 @@ static const char *decode(const char *input, int *_bit_errors)
  * input: 10*15 code words (LSB first)
  * output: stream of 33 sync + 1 + 150 interleaved bits
  * FTZ 171 TR 60 / 5.1.1.2 and 5.1.1.2 */
-static const char *interleave(const char *input)
+static char *interleave(const char *input)
 {
 	static char output[185]; /* + termination char for debug */
 	int i, j;
@@ -1488,9 +1490,9 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 	telegramm.jitter = jitter;
 
 	if (bit_errors)
-		PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Jitter: %.2f Sync Time: %.2f Bit errors: %d %s\n", fabs(level * 32767.0 / cnetz->fsk_deviation) * 100.0, jitter, sync_time, bit_errors, (level < 0) ? "NEGATIVE" : "POSITIVE");
+		PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Jitter: %.2f Sync Time: %.2f (TS %.2f) Bit errors: %d %s\n", fabs(level) * 32767.0 / cnetz->fsk_deviation * 100.0, jitter, sync_time, sync_time / 396.0, bit_errors, (level < 0) ? "NEGATIVE" : "POSITIVE");
 	else
-		PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Jitter: %.2f Sync Time: %.2f %s\n", fabs(level * 32767.0 / cnetz->fsk_deviation) * 100.0, jitter, sync_time, (level < 0) ? "NEGATIVE" : "POSITIVE");
+		PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Jitter: %.2f Sync Time: %.2f (TS %.2f) %s\n", fabs(level) * 32767.0 / cnetz->fsk_deviation * 100.0, jitter, sync_time, sync_time / 396.0, (level < 0) ? "NEGATIVE" : "POSITIVE");
 
 	if (cnetz->sender.loopback) {
 		PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm in loopback test mode (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
@@ -1508,13 +1510,32 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 		return;
 	}
 
+	/* auto select cell */
+	if (cnetz->cell_auto) {
+		if (!match_fuz(cnetz, &telegramm, 0)) {
+			cnetz->cell_nr = 1;
+selected:
+			cnetz->cell_auto = 0;
+			printf("***********************************************\n");
+			printf("*** Autoselecting %stive FSK TX polarity! ***\n", (si[cnetz->cell_nr].flip_polarity) ? "nega" : "posi");
+			printf("***********************************************\n");
+		} else if (!match_fuz(cnetz, &telegramm, 1)) {
+			cnetz->cell_nr = 0;
+			goto selected;
+		} else {
+			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm with no cell number, ignoring!\n");
+			return;
+		}
+	}
+
 	switch (cnetz->dsp_mode) {
 	case DSP_MODE_OGK:
 		if (definition_opcode[opcode].block != BLOCK_R && definition_opcode[opcode].block != BLOCK_M) {
 			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used OgK channel signalling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
-		block = cnetz->last_tx_timeslot * 2;
+		/* determine block by last timeslot sent and by message type */
+		block = cnetz->sched_last_ts[cnetz->cell_nr] * 2;
 		if (definition_opcode[opcode].block == BLOCK_M)
 			block++;
 		cnetz_receive_telegramm_ogk(cnetz, &telegramm, block);
@@ -1542,7 +1563,7 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 {
 	const telegramm_t *telegramm = NULL;
 	uint8_t opcode;
-	const char *bits;
+	char *bits;
 
 	switch (cnetz->dsp_mode) {
 	case DSP_MODE_OGK:
@@ -1565,6 +1586,14 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 	bits = assemble_telegramm(telegramm, (opcode != OPCODE_LR_R) && (opcode != OPCODE_MLR_M));
 	bits = encode(bits);
 	bits = interleave(bits);
+
+	/* invert, if polarity of the cell is negative */
+	if (si[cnetz->cell_nr].flip_polarity) {
+		int i;
+
+		for (i = 0; i < 184; i++)
+			bits[i] ^= 1;
+	}
 
 	return bits;
 }
