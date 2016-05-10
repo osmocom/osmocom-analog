@@ -148,12 +148,14 @@ Let it run again for one hour and you will see that signal is now below 1 PPM.
 <center><img src="c-netz-burst_part.png"/></center>
 
 <p>
-C-Netz uses FSK by directly modulating the carrier, rather than modulating an FM tone.
+C-Netz uses FSK (Frequency Shift Keying) by directly modulating the carrier, rather than modulating a transmitted tone.
 The advantage is much higher data rate.
-A phone will only detect the correct polarity.
+The base station's carrier frequency is raised by 2.5 KHz to transmit a logical "1" and lowered by 2.5 KHz to transmit a logial "0".
+(The mobile station transmits reversed polarity.) 
+The mobile station will only detect the correct polarity.
 The three sync words of "11100010010", is shown in the picture above.
 In the picture above, the polarity is wrong.
-The "1" points down and the "0" up.
+(The logical "1" points down and the logical "0" points up.)
 You must check, with what polarity your transmitter is doing a positive frequency deviation.
 Also you must check your sound card's polarity on positive value beeing sent.
 To change polarty, use command line option '-F' or '--flip-polarity'.
@@ -161,8 +163,8 @@ To change polarty, use command line option '-F' or '--flip-polarity'.
 </p>
 
 <p>
-This software does not care about what polarity it receives.
-It just checks for sync words at both polarities and chooses right polarity automatically.
+This software does not care about what polarity it receives from the mobile station.
+It just checks for sync words with both polarities and chooses right polarity automatically.
 </p>
 
 [<a href="index.html">Back to main page</a>]
