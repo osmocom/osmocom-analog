@@ -34,8 +34,8 @@
 
 /* signalling */
 #define TX_AUDIO_0dBm0		32767	/* works quite well */
-#define TX_PEAK_FSK		16384.0	/* peak amplitude of signalling FSK */
-#define TX_PEAK_SUPER		1638.0	/* peak amplitude of supervisory signal */
+#define TX_PEAK_FSK		10000.0	/* peak amplitude of signalling FSK */
+#define TX_PEAK_SUPER		1000.0	/* peak amplitude of supervisory signal */
 #define BIT_RATE		1200	/* baud rate */
 #define STEPS_PER_BIT		10	/* step every 1/12000 sec */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
