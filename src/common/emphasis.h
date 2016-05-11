@@ -1,12 +1,14 @@
 typedef struct emphasis {
 	struct {
-		double last_value;
+		double x_last;
 		double factor;
 		double amp;
 	} p;
 	struct {
-		double last_value;
-		double factor;
+		double y_last;
+		double z_last;
+		double d_factor;
+		double h_factor;
 		double amp;
 	} d;
 } emphasis_t;

@@ -24,10 +24,14 @@
 #include "emphasis.h"
 #include "debug.h"
 
+#define PI		M_PI
+
+#define CUT_OFF_E	300.0	/* cut-off frequency for emphasis filters */
+#define CUT_OFF_H	300.0	/* cut-off frequency for high-pass filters */
 
 int init_emphasis(emphasis_t *state, int samplerate)
 {
-	double factor;
+	double factor, rc, dt;
 
 	memset(state, 0, sizeof(*state));
 	if (samplerate < 24000) {
@@ -35,33 +39,39 @@ int init_emphasis(emphasis_t *state, int samplerate)
 		return -1;
 	}
 
-	factor = 0.97;
+	/* exp (-2 * PI * CUT_OFF * delta_t) */
+	factor = exp(-2.0 * PI * CUT_OFF_E / samplerate); /* 1/samplerate == delta_t */
+	PDEBUG(DDSP, DEBUG_DEBUG, "Emphasis factor = %.3f\n", factor);
 	state->p.factor = factor;
 	state->p.amp = samplerate / 6350.0;
-	state->d.factor = factor;
-	state->d.amp = 1.0 / (samplerate / 6350.0);
+	state->d.d_factor = factor;
+	state->d.amp = 1.0 / (samplerate / 5550.0);
 
+	rc = 1.0 / (CUT_OFF_H * 2.0 *3.14);
+	dt = 1.0 / samplerate;
+	state->d.h_factor = rc / (rc + dt);
+	PDEBUG(DDSP, DEBUG_DEBUG, "High-Pass factor = %.3f\n", state->d.h_factor);
 	return 0;
 }
 
 void pre_emphasis(emphasis_t *state, int16_t *samples, int num)
 {
 	int32_t sample;
-	double old_value, new_value, last_value, factor, amp;
+	double x, y, x_last, factor, amp;
 	int i;
 
-	last_value = state->p.last_value;
+	x_last = state->p.x_last;
 	factor = state->p.factor;
 	amp = state->p.amp;
 
 	for (i = 0; i < num; i++) {
-		old_value = (double)(*samples) / 32768.0;
+		x = (double)(*samples) / 32768.0;
 
-		new_value = old_value - factor * last_value;
+		y = x - factor * x_last;
 
-		last_value = old_value;
+		x_last = x;
 
-		sample = (int)(amp * new_value * 32768.0);
+		sample = (int)(amp * y * 32768.0);
 		if (sample > 32767)
 			sample = 32767;
 		else if (sample < -32768)
@@ -69,27 +79,34 @@ void pre_emphasis(emphasis_t *state, int16_t *samples, int num)
 		*samples++ = sample;
 	}
 
-	state->p.last_value = last_value;
+	state->p.x_last = x_last;
 }
 
 void de_emphasis(emphasis_t *state, int16_t *samples, int num)
 {
 	int32_t sample;
-	double old_value, new_value, last_value, factor, amp;
+	double x, y, z, y_last, z_last, d_factor, h_factor, amp;
 	int i;
 
-	last_value = state->d.last_value;
-	factor = state->d.factor;
+	y_last = state->d.y_last;
+	z_last = state->d.z_last;
+	d_factor = state->d.d_factor;
+	h_factor = state->d.h_factor;
 	amp = state->d.amp;
 
 	for (i = 0; i < num; i++) {
-		old_value = (double)(*samples) / 32768.0;
+		x = (double)(*samples) / 32768.0;
 
-		new_value = old_value + factor * last_value;
+		/* de-emphasis */
+		y = x + d_factor * y_last;
 
-		last_value = new_value;
+		/* high pass */
+		z = h_factor * (z_last + y - y_last);
 
-		sample = (int)(amp * new_value * 32768.0);
+		y_last = y;
+		z_last = z;
+
+		sample = (int)(amp * z * 32768.0);
 		if (sample > 32767)
 			sample = 32767;
 		else if (sample < -32768)
@@ -97,6 +114,7 @@ void de_emphasis(emphasis_t *state, int16_t *samples, int num)
 		*samples++ = sample;
 	}
 
-	state->d.last_value = last_value;
+	state->d.y_last = y_last;
+	state->d.z_last = z_last;
 }
 
