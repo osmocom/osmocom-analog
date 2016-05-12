@@ -406,16 +406,16 @@ static void nmt_page(nmt_t *nmt, char ms_country, const char *ms_number, int try
 	/* page on all CC (CC/TC) */
 	for (sender = sender_head; sender; sender = sender->next) {
 		other = (nmt_t *)sender;
-		if (nmt->sysinfo.chan_type != CHAN_TYPE_CC
-		 && nmt->sysinfo.chan_type != CHAN_TYPE_CC_TC)
-		 	continue;
-		if (nmt->state != STATE_IDLE)
-			continue;
 		if (other == nmt) {
 			/* this is us */
 			PDEBUG(DNMT, DEBUG_INFO, "Paging on our channel %d.\n", other->sender.kanal);
 		} else {
 			/* this is not us */
+			if (other->sysinfo.chan_type != CHAN_TYPE_CC
+			 && other->sysinfo.chan_type != CHAN_TYPE_CC_TC)
+				continue;
+			if (other->state != STATE_IDLE)
+				continue;
 			PDEBUG(DNMT, DEBUG_INFO, "Paging on other channel %d.\n", other->sender.kanal);
 			other->page_for_nmt = nmt;
 		}
