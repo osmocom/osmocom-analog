@@ -25,23 +25,26 @@
 #include <errno.h>
 #include "../common/debug.h"
 #include "../common/timer.h"
+#include "../common/call.h"
 #include "cnetz.h"
 #include "sysinfo.h"
 #include "telegramm.h"
 #include "dsp.h"
 
 /* test function to mirror received audio from ratio back to radio */
-//#define TEST_SCRABLE
-/* test the audio quality after cascading two scramblers (TEST_SCRABLE must be defined) */
-//#define TEST_UNSCRABLE
+//#define TEST_SCRAMBLE
+/* test the audio quality after cascading two scramblers (TEST_SCRAMBLE must be defined) */
+//#define TEST_UNSCRAMBLE
 
 #define PI		M_PI
 
-#define FSK_DEVIATION	16384
+#define FSK_DEVIATION	10000
+#define COMPANDER_0DB	20000
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
+#define CUT_OFF_OFFSET	300.0	/* cut off frequency for offset filter (level correction between subsequent audio chunks) */
 
-#ifdef TEST_SCRABLE
+#ifdef TEST_SCRAMBLE
 jitter_t scrambler_test_jb;
 scrambler_t scrambler_test_scrambler1;
 scrambler_t scrambler_test_scrambler2;
@@ -77,6 +80,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 {
 	int rc = 0;
 	double size;
+	double RC, dt;
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
 
@@ -136,9 +140,14 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 
 	/* init compander, according to C-Netz specs, attack and recovery time
 	 * shall not exceed according to ITU G.162 */
-	init_compander(&cnetz->cstate, 8000, 5.0, 22.5, 32767);
+	init_compander(&cnetz->cstate, 8000, 5.0, 22.5, COMPANDER_0DB);
 
-#ifdef TEST_SCRABLE
+	/* use this filter to compensate level changes between two subsequent audio chunks */
+	RC = 1.0 / (CUT_OFF_OFFSET * 2.0 *3.14);
+	dt = 1.0 / cnetz->sender.samplerate;
+	cnetz->offset_factor = RC / (RC + dt);
+
+#ifdef TEST_SCRAMBLE
 	rc = jitter_create(&scrambler_test_jb, cnetz->sender.samplerate / 5);
 	if (rc < 0) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Failed to init jitter buffer for scrambler test!\n");
@@ -565,8 +574,8 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	/* measure rx sample speed */
 	calc_clock_speed(cnetz, length, 0, 0);
 
-#ifdef TEST_SCRABLE
-#ifdef TEST_UNSCRABLE
+#ifdef TEST_SCRAMBLE
+#ifdef TEST_UNSCRAMBLE
 	scrambler(&scrambler_test_scrambler1, samples, length);
 #endif
 	jitter_save(&scrambler_test_jb, samples, length);
@@ -711,12 +720,15 @@ again:
 		if (*spl == -32768) {
 			/* marker found to insert new chunk of audio */
 			jitter_load(&cnetz->sender.audio, speech_buffer, 100);
+			/* 1. compress dynamics */
 			compress_audio(&cnetz->cstate, speech_buffer, 100);
+			/* 2. upsample */
 			speech_length = samplerate_upsample(&cnetz->sender.srstate, speech_buffer, 100, speech_buffer);
+			/* 3. scramble */
 			if (cnetz->scrambler)
 				scrambler(&cnetz->scrambler_tx, speech_buffer, speech_length);
-			/* pre-emphasis is done by cnetz code, not by common code */
-			/* pre-emphasis makes bad sound in conjunction with scrambler, so we disable */
+			/* 4. pre-emphasis is done by cnetz code, not by common code */
+			/* pre-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
 			if (cnetz->pre_emphasis && !cnetz->scrambler)
 				pre_emphasis(&cnetz->estate, speech_buffer, speech_length);
 			speech_pos = 0;
@@ -751,7 +763,7 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 	/* measure tx sample speed */
 	calc_clock_speed(cnetz, length, 1, 0);
 
-#ifdef TEST_SCRABLE
+#ifdef TEST_SCRAMBLE
 	jitter_load(&scrambler_test_jb, samples, length);
 	scrambler(&scrambler_test_scrambler2, samples, length);
 	return;
@@ -773,5 +785,57 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 		}
 	}
 #endif
+}
+
+/* unshrink audio segment from the duration of 60 bits to 12.5 ms */
+void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
+{
+	int16_t *spl;
+	int32_t value;
+	int pos, i;
+	double x, y, x_last, y_last, factor;
+
+	/* fix offset between speech blocks by using high pass filter */
+	/* use first sample as previous sample, so we don't have a level jump between two subsequent audio chunks */
+	x_last = speech_buffer[0];
+	y_last = cnetz->offset_y_last;
+	factor = cnetz->offset_factor;
+	for (i = 0; i < count; i++) {
+		x = (double)speech_buffer[i];
+		/* high-pass to remove low level frequencies, caused by level jump between audio chunks */
+		y = factor * (y_last + x - x_last);
+		x_last = x;
+		y_last = y;
+		value = (int32_t)y;
+		if (value < -32768.0)
+			value = -32768.0;
+		else if (value > 32767)
+			value = 32767;
+		speech_buffer[i] = value;
+	}
+	cnetz->offset_y_last = y_last;
+
+	/* 4. de-emphasis is done by cnetz code, not by common code */
+	/* de-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
+	if (cnetz->de_emphasis && !cnetz->scrambler)
+		de_emphasis(&cnetz->estate, speech_buffer, count);
+	/* 3. descramble */
+	if (cnetz->scrambler)
+		scrambler(&cnetz->scrambler_rx, speech_buffer, count);
+	/* 2. decompress time */
+	count = samplerate_downsample(&cnetz->sender.srstate, speech_buffer, count, speech_buffer);
+	/* 1. expand dynamics */
+	expand_audio(&cnetz->cstate, speech_buffer, count);
+	/* to call control */
+	spl = cnetz->sender.rxbuf;
+	pos = cnetz->sender.rxbuf_pos;
+	for (i = 0; i < count; i++) {
+		spl[pos++] = speech_buffer[i];
+		if (pos == 160) {
+			call_tx_audio(cnetz->sender.callref, spl, 160);
+			pos = 0;
+		}
+	}
+	cnetz->sender.rxbuf_pos = pos;
 }
 

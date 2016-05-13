@@ -106,7 +106,6 @@
 #include <math.h>
 #include "../common/timer.h"
 #include "../common/debug.h"
-#include "../common/call.h"
 #include "cnetz.h"
 #include "dsp.h"
 #include "telegramm.h"
@@ -156,52 +155,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 	fsk->level_threshold = 655;
 
-	/* reduce half of DC after about 3ms */
-	cnetz->offset_removal_factor = pow(0.5, 1.0 / ((double)samplerate / 333.0));
-
 	return 0;
-}
-
-/* unshrink audio segment from the duration of 60 bits to 12.5 ms */
-static inline void unshrink_speech(cnetz_t *cnetz)
-{
-	int16_t *spl;
-	int32_t value;
-	int pos, i, count;
-	double offset, factor;
-
-	/* fix offset between speech blocks */
-	offset = (double)(speech_buffer[0] - cnetz->offset_last_sample);
-	factor = cnetz->offset_removal_factor;
-	for (i = 0; i < speech_count; i++) {
-		value = (int32_t)speech_buffer[i] - (int)offset;
-		if (value < -32768.0)
-			value = -32768.0;
-		else if (value > 32767)
-			value = 32767;
-		speech_buffer[i] = value;
-		offset = offset * factor;
-	}
-	cnetz->offset_last_sample = speech_buffer[speech_count-1];
-
-	/* de-emphasis is done by cnetz code, not by common code */
-	/* de-emphasis makes bad sound in conjunction with scrambler, so we disable */
-	if (cnetz->de_emphasis && !cnetz->scrambler)
-		de_emphasis(&cnetz->estate, speech_buffer, speech_count);
-	if (cnetz->scrambler)
-		scrambler(&cnetz->scrambler_rx, speech_buffer, speech_count);
-	count = samplerate_downsample(&cnetz->sender.srstate, speech_buffer, speech_count, speech_buffer);
-	expand_audio(&cnetz->cstate, speech_buffer, count);
-	spl = cnetz->sender.rxbuf;
-	pos = cnetz->sender.rxbuf_pos;
-	for (i = 0; i < count; i++) {
-		spl[pos++] = speech_buffer[i];
-		if (pos == 160) {
-			call_tx_audio(cnetz->sender.callref, spl, 160);
-			pos = 0;
-		}
-	}
-	cnetz->sender.rxbuf_pos = pos;
 }
 
 /* get levels, sync time and jitter from sync sequence or frame data */
@@ -514,15 +468,18 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 			} else
 			if (t >= 5.5 && t < 65.5) {
 				/* get audio for the duration of 60 bits */
+				/* prevent overflow, if speech_size != 0 and SPK_V
+				 * has been restarted. */
 				if (speech_count <= speech_size)
 					speech_buffer[speech_count++] = samples[i];
 			} else
 			if (t >= 65.5) {
 				if (speech_count) {
-					unshrink_speech(fsk->cnetz);
+					unshrink_speech(fsk->cnetz, speech_buffer, speech_count);
 					speech_count = 0;
 				}
 			}
+
 		}
 		bit_time += bits_per_sample;
 		if (bit_time >= BITS_PER_SUPERFRAME) {

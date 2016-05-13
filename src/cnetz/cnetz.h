@@ -144,8 +144,8 @@ typedef struct cnetz {
 	double			frame_last_phase;	/* master's bit phase of last frame sync */
 
 	/* audio offset removal */
-	double			offset_removal_factor;	/* how much to remove every sample */
-	int16_t			offset_last_sample;	/* last sample of last audio chunk */
+	double			offset_factor;		/* filer alpha of high-pass filter */
+	double			offset_y_last;		/* last stored sample */
 
 	/* measurements */
 	int			measure_speed;		/* measure clock speed */
