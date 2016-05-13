@@ -52,7 +52,7 @@ int auth = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "");
+	print_help_common(arg0, "-S <rx ppm>,<tx ppm> -E -e ");
 	/*      -                                                                             - */
 	printf(" -t --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
@@ -264,6 +264,15 @@ int main(int argc, char *argv[])
 	}
 	if (i == num_kanal)
 		fprintf(stderr, "You did not define any SpK (speech) channel. You will not be able to make any call.\n");
+
+	if (!do_pre_emphasis || !do_de_emphasis) {
+		fprintf(stderr, "*******************************************************************************\n");
+		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -E -e)!\n");
+		fprintf(stderr, "Use a transmitter/receiver without emphasis and let me do that!\n");
+		fprintf(stderr, "Because carrier FSK signalling and scrambled voice (default) does not use\n");
+		fprintf(stderr, "emphasis, I like to control emphasis by myself for best results.\n");
+		fprintf(stderr, "*******************************************************************************\n");
+	}
 
 	polarity = 0; /* auto */
 	if (!strcmp(flip_polarity, "no"))
