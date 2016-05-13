@@ -216,6 +216,39 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 	PDEBUG(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx[0], speed_ppm_tx[0], speed_ppm_rx[1], speed_ppm_tx[1]);
 }
 
+static int fsk_testtone_encode(cnetz_t *cnetz)
+{
+	int16_t *spl;
+	double phase, bitstep;
+	int i, count;
+
+	spl = cnetz->fsk_tx_buffer;
+	phase = cnetz->fsk_tx_phase;
+	bitstep = cnetz->fsk_tx_bitstep * 256.0;
+
+	/* add 198 bits of noise */
+	for (i = 0; i < 99; i++) {
+		do {
+			*spl++ = ramp_up[(int)phase];
+			phase += bitstep;
+		} while (phase < 256.0);
+		phase -= 256.0;
+		do {
+			*spl++ = ramp_down[(int)phase];
+			phase += bitstep;
+		} while (phase < 256.0);
+		phase -= 256.0;
+	}
+
+	/* depending on the number of samples, return the number */
+	count = ((uintptr_t)spl - (uintptr_t)cnetz->fsk_tx_buffer) / sizeof(*spl);
+
+	cnetz->fsk_tx_phase = phase;
+	cnetz->fsk_tx_buffer_length = count;
+
+	return count;
+}
+
 static int fsk_nothing_encode(cnetz_t *cnetz)
 {
 	int16_t *spl;
@@ -652,7 +685,7 @@ again:
 			break;
 		case DSP_MODE_OFF:
 		default:
-			fsk_nothing_encode(cnetz);
+			fsk_testtone_encode(cnetz);
 		}
 
 		if (cnetz->dsp_mode == DSP_MODE_SPK_V) {
