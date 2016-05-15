@@ -79,6 +79,8 @@ void print_help(const char *arg0)
 	printf("        Enable authentication on the base station. Since we cannot\n");
 	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
 	printf("	we just accept any card. With this we get the vendor IDs of the phone.\n");
+	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
+	printf("        start of this program.\n");
 }
 
 static int handle_options(int argc, char **argv)
@@ -195,6 +197,11 @@ int main(int argc, char *argv[])
 	argv += skip_args;
 
 	if (argc > 1) {
+		station_id = argv[1];
+		if (strlen(station_id) != 7) {
+			printf("Given station ID '%s' does not have 7 digits\n", station_id);
+			return 0;
+		}
 	}
 
 	if (!num_kanal) {

@@ -202,8 +202,13 @@ int main(int argc, char *argv[])
 	argc -= skip_args;
 	argv += skip_args;
 
-	if (argc > 1)
+	if (argc > 1) {
 		station_id = argv[1];
+		if (strlen(station_id) != 7) {
+			printf("Given station ID '%s' does not have 7 digits\n", station_id);
+			return 0;
+		}
+	}
 
 	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel 1 (-k 1).\n\n");
