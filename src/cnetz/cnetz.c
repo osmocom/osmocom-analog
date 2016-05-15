@@ -550,7 +550,7 @@ int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_res
 
 	cnetz = search_ogk();
 	if (!cnetz) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "'Meldeaufruf', but OgK is currently busy, rejecting!\n");
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "'Meldeaufruf', but OgK is currently busy!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest);
@@ -862,6 +862,7 @@ static void transaction_timeout(struct timer *timer)
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_MFT:
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after keepalive order 'Meldeaufruf'\n");
 		trans->ma_failed = 1;
 		destroy_transaction(trans);
 		break;
@@ -1158,9 +1159,11 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 	case OPCODE_MFT_M:
 		trans = search_transaction_number(cnetz, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 		if (!trans) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldun Funktelefonteilnemer' message without transaction, ignoring!\n");
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldung Funktelefonteilnehmer' message without transaction, ignoring!\n");
 			break;
 		}
+		rufnummer = transaction2rufnummer(trans);
+		PDEBUG(DCNETZ, DEBUG_INFO, "Received acknowledge 'Meldung Funktelefonteilnehmer' message from Subscriber '%s'\n", rufnummer);
 		destroy_transaction(trans);
 		valid_frame = 1;
 		break;
