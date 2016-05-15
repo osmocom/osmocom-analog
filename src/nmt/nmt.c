@@ -104,7 +104,7 @@ static struct nmt_channels {
 	{ CHAN_TYPE_CC,		"CC",	"calling channel" },
 	{ CHAN_TYPE_TC,		"TC",	"traffic channel" },
 	{ CHAN_TYPE_CC_TC,	"CC/TC","combined calling & traffic channel" },
-	{ CHAN_TYPE_TEST,	"TEST",	"calling channel" },
+	{ CHAN_TYPE_TEST,	"TEST",	"test channel" },
 	{ 0, NULL, NULL }
 };
 
