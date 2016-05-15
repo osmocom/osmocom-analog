@@ -552,18 +552,6 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 	return count;
 }
 
-void show_level(double level)
-{
-	char text[42] = "                                         ";
-
-	if (level > 1.0)
-		level = 1.0;
-	if (level < -1.0)
-		level = -1.0;
-	text[20 - (int)(level * 20)] = '*';
-	printf("%s\n", text);
-}
-
 /* decode samples and hut for bit changes
  * use deviation to find greatest slope of the signal (bit change)
  */

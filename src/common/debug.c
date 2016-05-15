@@ -70,3 +70,17 @@ void _printdebug(const char *file, const char *function, int line, int cat, int 
 	fflush(stdout);
 }
 
+const char *debug_amplitude(double level)
+{
+	static char text[42];
+
+	strcpy(text, "                    :                    ");
+	if (level > 1.0)
+		level = 1.0;
+	if (level < -1.0)
+		level = -1.0;
+	text[20 + (int)(level * 20)] = '*';
+
+	return text;
+}
+

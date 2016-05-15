@@ -317,17 +317,6 @@ got_sync:
 	}
 }
 
-#ifdef DEBUG_DECODER
-static void fsk_show_level(double level)
-{
-	if (level > 1.0)
-		level = 1.0;
-	if (level < -1.0)
-		level = -1.0;
-	printf("                     *\n" + 10 - (int)(level * 10));
-}
-#endif
-
 /* DOC TBD: find change for bit change */
 static inline void find_change(fsk_fm_demod_t *fsk)
 {
@@ -438,7 +427,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 		if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 #ifdef DEBUG_DECODER
 			DEBUG_DECODER
-				fsk_show_level((double)samples[i] / 32768.0);
+				puts(debug_amplitude((double)samples[i] / 32768.0));
 #endif
 			find_change(fsk);
 		} else {
@@ -462,7 +451,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 			if (t >= 0.5 && t < 5.5) {
 #ifdef DEBUG_DECODER
 				DEBUG_DECODER
-					fsk_show_level((double)samples[i] / 32768.0);
+					puts(debug_amplitude((double)samples[i] / 32768.0));
 #endif
 				find_change(fsk);
 			} else

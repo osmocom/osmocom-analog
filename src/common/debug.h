@@ -19,5 +19,7 @@
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, fmt, ## arg)
 void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...);
 
+const char *debug_amplitude(double level);
+
 extern int debuglevel;
 

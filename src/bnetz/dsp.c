@@ -188,21 +188,6 @@ static void fsk_receive_bit(bnetz_t *bnetz, int bit, double level, double qualit
 	bnetz_receive_telegramm(bnetz, bnetz->fsk_filter_telegramm, level, quality);
 }
 
-char *show_level(int value)
-{
-	static char text[22];
-
-	value /= 5;
-	if (value < 0)
-		value = 0;
-	if (value > 20)
-		value = 20;
-	strcpy(text, "                     ");
-	text[value] = '*';
-
-	return text;
-}
-
 //#define DEBUG_FILTER
 //#define DEBUG_QUALITY
 
@@ -236,8 +221,8 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 	if (softbit < 0)
 		softbit = 0;
 #ifdef DEBUG_FILTER
-	printf("|%s", show_level(result[0]/level*100));
-	printf("|%s| low=%.3f high=%.3f level=%d\n", show_level(result[1]/level*100), result[0]/level, result[1]/level, (int)level);
+	printf("|%s", debug_amplitude(result[0]/level));
+	printf("|%s| low=%.3f high=%.3f level=%d\n", debug_amplitude(result[1]/level), result[0]/level, result[1]/level, (int)level);
 #endif
 	if (softbit > 0.5)
 		bit = 1;
@@ -264,8 +249,8 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 	} else if (--bnetz->fsk_filter_sample == 0) {
 		/* if sample counter bit reaches 0, we reset sample counter to one bit duration */
 #ifdef DEBUG_QUALITY
-		printf("|%s| quality=%.2f ", show_level(softbit * 100), quality);
-		printf("|%s|\n", show_level(quality * 100));
+		printf("|%s| quality=%.2f ", debug_amplitude(softbit), quality);
+		printf("|%s|\n", debug_amplitude(quality);
 #endif
 		/* adjust level, so we get peak of sine curve */
 		fsk_receive_bit(bnetz, bit, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);

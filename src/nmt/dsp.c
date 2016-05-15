@@ -267,21 +267,6 @@ static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 	nmt_receive_frame(nmt, nmt->fsk_filter_frame, quality, level * 32768.0 / TX_PEAK_FSK, frames_elapsed);
 }
 
-char *show_level(int value)
-{
-	static char text[22];
-
-	value /= 5;
-	if (value < 0)
-		value = 0;
-	if (value > 20)
-		value = 20;
-	strcpy(text, "                     ");
-	text[value] = '*';
-
-	return text;
-}
-
 //#define DEBUG_MODULATOR
 //#define DEBUG_FILTER
 //#define DEBUG_QUALITY
@@ -317,9 +302,9 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 #define MIN_QUALITY 0.33
 	softbit = (softbit - MIN_QUALITY) / (1.0 - MIN_QUALITY - MIN_QUALITY);
 #ifdef DEBUG_FILTER
-//	printf("|%s", show_level(result[0]/level*100));
-//	printf("|%s| low=%.3f high=%.3f level=%d\n", show_level(result[1]/level*100), result[0]/level, result[1]/level, (int)level);
-	printf("|%s| softbit=%.3f\n", show_level(softbit * 100), softbit);
+//	printf("|%s", debug_amplitude(result[0]/level));
+//	printf("|%s| low=%.3f high=%.3f level=%d\n", debug_amplitude(result[1]/level), result[0]/level, result[1]/level, (int)level);
+	printf("|%s| softbit=%.3f\n", debug_amplitude(softbit), softbit);
 #endif
 	if (softbit > 1)
 		softbit = 1;
@@ -348,8 +333,8 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 		else
 			quality = 1.0 - softbit * 2.0;
 #ifdef DEBUG_QUALITY
-		printf("|%s| quality=%.2f ", show_level(softbit * 100), quality);
-		printf("|%s|\n", show_level(quality * 100));
+		printf("|%s| quality=%.2f ", debug_amplitude(softbit), quality);
+		printf("|%s|\n", debug_amplitude(quality));
 #endif
 		/* adjust level, so a peak level becomes 100% */
 		fsk_receive_bit(nmt, bit, quality, level / 0.63662);
@@ -442,7 +427,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	spl = nmt->fsk_filter_spl;
 	for (i = 0; i < length; i++) {
 #ifdef DEBUG_MODULATOR
-		printf("|%s|\n", show_level((int)((samples[i] / TX_PEAK_FSK) * 50)+50));
+		printf("|%s|\n", debug_amplitude((double)samples[i] / TX_PEAK_FSK / 2.0));
 #endif
 		spl[pos++] = samples[i];
 		if (nmt->fsk_filter_mute) {
