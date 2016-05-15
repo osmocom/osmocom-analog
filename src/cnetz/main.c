@@ -64,9 +64,9 @@ void print_help(const char *arg0)
 	printf("        correct signal processing speed. After adjustment, the clock must match\n");
 	printf("        +- 1ppm or better. CORRECTING CLOCK SPEED IS REQUIRED! See\n");
 	printf("        documentation on how to measure correct value.\n");
-	printf(" -F --flip-polarity no | yes auto\n");
+	printf(" -F --flip-polarity no | yes | auto\n");
 	printf("        Flip polarity of transmitted FSK signal. If yes, the sound card\n");
-	printf("        generates a negative signal rather than a positive one. If auto, the");
+	printf("        generates a negative signal rather than a positive one. If auto, the\n");
 	printf("        base station generates two virtual base stations with both polarities.\n");
 	printf("        Once a mobile registers, the correct polarity is selected and used.\n");
 	printf("        (default = %s)\n", flip_polarity);

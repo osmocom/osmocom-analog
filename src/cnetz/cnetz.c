@@ -200,11 +200,11 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 			abort();
 		}
 		break;
-	case 2:
+	case -1:
 		/* select cell 1 for negative polarity */
 		cnetz->cell_nr = 1;
 		cnetz->cell_auto = 0;
-		if (si[cnetz->cell_nr].flip_polarity != 0) {
+		if (si[cnetz->cell_nr].flip_polarity == 0) {
 			fprintf(stderr, "cell %d must have negative polarity, please fix!\n", cnetz->cell_nr);
 			abort();
 		}
