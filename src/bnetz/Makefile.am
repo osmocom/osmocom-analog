@@ -12,7 +12,7 @@ bnetz_SOURCES = \
 	main.c
 bnetz_LDADD = \
 	$(COMMON_LA) \
-	$(ALSA_LIBS) \
 	$(top_builddir)/src/common/libcommon.a \
+	$(ALSA_LIBS) \
 	-lm
 

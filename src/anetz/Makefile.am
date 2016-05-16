@@ -11,7 +11,7 @@ anetz_SOURCES = \
 	main.c
 anetz_LDADD = \
 	$(COMMON_LA) \
-	$(ALSA_LIBS) \
 	$(top_builddir)/src/common/libcommon.a \
+	$(ALSA_LIBS) \
 	-lm
 
