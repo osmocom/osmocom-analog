@@ -13,7 +13,8 @@ enum dsp_mode {
 enum bnetz_state {
 	BNETZ_FREI,		/* sending 'Gruppenfreisignal' */
 	BNETZ_WAHLABRUF,	/* sending 'Wahlabruf', receiving call setup */
-	BNETZ_SELEKTIVRUF,	/* paging phone */
+	BNETZ_SELEKTIVRUF_EIN,	/* paging phone (switch to calling channel) */
+	BNETZ_SELEKTIVRUF_AUS,	/* paging phone (wait before switching back) */
 	BNETZ_RUFBESTAETIGUNG,	/* waitig for acknowledge from phone */
 	BNETZ_RUFHALTUNG,	/* phone is ringing */
 	BNETZ_GESPRAECH,	/* during conversation */

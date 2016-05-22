@@ -46,6 +46,7 @@ static int new_callref = 0x40000000;
 #define PAGING_TO	4	/* timeout 4 seconds after "Selektivruf" */
 #define PAGE_TRIES	2	/* two tries */
 #define SWITCH19_TIME	1.0	/* time to switch channel (radio should be tansmitting after that) */
+#define SWITCHBACK_TIME	0.1	/* time to wait until switching back (latency of sound device shall be lower) */
 
 /* Convert channel number to frequency number of base station.
    Set 'unterband' to 1 to get frequency of mobile station. */
@@ -372,7 +373,7 @@ static void bnetz_release(bnetz_t *bnetz)
 static void bnetz_page(bnetz_t *bnetz, const char *dial_string, int try)
 {
 	PDEBUG(DBNETZ, DEBUG_INFO, "Entering paging state (try %d), sending 'Selektivruf' to '%s'.\n", try, dial_string);
-	bnetz->state = BNETZ_SELEKTIVRUF;
+	bnetz->state = BNETZ_SELEKTIVRUF_EIN;
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_0);
 	bnetz->page_mode = PAGE_MODE_NUMBER;
 	bnetz->page_try = try;
@@ -405,13 +406,12 @@ const char *bnetz_get_telegramm(bnetz_t *bnetz)
 		}
 		it = bnetz_telegramm(bnetz->station_id[bnetz->station_id_pos++]);
 		break;
-	case BNETZ_SELEKTIVRUF:
+	case BNETZ_SELEKTIVRUF_EIN:
 		if (bnetz->page_mode == PAGE_MODE_KANALBEFEHL) {
 			PDEBUG(DBNETZ, DEBUG_INFO, "Paging mobile station %s complete, waiting for answer.\n", bnetz->station_id);
-			bnetz->state = BNETZ_RUFBESTAETIGUNG;
+			bnetz->state = BNETZ_SELEKTIVRUF_AUS;
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_SILENCE);
-			switch_channel_19(bnetz, 0);
-			timer_start(&bnetz->timer, PAGING_TO);
+			timer_start(&bnetz->timer, SWITCHBACK_TIME);
 			return NULL;
 		}
 		if (bnetz->station_id_pos == 5) {
@@ -686,9 +686,15 @@ static void bnetz_timeout(struct timer *timer)
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while receiving call setup from mobile station, aborting.\n");
 		bnetz_go_idle(bnetz);
 		break;
-	case BNETZ_SELEKTIVRUF:
+	case BNETZ_SELEKTIVRUF_EIN:
 		PDEBUG(DBNETZ, DEBUG_DEBUG, "Transmitter switched to channel 19, starting paging telegramms.\n");
 		bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
+		break;
+	case BNETZ_SELEKTIVRUF_AUS:
+		PDEBUG(DBNETZ, DEBUG_DEBUG, "Transmitter switched back to channel %d, waiting for paging response.\n", bnetz->sender.kanal);
+		bnetz->state = BNETZ_RUFBESTAETIGUNG;
+		switch_channel_19(bnetz, 0);
+		timer_start(&bnetz->timer, PAGING_TO);
 		break;
 	case BNETZ_RUFBESTAETIGUNG:
 		if (bnetz->page_try == PAGE_TRIES) {
@@ -789,7 +795,8 @@ void call_out_disconnect(int callref, int cause)
 	if (bnetz->state == BNETZ_GESPRAECH)
 		return;
 	switch (bnetz->state) {
-	case BNETZ_SELEKTIVRUF:
+	case BNETZ_SELEKTIVRUF_EIN:
+	case BNETZ_SELEKTIVRUF_AUS:
 	case BNETZ_RUFBESTAETIGUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during paging, releasing!\n");
 	 	bnetz_release(bnetz);
@@ -833,7 +840,8 @@ void call_out_release(int callref, int cause)
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during call, releasing!\n");
 	 	bnetz_release(bnetz);
 		break;
-	case BNETZ_SELEKTIVRUF:
+	case BNETZ_SELEKTIVRUF_EIN:
+	case BNETZ_SELEKTIVRUF_AUS:
 	case BNETZ_RUFBESTAETIGUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during paging, releasing!\n");
 	 	bnetz_release(bnetz);
