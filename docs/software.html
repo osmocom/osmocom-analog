@@ -149,7 +149,7 @@ Some adapters have mono input, especially on microphone jack.
 In this case you will always receive audio, no matter if you cross the channels or not.
 If you cross the channels, the left channel of your sound adapter is used.
 I use mono cables with only one channel on the tip of the plug.
-My sound adapter uses left channel on the tip, so i need to swap channels.
+Usual sound adapters connect left channel on the tip of the plug, so we need to swap channels to use mono plugs.
 Use the command line option '-x' or '--cross':
 </p>
 
@@ -170,7 +170,7 @@ Emphasis
 Pre-emphasis is used on the transmitter and de-emphasis is used on the receiver side.
 The nature of FM causes noise amplitude to be proportional to the transmitted frequency.
 (double frequency = double noise volume)
-To compensate this, most FM radios, as well as all analog mobile networks emphasis.
+To compensate this, most FM radios, as well as all analog mobile networks use emphasis.
 </p>
 
 <center><img src="emphasis.gif"/></center>
@@ -266,7 +266,7 @@ bnetz.c:528 notice : Round trip delay is 0.001 seconds
 </pre>
 
 <p>
-If command line option '-L 1' or '--loopback 2' is given, an external loopback is performed.
+If command line option '-L 2' or '--loopback 2' is given, an external loopback is performed.
 The receiver needs to be tuned to transmitter, so the software receives its own signal.
 The received quality level is relevant. It should be not less than 90 for B-Netz.
 </p>
@@ -274,7 +274,7 @@ The received quality level is relevant. It should be not less than 90 for B-Netz
 <p>
 If command line option '-L 3' or '--loopback 3' is given, the audio from the input is sent back to the output.
 It can be used to check a headset.
-Everything that is spoken into the microphone should be appear in the headphone.
+Everything that is spoken into the microphone should appear on the headphone.
 </p>
 
 [<a href="index.html">Back to main page</a>]

@@ -61,6 +61,10 @@ How it works
 </p>
 
 <p>
+Note that the following protocol description is based on my research. It may be incomplete or wrong on certain details.
+</p>
+
+<p>
 Two tones are used for signalling:
 </p>
 
@@ -397,6 +401,7 @@ The transceiver of the base station switches to channel 19 and sends a paging se
 Then the base station returns to the ordered channel and waits 2 seconds for the mobile station to send the call acknowledge signal ("Rufbest&auml;tigung").
 If it is not received, the base station repeats the paging sequence again.
 If there is still no call acknowledge signal, it returns to idle state and indicates announcenemnt to the calling party that the mobile station is (currently) not available.
+(German announcement sais: "Dieser Anschlu&szlig; ist vorr&uuml;bergehend nicht erreichbar!")
 </p>
 
 <p>
@@ -410,7 +415,7 @@ The base station receives the call acknowledge signal and sends the call hold si
 
 <p>
 When the mobile station receives the call hold signal, it indicates ringing tone to the mobile subscriber.
-Additionally the car's siren is turned on, if the mobile subscriber is outside the car.
+Additionally the car's siren is turned on (if connected to the phone), if the mobile subscriber is outside the car.
 </p>
 
 <p>
