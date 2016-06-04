@@ -202,7 +202,7 @@ static void anetz_go_idle(anetz_t *anetz)
 
 	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state, sending 2280 Hz tone.\n");
 	anetz->state = ANETZ_FREI;
-	anetz->dsp_mode = DSP_MODE_TONE;
+	anetz_set_dsp_mode(anetz, DSP_MODE_TONE);
 	anetz->station_id[0] = '\0';
 }
 
@@ -213,7 +213,7 @@ static void anetz_release(anetz_t *anetz)
 
 	PDEBUG(DANETZ, DEBUG_INFO, "Sending 2280 Hz release tone.\n");
 	anetz->state = ANETZ_AUSLOESEN;
-	anetz->dsp_mode = DSP_MODE_TONE;
+	anetz_set_dsp_mode(anetz, DSP_MODE_TONE);
 	anetz->station_id[0] = '\0';
 	timer_start(&anetz->timer, RELEASE_TO);
 }
@@ -223,7 +223,7 @@ static void anetz_page(anetz_t *anetz, const char *dial_string, double *freq)
 {
 	PDEBUG(DANETZ, DEBUG_INFO, "Entering paging state, sending 'Selektivruf' to '%s'.\n", dial_string);
 	anetz->state = ANETZ_ANRUF;
-	anetz->dsp_mode = DSP_MODE_PAGING;
+	anetz_set_dsp_mode(anetz, DSP_MODE_PAGING);
 	dsp_set_paging(anetz, freq);
 	strcpy(anetz->station_id, dial_string);
 	timer_start(&anetz->timer, PAGING_TO);
@@ -262,7 +262,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		if (tone == 1) {
 			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz calling signal from mobile station, removing idle signal.\n");
 			anetz->state = ANETZ_GESPRAECH;
-			anetz->dsp_mode = DSP_MODE_SILENCE;
+			anetz_set_dsp_mode(anetz, DSP_MODE_SILENCE);
 			break;
 		}
 		break;
@@ -285,7 +285,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
 				call_in_answer(anetz->sender.callref, anetz->station_id);
 			}
-			anetz->dsp_mode = DSP_MODE_AUDIO;
+			anetz_set_dsp_mode(anetz, DSP_MODE_AUDIO);
 		}
 		/* release call */
 		if (tone == 1) {
@@ -302,7 +302,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz answer signal from mobile station, removing paging tones.\n");
 			timer_stop(&anetz->timer);
 			anetz->state = ANETZ_GESPRAECH;
-			anetz->dsp_mode = DSP_MODE_SILENCE;
+			anetz_set_dsp_mode(anetz, DSP_MODE_SILENCE);
 			break;
 		}
 	default:

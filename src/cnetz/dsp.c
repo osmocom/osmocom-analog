@@ -639,7 +639,7 @@ again:
 			if (--cnetz->sched_switch_mode == 0) {
 				/* OgK / SpK(K) / SpK(V) */
 				PDEBUG(DDSP, DEBUG_INFO, "Switching channel (mode)\n");
-				cnetz->dsp_mode = cnetz->sched_dsp_mode;
+				cnetz_set_dsp_mode(cnetz, cnetz->sched_dsp_mode);
 			}
 		}
 
@@ -825,5 +825,18 @@ void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
 		}
 	}
 	cnetz->sender.rxbuf_pos = pos;
+}
+
+void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
+{
+	PDEBUG(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", cnetz->dsp_mode, mode);
+	cnetz->dsp_mode = mode;
+}
+
+void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int frames_ahead)
+{
+	PDEBUG(DDSP, DEBUG_DEBUG, "Schedule DSP mode %d -> %d in %d frames\n", cnetz->dsp_mode, mode, frames_ahead);
+	cnetz->sched_dsp_mode = mode;
+	cnetz->sched_switch_mode = frames_ahead;
 }
 

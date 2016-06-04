@@ -607,6 +607,8 @@ void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 	/* reset telegramm */
 	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode)
 		nmt->frame = 0;
+
+	PDEBUG(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", nmt->dsp_mode, mode);
 	nmt->dsp_mode = mode;
 }
 

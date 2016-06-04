@@ -349,3 +349,9 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 	}
 }
 
+void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode)
+{
+	PDEBUG(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", anetz->dsp_mode, mode);
+	anetz->dsp_mode = mode;
+}
+

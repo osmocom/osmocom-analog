@@ -221,23 +221,21 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 		goto error;
 
 	/* go into idle state */
-	cnetz->dsp_mode = DSP_MODE_OGK;
-	cnetz->sched_dsp_mode = DSP_MODE_OGK;
-	cnetz->sched_switch_mode = 0;
+	cnetz_set_dsp_mode(cnetz, DSP_MODE_OGK);
+	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_OGK, 0);
 	cnetz_go_idle(cnetz);
 
 #ifdef DEBUG_SPK
 	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002);
 	trans->mo_call = 1;
-	cnetz->sched_switch_mode = 2;
-	cnetz->sched_dsp_mode = DSP_MODE_SPK_K;
+	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
 #else
 	/* create transaction for speech channel loopback */
 	if (loopback && chan_type == CHAN_TYPE_SPK) {
 		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ, 2, 2, 22002);
 		trans->mo_call = 1;
-		cnetz->dsp_mode = DSP_MODE_SPK_K;
-		cnetz->sched_dsp_mode = DSP_MODE_SPK_K;
+		cnetz_set_dsp_mode(cnetz, DSP_MODE_SPK_K);
+		cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 0);
 	}
 #endif
 
@@ -282,11 +280,10 @@ static void cnetz_go_idle(cnetz_t *cnetz)
 	cnetz_new_state(cnetz, CNETZ_IDLE);
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* go idle after next frame/slot */
-		cnetz->sched_switch_mode = 1;
-		cnetz->sched_dsp_mode = (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF;
+		cnetz_set_sched_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 1);
 	} else {
-		cnetz->sched_switch_mode = 0;
-		cnetz->dsp_mode = (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF;
+		cnetz_set_sched_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 0);
+		cnetz_set_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF);
 	}
 }
 
@@ -1014,8 +1011,7 @@ wbn:
 			telegramm.frequenz_nr = spk->sender.kanal;
 			cnetz_new_state(spk, CNETZ_BUSY);
 			/* schedule switching two slots ahead */
-			spk->sched_switch_mode = 2;
-			spk->sched_dsp_mode = DSP_MODE_SPK_K;
+			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
 			unlink_transaction(trans);
 			link_transaction(trans, spk);
 			/* flush all other transactions, if any (in case of OgK/SpK) */
@@ -1251,8 +1247,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 			/* next sub frame */
 			trans_new_state(trans, TRANS_VHQ);
 			trans->count = 0;
-			cnetz->sched_switch_mode = 1;
-			cnetz->sched_dsp_mode = DSP_MODE_SPK_V;
+			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
 #ifndef DEBUG_SPK
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
 #endif
@@ -1269,8 +1264,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 			/* next sub frame */
 			trans_new_state(trans, TRANS_VHQ);
 			trans->count = 0;
-			cnetz->sched_switch_mode = 1;
-			cnetz->sched_dsp_mode = DSP_MODE_SPK_V;
+			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
 		}
 		break;
