@@ -17,6 +17,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Uncomment this for writing TX as wave (For debug purpose) */
+//#define WAVE_WRITE_TX
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -233,11 +236,17 @@ cant_recover:
 			jitter_load(&sender->audio, samples, count);
 		else
 			sender_send(sender, samples, count);
+#ifdef WAVE_WRITE_TX
+		if (sender->wave_rec.fp)
+			wave_write(&sender->wave_rec, samples, count);
+#endif
 		/* internal loopback: loop back TX audio to RX */
 		if (sender->loopback == 1) {
+#ifndef WAVE_WRITE_TX
 			if (sender->wave_rec.fp)
 				wave_write(&sender->wave_rec, samples, count);
 			sender_receive(sender, samples, count);
+#endif
 		}
 		/* do pre emphasis towards radio, not wave_write */
 		if (sender->pre_emphasis)
@@ -248,10 +257,16 @@ cant_recover:
 				jitter_load(&slave->audio, slave_samples, count);
 			else
 				sender_send(slave, slave_samples, count);
+#ifdef WAVE_WRITE_TX
+			if (sender->wave_rec.fp)
+				wave_write(&slave->wave_rec, slave_samples, count);
+#endif
 			/* internal loopback, if audio slave is set */
 			if (slave && slave->loopback == 1) {
+#ifndef WAVE_WRITE_TX
 				if (slave->wave_rec.fp)
 					wave_write(&slave->wave_rec, slave_samples, count);
+#endif
 				sender_receive(slave, slave_samples, count);
 			}
 			/* do pre emphasis towards radio, not wave_write */
@@ -343,8 +358,10 @@ cant_recover:
 		if (sender->wave_play.fp)
 			wave_read(&sender->wave_play, samples, count);
 		if (sender->loopback != 1) {
+#ifndef WAVE_WRITE_TX
 			if (sender->wave_rec.fp)
 				wave_write(&sender->wave_rec, samples, count);
+#endif
 			sender_receive(sender, samples, count);
 		}
 		if (sender->loopback == 3)
@@ -358,8 +375,10 @@ cant_recover:
 			if (slave->wave_play.fp)
 				wave_read(&slave->wave_play, slave_samples, count);
 			if (slave->loopback != 1) {
+#ifndef WAVE_WRITE_TX
 				if (slave->wave_rec.fp)
 					wave_write(&slave->wave_rec, slave_samples, count);
+#endif
 				sender_receive(slave, slave_samples, count);
 			}
 			if (slave->loopback == 3)
