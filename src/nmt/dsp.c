@@ -141,7 +141,7 @@ int dsp_init_sender(nmt_t *nmt)
 
 	/* allocate ring buffer for supervisory signal detection */
 	nmt->super_samples = (int)((double)nmt->sender.samplerate * SUPER_DURATION + 0.5);
-	spl = calloc(166, nmt->super_samples * sizeof(*spl));
+	spl = calloc(1, nmt->super_samples * sizeof(*spl));
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
