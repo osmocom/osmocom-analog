@@ -54,8 +54,11 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	/*      -                                                                             - */
 	printf(" -h --help\n");
 	printf("        This help\n");
-	printf(" -D --debug <level>\n");
-	printf("        Debug level:  0 = debug | 1 = info | 2 = notice (default = '%d')\n", debuglevel);
+	printf(" -D --debug <level> | <level>,<category>[,<category>[,...]] | list\n");
+	printf("        Use 'list' to get a list of all levels and categories\n");
+	printf("        Debug level: digit of debug level (default = '%d')\n", debuglevel);
+	printf("        Debug level+category: level digit followed by one or more categories\n");
+	printf("        -> If no category is specified, all categories are selected\n");
 	printf(" -k --kanal <channel>\n");
 	printf("        Channel number of \"Sender\"\n");
 	printf(" -d --device hw:<card>,<device>\n");
@@ -76,7 +79,7 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -G --rx-gain <dB>\n");
 	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
 	printf("        level of the sound device is too low, even after setting maximum level\n");
-	printf("	with the mixer settings.\n");
+	printf("        with the mixer settings.\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
@@ -143,11 +146,14 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		print_help(arg0);
 		exit(0);
 	case 'D':
-		debuglevel = atoi(optarg);
-		if (debuglevel > 2)
-			debuglevel = 2;
-		if (debuglevel < 0)
-			debuglevel = 0;
+		if (!strcasecmp(optarg, "list")) {
+	                debug_list_cat();
+			exit(0);
+		}
+		if (parse_debug_opt(optarg)) {
+			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
+			exit(0);
+		}
 		*skip_args += 2;
 		break;
 	case 'k':

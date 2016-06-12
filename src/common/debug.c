@@ -20,6 +20,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <errno.h>
 #include "debug.h"
 
 const char *debug_level[] = {
@@ -27,6 +30,7 @@ const char *debug_level[] = {
 	"info   ",
 	"notice ",
 	"error  ",
+	NULL,
 };
 
 struct debug_cat {
@@ -44,9 +48,12 @@ struct debug_cat {
 	{ "call", "\033[1;37m" },
 	{ "mncc", "\033[1;32m" },
 	{ "database", "\033[0;33m" },
+	{ "transaction", "\033[0;32m" },
+	{ NULL, NULL }
 };
 
 int debuglevel = DEBUG_INFO;
+uint64_t debug_mask = ~0;
 
 void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...)
 {
@@ -55,6 +62,9 @@ void _printdebug(const char *file, const char *function, int line, int cat, int 
 	va_list args;
 
 	if (debuglevel > level)
+		return;
+
+	if (!(debug_mask & (1 << cat)))
 		return;
 
 	va_start(args, fmt);
@@ -82,5 +92,58 @@ const char *debug_amplitude(double level)
 	text[20 + (int)(level * 20)] = '*';
 
 	return text;
+}
+
+void debug_list_cat(void)
+{
+	int i;
+
+	printf("Give number of debug level:\n");
+	for (i = 0; debug_level[i]; i++)
+		printf(" %d = %s\n", i, debug_level[i]);
+	printf("\n");
+
+	printf("Give name(s) of debug category:\n");
+	for (i = 0; debug_cat[i].name; i++)
+		printf(" %s%s\033[0;39m\n", debug_cat[i].color, debug_cat[i].name);
+	printf("\n");
+}
+
+int parse_debug_opt(const char *optarg)
+{
+	int i, max_level = 0;
+	char *dstring, *p;
+
+	for (i = 0; debug_level[i]; i++)
+		max_level = i;
+	
+	dstring = strdup(optarg);
+	p = strsep(&dstring, ",");
+	for (i = 0; i < p[i]; i++) {
+		if (p[i] < '0' || p[i] > '9') {
+			fprintf(stderr, "Only digits are allowed for debug level!\n");
+			return -EINVAL;
+		}
+	}
+	debuglevel = atoi(p);
+	if (debuglevel > max_level) {
+		fprintf(stderr, "Debug level too high, use 'list' to show available levels!\n");
+		return -EINVAL;
+	}
+	if (dstring)
+		debug_mask = 0;
+	while((p = strsep(&dstring, ","))) {
+		for (i = 0; debug_cat[i].name; i++) {
+			if (!strcasecmp(p, debug_cat[i].name))
+				break;
+		}
+		if (!debug_cat[i].name) {
+			fprintf(stderr, "Given debug category '%s' unknown, use 'list' to show available categories!\n", p);
+			return -EINVAL;
+		}
+		debug_mask |= (1 << i);
+	}
+
+	return 0;
 }
 
