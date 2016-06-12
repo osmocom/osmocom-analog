@@ -441,6 +441,7 @@ static int process_ui(void)
 			}
 			if ((c == 8 || c == 127) && strlen(call.station_id))
 				call.station_id[strlen(call.station_id) - 1] = '\0';
+dial_after_hangup:
 			if (c == 'd' && strlen(call.station_id) == call.dial_digits) {
 				int rc;
 				int callref = ++new_callref;
@@ -466,13 +467,15 @@ static int process_ui(void)
 	case CALL_CONNECT:
 	case CALL_DISCONNECTED:
 		if (c > 0) {
-			if (c == 'h') {
+			if (c == 'h' || c == 'd') {
 				PDEBUG(DCALL, DEBUG_INFO, "Call hangup\n");
 				call_new_state(CALL_IDLE);
 				if (call.callref) {
 					call_out_release(call.callref, CAUSE_NORMAL);
 					call.callref = 0;
 				}
+				if (c == 'd')
+					goto dial_after_hangup;
 			}
 		}
 		if (call.state == CALL_SETUP_MT)
