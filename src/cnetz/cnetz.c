@@ -105,11 +105,6 @@ int cnetz_init(void)
 }
 
 static void cnetz_go_idle(cnetz_t *cnetz);
-static transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
-static transaction_t *search_transaction(cnetz_t *cnetz, uint32_t state_mask);
-static void destroy_transaction(transaction_t *trans);
-static void trans_new_state(transaction_t *trans, int state);
-static void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans);
 
 /* Create transceiver instance and link to a list. */
 int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, double noise, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback)
@@ -270,13 +265,13 @@ void cnetz_destroy(sender_t *sender)
 static void cnetz_go_idle(cnetz_t *cnetz)
 {
 	if (cnetz->sender.callref) {
-		PDEBUG(DBNETZ, DEBUG_ERROR, "Releasing missing callref, please fix!\n");
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Releasing but still having callref, please fix!\n");
 		call_in_release(cnetz->sender.callref, CAUSE_NORMAL);
 		cnetz->sender.callref = 0;
 	}
 
 	/* set scheduler to OgK */
-	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal);
+	PDEBUG(DCNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal);
 	cnetz_new_state(cnetz, CNETZ_IDLE);
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* go idle after next frame/slot */
@@ -396,13 +391,7 @@ inval:
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *) sender;
 		/* search transaction for this number */
-		trans = cnetz->trans_list;
-		for (trans = cnetz->trans_list; trans; trans = trans->next) {
-			if (trans->futln_nat == futln_nat
-			 && trans->futln_fuvst == futln_fuvst
-			 && trans->futln_rest == futln_rest)
-				break;
-		}
+		trans = search_transaction_number(cnetz, futln_nat, futln_fuvst, futln_rest);
 		if (trans)
 			break;
 	}
@@ -462,12 +451,15 @@ void call_out_disconnect(int callref, int cause)
 		return;
 	}
 
+#if 0
+	dont use this, because busy state is only entered when channel is actually used for voice
 	if (cnetz->state != CNETZ_BUSY) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing release, but sender is not in busy state.\n");
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing disconnect, but sender is not in busy state.\n");
 		call_in_release(callref, cause);
 		sender->callref = 0;
 		return;
 	}
+#endif
 
 	trans = cnetz->trans_list;
 	if (!trans) {
@@ -484,16 +476,17 @@ void call_out_disconnect(int callref, int cause)
 	case DSP_MODE_SPK_K:
 		PDEBUG(DCNETZ, DEBUG_INFO, "Call control disconnects on speech channel, releasing towards mobile station.\n");
 		cnetz_release(trans, cnetz_cause_isdn2cnetz(cause));
+		call_in_release(callref, cause);
+		sender->callref = 0;
 		break;
 	default:
 		PDEBUG(DCNETZ, DEBUG_INFO, "Call control disconnects on organisation channel, removing transaction.\n");
+		call_in_release(callref, cause);
+		sender->callref = 0;
 		destroy_transaction(trans);
 		cnetz_go_idle(cnetz);
 	}
 
-	call_in_release(callref, cause);
-
-	sender->callref = 0;
 }
 
 /* Call control releases call toward mobile station. */
@@ -518,10 +511,13 @@ void call_out_release(int callref, int cause)
 
 	sender->callref = 0;
 
+#if 0
+	dont use this, because busy state is only entered when channel is actually used for voice
 	if (cnetz->state != CNETZ_BUSY) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing release, but sender is not in busy state.\n");
 		return;
 	}
+#endif
 
 	trans = cnetz->trans_list;
 	if (!trans)
@@ -557,192 +553,6 @@ int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_res
 	}
 
 	return 0;
-}
-
-/*
- * Transaction handling
- */
-
-static void transaction_timeout(struct timer *timer);
-
-/* link transaction to list */
-static void link_transaction(transaction_t *trans, cnetz_t *cnetz)
-{
-	transaction_t **transp;
-
-	/* attach to end of list, so first transaction is served first */
-	trans->cnetz = cnetz;
-	transp = &cnetz->trans_list;
-	while (*transp)
-		transp = &((*transp)->next);
-	*transp = trans;
-}
-
-/* create transaction */
-static transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
-{
-	transaction_t *trans;
-
-	/* search transaction for this subsriber */
-	trans = cnetz->trans_list;
-	while (trans) {
-		if (trans->futln_nat == futln_nat
-		 && trans->futln_fuvst == futln_fuvst
-		 && trans->futln_rest == futln_rest) {
-			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', deleting!\n", rufnummer);
-			destroy_transaction(trans);
-			break;
-		}
-		trans = trans->next;
-	}
-
-	trans = calloc(1, sizeof(*trans));
-	if (!trans) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "No memory!\n");
-		return NULL;
-	}
-
-	timer_init(&trans->timer, transaction_timeout, trans);
-
-	trans_new_state(trans, state);
-	trans->futln_nat = futln_nat;
-	trans->futln_fuvst = futln_fuvst;
-	trans->futln_rest = futln_rest;
-
-	if (state == TRANS_VWG)
-		trans->mo_call = 1;
-	if (state == TRANS_VAK)
-		trans->mt_call = 1;
-
-	const char *rufnummer = transaction2rufnummer(trans);
-	PDEBUG(DCNETZ, DEBUG_INFO, "Created transaction for subscriber '%s'\n", rufnummer);
-
-	link_transaction(trans, cnetz);
-
-	/* update database: now busy */
-	update_db(cnetz, futln_nat, futln_fuvst, futln_rest, 1, 0);
-
-	return trans;
-}
-
-/* unlink transaction from list */
-static void unlink_transaction(transaction_t *trans)
-{
-	transaction_t **transp;
-
-	/* unlink */
-	transp = &trans->cnetz->trans_list;
-	while (*transp && *transp != trans)
-		transp = &((*transp)->next);
-	if (!(*transp)) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Transaction not in list, please fix!!\n");
-		abort();
-	}
-	*transp = trans->next;
-	trans->cnetz = NULL;
-}
-
-/* destroy transaction */
-static void destroy_transaction(transaction_t *trans)
-{
-	/* update database: now idle */
-	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, 0, trans->ma_failed);
-
-	unlink_transaction(trans);
-	
-	const char *rufnummer = transaction2rufnummer(trans);
-	PDEBUG(DCNETZ, DEBUG_INFO, "Destroying transaction for subscriber '%s'\n", rufnummer);
-
-	timer_exit(&trans->timer);
-
-	trans_new_state(trans, 0);
-
-	free(trans);
-}
-
-static transaction_t *search_transaction(cnetz_t *cnetz, uint32_t state_mask)
-{
-	transaction_t *trans = cnetz->trans_list;
-
-	while (trans) {
-		if ((trans->state & state_mask)) {
-			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DCNETZ, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
-			return trans;
-		}
-		trans = trans->next;
-	}
-
-	return NULL;
-}
-
-static transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
-{
-	transaction_t *trans = cnetz->trans_list;
-
-	while (trans) {
-		if (trans->futln_nat == futln_nat
-		 && trans->futln_fuvst == futln_fuvst
-		 && trans->futln_rest == futln_rest) {
-			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DCNETZ, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
-			return trans;
-		}
-		trans = trans->next;
-	}
-
-	return NULL;
-}
-
-static const char *trans_state_name(int state)
-{
-	switch (state) {
-	case 0:
-		return "IDLE";
-	case TRANS_EM:
-		return "EM";
-	case TRANS_UM:
-		return "UM";
-	case TRANS_MA:
-		return "MA";
-	case TRANS_MFT:
-		return "MFT";
-	case TRANS_VWG:
-		return "VWG";
-	case TRANS_WAF:
-		return "WAF";
-	case TRANS_WBP:
-		return "WBP";
-	case TRANS_WBN:
-		return "WBN";
-	case TRANS_VAG:
-		return "VAG";
-	case TRANS_VAK:
-		return "VAK";
-	case TRANS_BQ:
-		return "BQ";
-	case TRANS_VHQ:
-		return "VHQ";
-	case TRANS_RTA:
-		return "RTA";
-	case TRANS_DS:
-		return "DS";
-	case TRANS_AHQ:
-		return "AHQ";
-	case TRANS_AF:
-		return "AF";
-	case TRANS_AT:
-		return "AT";
-	default:
-		return "<invald transaction state>";
-	}
-}
-
-static void trans_new_state(transaction_t *trans, int state)
-{
-	PDEBUG(DCNETZ, DEBUG_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));
-	trans->state = state;
 }
 
 static struct cnetz_channels {
@@ -805,7 +615,7 @@ const char *chan_type_long_name(enum cnetz_chan_type chan_type)
 }
 
 /* Timeout handling */
-static void transaction_timeout(struct timer *timer)
+void transaction_timeout(struct timer *timer)
 {
 	transaction_t *trans = (transaction_t *)timer->priv;
 	cnetz_t *cnetz = trans->cnetz;
@@ -865,20 +675,6 @@ static void transaction_timeout(struct timer *timer)
 		break;
 	default:
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
-	}
-}
-
-static void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans)
-{
-	/* flush after this very trans */
-	while (trans->next) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Kicking other pending transaction\n");
-		destroy_transaction(trans);
-	}
-	/* flush before this very trans */
-	while (cnetz->trans_list != trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Kicking other pending transaction\n");
-		destroy_transaction(cnetz->trans_list);
 	}
 }
 
@@ -1001,10 +797,18 @@ wbn:
 			timer_start(&trans->timer, 0.150 + 0.0375 * F_BQ); /* two slots + F_BQ frames */
 			/* select channel */
 			spk = search_free_spk();
+			if (!spk) {
+				PDEBUG(DCNETZ, DEBUG_NOTICE, "No free channel anymore, kicking transaction due to race condition!\n");
+				destroy_transaction(trans);
+				cnetz_go_idle(cnetz);
+			break;
+			}
 			if (spk == cnetz) {
 				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined calling + traffic channel %d\n", spk->sender.kanal);
 			} else {
 				PDEBUG(DCNETZ, DEBUG_INFO, "Assigning phone to traffic channel %d\n", spk->sender.kanal);
+				spk->sender.callref = cnetz->sender.callref;
+				cnetz->sender.callref = 0;
 				/* sync RX time to current OgK time */
 				spk->fsk_demod.bit_time = cnetz->fsk_demod.bit_time;
 			}

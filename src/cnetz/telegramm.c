@@ -457,15 +457,6 @@ const char *telegramm2rufnummer(telegramm_t *telegramm)
 	return rufnummer;
 }
 
-const char *transaction2rufnummer(transaction_t *trans)
-{
-	static char rufnummer[9];
-
-	sprintf(rufnummer, "%d%d%05d", trans->futln_nat, trans->futln_fuvst, trans->futln_rest);
-
-	return rufnummer;
-}
-
 static void decode_dialstring(char *number, uint64_t value)
 {
 	int index, max, shift;

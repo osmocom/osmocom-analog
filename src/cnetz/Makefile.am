@@ -5,6 +5,7 @@ bin_PROGRAMS = \
 
 cnetz_SOURCES = \
 	cnetz.c \
+	transaction.c \
 	database.c \
 	sysinfo.c \
 	telegramm.c \
