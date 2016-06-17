@@ -23,10 +23,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
 #include <math.h>
+#include <termios.h>
 #include "main.h"
 #include "debug.h"
-#include "../common/sender.h"
+#include "sender.h"
+#include "timer.h"
+#include "call.h"
 
 /* common settings */
 int num_kanal = 0;
@@ -239,5 +243,85 @@ void sighandler(int sigset)
 	fprintf(stderr, "Signal received: %d\n", sigset);
 
 	quit = 1;
+}
+
+static int get_char()
+{
+	struct timeval tv = {0, 0};
+	fd_set fds;
+	char c = 0;
+	int __attribute__((__unused__)) rc;
+
+	FD_ZERO(&fds);
+	FD_SET(0, &fds);
+	select(0+1, &fds, NULL, NULL, &tv);
+	if (FD_ISSET(0, &fds)) {
+		rc = read(0, &c, 1);
+		return c;
+	} else
+		return -1;
+}
+
+/* Loop through all transceiver instances of one network. */
+void main_loop(int *quit, int latency)
+{
+	int latspl;
+	sender_t *sender;
+	double last_time = 0, now;
+	struct termios term, term_orig;
+	int c;
+
+	/* prepare terminal */
+	tcgetattr(0, &term_orig);
+	term = term_orig;
+	term.c_lflag &= ~(ISIG|ICANON|ECHO);
+	term.c_cc[VMIN]=1;
+	term.c_cc[VTIME]=2;
+	tcsetattr(0, TCSANOW, &term);
+
+	while(!(*quit)) {
+		/* process sound of all transceivers */
+		for (sender = sender_head; sender; sender = sender->next) {
+			/* do not process audio for an audio slave, since it is done by audio master */
+			if (sender->master) /* if master is set, we are an audio slave */
+				continue;
+			latspl = sender->samplerate * latency / 1000;
+			process_sender_audio(sender, quit, latspl);
+		}
+
+		/* process timers */
+		process_timer();
+
+		/* process audio for mncc call instances */
+		now = get_time();
+		if (now - last_time >= 0.1)
+			last_time = now;
+		if (now - last_time >= 0.020) {
+			last_time += 0.020;
+			/* call clock every 20ms */
+			call_mncc_clock();
+		}
+
+		c = get_char();
+		switch (c) {
+		case 3:
+			/* quit */
+			*quit = 1;
+			break;
+		case 'w':
+			/* toggle display */
+			display_wave_on(-1);
+			break;
+		default:
+			/* process audio of built-in call control */
+			process_call(c);
+		}
+
+		/* sleep a while */
+		usleep(1000);
+	}
+
+	/* reset terminal */
+	tcsetattr(0, TCSANOW, &term_orig);
 }
 

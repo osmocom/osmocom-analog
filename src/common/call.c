@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
-#include <termios.h>
 #include "../common/debug.h"
 #include "../common/sender.h"
 #include "cause.h"
@@ -331,24 +330,12 @@ static void get_process_patterns(process_t *process, int16_t *samples, int lengt
 	process->audio_pos = pos;
 }
 
-static struct termios term_orig;
-
 int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int dial_digits, int loopback)
 {
-	struct termios term;
 	int rc = 0;
 
 	if (use_mncc_sock)
 		return 0;
-
-	if (!loopback) {
-		tcgetattr(0, &term_orig);
-		term = term_orig;
-		term.c_lflag &= ~(ISIG|ICANON|ECHO);
-		term.c_cc[VMIN]=1;
-		term.c_cc[VTIME]=2;
-		tcsetattr(0, TCSANOW, &term);
-	}
 
 	memset(&call, 0, sizeof(call));
 	strncpy(call.station_id, station_id, sizeof(call.station_id) - 1);
@@ -391,8 +378,6 @@ void call_cleanup(void)
 {
 	if (use_mncc_sock)
 		return;
-	if (!call.loopback)
-		tcsetattr(0, TCSANOW, &term_orig);
 
 	/* close sound devoice */
 	if (call.sound)
@@ -405,33 +390,8 @@ void call_cleanup(void)
 	}
 }
 
-static int get_char()
+static void process_ui(int c)
 {
-	struct timeval tv = {0, 0};
-	fd_set fds;
-	char c = 0;
-	int __attribute__((__unused__)) rc;
-
-	FD_ZERO(&fds);
-	FD_SET(0, &fds);
-	select(0+1, &fds, NULL, NULL, &tv);
-	if (FD_ISSET(0, &fds)) {
-		rc = read(0, &c, 1);
-		return c;
-	} else
-		return -1;
-}
-
-static int process_ui(void)
-{
-	int c;
-
-	c = get_char();
-
-	/* break */
-	if (c == 3)
-		return 1;
-
 	switch (call.state) {
 	case CALL_IDLE:
 		if (c > 0) {
@@ -493,26 +453,22 @@ dial_after_hangup:
 		break;
 	}
 	fflush(stdout);
-
-	return 0;
 }
 
 /* get keys from keyboad to control call via console
  * returns 1 on exit (ctrl+c) */
-int process_call(void)
+void process_call(int c)
 {
 	if (use_mncc_sock) {
 		mncc_handle();
-		return 0;
+		return;
 	}
 
-	if (!call.loopback) {
-		if (process_ui())
-			return 1;
-	}
+	if (!call.loopback)
+		process_ui(c);
 
 	if (!call.sound)
-		return 0;
+		return;
 	/* handle audio, if sound device is used */
 
 	int16_t samples[call.latspl];
@@ -524,7 +480,7 @@ int process_call(void)
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE)
 			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
-		return 0;
+		return;
 	}
 	if (count < call.latspl) {
 		int16_t up[count + 10];
@@ -552,7 +508,7 @@ int process_call(void)
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE)
 				PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
-			return 0;
+			return;
 		}
 	}
 	count = sound_read(call.sound, samples, samples, call.latspl);
@@ -560,7 +516,7 @@ int process_call(void)
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)
 			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
-		return 0;
+		return;
 	}
 	if (count) {
 		int16_t down[count]; /* more than enough */
@@ -570,8 +526,6 @@ int process_call(void)
 		count = samplerate_downsample(&call.srstate, samples, count, down);
 		call_rx_audio(call.callref, down, count);
 	}
-
-	return 0;
 }
 
 /* Setup is received from transceiver. */

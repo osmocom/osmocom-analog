@@ -35,3 +35,6 @@ void opt_switch_common(int c, char *arg0, int *skip_args);
 
 extern int quit;
 void sighandler(int sigset);
+
+void main_loop(int *quit, int latency);
+

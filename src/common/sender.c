@@ -23,13 +23,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include "debug.h"
 #include "sender.h"
-#include "timer.h"
-#include "call.h"
 
 sender_t *sender_head = NULL;
 static sender_t **sender_tailp = &sender_head;
@@ -138,6 +135,9 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 	*sender_tailp = sender;
 	sender_tailp = &sender->next;
 
+	if (sender == sender_head)
+		display_wave_init(sender, samplerate);
+
 	return 0;
 error:
 	sender_destroy(sender);
@@ -209,7 +209,7 @@ static void gain_samples(int16_t *samples, int length, double gain)
 }
 
 /* Handle audio streaming of one transceiver. */
-static void process_sender_audio(sender_t *sender, int *quit, int latspl)
+void process_sender_audio(sender_t *sender, int *quit, int latspl)
 {
 	sender_t *slave = sender->slave;
 	int16_t samples[latspl], pilot[latspl], slave_samples[latspl];
@@ -245,6 +245,8 @@ cant_recover:
 #ifndef WAVE_WRITE_TX
 			if (sender->wave_rec.fp)
 				wave_write(&sender->wave_rec, samples, count);
+			if (sender == sender_head)
+				display_wave(sender, samples, count);
 			sender_receive(sender, samples, count);
 #endif
 		}
@@ -362,6 +364,8 @@ cant_recover:
 			if (sender->wave_rec.fp)
 				wave_write(&sender->wave_rec, samples, count);
 #endif
+			if (sender == sender_head)
+				display_wave(sender, samples, count);
 			sender_receive(sender, samples, count);
 		}
 		if (sender->loopback == 3)
@@ -384,45 +388,6 @@ cant_recover:
 			if (slave->loopback == 3)
 				jitter_save(&slave->audio, slave_samples, count);
 		}
-	}
-}
-
-/* Loop through all transceiver instances of one network. */
-void main_loop(int *quit, int latency)
-{
-	int latspl;
-	sender_t *sender;
-	double last_time = 0, now;
-
-	while(!(*quit)) {
-		/* process sound of all transceivers */
-		for (sender = sender_head; sender; sender = sender->next) {
-			/* do not process audio for an audio slave, since it is done by audio master */
-			if (sender->master) /* if master is set, we are an audio slave */
-				continue;
-			latspl = sender->samplerate * latency / 1000;
-			process_sender_audio(sender, quit, latspl);
-		}
-
-		/* process timers */
-		process_timer();
-
-		/* process audio for mncc call instances */
-		now = get_time();
-		if (now - last_time >= 0.1)
-			last_time = now;
-		if (now - last_time >= 0.020) {
-			last_time += 0.020;
-			/* call clock every 20ms */
-			call_mncc_clock();
-		}
-
-		/* process audio of built-in call control */
-		if (process_call())
-			break;
-
-		/* sleep a while */
-		usleep(1000);
 	}
 }
 

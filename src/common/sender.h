@@ -4,6 +4,7 @@
 #include "jitter.h"
 #include "loss.h"
 #include "emphasis.h"
+#include "display_wave.h"
 
 #define MAX_SENDER	16
 
@@ -53,6 +54,9 @@ typedef struct sender {
 	int			pilot_on;		/* 1 or 0 for on or off */
 	double			pilotton_phaseshift;	/* phase to shift every sample */
 	double			pilotton_phase; 	/* current phase */
+
+	/* display wave */
+	dispwav_t		dispwav;		/* display wave form */
 } sender_t;
 
 /* list of all senders */
@@ -61,7 +65,7 @@ extern int cant_recover;
 
 int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal);
 void sender_destroy(sender_t *sender);
+void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, int16_t *samples, int count);
 void sender_receive(sender_t *sender, int16_t *samples, int count);
-void main_loop(int *quit, int latency);
 

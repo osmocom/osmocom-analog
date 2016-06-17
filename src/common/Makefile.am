@@ -21,5 +21,6 @@ libcommon_a_SOURCES = \
 	../common/emphasis.c \
 	../common/compander.c \
 	../common/sender.c \
+	../common/display_wave.c \
 	../common/main_common.c
 
