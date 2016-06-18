@@ -5,6 +5,7 @@ extern int num_sounddev;
 extern const char *sounddev[];
 extern const char *call_sounddev;
 extern int samplerate;
+extern int interval;
 extern int latency;
 extern int cross_channels;
 extern int do_pre_emphasis;
@@ -36,5 +37,5 @@ void opt_switch_common(int c, char *arg0, int *skip_args);
 extern int quit;
 void sighandler(int sigset);
 
-void main_loop(int *quit, int latency);
+void main_loop(int *quit, int latency, int interval);
 

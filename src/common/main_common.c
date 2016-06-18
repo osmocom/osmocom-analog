@@ -39,6 +39,7 @@ int num_sounddev = 0;
 const char *sounddev[MAX_SENDER] = { "hw:0,0" };
 const char *call_sounddev = "";
 int samplerate = 48000;
+int interval = 1;
 int latency = 50;
 int cross_channels = 0;
 int do_pre_emphasis = 0;
@@ -69,8 +70,12 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Sound card and device number (default = '%s')\n", sounddev[0]);
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
+	printf(" -i --interval 1..25\n");
+	printf("        Interval of processing loop in ms (default = '%d' ms)\n", interval);
+	printf("        Use 25 to drastically reduce CPU usage. In case of buffer underrun,\n");
+	printf("        increase latency accordingly.\n");
 	printf(" -l --latency <delay>\n");
-	printf("        How many milliseconds processed in advance  (default = '%d')\n", latency);
+	printf("        How many milliseconds processed in advance (default = '%d')\n", latency);
 	printf(" -x --cross\n");
 	printf("        Cross channels on sound card. 1st channel (right) is swapped with\n");
 	printf("        second channel (left)\n");
@@ -107,6 +112,7 @@ static struct option long_options_common[] = {
 	{"device", 1, 0, 'd'},
 	{"call-device", 1, 0, 'c'},
 	{"samplerate", 1, 0, 's'},
+	{"interval", 1, 0, 'i'},
 	{"latency", 1, 0, 'l'},
 	{"cross", 0, 0, 'x'},
 	{"pre-emphasis", 0, 0, 'E'},
@@ -121,7 +127,7 @@ static struct option long_options_common[] = {
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:l:xEeG:mp:L:r:W:R:";
+const char *optstring_common = "hD:k:d:s:c:i:l:xEeG:mp:L:r:W:R:";
 
 struct option *long_options;
 char *optstring;
@@ -175,6 +181,14 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'c':
 		call_sounddev = strdup(optarg);
 		*skip_args += 2;
+		break;
+	case 'i':
+		interval = atoi(optarg);
+		*skip_args += 2;
+		if (interval < 1)
+			interval = 1;
+		if (interval > 25)
+			interval = 25;
 		break;
 	case 'l':
 		latency = atoi(optarg);
@@ -263,7 +277,7 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_loop(int *quit, int latency)
+void main_loop(int *quit, int latency, int interval)
 {
 	int latspl;
 	sender_t *sender;
@@ -318,7 +332,7 @@ void main_loop(int *quit, int latency)
 		}
 
 		/* sleep a while */
-		usleep(1000);
+		usleep(interval * 1000);
 	}
 
 	/* reset terminal */

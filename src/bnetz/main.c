@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
 	}
 
-	main_loop(&quit, latency);
+	main_loop(&quit, latency, interval);
 
 	if (rt_prio > 0) {
 		struct sched_param schedp;
