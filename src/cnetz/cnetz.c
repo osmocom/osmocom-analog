@@ -801,7 +801,7 @@ wbn:
 				PDEBUG(DCNETZ, DEBUG_NOTICE, "No free channel anymore, kicking transaction due to race condition!\n");
 				destroy_transaction(trans);
 				cnetz_go_idle(cnetz);
-			break;
+				break;
 			}
 			if (spk == cnetz) {
 				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined calling + traffic channel %d\n", spk->sender.kanal);
@@ -812,10 +812,13 @@ wbn:
 				/* sync RX time to current OgK time */
 				spk->fsk_demod.bit_time = cnetz->fsk_demod.bit_time;
 			}
+			/* set channel */
 			telegramm.frequenz_nr = spk->sender.kanal;
+			/* change state to busy */
 			cnetz_new_state(spk, CNETZ_BUSY);
 			/* schedule switching two slots ahead */
 			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
+			/* relink */
 			unlink_transaction(trans);
 			link_transaction(trans, spk);
 			/* flush all other transactions, if any (in case of OgK/SpK) */
@@ -1153,7 +1156,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 			break;
 		}
 		valid_frame = 1;
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received ringback 'Rufton anschlaten Quittung' message.\n");
+		PDEBUG(DCNETZ, DEBUG_INFO, "Received ringback 'Rufton anschalten Quittung' message.\n");
 		if (trans->state != TRANS_RTA)
 			break;
 		timer_start(&trans->timer, 0.0375 * F_RTA); /* F_RTA frames */
