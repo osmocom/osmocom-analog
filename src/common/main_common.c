@@ -316,20 +316,21 @@ void main_loop(int *quit, int latency, int interval)
 			call_mncc_clock();
 		}
 
+next_char:
 		c = get_char();
 		switch (c) {
 		case 3:
 			/* quit */
 			*quit = 1;
-			break;
+			goto next_char;
 		case 'w':
 			/* toggle display */
 			display_wave_on(-1);
-			break;
-		default:
-			/* process audio of built-in call control */
-			process_call(c);
+			goto next_char;
 		}
+
+		/* process audio of built-in call control */
+		process_call(c);
 
 		/* sleep a while */
 		usleep(interval * 1000);
