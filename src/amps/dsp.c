@@ -82,8 +82,8 @@
 #define SIG_TONE_MAXBITS	1050	/* as above, maximum bits */
 #define SAT_DURATION		0.100	/* duration of SAT signal measurement */
 #define SAT_QUALITY		0.85	/* quality needed to detect sat */
-#define SAT_DETECT_COUNT	3	/* number of measures to detect SAT signal */
-#define SAT_LOST_COUNT		3	/* number of measures to loose SAT signal */
+#define SAT_DETECT_COUNT	3	/* number of measures to detect SAT signal (specs say 250ms) */
+#define SAT_LOST_COUNT		3	/* number of measures to loose SAT signal (specs say 250ms) */
 #define SIG_DETECT_COUNT	3	/* number of measures to detect Signalling Tone */
 #define SIG_LOST_COUNT		2	/* number of measures to loose Signalling Tone */
 #define CUT_OFF_HIGHPASS	300.0   /* cut off frequency for high pass filter to remove dc level from sound card / sample */

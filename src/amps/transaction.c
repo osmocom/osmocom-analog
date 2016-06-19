@@ -44,6 +44,8 @@ static const char *trans_state_name(int state)
 		return "CALL ASSIGN MOBILE TERMINATING SEND";
 	case TRANS_CALL_MT_ALERT:
 		return "CALL ALERT MOBILE TERMINATING";
+	case TRANS_CALL_MT_ALERT_SEND:
+		return "CALL ALERT MOBILE TERMINATING SEND";
 	case TRANS_CALL_REJECT:
 		return "CALL REJECT";
 	case TRANS_CALL_REJECT_SEND:

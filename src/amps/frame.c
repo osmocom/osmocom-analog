@@ -2251,12 +2251,12 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_PCI,			"PCI",			"Set to 1 if Control Channel can assign digital traffic channels", ie_yes },
 	{ AMPS_IE_PCI_HOME,		"PCI_HOME",		"Home Protocol Capability Indicator", ie_yes },
 	{ AMPS_IE_PCI_ROAM,		"PCI_ROAM",		"Roam Protocol Capability Indicator", ie_yes },
-	{ AMPS_IE_PDREG,		"PDREG",		"Power Down Registration status field (enabled = 1, disabled = 0)", ie_yes },
+	{ AMPS_IE_PDREG,		"PDREG",		"Power Down Registration status field", ie_enabled },
 	{ AMPS_IE_PI,			"PI",			"Presentation Indicator", ie_pi },
 	{ AMPS_IE_PM,			"PM",			"Privacy Mode indicator", ie_yes },
 	{ AMPS_IE_PM_D,			"PM_D",			"Privacy Mode indicator for Fax/Data", ie_pm_d },
 	{ AMPS_IE_PSCC,			"PSCC",			"Present SAT color code", ie_scc },
-	{ AMPS_IE_PUREG,		"PUREG",		"Power Up Registration status field (enabled = 1, disabled = 0)", ie_yes },
+	{ AMPS_IE_PUREG,		"PUREG",		"Power Up Registration status field", ie_enabled },
 	{ AMPS_IE_PVI,			"PVI",			"Protocol Version Indicator", ie_pvi },
 	{ AMPS_IE_RAND1_A,		"RAND1_A",		"The 16 most significant bits of the 32-bit RAND variable stored by a mobile station for use in the authentication process", ie_hex },
 	{ AMPS_IE_RAND1_B,		"RAND1_B",		"The 16 least significant bits of the 32-bit RAND variable stored by a mobile station for use in the authentication process", ie_hex },
@@ -2311,7 +2311,7 @@ static int ie_desc_max_len;
 
 /* decode 7 bit sequence to DCC code
  * return -1 if failed */
-static int8_t dcc_decode[127];
+static int8_t dcc_decode[128];
 
 /* encode DCC code to 7 bit sequence */
 static uint8_t dcc_encode[4] = {
@@ -2718,7 +2718,7 @@ uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 
 static uint64_t amps_encode_control_filler(uint8_t dcc, uint8_t cmac, uint8_t sdcc1, uint8_t sdcc2, uint8_t wfom)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2737,7 +2737,7 @@ static uint64_t amps_encode_control_filler(uint8_t dcc, uint8_t cmac, uint8_t sd
 
 uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2753,7 +2753,7 @@ uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_
 
 uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2774,7 +2774,7 @@ uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t reg
 
 uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2787,7 +2787,7 @@ uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end)
 
 uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2801,7 +2801,7 @@ uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8
 
 uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, uint8_t lreg, uint16_t locaid, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2818,7 +2818,7 @@ uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, ui
 
 uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2832,7 +2832,7 @@ uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_
 
 uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2861,7 +2861,7 @@ uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end)
 
 uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uint8_t pci_roam, uint8_t bspc, uint8_t bscap, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2879,7 +2879,7 @@ uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uin
 
 uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t maxsztr_pgr, uint8_t maxbusy_other, uint8_t maxsztr_other, uint8_t end)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 3;
@@ -2896,7 +2896,7 @@ uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t ma
 
 uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t min1, int multiple)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	if (multiple)
@@ -2910,7 +2910,7 @@ uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t min1, 
 
 uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 2;
@@ -2925,7 +2925,7 @@ uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t msg_ty
 
 uint64_t amps_encode_word1_extended_address_word_b(uint8_t scc, uint16_t min2, uint8_t vmac, uint16_t chan)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 2;
@@ -2938,7 +2938,7 @@ uint64_t amps_encode_word1_extended_address_word_b(uint8_t scc, uint16_t min2, u
 
 uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc, uint8_t msg_type, uint8_t ordq, uint8_t order)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 2;
@@ -2953,7 +2953,7 @@ uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc, uint8_
 
 uint64_t amps_encode_mobile_station_control_message_word1_b(uint8_t scc, uint8_t pscc, uint8_t dtx, uint8_t pvi, uint8_t mem, uint8_t vmac, uint16_t chan)
 {
-	static frame_t frame;
+	frame_t frame;
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 2;
