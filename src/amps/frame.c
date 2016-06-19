@@ -3239,8 +3239,9 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		amps->rx_recc_dialing[31] = digit2number[frame->ie[AMPS_IE_DIGIT_32]];
 	}
 
-	if (msg_count >= 2 && nawc == 0) {
-		amps_rx_recc(amps, amps->rx_recc_scm, amps->rx_recc_esn, amps->rx_recc_min1, amps->rx_recc_min2, amps->rx_recc_msg_type, amps->rx_recc_ordq, amps->rx_recc_order, amps->rx_recc_dialing);
+	if (msg_count >= 3 && nawc == 0) {
+		/* if no digit messages are present, send NULL as dial string (paging reply) */
+		amps_rx_recc(amps, amps->rx_recc_scm, amps->rx_recc_esn, amps->rx_recc_min1, amps->rx_recc_min2, amps->rx_recc_msg_type, amps->rx_recc_ordq, amps->rx_recc_order, (msg_count > 3) ? amps->rx_recc_dialing : NULL);
 	}
 
 	amps->rx_recc_word_count++;
@@ -3618,7 +3619,7 @@ int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 			if (!strncmp(encode_bch(word_string, 28), word_string + 28, 12))
 				crc_ok++;
 		}
-		if (crc_ok == i) {
+		if (crc_ok) {
 			PDEBUG(DFRAME, DEBUG_NOTICE, "Seems we RX FOCC frame due to loopback, ignoring!\n");
 			return 0;
 		}

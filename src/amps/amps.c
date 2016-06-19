@@ -648,15 +648,21 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 		}
 	} else
 	if (order == 0 && ordq == 0 && msg_type == 0) {
-		trans = search_transaction_number(amps, min1, min2);
-		if (!trans) {
-			PDEBUG(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s)\n", callerid, dialing, esn, amps_scm(scm));
-		} else {
+		if (!dialing)
 			PDEBUG(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+		else
+			PDEBUG(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s)\n", callerid, dialing, esn, amps_scm(scm));
+		trans = search_transaction_number(amps, min1, min2);
+		if (!trans && !dialing) {
+			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging reply, but call is already gone, rejecting call\n");
+			goto reject;
 		}
+		if (trans && dialing)
+			PDEBUG(DAMPS, DEBUG_NOTICE, "There is already a transaction for this phone. Cloning?\n");
 		vc = search_free_vc();
 		if (!vc) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "No free channel, rejecting call\n");
+reject:
 			if (!trans) {
 				trans = create_transaction(amps, TRANS_CALL_REJECT, min1, min2, 0, 0, 3, 0);
 				if (!trans) {
