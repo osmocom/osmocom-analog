@@ -22,12 +22,43 @@ History
 </p>
 
 <p>
-*TBD*
+C-Netz was the third mobile telephone network in Germany.
+It existed between 1984 (officially Mai 1985) and December 2000.
+It was the first cellular system, so frequencies could be used more efficiently.
+It offered handover capability, so moving phones can change cells during a call.
+New was the SIM card, which was similar to GSM.
+This card allowed to use phones by different subscribers with different subscriber numbers.
+Authentication was used to prevent fraud, but is was used only with SIM card phones.
+Extra services (e.g. conditional call forwarding, answering machine) were installed in the mobile network.
+A scrambler inside the phone and base station prevented eavedropping with radio scanners.
+Phones became smaller and portable, even handheld phones were available.
+It used full duplex radio link.
+All phones were available under a dedicated prefix, so the caller must to know the location of the phone anymore.
+
 </p>
+
+<center><img src="c-netz-c130.jpg"/></center>
+
+<p>
+<ul>
+	<li>Frequency range: 461.300 - 465.740 MHz (downlink); 451.300 - 465.740 MHz (uplink)
+	<li>222 voice channels
+	<li>237 voice channels since Mai 1988
+	<li>287 voice channels since September 1989
+	<li>1 organisation channel (call setup and paging)
+	<li>Duplex distance: 10 MHz
+	<li>Channel spacing: 10 KHz and optionally 12.5 KHz
+	<li>Voice modulation: FM
+	<li>Signalling modulation: carrier FSK
+	<li>Frequency deviation: 2.4 KHz (FSK)
+	<li>Mobile station transmit power: 50 mW up to 15 Watts
+	<li>Base station transmit power: 25 Watts
+</ul>
+</p>
+
 
 <p class="toppic">
 <a name="howitworks"></a>
-How it works
 </p>
 
 <p>
@@ -56,7 +87,7 @@ We need to calibrate the speed of our transmit signal (and receive signal as wel
 </p>
 
 <p>
-First of all, we need a reference clock.
+First of all we need a reference clock.
 Since most systems have standard crystals, we cannot use our system clock as reference without any help.
 I decided to use the NTP daemon.
 After running the system for several days, the clock speed should be accurate enough for our needs.
@@ -75,7 +106,7 @@ server ntp3.ptb.de
 
 <p>
 This clock provides time base for European radio clocks and most German clocks.
-It is perfect for this project, so please use this clock.
+It accurate enough for this project, so please use this clock.
 </p>
 
 <pre>
@@ -145,14 +176,25 @@ Let it run again for one hour and you will see that clock deviation is below 1 P
 <font color="red">Importaint: We need to connect to PLL and discriminator!</font>
 </p>
 
+<p>
+C-Netz does not use a modulated tone to carry bits of information, instead it modulates the carrier directly.
+This image shows the demodulated signal from a receiver:
+</p>
+
 <center><img src="c-netz-burst_full.png"/></center>
 
 <p>
-*TBD*
+Generally a receiver will do de-emphasis and filtering after demodulating the signal.
+We don't want that.
+It may work, but be sure to get a receiver with disciminator output.
+Many receivers can be modified, so search the Web for more infos.
 </p>
 
 <p>
-*TBD*
+On the transmitter we don't want to have filtering and pre-emphasis.
+It may work, but be sure to get a transmitter that allows to disable emphasis.
+I took the schematics of my transmitter and connected the sound card
+directly to the PLL.
 </p>
 
 <p>
@@ -165,21 +207,57 @@ Let it run again for one hour and you will see that clock deviation is below 1 P
 C-Netz uses FSK (Frequency Shift Keying) by directly modulating the carrier, rather than modulating a tone, which is then transmitted via FM.
 The advantage is much higher data rate.
 The base station's carrier frequency is raised by 2.5 KHz to transmit a logical "1" and lowered by 2.5 KHz to transmit a logial "0".
-(The mobile station transmits reversed polarity.) 
+(The mobile station transmits reversed polarity.)
 The mobile station will only detect the correct polarity.
 The three sync words of "11100010010", is shown in the picture above.
 In the picture above, the polarity is wrong.
 (The logical "1" points down and the logical "0" points up.)
-You must check, with what polarity your transmitter is doing a positive frequency deviation.
-Also you must check your sound card's polarity on positive value beeing sent.
-To change polarty, use command line option '-F yes' or '--flip-polarity yes'.
+To change polarty, use command line option '-F yes|no|auto' or '--flip-polarity yes|no|auto'.
 (Note: don't confuse with '-P'!)
 </p>
 
 <p>
-This software does not care about what polarity it receives from the mobile station.
+The 'auto' option (default) will generate a signal of two base stations.
+Since we have time division multiplex on the main control channel, we can transmit a second base station easily.
+The second base station uses reversed polarity, so there is one base station with correct and one with wrong polarity.
+The two base stations have different time slots and different IDs.
+If a first registration message is received from the phone, we check which base station this response belongs to.
+Then we found the correct polarity and turn off the base station with the wrong polarity.
+</p>
+
+<p>
+The decoder itself does not care about what polarity it receives from the mobile station.
 It just checks for sync words with both polarities and chooses right polarity automatically.
 </p>
+
+<p>
+I have a transmitter and a receiver without emphasis, my soundcard has a clock error of about 19.2 PPM.
+To run the base station I the following command line options:
+</p>
+
+<pre>
+
+# cnetz -k 131 -E -e -S 19.25,19.25
+...
+cnetz.c:142 notice : You selected channel 131 ('Orga-Kanal') for combined callin
+g + traffic channel. Some phones will reject this.
+dsp.c:96 info   : Using clock speed of 19.2 ppm (RX) and 19.2 ppm (TX) to correc
+t sound card's clock.
+cnetz.c:274 info   : Entering IDLE state on channel 131.
+Base station on channel 131 ready, please tune transmitter to 465.090 MHz and re
+ceiver to 455.090 MHz.
+
+</pre>
+
+<p>
+The sofware complains about using control channel 131 for voice traffic too.
+This is the easiest way to use a single transmitter and receiver without switching.
+But this is not compliant, so especially newer phone will reject this, like the Nokia C130.
+Old phones like BSA, Storno or Phillips phones don't care.
+When we make a call and another phone is regisered, the phone will loose coverage when we switch from control channel to traffic channel.
+After the call, the other phone re-registers again.
+</p>
+
 
 [<a href="index.html">Back to main page</a>]
 </td></tr></table></center>

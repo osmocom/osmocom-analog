@@ -1,0 +1,231 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>AMPS</center></h2>
+
+<center><img src="amps.jpg"/></center>
+
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks">How it works</a>
+	<li><a href="#basestation">Setup of a base station</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
+</p>
+
+<p>
+*TBD*
+</p>
+
+<center><img src="amps-dynatac.jpg"/></center>
+
+<p>
+<ul>
+	<li>Frequency range: 
+	<li>xxx voice channels
+	<li>Duplex distance: 45 MHz
+	<li>Channel spacing: 30 KHz
+	<li>Voice modulation: FM
+	<li>Signalling modulation: carrier FSK
+	<li>Frequency deviation: 8 KHz (FSK)
+	<li>Mobile station transmit power: 
+	<li>Base station transmit power: 
+</ul>
+</p>
+
+
+<p class="toppic">
+<a name="howitworks"></a>
+</p>
+
+<p>
+*TBD*
+</p>
+
+<p class="toppic">
+<a name="basestation"></a>
+Setup of a base station
+</p>
+
+<p>
+*TBD*
+</p>
+
+<pre>
+
+# amps -k 334 -F yes -E -e
+...
+Selected System ID (SID) 40 belongs to:
+        Salinas, CA (GTE Mobile)
+        San Francisco, CA (GTE Mobile)
+        San Jose, CA (GTE Mobile)
+        San Rosa, CA (GTE Mobile)
+        Santa Barbara, CA (GTE Mobile)
+amps.c:390 notice : You selected 'combined control &amp; paging &amp; voice channel'.
+This is a hack, but the only way to use control channel and voice channel on one transceiver.
+ Some phones may reject this.
+amps.c:481 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp; paging
+ &amp; voice channel.
+Base station on channel 334 ready, please tune transmitter to 880.020 MHz and receiver to 835.020 MHz.
+frame.c:3658 info   : RX Level: 54% Quality: 66% Polarity: NEGATIVE
+frame.c:3658 info   : RX Level: 53% Quality: 65% Polarity: NEGATIVE
+frame.c:3658 info   : RX Level: 52% Quality: 60% Polarity: NEGATIVE
+
+</pre>
+
+<pre>
+
+frame.c:3630 info   : RX RECC: DCC=0
+frame.c:2990 info   : Received: Word A - Abbreviated Address Word
+frame.c:2990 info   : Received: Word B - Extended Address Word
+frame.c:2990 info   : Received: Word C - Serial Number Word
+amps.c:635 info   : Registration 617XXXXXXX (ESN = 825b5f79, Class 6 / Discontinuous / 25 MHz)
+transaction.c:175 info   : Transaction state IDLE -&gt; REGISTER ACK
+transaction.c:98 info   : Created transaction '617XXXXXXX' for subscriber 'REGISTER ACK'
+amps.c:989 info   : Sending Register acknowledge
+transaction.c:175 info   : Transaction state REGISTER ACK -&gt; REGISTER ACK SEND
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+transaction.c:117 info   : Destroying transaction for subscriber '617XXXXXXX'
+transaction.c:175 info   : Transaction state REGISTER ACK SEND -&gt; IDLE
+
+</pre>
+
+<pre>
+
+frame.c:3630 info   : RX RECC: DCC=0
+frame.c:2990 info   : Received: Word A - Abbreviated Address Word
+frame.c:2990 info   : Received: Word B - Extended Address Word
+frame.c:2990 info   : Received: Word C - Serial Number Word
+frame.c:2990 info   : Received: Word D - First Word of the Called-Address (Origination - Voice Service)
+amps.c:653 info   : Call 617XXXXXXX -&gt; 5551212 (ESN = 825b5f79, Class 6 / Discontinuous / 25 MHz)
+transaction.c:175 info   : Transaction state IDLE -&gt; CALL ASSIGN MOBILE ORIGINAT ING
+transaction.c:98 info   : Created transaction '617XXXXXXX' for subscriber 'CALLASSIGN MOBILE ORIGINATING'
+amps.c:1003 info   : Assigning channel to call from mobile station
+transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING -&gt;
+CALL ASSIGN MOBILE ORIGINATING SEND
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING SEND -&gt; CALL
+amps.c:951 info   : Staying on combined control + voice channel 334
+amps.c:959 info   : Setup call to network.
+call.c:590 info   : Incomming call from '617XXXXXXX' to '5551212'
+dsp.c:678 notice : SAT level 72.31% quality 98%p)
+dsp.c:678 notice : SAT level 78.63% quality 100%)
+dsp.c:678 notice : SAT level 78.76% quality 100%)
+amps.c:585 info   : Detected SAT signal with quality=100.
+dsp.c:678 notice : SAT level 78.66% quality 100%)
+
+</pre>
+
+<pre>
+
+amps.c:525 info   : Detected Signalling Tone with quality=100.
+transaction.c:117 info   : Destroying transaction for subscriber '617XXXXXXX'
+transaction.c:175 info   : Transaction state CALL -&gt; IDLE
+call.c:711 info   : Call has been released with cause=16
+amps.c:481 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp; paging
+&amp; voice channel.
+
+</pre>
+
+<pre>
+
+call.c:457 info   : Outgoing call to 617XXXXXXX
+amps.c:753 info   : Call to mobile station, paging station id '617XXXXXXX'
+transaction.c:175 info   : Transaction state IDLE -&gt; PAGE
+transaction.c:98 info   : Created transaction '617XXXXXXX' for subscriber 'PAGE'
+amps.c:1025 info   : Paging the phone
+transaction.c:175 info   : Transaction state PAGE -&gt; PAGE SEND
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+transaction.c:175 info   : Transaction state PAGE SEND -&gt; PAGE REPLY
+frame.c:3658 info   : RX Level: 60% Quality: 90% Polarity: POSITIVE
+frame.c:3630 info   : RX RECC: DCC=0
+frame.c:2990 info   : Received: Word A - Abbreviated Address Word
+frame.c:2990 info   : Received: Word B - Extended Address Word
+frame.c:2990 info   : Received: Word C - Serial Number Word
+amps.c:655 info   : Paging reply 617XXXXXXX (ESN = 825b5f79, Class 6 / Discontinuous / 25 MHz)
+transaction.c:175 info   : Transaction state PAGE REPLY -&gt; CALL ASSIGN MOBILE TERMINATING
+amps.c:1012 info   : Assigning channel to call to mobile station
+transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE TERMINATING -&gt;
+CALL ASSIGN MOBILE TERMINATING SEND
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE TERMINATING SEND -&gt;
+CALL ALERT MOBILE TERMINATING
+amps.c:951 info   : Staying on combined control + voice channel 334
+frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:678 notice : SAT level 76.43% quality 98%
+frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:678 notice : SAT level 77.44% quality 99%
+frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:678 notice : SAT level 78.58% quality 99%
+amps.c:585 info   : Detected SAT signal with quality=99.
+frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:678 notice : SAT level 79.75% quality 100%
+amps.c:525 info   : Detected Signalling Tone with quality=100.
+call.c:646 info   : Call is alerting
+transaction.c:175 info   : Transaction state CALL ALERT MOBILE TERMINATING -&gt;
+CALL ALERT MOBILE TERMINATING SEND
+dsp.c:678 notice : SAT level 67.88% quality 98%
+dsp.c:678 notice : SAT level 80.28% quality 99%
+dsp.c:678 notice : SAT level 80.39% quality 99%
+dsp.c:678 notice : SAT level 80.08% quality 100%
+
+</pre>
+
+<pre>
+
+mps.c:527 info   : Lost Signalling Tone signal
+call.c:689 info   : Call has been answered by '617XXXXXXX'
+transaction.c:175 info   : Transaction state CALL ALERT MOBILE TERMINATING SEND -&gt; CALL
+
+</pre>
+
+<pre>
+
+call.c:479 info   : Call hangup
+amps.c:836 info   : Call has been released by network, releasing call.
+amps.c:866 info   : Call control releases on voice channel, releasing towards mobile station.
+transaction.c:175 info   : Transaction state CALL -&gt; CALL RELEASE
+amps.c:1048 info   : Releasing call to mobile station
+transaction.c:175 info   : Transaction state CALL RELEASE -&gt; CALL RELEASE SEND
+frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:678 notice : SAT level 76.60% quality 100%
+transaction.c:117 info   : Destroying transaction for subscriber '617XXXXXXX'
+transaction.c:175 info   : Transaction state CALL RELEASE SEND -&gt; IDLE
+amps.c:481 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp;
+paging &amp; voice channel.
+
+</pre>
+
+
+[<a href="index.html">Back to main page</a>]
+</td></tr></table></center>
+</body>
+</html>
