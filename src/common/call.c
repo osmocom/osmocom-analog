@@ -24,11 +24,14 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
-#include "../common/debug.h"
-#include "../common/sender.h"
+#include "debug.h"
+#include "sender.h"
 #include "cause.h"
 #include "call.h"
+#include "timer.h"
 #include "mncc_sock.h"
+
+#define DISC_TIMEOUT	30
 
 extern int use_mncc_sock;
 extern int send_patterns;
@@ -219,9 +222,13 @@ typedef struct process {
 	int audio_disconnected; /* if not associated with transceiver anymore */
 	enum audio_pattern pattern;
 	int audio_pos;
+	uint8_t cause;
+	struct timer timer;
 } process_t;
 
 static process_t *process_head = NULL;
+
+static void process_timeout(struct timer *timer);
 
 static void create_process(int callref, int state)
 {
@@ -232,6 +239,7 @@ static void create_process(int callref, int state)
 		PDEBUG(DCALL, DEBUG_ERROR, "No memory!\n");
 		abort();
 	}
+	timer_init(&process->timer, process_timeout, process);
 	process->next = process_head;
 	process_head = process;
 
@@ -247,6 +255,7 @@ static void destroy_process(int callref)
 	while (process) {
 		if (process->callref == callref) {
 			*process_p = process->next;
+			timer_exit(&process->timer);
 			free(process);
 			return;
 		}
@@ -319,6 +328,8 @@ static void disconnect_process(int callref, int cause)
 			process->pattern = cause2pattern(cause);
 			process->audio_disconnected = 1;
 			process->audio_pos = 0;
+			process->cause = cause;
+			timer_start(&process->timer, DISC_TIMEOUT);
 			return;
 		}
 		process = process->next;
@@ -376,6 +387,28 @@ static void get_process_patterns(process_t *process, int16_t *samples, int lengt
 			pos = 0;
 	}
 	process->audio_pos = pos;
+}
+
+static void process_timeout(struct timer *timer)
+{
+	process_t *process = (process_t *)timer->priv;
+
+	{
+		/* announcement timeout */
+		uint8_t buf[sizeof(struct gsm_mncc)];
+		struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
+
+		memset(buf, 0, sizeof(buf));
+		mncc->msg_type = MNCC_REL_IND;
+		mncc->callref = process->callref;
+		mncc->fields |= MNCC_F_CAUSE;
+		mncc->cause.location = 1; /* private local */
+		mncc->cause.value = process->cause;
+
+		destroy_process(process->callref);
+		PDEBUG(DMNCC, DEBUG_INFO, "Releasing MNCC call towards Network (after timeout)\n");
+		mncc_write(buf, sizeof(struct gsm_mncc));
+	}
 }
 
 int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int dial_digits, int loopback)
