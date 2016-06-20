@@ -2716,7 +2716,7 @@ uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 	return word;
 }
 
-static uint64_t amps_encode_control_filler(uint8_t dcc, uint8_t cmac, uint8_t sdcc1, uint8_t sdcc2, uint8_t wfom)
+static uint64_t amps_encode_control_filler(amps_t *amps, uint8_t dcc, uint8_t cmac, uint8_t sdcc1, uint8_t sdcc2, uint8_t wfom)
 {
 	frame_t frame;
 
@@ -2730,7 +2730,12 @@ static uint64_t amps_encode_control_filler(uint8_t dcc, uint8_t cmac, uint8_t sd
 	frame.ie[AMPS_IE_SDCC2] = sdcc2;
 	frame.ie[AMPS_IE_1] = 1;
 	frame.ie[AMPS_IE_WFOM] = wfom;
-	frame.ie[AMPS_IE_1111] = 15;
+	if (amps->sender.loopback) {
+		frame.ie[AMPS_IE_1111] = amps->when_count;
+		amps->when_transmitted[amps->when_count] = get_time();
+		amps->when_count = (amps->when_count + 1) & 0xf;
+	} else
+		frame.ie[AMPS_IE_1111] = 15;
 	frame.ie[AMPS_IE_OHD] = 1;
 	return amps_encode_word(&frame, &control_filler, -1);
 }
@@ -3013,7 +3018,8 @@ static frame_t *amps_decode_word(uint64_t word, struct def_word *w)
 static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 {
 	struct def_word *w = NULL;
-	int t1t2, ohd, act, scc;
+	int t1t2, ohd = -1, act, scc;
+	static frame_t *frame;
 
 	t1t2 = (word >> 38) & 3;
 
@@ -3105,7 +3111,10 @@ decode:
 		return;
 	}
 
-	amps_decode_word(word, w);
+	frame = amps_decode_word(word, w);
+	/* show control filler delay */
+	if (amps->sender.loopback && ohd == 1)
+		PDEBUG(DDSP, DEBUG_NOTICE, "Round trip delay is %.3f seconds\n", amps->when_received - amps->when_transmitted[frame->ie[AMPS_IE_1111]]);
 }
 
 /* get word from data bits and call decoder function
@@ -3425,7 +3434,7 @@ const char *amps_encode_frame_focc(amps_t *amps)
 	}
 
 	/* send filler */
-	word = amps_encode_control_filler(amps->si.dcc, amps->si.filler.cmac, amps->si.filler.sdcc1, amps->si.filler.sdcc2, amps->si.filler.wfom);
+	word = amps_encode_control_filler(amps, amps->si.dcc, amps->si.filler.cmac, amps->si.filler.sdcc1, amps->si.filler.sdcc2, amps->si.filler.wfom);
 	if (++amps->tx_focc_frame_count >= 17)
 		amps->tx_focc_frame_count = 0;
 
@@ -3655,8 +3664,9 @@ int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, d
 	int more = 0;
 
 	/* not if additional words are received without sync */
-	if (count != 240)
+	if (count != 240) {
 		PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality: %.0f%% Polarity: %s\n", level * 100.0, quality * 100.0, (negative) ? "NEGATIVE" : "POSITIVE");
+	}
 	if (count == 441) {
 		amps_decode_bits_focc(amps, bits);
 	} else if (count == 247) {

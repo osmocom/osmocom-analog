@@ -495,6 +495,7 @@ prepare_frame:
 			amps->fsk_rx_frame_quality = 0.0;
 			amps->fsk_rx_frame_level = 0.0;
 			amps->fsk_rx_sync_register = 0x555;
+			amps->when_received = get_time() - (21.0 / (double)BITRATE);
 			return;
 		}
 		if ((amps->fsk_rx_sync_register & 0x7ff) == 0x0ed) {

@@ -136,6 +136,11 @@ typedef struct amps {
 	int			sig_detect_count;	/* current number of consecutive detections/losses */
 
 	transaction_t		*trans_list;		/* list of transactions */
+
+	/* delay measurement in loopback mode */
+	double			when_received;		/* time stamp of received frame start (start of dotting) */
+	double			when_transmitted[16];	/* time stamps of filler frames with different count */
+	int			when_count;		/* counter of the filler frame */
 } amps_t;
 
 void amps_channel_list(void);
