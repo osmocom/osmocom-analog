@@ -3285,22 +3285,21 @@ static uint64_t string2bin(const char *string)
 }
 #endif
 
-static char *amps_encode_focc_bits(amps_t *amps, uint64_t word_a, uint64_t word_b, int busy_idle)
+void amps_encode_focc_bits(amps_t *amps, uint64_t word_a, uint64_t word_b, char *bits)
 {
-	static char bits[463 + 1];
 	int i, j, k;
 
 	strncpy(bits + 0, dotting, 10);
-	bits[10] = (busy_idle) ? '1' : '0';
+	bits[10] = 'i';
 	strcpy(bits + 11, sync_word);
-	bits[22] = (busy_idle) ? '1' : '0';
+	bits[22] = 'i';
 	/* WORD A (msb first) */
 	k = 23;
 	for (i = 0; i < 5; i++) {
 		for (j = 39; j >= 0; j--) {
 			bits[k++] = ((word_a >> j) & 1) + '0';
 			if ((j % 10) == 0)
-				bits[k++] = (busy_idle) ? '1' : '0';
+				bits[k++] = 'i';
 		}
 	}
 	/* WORD B (msb first) */
@@ -3308,7 +3307,7 @@ static char *amps_encode_focc_bits(amps_t *amps, uint64_t word_a, uint64_t word_
 		for (j = 39; j >= 0; j--) {
 			bits[k++] = ((word_b >> j) & 1) + '0';
 			if ((j % 10) == 0)
-				bits[k++] = (busy_idle) ? '1' : '0';
+				bits[k++] = 'i';
 		}
 	}
 
@@ -3335,13 +3334,10 @@ static char *amps_encode_focc_bits(amps_t *amps, uint64_t word_a, uint64_t word_
 		}
 #endif
 	}
-
-	return bits;
 }
 
-static char *amps_encode_fvc_bits(amps_t *amps, uint64_t word_a)
+void amps_encode_fvc_bits(amps_t *amps, uint64_t word_a, char *bits)
 {
-	static char bits[1032 + 1];
 	int i, j, k;
 
 	
@@ -3369,13 +3365,10 @@ static char *amps_encode_fvc_bits(amps_t *amps, uint64_t word_a)
 		PDEBUG(DFRAME, DEBUG_INFO, "TX FVC: %s\n", bits);
 	}
 #endif
-
-	return bits;
 }
 
-const char *amps_encode_frame_focc(amps_t *amps)
+int amps_encode_frame_focc(amps_t *amps, char *bits)
 {
-	char *bits;
 	uint64_t word;
 
 	/* init overhead train */
@@ -3406,7 +3399,7 @@ const char *amps_encode_frame_focc(amps_t *amps)
 		}
 		/* on change of dsp mode */
 		if (amps->dsp_mode != DSP_MODE_FRAME_RX_FRAME_TX)
-			return NULL;
+			return 1;
 	}
 	/* send scheduled mobile control message */
 	if (amps->tx_focc_send) {
@@ -3439,7 +3432,7 @@ const char *amps_encode_frame_focc(amps_t *amps)
 		amps->tx_focc_frame_count = 0;
 
 send:
-	bits = amps_encode_focc_bits(amps, word, word, 1);
+	amps_encode_focc_bits(amps, word, word, bits);
 
 	/* invert, if polarity of the cell is negative */
 	if (amps->flip_polarity) {
@@ -3449,12 +3442,11 @@ send:
 			bits[i] ^= 1;
 	}
 
-	return bits;
+	return 0;
 }
 
-const char *amps_encode_frame_fvc(amps_t *amps)
+int amps_encode_frame_fvc(amps_t *amps, char *bits)
 {
-	char *bits;
 	uint64_t word;
 
 	/* see if we can schedule a mobile control message */
@@ -3470,7 +3462,7 @@ const char *amps_encode_frame_fvc(amps_t *amps)
 		}
 		/* on change of dsp mode */
 		if (amps->dsp_mode != DSP_MODE_AUDIO_RX_FRAME_TX)
-			return NULL;
+			return 1;
 	}
 
 	/* send scheduled mobile control message */
@@ -3481,9 +3473,9 @@ const char *amps_encode_frame_fvc(amps_t *amps)
 		else
 			word = amps_encode_mobile_station_control_message_word1_a(amps->sat, amps->tx_fvc_msg_type, amps->tx_fvc_ordq, amps->tx_fvc_order);
 	} else
-		return NULL;
+		return 1;
 
-	bits = amps_encode_fvc_bits(amps, word);
+	amps_encode_fvc_bits(amps, word, bits);
 
 	/* invert, if polarity of the cell is negative */
 	if (amps->flip_polarity) {
@@ -3493,7 +3485,7 @@ const char *amps_encode_frame_fvc(amps_t *amps)
 			bits[i] ^= 1;
 	}
 
-	return bits;
+	return 0;
 }
 
 /* assemble FOCC bits */

@@ -41,7 +41,7 @@ static struct sysinfo_acc_attempt default_acc_attempt = {
 	10,
 };
 
-void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, int regr, int pureg, int pdreg, int locaid, int regincr)
+void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, int regr, int pureg, int pdreg, int locaid, int regincr, int bis)
 {
 	int i;
 
@@ -56,7 +56,7 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, 
 	si->filler.cmac = cmac;
 	si->filler.sdcc1 = 0;
 	si->filler.sdcc2 = 0;
-	si->filler.wfom = 1; /* must be set to ignore B/I bit */
+	si->filler.wfom = (bis) ? 0 : 1; /* must be set to ignore B/I bit */
 
 	/* Word 1 */
 	si->word1.sid1 = sid1;
@@ -71,7 +71,7 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, 
 	si->word2.regr = regr;
 	si->word2.dtx = 0;
 	si->word2.n_1 = 20;
-	si->word2.rcf = 1; /* must be set to ignore B/I bit */
+	si->word2.rcf = (bis) ? 0 : 1; /* must be set to ignore B/I bit */
 	si->word2.cpa = 1; /* must be set for combined CC+PC */
 	si->word2.cmax_1 = 20;
 
@@ -99,7 +99,7 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, 
 	 * So we don't set the B/I bit to busy on reception of message.
 	 * The access type message (including this 'bis') must also be included.
 	 */
-	si->acc_type.bis = 0; /* must be clear to ignore B/I bit */
+	si->acc_type.bis = bis; /* must be clear to ignore B/I bit */
 	si->acc_type.pci_home = 0; /* if set, bscap must allso be set */
 	si->acc_type.pci_roam = 0; /* if set, bscap must allso be set */
 	si->acc_type.bspc = 0;

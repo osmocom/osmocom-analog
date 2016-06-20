@@ -158,7 +158,7 @@ int dsp_init_sender(amps_t *amps, int high_pass)
 	amps->fsk_bitstep = 1.0 / amps->fsk_bitduration;
 	PDEBUG(DDSP, DEBUG_DEBUG, "Use %.4f samples for full bit duration @ %d.\n", amps->fsk_bitduration, amps->sender.samplerate);
 
-	amps->fsk_tx_buffer_size = amps->fsk_bitduration * (double)FSK_MAX_BITS + 10; /* 10 extra to avoid overflow due to routing */
+	amps->fsk_tx_buffer_size = amps->fsk_bitduration + 10; /* 10 extra to avoid overflow due to rounding */
 	amps->fsk_tx_buffer = calloc(sizeof(int16_t), amps->fsk_tx_buffer_size);
 	if (!amps->fsk_tx_buffer) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
@@ -237,17 +237,12 @@ void dsp_cleanup_sender(amps_t *amps)
 #endif
 }
 
-static int fsk_encode(amps_t *amps, const char *bits)
+static int fsk_encode(amps_t *amps, char bit)
 {
 	int16_t *spl;
 	double phase, bitstep, deviation;
 	int count;
 	char last;
-
-	if (strlen(bits) > FSK_MAX_BITS) {
-		fprintf(stderr, "FSK buffer too small\n");
-		abort();
-	}
 
 	deviation = amps->fsk_deviation;
 	spl = amps->fsk_tx_buffer;
@@ -255,58 +250,53 @@ static int fsk_encode(amps_t *amps, const char *bits)
 	last = amps->fsk_tx_last_bit;
 	bitstep = amps->fsk_bitstep * 256.0 * 2.0; /* half bit ramp */
 
-//printf("%s\n", bits);
-	while (*bits) {
-//printf("%d %d\n", (*bits) & 1, last & 1);
-		if (((*bits) & 1)) {
-			if ((last & 1)) {
-				/* last bit was 1, this bit is 1, so we ramp down first */
-				do {
-					*spl++ = ramp_down[(int)phase];
-					phase += bitstep;
-				} while (phase < 256.0);
-				phase -= 256.0;
-			} else {
-				/* last bit was 0, this bit is 1, so we stay down first */
-				do {
-					*spl++ = -deviation;
-					phase += bitstep;
-				} while (phase < 256.0);
-				phase -= 256.0;
-			}
-			/* ramp up */
-			do {
-				*spl++ = ramp_up[(int)phase];
-				phase += bitstep;
-			} while (phase < 256.0);
-			phase -= 256.0;
-		} else {
-			if ((last & 1)) {
-				/* last bit was 1, this bit is 0, so we stay up first */
-				do {
-					*spl++ = deviation;
-					phase += bitstep;
-				} while (phase < 256.0);
-				phase -= 256.0;
-			} else {
-				/* last bit was 0, this bit is 0, so we ramp up first */
-				do {
-					*spl++ = ramp_up[(int)phase];
-					phase += bitstep;
-				} while (phase < 256.0);
-				phase -= 256.0;
-			}
-			/* ramp up */
+//printf("%d %d\n", (bit) & 1, last & 1);
+	if ((bit & 1)) {
+		if ((last & 1)) {
+			/* last bit was 1, this bit is 1, so we ramp down first */
 			do {
 				*spl++ = ramp_down[(int)phase];
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
+		} else {
+			/* last bit was 0, this bit is 1, so we stay down first */
+			do {
+				*spl++ = -deviation;
+				phase += bitstep;
+			} while (phase < 256.0);
+			phase -= 256.0;
 		}
-		last = *bits;
-		bits++;
+		/* ramp up */
+		do {
+			*spl++ = ramp_up[(int)phase];
+			phase += bitstep;
+		} while (phase < 256.0);
+		phase -= 256.0;
+	} else {
+		if ((last & 1)) {
+			/* last bit was 1, this bit is 0, so we stay up first */
+			do {
+				*spl++ = deviation;
+				phase += bitstep;
+			} while (phase < 256.0);
+			phase -= 256.0;
+		} else {
+			/* last bit was 0, this bit is 0, so we ramp up first */
+			do {
+				*spl++ = ramp_up[(int)phase];
+				phase += bitstep;
+			} while (phase < 256.0);
+			phase -= 256.0;
+		}
+		/* ramp up */
+		do {
+			*spl++ = ramp_down[(int)phase];
+			phase += bitstep;
+		} while (phase < 256.0);
+		phase -= 256.0;
 	}
-
+	last = bit;
 	/* depending on the number of samples, return the number */
 	count = ((uintptr_t)spl - (uintptr_t)amps->fsk_tx_buffer) / sizeof(*spl);
 
@@ -319,46 +309,60 @@ static int fsk_encode(amps_t *amps, const char *bits)
 
 int fsk_frame(amps_t *amps, int16_t *samples, int length)
 {
-	int count = 0, pos, copy, i;
+	int count = 0, len, pos, copy, i;
 	int16_t *spl;
-	const char *bits;
+	int rc;
+	char c;
+
+	len = amps->fsk_tx_buffer_length;
+	pos = amps->fsk_tx_buffer_pos;
+	spl = amps->fsk_tx_buffer;
 
 again:
 	/* there must be length, otherwise we would skip blocks */
 	if (count == length)
-		return count;
+		goto done;
 
-	pos = amps->fsk_tx_buffer_pos;
-	spl = amps->fsk_tx_buffer + pos;
-
-	/* start new frame, so we generate one */
+	/* start of new bit, so generate buffer for one bit */
 	if (pos == 0) {
-		if (amps->dsp_mode == DSP_MODE_AUDIO_RX_FRAME_TX)
-			bits = amps_encode_frame_fvc(amps);
-		else
-			bits = amps_encode_frame_focc(amps);
-		if (!bits)
-			return 0;
-		fsk_encode(amps, bits);
+		c = amps->fsk_tx_frame[amps->fsk_tx_frame_pos];
+		/* start new frame, so we generate one */
+		if (c == '\0') {
+			if (amps->dsp_mode == DSP_MODE_AUDIO_RX_FRAME_TX)
+				rc = amps_encode_frame_fvc(amps, amps->fsk_tx_frame);
+			else
+				rc = amps_encode_frame_focc(amps, amps->fsk_tx_frame);
+			/* check if we have not bit string (change to tx audio)
+			 * we may not store fsk_tx_buffer_pos, because is was reset on a mode achange */
+			if (rc)
+				return count;
+			amps->fsk_tx_frame_pos = 0;
+			c = amps->fsk_tx_frame[0];
+		}
+		if (c == 'i')
+			c = (amps->channel_busy) ? '0' : '1';
+		len = fsk_encode(amps, c);
+		amps->fsk_tx_frame_pos++;
 	}
 
-	copy = amps->fsk_tx_buffer_length - pos;
+	copy = len - pos;
 	if (length - count < copy)
 		copy = length - count;
 //printf("pos=%d length=%d copy=%d\n", pos, length, copy);
 	for (i = 0; i < copy; i++) {
 #ifdef DEBUG_ENCODER
-		puts(debug_amplitude((double)(*spl) / 32767.0));
+		puts(debug_amplitude((double)spl[pos] / 32767.0));
 #endif
-		*samples++ = *spl++;
+		*samples++ = spl[pos++];
 	}
-	pos += copy;
 	count += copy;
-	if (pos ==amps->fsk_tx_buffer_length) {
-		amps->fsk_tx_buffer_pos = 0;
+	if (pos == len) {
+		pos = 0;
 		goto again;
 	}
 
+done:
+	amps->fsk_tx_buffer_length = len;
 	amps->fsk_tx_buffer_pos = pos;
 
 	return count;
@@ -399,12 +403,10 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 again:
 	switch (amps->dsp_mode) {
 	case DSP_MODE_OFF:
-off:
 		/* silence, if transmitter is off */
 		memset(samples, 0, length * sizeof(*samples));
 		break;
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
-audio:
 		jitter_load(&amps->sender.audio, samples, length);
 		/* pre-emphasis */
 		if (amps->pre_emphasis)
@@ -417,21 +419,10 @@ audio:
 		/* Encode frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
 		count = fsk_frame(amps, samples, length);
-#if 0
-		/* special case: add SAT signal to frame at loop test */
-		if (amps->sender.loopback)
-			sat_encode(amps, samples, length);
-#endif
-		/* count == 0: no frame, this should not happen */
-		if (count == 0)
-			goto off;
-		/* * also if the mode changed to audio during processing */
-		if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX)
-			goto audio;
 		samples += count;
 		length -= count;
-		goto again;
-		break;
+		if (length)
+			goto again;
 	}
 }
 
@@ -512,6 +503,7 @@ prepare_frame:
 			printf("No Sync detected after dotting\n");
 #endif
 			amps->fsk_rx_sync = FSK_SYNC_NONE;
+			amps->channel_busy = 0;
 			return;
 		}
 		return;
@@ -549,6 +541,7 @@ prepare_frame:
 			if (amps->fsk_rx_frame_length == 240)
 				amps->fsk_rx_frame_length = 247;
 			amps->fsk_rx_sync = FSK_SYNC_NONE;
+			amps->channel_busy = 0;
 		}
 	}
 }
@@ -599,6 +592,8 @@ void fsk_rx_dotting(amps_t *amps, double _elapsed, int dir)
 		amps->fsk_rx_sync = FSK_SYNC_DOTTING;
 		amps->fsk_rx_dotting_average = fabs(average);
 		amps->fsk_rx_bitcount = 0.5 + average;
+		if (amps->si.acc_type.bis)
+			amps->channel_busy = 1;
 	}
 }
 
@@ -859,9 +854,12 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 
 	/* reset detection process */
 	amps->fsk_rx_sync = FSK_SYNC_NONE;
+	amps->channel_busy = 0;
 	amps->fsk_rx_sync_register = 0x555;
 
 	/* reset transmitter */
 	amps->fsk_tx_buffer_pos = 0;
+	amps->fsk_tx_frame[0] = '\0';
+	amps->fsk_tx_frame_pos = 0;
 }
 

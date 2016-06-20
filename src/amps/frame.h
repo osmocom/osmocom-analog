@@ -219,7 +219,7 @@ uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_
 uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end);
 uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uint8_t pci_roam, uint8_t bspc, uint8_t bscap, uint8_t end);
 uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t maxsztr_pgr, uint8_t maxbusy_other, uint8_t maxsztr_other, uint8_t end);
-const char *amps_encode_frame_focc(amps_t *amps);
-const char *amps_encode_frame_fvc(amps_t *amps);
+int amps_encode_frame_focc(amps_t *amps, char *bits);
+int amps_encode_frame_fvc(amps_t *amps, char *bits);
 int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, double quality, int negative);
 

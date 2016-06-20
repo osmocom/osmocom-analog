@@ -44,7 +44,7 @@
 int num_chan_type = 0;
 enum amps_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_PC_VC };
 const char *flip_polarity = "";
-int ms_power = 4, dcc = 0, scc = 0, sid = 40, regh = 1, regr = 1, pureg = 1, pdreg = 1, locaid = -1, regincr = 300;
+int ms_power = 4, dcc = 0, scc = 0, sid = 40, regh = 1, regr = 1, pureg = 1, pdreg = 1, locaid = -1, regincr = 300, bis = 0;
 
 void print_help(const char *arg0)
 {
@@ -83,6 +83,9 @@ void print_help(const char *arg0)
 	printf("        If 1, phone registers only if System ID matches (default = '%d')\n", regh);
 	printf(" -S --sysinfo regr=0 | regr=1\n");
 	printf("        If 1, phone registers only if System ID is different (default = '%d')\n", regr);
+	printf(" -S --sysinfo bis=0 | bis=1\n");
+	printf("        If 0, phone ignores BUSY/IDLE bit on FOCC (default = '%d')\n", bis);
+	printf("        If 1, be sure to have a round-trip delay (latency) not more than 5 ms\n");
 	printf("\nstation-id: Give 10 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 }
@@ -151,7 +154,7 @@ static int handle_options(int argc, char **argv)
 				exit(0);
 			}
 			p++;
-			if (!strncasecmp(optarg, "sid=", 4)) {
+			if (!strncasecmp(optarg, "sid=", p - optarg)) {
 				if (!strcasecmp(p, "list")) {
 					list_stations();
 					exit(0);
@@ -162,39 +165,42 @@ static int handle_options(int argc, char **argv)
 				if (sid < 0)
 					sid = 0;
 			} else
-			if (!strncasecmp(optarg, "dcc=", 4)) {
+			if (!strncasecmp(optarg, "dcc=", p - optarg)) {
 				dcc = atoi(p);
 				if (dcc > 3)
 					dcc = 3;
 				if (dcc < 0)
 					dcc = 0;
 			} else
-			if (!strncasecmp(optarg, "scc=", 4)) {
+			if (!strncasecmp(optarg, "scc=", p - optarg)) {
 				scc = atoi(p);
 				if (scc > 2)
 					scc = 2;
 				if (scc < 0)
 					scc = 0;
 			} else
-			if (!strncasecmp(optarg, "regincr=", 4)) {
+			if (!strncasecmp(optarg, "regincr=", p - optarg)) {
 				regincr = atoi(p);
 			} else
-			if (!strncasecmp(optarg, "pureg=", 4)) {
+			if (!strncasecmp(optarg, "pureg=", p - optarg)) {
 				pureg = atoi(p) & 1;
 			} else
-			if (!strncasecmp(optarg, "pdreg=", 4)) {
+			if (!strncasecmp(optarg, "pdreg=", p - optarg)) {
 				pdreg = atoi(p) & 1;
 			} else
-			if (!strncasecmp(optarg, "locaid=", 4)) {
+			if (!strncasecmp(optarg, "locaid=", p - optarg)) {
 				locaid = atoi(p);
 				if (locaid > 4095)
 					locaid = 4095;
 			} else
-			if (!strncasecmp(optarg, "regh=", 4)) {
+			if (!strncasecmp(optarg, "regh=", p - optarg)) {
 				regh = atoi(p) & 1;
 			} else
-			if (!strncasecmp(optarg, "regr=", 4)) {
+			if (!strncasecmp(optarg, "regr=", p - optarg)) {
 				regr = atoi(p) & 1;
+			} else
+			if (!strncasecmp(optarg, "bis=", p - optarg)) {
+				bis = atoi(p) & 1;
 			} else {
 				fprintf(stderr, "Given sysinfo parameter '%s' unknown, see help!\n", optarg);
 				exit(0);
@@ -256,6 +262,11 @@ int main(int argc, char *argv[])
 		num_chan_type = 1; /* use defualt */
 	if (num_kanal != num_chan_type) {
 		fprintf(stdout, "You need to specify as many channel types as you have channels.\n");
+		exit(0);
+	}
+
+	if (bis && latency > 5) {
+		fprintf(stdout, "If you use BUSY/IDLE bit, you need to lower the round-trip delay to 5 ms (--latenc 5).\n");
 		exit(0);
 	}
 
@@ -329,7 +340,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < num_kanal; i++) {
 		amps_si si;
 
-		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr);
+		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
 		rc = amps_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, &si, sid, scc, polarity, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");

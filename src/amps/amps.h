@@ -31,7 +31,7 @@ enum fsk_rx_sync {
 	FSK_SYNC_NEGATIVE,	/* as above, but negative sync (high frequency deviation detected as low signal)  */
 };
 
-#define FSK_MAX_BITS		1032	/* maximum number of bits to process */
+#define FSK_MAX_BITS		1032	/* maximum number of bits to process (FVC with dotting+sync) */
 
 typedef struct amps {
 	sender_t		sender;
@@ -44,6 +44,7 @@ typedef struct amps {
 	enum amps_chan_type	chan_type;
 	enum amps_state		state;
 	int			page_retry;		/* current number of paging (re)try */
+	int			channel_busy;		/* indicate channel is busy while receiving */
 
 	/* system info */
 	amps_si			si;
@@ -60,6 +61,8 @@ typedef struct amps {
 	double			fsk_bitduration;	/* duration of one bit in samples */
 	double			fsk_bitstep;		/* fraction of one bit each sample */
 	/* tx bits generation */
+	char			fsk_tx_frame[FSK_MAX_BITS + 1];	/* +1 because 0-termination */
+	int			fsk_tx_frame_pos;	/* current position sending bits */
 	int16_t			*fsk_tx_buffer;		/* tx buffer for one data block */
 	int			fsk_tx_buffer_size;	/* size of tx buffer (in samples) */
 	int			fsk_tx_buffer_length;	/* usage of buffer (in samples) */
