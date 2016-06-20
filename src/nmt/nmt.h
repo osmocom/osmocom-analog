@@ -1,5 +1,5 @@
 #include "../common/sender.h"
-#include "../common/compander.h"
+#include "../common/compandor.h"
 #include "../common/dtmf.h"
 
 enum dsp_mode {
@@ -72,7 +72,7 @@ const char *nmt_dir_name(enum nmt_direction dir);
 typedef struct nmt {
 	sender_t		sender;
 	nmt_sysinfo_t		sysinfo;
-	compander_t		cstate;
+	compandor_t		cstate;
 	dtmf_t			dtmf;
 
 	/* sender's states */
@@ -90,7 +90,7 @@ typedef struct nmt {
 	int			mt_channel;		/* channel to use */
 
 	/* features */
-	int			compander;		/* if compander shall be used */
+	int			compandor;		/* if compandor shall be used */
 	int			supervisory;		/* if set, use supervisory signal 1..4 */
 
 	/* dsp states */
@@ -138,7 +138,7 @@ const char *chan_type_long_name(enum nmt_chan_type chan_type);
 double nmt_channel2freq(int channel, int uplink);
 void nmt_country_list(void);
 uint8_t nmt_country_by_short_name(const char *short_name);
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback);
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, int loopback);
 void nmt_destroy(sender_t *sender);
 void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);
 const char *nmt_get_frame(nmt_t *nmt);

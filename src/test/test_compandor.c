@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include "../common/compander.h"
+#include "../common/compandor.h"
 
 #define level2db(level)		(20 * log10(level))
 #define db2level(db)		pow(10, (double)db / 20.0)
@@ -66,11 +66,11 @@ static void check_level(int16_t *samples, double duration, const char *desc, dou
 
 int main(void)
 {
-	compander_t cstate;
+	compandor_t cstate;
 	int16_t samples[SAMPLERATE * 2];
 	int f;
 
-	init_compander(&cstate, SAMPLERATE, ATTACK_MS, RECOVERY_MS, UNAFFECTED);
+	init_compandor(&cstate, SAMPLERATE, ATTACK_MS, RECOVERY_MS, UNAFFECTED);
 
 	for (f = 0; f < 3; f++) {
 		/* -16 and -4 dB */

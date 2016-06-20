@@ -39,7 +39,7 @@
 #define PI		M_PI
 
 #define FSK_DEVIATION	10000
-#define COMPANDER_0DB	20000
+#define COMPANDOR_0DB	20000
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
 #define CUT_OFF_OFFSET	300.0	/* cut off frequency for offset filter (level correction between subsequent audio chunks) */
@@ -138,9 +138,9 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	if (rc < 0)
 		goto error;
 
-	/* init compander, according to C-Netz specs, attack and recovery time
+	/* init compandor, according to C-Netz specs, attack and recovery time
 	 * shall not exceed according to ITU G.162 */
-	init_compander(&cnetz->cstate, 8000, 5.0, 22.5, COMPANDER_0DB);
+	init_compandor(&cnetz->cstate, 8000, 5.0, 22.5, COMPANDOR_0DB);
 
 	/* use this filter to compensate level changes between two subsequent audio chunks */
 	RC = 1.0 / (CUT_OFF_OFFSET * 2.0 *3.14);

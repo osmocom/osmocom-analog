@@ -1,4 +1,4 @@
-#include "../common/compander.h"
+#include "../common/compandor.h"
 #include "../common/sender.h"
 #include "fsk_fm_demod.h"
 #include "scrambler.h"
@@ -58,7 +58,7 @@ typedef struct cnetz {
 	enum cnetz_chan_type	chan_type;		/* channel type */
 	scrambler_t		scrambler_tx;		/* mirror what we transmit to MS */
 	scrambler_t		scrambler_rx;		/* mirror what we receive from MS */
-	compander_t		cstate;
+	compandor_t		cstate;
 	int			pre_emphasis;		/* use pre_emphasis by this instance */
 	int			de_emphasis;		/* use de_emphasis by this instance */
 	emphasis_t		estate;

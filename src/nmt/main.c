@@ -42,7 +42,7 @@ enum nmt_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
 int ms_power = 1; /* 1..3 */
 char traffic_area[3] = "";
 char area_no = 0;
-int compander = 1;
+int compandor = 1;
 int supervisory = 0;
 
 void print_help(const char *arg0)
@@ -64,8 +64,8 @@ void print_help(const char *arg0)
 	printf("        Use 'list' to get a list of available short country code names\n");
 	printf(" -a --area-number <area no> | 0\n");
 	printf("        Give area number 1..4 or 0 for no area number. (default = '%d')\n", area_no);
-	printf(" -C --compander 1 | 0\n");
-	printf("        Make use of the compander to reduce noise during call. (default = '%d')\n", compander);
+	printf(" -C --compandor 1 | 0\n");
+	printf("        Make use of the compandor to reduce noise during call. (default = '%d')\n", compandor);
 	printf(" -0 --supervisory 1..4 | 0\n");
 	printf("        Use supervisory signal 1..4 to detect loss of signal from mobile\n");
 	printf("        station, use 0 to disable. (default = '%d')\n", supervisory);
@@ -83,7 +83,7 @@ static int handle_options(int argc, char **argv)
 		{"ms-power", 1, 0, 'P'},
 		{"area-number", 1, 0, 'a'},
 		{"traffic-area", 1, 0, 'y'},
-		{"compander", 1, 0, 'C'},
+		{"compandor", 1, 0, 'C'},
 		{"supervisory", 1, 0, '0'},
 		{0, 0, 0, 0}
 	};
@@ -165,7 +165,7 @@ error_ta:
 			skip_args += 2;
 			break;
 		case 'C':
-			compander = atoi(optarg);
+			compandor = atoi(optarg);
 			skip_args += 2;
 			break;
 		case '0':
@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compander, supervisory, loopback);
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;

@@ -283,7 +283,7 @@ static void nmt_timeout(struct timer *timer);
 static void nmt_go_idle(nmt_t *nmt);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compander, int supervisory, int loopback)
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -342,7 +342,7 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 	nmt->sysinfo.ms_power = ms_power;
 	nmt->sysinfo.traffic_area = traffic_area;
 	nmt->sysinfo.area_no = area_no;
-	nmt->compander = compander;
+	nmt->compandor = compandor;
 	nmt->supervisory = supervisory;
 
 	/* go into idle state */
@@ -778,10 +778,10 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 		if (nmt->tx_frame_count == 1)
 			PDEBUG(DNMT, DEBUG_INFO, "Send 'addess complete'.\n");
 	} else {
-		if (nmt->compander) {
+		if (nmt->compandor) {
 			set_line_signal(nmt, frame, 5);
 			if (nmt->tx_frame_count == 5)
-				PDEBUG(DNMT, DEBUG_INFO, "Send 'compander in'.\n");
+				PDEBUG(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
 		} else
 			frame->index = NMT_MESSAGE_6;
 		if (nmt->tx_frame_count == 9) {
@@ -946,9 +946,9 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 {
 	set_line_signal(nmt, frame, 5);
 	++nmt->tx_frame_count;
-	if (nmt->compander) {
+	if (nmt->compandor) {
 		if (nmt->tx_frame_count == 1)
-			PDEBUG(DNMT, DEBUG_INFO, "Send 'compander in'.\n");
+			PDEBUG(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
 	} else
 		frame->index = NMT_MESSAGE_6;
 	if (nmt->tx_frame_count == 5) {
@@ -1492,7 +1492,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 
 	if (nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF) {
 		int16_t up[(int)((double)count * nmt->sender.srstate.factor + 0.5) + 10];
-		if (nmt->compander)
+		if (nmt->compandor)
 			compress_audio(&nmt->cstate, samples, count);
 		count = samplerate_upsample(&nmt->sender.srstate, samples, count, up);
 		jitter_save(&nmt->sender.audio, up, count);

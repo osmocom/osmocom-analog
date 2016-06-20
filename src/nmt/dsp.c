@@ -33,7 +33,7 @@
 #define PI			M_PI
 
 /* signalling */
-#define TX_AUDIO_0dBm0		32767	/* works quite well */
+#define COMPANDOR_0DB		32767	/* works quite well */
 #define TX_PEAK_FSK		10000.0	/* peak amplitude of signalling FSK */
 #define TX_PEAK_SUPER		1000.0	/* peak amplitude of supervisory signal */
 #define BIT_RATE		1200	/* baud rate */
@@ -85,7 +85,7 @@ int dsp_init_sender(nmt_t *nmt)
 	int i;
 
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
-	init_compander(&nmt->cstate, 8000, 3.0, 13.5, TX_AUDIO_0dBm0);
+	init_compandor(&nmt->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
 
 	if ((nmt->sender.samplerate % (BIT_RATE * STEPS_PER_BIT))) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be a multiple of %d bits per second.\n", BIT_RATE * STEPS_PER_BIT);
@@ -449,7 +449,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		int count;
 
 		count = samplerate_downsample(&nmt->sender.srstate, samples, length, down);
-		if (nmt->compander)
+		if (nmt->compandor)
 			expand_audio(&nmt->cstate, down, count);
 		if (nmt->dsp_mode == DSP_MODE_DTMF)
 			dtmf_tone(&nmt->dtmf, down, count);

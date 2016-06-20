@@ -1,4 +1,4 @@
-/* Compander to use various networks like C-Netz / NMT / AMPS
+/* Compandor to use various networks like C-Netz / NMT / AMPS
  *
  * (C) 2016 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "compander.h"
+#include "compandor.h"
 
 //#define db2level(db)			pow(10, (double)db / 20.0)
 
@@ -37,12 +37,12 @@
 static double sqrt_tab[10000];
 
 /*
- * Init compander according to ITU-T G.162 specification
+ * Init compandor according to ITU-T G.162 specification
  *
  * Hopefully this is correct
  *
  */
-void init_compander(compander_t *state, int samplerate, double attack_ms, double recovery_ms, int unaffected_level)
+void init_compandor(compandor_t *state, int samplerate, double attack_ms, double recovery_ms, int unaffected_level)
 {
 	int i;
 
@@ -64,7 +64,7 @@ void init_compander(compander_t *state, int samplerate, double attack_ms, double
 		sqrt_tab[i] = sqrt(i * 0.001);
 }
 
-void compress_audio(compander_t *state, int16_t *samples, int num)
+void compress_audio(compandor_t *state, int16_t *samples, int num)
 {
 	int32_t sample;
 	double value, peak, envelope, step_up, step_down, unaffected;
@@ -114,7 +114,7 @@ void compress_audio(compander_t *state, int16_t *samples, int num)
 	state->c.peak = peak;
 }
 
-void expand_audio(compander_t *state, int16_t *samples, int num)
+void expand_audio(compandor_t *state, int16_t *samples, int num)
 {
 	int32_t sample;
 	double value, peak, envelope, step_up, step_down, unaffected;

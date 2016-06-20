@@ -75,7 +75,7 @@
 
 #define FSK_DEVIATION		32767.0	/* +-8 KHz */
 #define SAT_DEVIATION		8192.0	/* +-2 KHz */
-#define TX_AUDIO_0dBm0		45000	/* works quite well */
+#define COMPANDOR_0DB		45000	/* works quite well */
 #define BITRATE			10000
 #define SIG_TONE_CROSSINGS	2000	/* 2000 crossings are 100ms @ 10 KHz */
 #define SIG_TONE_MINBITS	950	/* minimum bit durations to detect signalling tone (1000 is perfect for 100 ms) */
@@ -145,7 +145,7 @@ int dsp_init_sender(amps_t *amps, int high_pass)
 	double RC, dt;
 
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
-	init_compander(&amps->cstate, 8000, 3.0, 13.5, TX_AUDIO_0dBm0);
+	init_compandor(&amps->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
 

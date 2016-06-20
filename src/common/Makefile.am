@@ -19,7 +19,7 @@ libcommon_a_SOURCES = \
 	../common/mncc_sock.c \
 	../common/cause.c \
 	../common/emphasis.c \
-	../common/compander.c \
+	../common/compandor.c \
 	../common/sender.c \
 	../common/display_wave.c \
 	../common/main_common.c

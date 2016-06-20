@@ -1,5 +1,5 @@
 #include "../common/sender.h"
-#include "../common/compander.h"
+#include "../common/compandor.h"
 #include "sysinfo.h"
 #include "transaction.h"
 
@@ -35,7 +35,7 @@ enum fsk_rx_sync {
 
 typedef struct amps {
 	sender_t		sender;
-	compander_t		cstate;
+	compandor_t		cstate;
 	int			pre_emphasis;		/* use pre_emphasis by this instance */
 	int			de_emphasis;		/* use de_emphasis by this instance */
 	emphasis_t		estate;

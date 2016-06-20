@@ -273,13 +273,13 @@ static const char *param_line_signal(uint64_t value, int ndigits, enum nmt_direc
 			desc = "Acknowledge MFT converter in";
 			break;
 		case 5:
-			desc = "Switch compander in";
+			desc = "Switch compandor in";
 			break;
 		case 6:
 			desc = "Address complete";
 			break;
 		case 7:
-			desc = "Switch compander out";
+			desc = "Switch compandor out";
 			break;
 		case 9:
 			desc = "Ringing order";
