@@ -24,16 +24,16 @@ History
 <p>
 C-Netz was the third mobile telephone network in Germany.
 It existed between 1984 (officially Mai 1985) and December 2000.
+In 1989, the German Wall came down and C-Netz was quickly deployed in eastern Germany to support the congested fixed network.
 It was the first cellular system, so frequencies could be used more efficiently.
-It offered handover capability, so moving phones can change cells during a call.
-New was the SIM card, which was similar to GSM.
+It offered handover capability, so moving phones could change cells during a call.
+The SIM card was introduced, which is similar to GSM.
 This card allowed to use phones by different subscribers with different subscriber numbers.
-Authentication was used to prevent fraud, but is was used only with SIM card phones.
-Extra services (e.g. conditional call forwarding, answering machine) were installed in the mobile network.
+Authentication was used to prevent fraud, but it was used only with SIM card phones. The magnetic cards could be cloned by receiving 'roaming' messages.
+Extra services (e.g. conditional call forwarding, answering machine) were installed in the mobile exchange.
 A scrambler inside the phone and base station prevented eavedropping with radio scanners.
 Phones became smaller and portable, even handheld phones were available.
-It used full duplex radio link.
-All phones were available under a dedicated prefix, so the caller must to know the location of the phone anymore.
+All phones were available under a dedicated prefix, so the caller must not know the location of the phone anymore.
 
 </p>
 
@@ -59,10 +59,125 @@ All phones were available under a dedicated prefix, so the caller must to know t
 
 <p class="toppic">
 <a name="howitworks"></a>
+How it works
 </p>
 
 <p>
-*TBD*
+Like AMPS (Advanced Mobile Phone Service), the C-Netz is a cellular network.
+</p>
+
+<center><img src="c-netz_zellstruktur.png"/></center>
+
+<p>
+Base stations are grouped into clusters.
+Each cluster has arround 7 base stations.
+Each base station in a cluster must have different channels.
+As depictet, the frequency of a base station marked with "1" can be re-used in other clusters.
+To handle more calls with the same amount of channels, the size of a cell must be reduced.
+By using small cell structure, it is likely to loose radio link while calling and moving at the same time.
+To prevent loss of radio link while moving to far away from a cell, handover to stronger or closer cell is performed.
+</p>
+
+<center><img src="c-netz_frequenzen.png"/></center>
+
+<p>
+Two frequency bands are used, one for uplink and one downlink.
+Only one exception is the control channel "131".
+It is the same for all base stations.
+To avoid collisions, the channel is divided into time slots.
+The time slots are re-used in the same way as channels are re-used in other clusters.
+This reduces the number of channels for call setup to only one channel.
+The mobile phone does not have to search for a valid control channel first.
+Also it is possible to have a dedicated control channel for cells in high traffic areas.
+</p>
+
+<center><img src="c-netz_zeitschlitze.png"/></center>
+
+<p>
+As depicted, the base station and mobile station use one or more time slots.
+Generally every 8th time slot is used.
+In this case the base station transmits every 600ms.
+The mobile phone transmits two time slots later.
+Every time slot contains two message blocks.
+One block is used for call setup.
+The other block is used for periodic check if the phone is still available.
+</p>
+
+<p>
+Message blocks contain 70 bits.
+The first 6 bits define the message type.
+The other 64 bits depend on the message type.
+The 70 bits are grouped into 10 words of 7 bits each.
+Eeach word gets 8 redudancy bits by using a BCH code.
+The redundany allows to correct up to two bit errors in a word.
+</p>
+
+<center><img src="c-netz_interleaving.png"/></center>
+
+<p>
+To correct burst errors (several bit errors after each other), the bits are interleaved before transmitted.
+As depicted above, the first bit of all words are transmitted first, then the next bit and so on.
+</p>
+
+<center><img src="c-netz_frame_k.png"/></center>
+
+<p>
+A sync word of 11 bits is added in front of each message three times.
+Additional 14 guard bits are used to allow the transmitter to ramp up and down RF power between time slots.
+</p>
+
+<center><img src="c-netz_frame_v.png"/></center>
+
+<p>
+Also message blocks are transmitted during voice conversation.
+The blocks are used to terminate the call, perform handover, measure link or transmit metering information.
+4 bits the message is transmitted every 12.5 ms. After 600 ms, the complete frame is transmitted.
+To remove the 4 bits from audio stream, the voice is time compressed (speed up) to 10/11th.
+The 4 bits + 2 guard bits are transmitted in the 1/11th gap between voice chunks.
+On the receiving end, the voice chunks are expanded again.
+The phone will keep in sync with the voice chunks by keeping in sync with the message bits.
+</p>
+
+<center><img src="c-netz_frame_v2.png"/></center>
+
+<p>
+The level at the end of one voice chunk may not match the level of the beginning of the next chunk.
+The offset must be removed by the receiver.
+</p>
+
+<center><img src="c-netz_lr.png"/></center>
+
+<p>
+This is an example of a broadcast message by a base station on the control channel.
+The message type 'O' (letter o) is "100111", so this message block contains cell informations and access informations.
+</p>
+
+<center><img src="c-netz_symbole.png"/></center>
+
+<p>
+The location of parameters inside a message (information elements) are shown by letters.
+Each letter is a different parameter as depicted above.
+</p>
+
+<center><img src="c-netz_call.png"/></center>
+
+<p>
+The first thing a phone does is looking for a strongest cell.
+The phone accesses the cell by transmitting a location update message.
+The cell acknowledges or rejects the phone.
+</p>
+
+<p>
+The call setup is depiced above.
+The mobile phone transmits a message that it wishes to make a normal call or emergency call.
+If the channel is available, the base station requests the dialed number from the phone.
+The phone transmits the dialed number.
+If the number is ok, the base station acknowledges the dialed number.
+After a voice channel is allocated, the phone is requested to change to that channel two time slots later.
+On this voice channel, the mobe phone and the base station transmit 8 messages to prove quality of channel.
+Messages VH1 and VHK are transmitted while the call is set up.
+Then the phone is ordered to switch to voice conversation.
+The following messages are transmitted between the voice chunks.
 </p>
 
 <p class="toppic">
@@ -88,14 +203,14 @@ We need to calibrate the speed of our transmit signal (and receive signal as wel
 
 <p>
 First of all we need a reference clock.
-Since most systems have standard crystals, we cannot use our system clock as reference without any help.
+Since most computer systems have standard crystals, we cannot use our system clock as reference without any help.
 I decided to use the NTP daemon.
 After running the system for several days, the clock speed should be accurate enough for our needs.
-Be sure to choose a place with constant temperature.
+Be sure to choose a place for your PC with constant temperature.
 </p>
 
 <p>
-In /etc/ntp.conf define one or more servers to geht the time from. I suggest to use the German atom clock of the PTB:
+In /etc/ntp.conf define one or more servers to get the time from. I suggest to use the German atom clock of the PTB:
 </p>
 
 <pre>
@@ -142,7 +257,7 @@ To minimize this effect, don't use extension cables.
 <p>
 Since we have precise system clock now, we can measure the speed of our sound adapter.
 Later we will use the measurement result to adjust our signal processor.
-Be sure to have your machine running for at least 3-4 days (with your sound adapter attached, in case you have USB sound adapter).
+Be sure to have your machine running for at least 5 to 7 days (with your sound adapter attached, in case you have USB sound adapter).
 The machine must have network connection to the NTP server.
 I suggest to use 'ntp1.ptb.de' and 'ntp2.ptb.de' as reference.
 Use command line option '-M' or '--measure' to measure my sound adapter.
@@ -257,6 +372,200 @@ Old phones like BSA, Storno or Phillips phones don't care.
 When we make a call and another phone is regisered, the phone will loose coverage when we switch from control channel to traffic channel.
 After the call, the other phone re-registers again.
 </p>
+
+<p>
+Now power up a phone.
+Depening on your card reader, insert chip or magnetic card.
+Hopefully you get a response from the phone.
+If it responds, you will hear a short burs on receiver.
+This bursts is just 37.5 ms long and sounds a bit less noisy than the noise floor.
+If the burst is received and correctly decoded, the base station knows the transmitter's polarty and selects it.
+</p>
+
+<pre>
+
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.04 Sync Time: 3968.18 (TS 10.02) POSITIVE
+***********************************************
+*** Autoselecting positive FSK TX polarity! ***
+***********************************************
+cnetz.c:895 info   : Received Attachment 'Einbuchen' message from Subscriber '6215784' with chip card's security code 11029
+transaction.c:208 info   : Transaction state IDLE -&gt; EM
+transaction.c:70 info   : Created transaction for subscriber '6215784'
+database.c:117 info   : Adding subscriber '6,2,15784' to database.
+database.c:121 info   : Subscriber '6,2,15784' busy now.
+cnetz.c:709 notice : Frame sync offset = 800.18, correcting!
+cnetz.c:760 info   : Sending acknowledgement 'Einbuchquittung' to Attachment request.
+database.c:124 info   : Subscriber '6,2,15784' idle now.
+transaction.c:89 info   : Destroying transaction for subscriber '6215784'
+transaction.c:208 info   : Transaction state EM -&gt; IDLE
+
+</pre>
+
+<p>
+Level adjustment:
+We see a receive level of arround 96%.
+This is already good, since I did the adjustment previously.
+Tune your receiver to the uplink frequency, so you get loopback of base station broadcast.
+Use the variable resistor (connecting your transmitter) to adjust the volume until the RX level matches the same level of your previously received bust.
+In my case I adjust the transmitter to match arround 96%. (+- 10% is good)
+Now, whatever frequency deviation the phone transmits for signalling, so does your base station.
+Use the other variable resistor (connecting your receviver) to adjust the volume until the level matches about 100%. (+- 10% is good)
+Switch back the receiver to uplink frequency and restart the phone.
+</p>
+
+<p>
+After some time (1 minute) the base station will check, if the phone is still available.
+It transmits a request (MA) to the phone.
+The phone answers to the request (MFT):
+</p>
+
+<pre>
+
+telegramm.c:1473 info   : Ignoring mysterious unmodulated telegramm (noise from phone's transmitter)
+database.c:72 info   : Check, if subscriber '6,2,15784' is still available.
+transaction.c:208 info   : Transaction state IDLE -&gt; MA
+transaction.c:70 info   : Created transaction for subscriber '6215784'
+database.c:121 info   : Subscriber '6,2,15784' busy now.
+cnetz.c:863 info   : Sending keepalive request 'Meldeaufruf'
+transaction.c:208 info   : Transaction state MA -&gt; MFT
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.02 Sync Time: 6534.01 (TS 16.50) POSITIVE
+cnetz.c:969 info   : Received acknowledge 'Meldung Funktelefonteilnehmer' message from Subscriber '6215784'
+database.c:124 info   : Subscriber '6,2,15784' idle now.
+transaction.c:89 info   : Destroying transaction for subscriber '6215784'
+transaction.c:208 info   : Transaction state MFT -&gt; IDLE
+
+</pre>
+
+<p>
+To make a call from the phone to the base station, just enter some digits and press the dial button on the phone.
+The phone requests a call (VWG).
+The base station requests dialed number (WAF).
+The phone transmits dialed number (WUE).
+The base station acknowledges the call (WBP) and then orders the phone to switch to speech channel (VAG).
+Then measurement and through connection of speech takes place:
+</p>
+
+<pre>
+
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.04 Sync Time: 12671.99 (TS 32.00) POSITIVE
+cnetz.c:931 info   : Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '6215784'
+transaction.c:208 info   : Transaction state IDLE -&gt; VWG
+transaction.c:70 info   : Created transaction for subscriber '6215784'
+database.c:121 info   : Subscriber '6,2,15784' busy now.
+cnetz.c:854 info   : Sending acknowledgement 'Wahlaufforderung' to outging call
+transaction.c:208 info   : Transaction state VWG -&gt; WAF
+telegramm.c:1486 info   : RX Level: 95% Jitter: 0.04 Sync Time: 3366.02 (TS 8.50) POSITIVE
+cnetz.c:957 info   : Received dialing digits 'Wahluebertragung' message from Subscriber '6215784' to Number '02123839349'
+transaction.c:208 info   : Transaction state WAF -&gt; WBP
+cnetz.c:782 info   : Sending call accept 'Wahlbestaetigung positiv'.
+transaction.c:208 info   : Transaction state WBP -&gt; VAG
+cnetz.c:789 info   : Sending channel assignment 'Verbindungsaufbau gehend'.
+transaction.c:208 info   : Transaction state VAG -&gt; BQ
+cnetz.c:807 info   : Staying on combined calling + traffic channel 131
+dsp.c:641 info   : Switching channel (mode)
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.02 Sync Time: 9504.02 (TS 24.00) POSITIVE
+cnetz.c:1118 info   : Received allocation 'Belegung' message.
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.02 Sync Time: 9701.99 (TS 24.50) POSITIVE
+cnetz.c:1118 info   : Received allocation 'Belegung' message.
+...
+transaction.c:208 info   : Transaction state BQ -&gt; VHQ
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 10494.00 (TS 26.50) POSITIVE
+cnetz.c:1118 info   : Received allocation 'Belegung' message.
+cnetz.c:1024 info   : Sending 'Quittung Verbindung halten' on traffic channel
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 10691.98 (TS 27.00) POSITIVE
+cnetz.c:1118 info   : Received allocation 'Belegung' message.
+...
+call.c:623 info   : Incomming call from '6215784' to '02123839349'
+transaction.c:208 info   : Transaction state VHQ -&gt; DS
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.02 Sync Time: 11286.00 (TS 28.50) POSITIVE
+cnetz.c:1145 info   : Received connection hold 'Verbindung halten' message.
+cnetz.c:1051 info   : Sending 'Durchschalten' on traffic channel
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 11483.99 (TS 29.00) POSITIVE
+cnetz.c:1145 info   : Received connection hold 'Verbindung halten' message.
+...
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 12276.00 (TS 31.00) POSITIVE
+cnetz.c:1131 info   : Received assignment confirm 'Durchschaltung Quittung' message.
+cnetz.c:1051 info   : Sending 'Durchschalten' on traffic channel
+telegramm.c:1486 info   : RX Level: 97% Jitter: 0.02 Sync Time: 12474.01 (TS 31.50) POSITIVE
+cnetz.c:1131 info   : Received assignment confirm 'Durchschaltung Quittung' message.
+...
+transaction.c:208 info   : Transaction state DS -&gt; VHQ
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 1781.99 (TS 4.50) POSITIVE
+cnetz.c:1131 info   : Received assignment confirm 'Durchschaltung Quittung' message.
+dsp.c:641 info   : Switching channel (mode)
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+telegramm.c:1486 info   : RX Level: 97% Jitter: 0.07 Sync Time: 5544.05 (TS 14.00) POSITIVE
+cnetz.c:1286 info   : Received supervisory frame 'Verbindung halten' message.
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+telegramm.c:1486 info   : RX Level: 97% Jitter: 0.07 Sync Time: 8712.02 (TS 22.00) POSITIVE
+cnetz.c:1286 info   : Received supervisory frame 'Verbindung halten' message.
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+telegramm.c:1486 info   : RX Level: 97% Jitter: 0.09 Sync Time: 11880.04 (TS 30.00) POSITIVE
+cnetz.c:1286 info   : Received supervisory frame 'Verbindung halten' message.
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+...
+
+</pre>
+
+<p>
+When calling to the phone, enter the mobile station's ID and press 'd' for dial.
+If the phone is attached, the base station orders the phone to switch to speech channel (VAK).
+The rest is similar to incomming calls, excpet the the phone has to answer before the speech is throughconnected:
+</p>
+
+<pre>
+
+call.c:490 info   : Outgoing call to 6215784
+cnetz.c:416 info   : Call to mobile station, paging station id '6215784'
+transaction.c:208 info   : Transaction state IDLE -&gt; VAK
+transaction.c:70 info   : Created transaction for subscriber '6215784'
+database.c:121 info   : Subscriber '6,2,15784' busy now.
+cnetz.c:792 info   : Sending channel assignment 'Verbindungsaufbau kommend'.
+transaction.c:208 info   : Transaction state VAK -&gt; BQ
+cnetz.c:807 info   : Staying on combined calling + traffic channel 131
+dsp.c:641 info   : Switching channel (mode)
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 6335.99 (TS 16.00) POSITIVE
+cnetz.c:1118 info   : Received allocation 'Belegung' message.
+cnetz.c:1014 info   : Sending 'Belegungsquittung' on traffic channel
+telegramm.c:1486 info   : RX Level: 95% Jitter: 0.03 Sync Time: 6534.06 (TS 16.50) POSITIVE
+cnetz.c:1118 info   : Received allocation 'Belegung' message.
+
+</pre>
+
+<p>
+When the mobile phon terminates, it sends the AT message.
+The base station responds with AF message and switches back to control channel.
+</p>
+
+<pre>
+
+telegramm.c:1486 info   : RX Level: 97% Jitter: 0.06 Sync Time: 11880.01 (TS 30.00) POSITIVE
+cnetz.c:1286 info   : Received supervisory frame 'Verbindung halten' message.
+cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
+telegramm.c:1486 info   : RX Level: 97% Jitter: 0.06 Sync Time: 2375.99 (TS 6.00) POSITIVE
+cnetz.c:1297 info   : Received release frame 'Ausloesen durch FuTln' message.
+transaction.c:208 info   : Transaction state VHQ -&gt; AT
+call.c:744 info   : Call has been released with cause=16
+cnetz.c:1253 info   : Sending 'Auslosen durch FuTln' on traffic channel
+database.c:124 info   : Subscriber '6,2,15784' idle now.
+transaction.c:89 info   : Destroying transaction for subscriber '6215784'
+transaction.c:208 info   : Transaction state AT -&gt; IDLE
+cnetz.c:274 info   : Entering IDLE state on channel 131.
+telegramm.c:1486 info   : RX Level: 96% Jitter: 0.06 Sync Time: 5543.98 (TS 14.00) POSITIVE
+dsp.c:641 info   : Switching channel (mode)
+telegramm.c:1484 info   : RX Level: 97% Jitter: 0.08 Sync Time: 9333.99 (TS 23.57) Bit errors: 6 POSITIVE
+telegramm.c:1525 notice : Received Telegramm that is not used OgK channel signalling, ignoring! (opcode 22 = AT(V))
+
+</pre>
 
 
 [<a href="index.html">Back to main page</a>]
