@@ -154,6 +154,10 @@ void *sound_open(const char *device, int samplerate)
 		goto error;
 	}
 
+	/* trigger capturing */
+	int16_t buff[2];
+	snd_pcm_readi(sound->chandle, buff, 1);
+
 	return sound;
 
 error:
@@ -207,13 +211,24 @@ int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int nu
 {
 	sound_t *sound = (sound_t *)inst;
 	int16_t buff[num << 1];
-	int rc;
+	int in, rc;
 	int i, ii;
 
+	/* get samples in rx buffer */
+	in = snd_pcm_avail(sound->chandle);
+	/* if less than 2 frames available, try next time */
+	if (in < 2)
+		return 0;
+	/* read one frame less than in buffer, because snd_pcm_readi() seems
+	 * to corrupt last frame */
+	in--;
+	if (in > num)
+		in = num;
+
 	if (sound->cchannels == 2)
-		rc = snd_pcm_readi(sound->chandle, buff, num);
+		rc = snd_pcm_readi(sound->chandle, buff, in);
 	else
-		rc = snd_pcm_readi(sound->chandle, samples_left, num);
+		rc = snd_pcm_readi(sound->chandle, samples_left, in);
 
 	if (rc < 0) {
 		if (errno == EAGAIN)
