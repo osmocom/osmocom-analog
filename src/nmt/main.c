@@ -24,6 +24,10 @@
 #include <string.h>
 #include <signal.h>
 #include <sched.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "../common/main.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
@@ -36,6 +40,9 @@
 #include "tones.h"
 #include "announcement.h"
 
+#define SMS_FIFO "/tmp/nmt_sms_deliver"
+static int sms_fd = -1;
+
 /* settings */
 int num_chan_type = 0;
 enum nmt_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
@@ -44,6 +51,7 @@ char traffic_area[3] = "";
 char area_no = 0;
 int compandor = 1;
 int supervisory = 0;
+const char *smsc_number = "767";
 
 void print_help(const char *arg0)
 {
@@ -69,6 +77,9 @@ void print_help(const char *arg0)
 	printf(" -0 --supervisory 1..4 | 0\n");
 	printf("        Use supervisory signal 1..4 to detect loss of signal from mobile\n");
 	printf("        station, use 0 to disable. (default = '%d')\n", supervisory);
+	printf(" -S --smsc-number <digits>\n");
+	printf("        If this number is dialed, the mobile is connected to the SMSC (Short\n");
+	printf("        Message Service Center). (default = '%s')\n", smsc_number);
 	printf("\nstation-id: Give 7 digits of station-id, you don't need to enter it\n");
 	printf("        for every start of this program.\n");
 }
@@ -85,10 +96,11 @@ static int handle_options(int argc, char **argv)
 		{"traffic-area", 1, 0, 'y'},
 		{"compandor", 1, 0, 'C'},
 		{"supervisory", 1, 0, '0'},
+		{"smsc-number", 1, 0, 'S'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:P:a:y:C:0:", long_options_special);
+	set_options_common("t:P:a:y:C:0:S:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c, rc;
@@ -176,6 +188,10 @@ error_ta:
 			}
 			skip_args += 2;
 			break;
+		case 'S':
+			smsc_number = strdup(optarg);
+			skip_args += 2;
+			break;
 		default:
 			opt_switch_common(c, argv[0], &skip_args);
 		}
@@ -184,6 +200,33 @@ error_ta:
 	free(long_options);
 
 	return skip_args;
+}
+
+static void myhandler(void)
+{
+	static char buffer[256];
+	static int pos = 0, rc, i;
+	int space = sizeof(buffer) - pos;
+
+	rc = read(sms_fd, buffer + pos, space);
+	if (rc > 0) {
+		pos += rc;
+		if (pos == space) {
+			fprintf(stderr, "SMS buffer overflow!\n");
+			pos = 0;
+		}
+		/* check for end of line */
+		for (i = 0; i < pos; i++) {
+			if (buffer[i] == '\r' || buffer[i] == '\n')
+				break;
+		}
+		/* send sms */
+		if (i < pos) {
+			buffer[i] = '\0';
+			pos = 0;
+			deliver_sms(buffer);
+		}
+	}
 }
 
 int main(int argc, char *argv[])
@@ -237,6 +280,20 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	/* create pipe for SMS delivery */
+	unlink(SMS_FIFO);
+	rc = mkfifo(SMS_FIFO, 0666);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to create SMS deliver FIFO!\n");
+		goto fail;
+	} else {
+		sms_fd = open(SMS_FIFO, O_RDONLY | O_NONBLOCK);
+		if (sms_fd < 0) {
+			fprintf(stderr, "Failed to open SMS deliver FIFO!\n");
+			goto fail;
+		}
+	}
+
 	if (!loopback)
 		print_image();
 
@@ -258,7 +315,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, loopback);
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
@@ -286,7 +343,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
 	}
 
-	main_loop(&quit, latency, interval, NULL);
+	main_loop(&quit, latency, interval, myhandler);
 
 	if (rt_prio > 0) {
 		struct sched_param schedp;
@@ -297,6 +354,11 @@ int main(int argc, char *argv[])
 	}
 
 fail:
+	/* fifo */
+	if (sms_fd > 0)
+		close(sms_fd);
+	unlink(SMS_FIFO);
+
 	/* cleanup functions */
 	call_cleanup();
 	if (use_mncc_sock)

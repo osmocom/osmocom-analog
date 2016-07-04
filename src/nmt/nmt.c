@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -29,6 +30,8 @@
 #include "nmt.h"
 #include "dsp.h"
 #include "frame.h"
+
+static int sms_ref = 0;
 
 /* Call reference for calls from mobile station to network
    This offset of 0x400000000 is required for MNCC interface. */
@@ -283,7 +286,7 @@ static void nmt_timeout(struct timer *timer);
 static void nmt_go_idle(nmt_t *nmt);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, int loopback)
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -337,10 +340,17 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 		goto error;
 	}
 
-	/* init audio processing */
+	/* init DMS processing */
 	rc = dms_init_sender(nmt);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init DMS processing!\n");
+		goto error;
+	}
+
+	/* init SMS processing */
+	rc = sms_init_sender(nmt);
+	if (rc < 0) {
+		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init SMS processing!\n");
 		goto error;
 	}
 
@@ -351,6 +361,7 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 	nmt->sysinfo.area_no = area_no;
 	nmt->compandor = compandor;
 	nmt->supervisory = supervisory;
+	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
 
 	/* go into idle state */
 	nmt_go_idle(nmt);
@@ -371,6 +382,7 @@ void nmt_destroy(sender_t *sender)
 	PDEBUG(DNMT, DEBUG_DEBUG, "Destroying 'NMT' instance for channel = %d.\n", sender->kanal);
 	dsp_cleanup_sender(nmt);
 	dms_cleanup_sender(nmt);
+	sms_cleanup_sender(nmt);
 	timer_exit(&nmt->timer);
 	sender_destroy(&nmt->sender);
 	free(nmt);
@@ -382,6 +394,8 @@ static void nmt_go_idle(nmt_t *nmt)
 	timer_stop(&nmt->timer);
 	nmt->page_for_nmt = NULL;
 	nmt->dms_call = 0;
+	dms_reset(nmt);
+	sms_reset(nmt);
 
 	PDEBUG(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.chan_type));
 	nmt_new_state(nmt, STATE_IDLE);
@@ -760,9 +774,9 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			break;
 		PDEBUG(DNMT, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", &nmt->subscriber.country, nmt->dialing);
 		/* setup call */
-		if (!strcmp(nmt->dialing, "767")) {
+		if (!strcmp(nmt->dialing, nmt->smsc_number)) {
 			/* SMS */
-			dms_reset(nmt);
+			PDEBUG(DNMT, DEBUG_INFO, "Setup call to SMSC.\n");
 			nmt->dms_call = 1;
 		} else {
 			int callref = ++new_callref;
@@ -979,6 +993,10 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 		if (nmt->supervisory) {
 			super_reset(nmt);
 			timer_start(&nmt->timer, SUPERVISORY_TO1);
+		}
+		if (nmt->dms_call) {
+			time_t ti = time(NULL);
+			sms_deliver(nmt, sms_ref, "", SMS_TYPE_UKNOWN, SMS_PLAN_ISDN_TEL, ti, nmt->sms_string);
 		}
 	}
 }
@@ -1365,7 +1383,7 @@ const char *nmt_get_frame(nmt_t *nmt)
  */
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, char *dialing)
+int _out_setup(int callref, char *dialing, const char *sms)
 {
 	sender_t *sender;
 	nmt_t *nmt;
@@ -1413,9 +1431,21 @@ inval:
 
 	/* 4. trying to page mobile station */
 	sender->callref = callref;
+	if (sms) {
+		strncpy(nmt->sms_string, sms, sizeof(nmt->sms_string) - 1);
+		nmt->dms_call = 1;
+	}
 	nmt_page(nmt, ms_country, ms_number, 1);
 
 	return 0;
+}
+int call_out_setup(int callref, char *dialing)
+{
+	return _out_setup(callref, dialing, NULL);
+}
+int sms_out_setup(char *dialing, const char *sms)
+{
+	return _out_setup(0, dialing, sms);
 }
 
 /* Call control sends disconnect (with tones).
@@ -1518,4 +1548,62 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		jitter_save(&nmt->sender.audio, up, count);
 	}
 }
+
+/*
+ * SMS layer messages
+ */
+
+/* SMS layer releases */
+void sms_release(nmt_t *nmt)
+{
+	PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing release, by SMS layer!\n");
+ 	nmt_release(nmt);
+}
+
+void sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
+{
+	PDEBUG(DNMT, DEBUG_NOTICE, "Received SMS from '%s' to '%s'\n", orig_address, dest_address);
+	printf("SMS received '%s' -> '%s': %s\n", orig_address, dest_address, message);
+
+}
+
+void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
+{
+	PDEBUG(DNMT, DEBUG_NOTICE, "Got SMS deliver report\n");
+	if (error)
+		printf("SMS failed! (cause=%d)\n", cause);
+	else {
+		sms_ref++;
+		printf("SMS sent!\n");
+	}
+}
+
+/* application sends ud a message, we need to deliver */
+void deliver_sms(const char *sms)
+{
+	int i, rc;
+	char number[8];
+
+	/* check for number digits */
+	for (i = 0; i < 7; i++) {
+		if (sms[i] < '0' || sms[i] > '9')
+			break;
+	}
+	if (i < 7 || sms[7] != ',') {
+		PDEBUG(DNMT, DEBUG_NOTICE, "Given SMS MUST start with the 7 digits phone number, followed by a comma (no spaces)\n");
+		return;
+	}
+	strncpy(number, sms, 7);
+	number[7] = '\0';
+	sms += 8;
+	PDEBUG(DNMT, DEBUG_INFO, "SMS for subscriber '%s'\n", number);
+	printf("SMS sending SMSC -> '%s': %s\n", number, sms);
+
+	rc = sms_out_setup(number, sms);
+	if (rc < 0) {
+		PDEBUG(DNMT, DEBUG_INFO, "SMS delivery failed with cause '%d'\n", -rc);
+		return;
+	}
+}
+
 

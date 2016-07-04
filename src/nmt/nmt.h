@@ -2,6 +2,7 @@
 #include "../common/compandor.h"
 #include "../common/dtmf.h"
 #include "dms.h"
+#include "sms.h"
 
 enum dsp_mode {
 	DSP_MODE_DIALTONE,	/* stream dial tone to mobile phone */
@@ -134,6 +135,12 @@ typedef struct nmt {
 	/* DMS states */
 	int			dms_call;		/* indicates that this call is a DMS call */
 	dms_t			dms;			/* DMS states */
+
+	/* SMS states */
+	char			smsc_number[33];	/* digits to match SMSC */
+	sms_t			sms;			/* SMS states */
+	struct timer		sms_timer;
+	char			sms_string[256];	/* current string to deliver */
 } nmt_t;
 
 void nmt_channel_list(void);
@@ -143,9 +150,10 @@ const char *chan_type_long_name(enum nmt_chan_type chan_type);
 double nmt_channel2freq(int channel, int uplink);
 void nmt_country_list(void);
 uint8_t nmt_country_by_short_name(const char *short_name);
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, int loopback);
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int loopback);
 void nmt_destroy(sender_t *sender);
 void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);
 const char *nmt_get_frame(nmt_t *nmt);
 void nmt_rx_super(nmt_t *nmt, int tone, double quality);
+void deliver_sms(const char *sms);
 

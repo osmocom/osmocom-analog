@@ -18,6 +18,7 @@
 #define DDB		11
 #define DTRANS		12
 #define DDMS		13
+#define DSMS		14
 
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, fmt, ## arg)
 void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...);
