@@ -139,6 +139,14 @@ int dsp_init_sender(nmt_t *nmt)
 	}
 	nmt->frame_spl = spl;
 
+	/* allocate DMS transmit buffer for a complete frame */
+	spl = calloc(127, nmt->samples_per_bit * sizeof(*spl));
+	if (!spl) {
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		return -ENOMEM;
+	}
+	nmt->dms.frame_spl = spl;
+
 	/* allocate ring buffer for supervisory signal detection */
 	nmt->super_samples = (int)((double)nmt->sender.samplerate * SUPER_DURATION + 0.5);
 	spl = calloc(1, nmt->super_samples * sizeof(*spl));
@@ -185,6 +193,10 @@ void dsp_cleanup_sender(nmt_t *nmt)
 	if (nmt->frame_spl) {
 		free(nmt->frame_spl);
 		nmt->frame_spl = NULL;
+	}
+	if (nmt->dms.frame_spl) {
+		free(nmt->dms.frame_spl);
+		nmt->dms.frame_spl = NULL;
 	}
 	if (nmt->fsk_filter_spl) {
 		free(nmt->fsk_filter_spl);
@@ -264,7 +276,7 @@ static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 	/* send telegramm */
 	frames_elapsed = (double)(nmt->rx_sample_count_current - nmt->rx_sample_count_last) / (double)(nmt->samples_per_bit * 166);
 	/* convert level so that received level at TX_PEAK_FSK results in 1.0 (100%) */
-	nmt_receive_frame(nmt, nmt->fsk_filter_frame, quality, level * 32768.0 / TX_PEAK_FSK, frames_elapsed);
+	nmt_receive_frame(nmt, nmt->fsk_filter_frame, quality, level, frames_elapsed);
 }
 
 //#define DEBUG_MODULATOR
@@ -337,7 +349,9 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 		printf("|%s|\n", debug_amplitude(quality));
 #endif
 		/* adjust level, so a peak level becomes 100% */
-		fsk_receive_bit(nmt, bit, quality, level / 0.63662);
+		fsk_receive_bit(nmt, bit, quality, level / 0.63662 * 32768.0 / TX_PEAK_FSK);
+		if (nmt->dms_call)
+			fsk_receive_bit_dms(nmt, bit, quality, level / 0.63662 * 32768.0 / TX_PEAK_FSK);
 		nmt->fsk_filter_sample = 10;
 	}
 }
@@ -467,12 +481,29 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		nmt->sender.rxbuf_pos = 0;
 }
 
+/* render frame */
+void fsk_render_frame(nmt_t *nmt, const char *frame, int length, int16_t *sample)
+{
+	int bit, polarity;
+	int i;
+
+	polarity = nmt->fsk_polarity;
+	for (i = 0; i < length; i++) {
+		bit = (frame[i] == '1');
+		memcpy(sample, nmt->fsk_sine[polarity][bit], nmt->samples_per_bit * sizeof(*sample));
+		sample += nmt->samples_per_bit;
+		/* flip polarity when we have 1.5 sine waves */
+		if (bit == 0)
+			polarity = 1 - polarity;
+	}
+	nmt->fsk_polarity = polarity;
+}
+
 static int fsk_frame(nmt_t *nmt, int16_t *samples, int length)
 {
-	int16_t *spl;
 	const char *frame;
+	int16_t *spl;
 	int i;
-	int bit, polarity;
 	int count, max;
 
 next_frame:
@@ -485,18 +516,8 @@ next_frame:
 		}
 		nmt->frame = 1;
 		nmt->frame_pos = 0;
-		spl = nmt->frame_spl;
 		/* render frame */
-		polarity = nmt->fsk_polarity;
-		for (i = 0; i < 166; i++) {
-			bit = (frame[i] == '1');
-			memcpy(spl, nmt->fsk_sine[polarity][bit], nmt->samples_per_bit * sizeof(*spl));
-			spl += nmt->samples_per_bit;
-			/* flip polarity when we have 1.5 sine waves */
-			if (bit == 0)
-				polarity = 1 - polarity;
-		}
-		nmt->fsk_polarity = polarity;
+		fsk_render_frame(nmt, frame, 166, nmt->frame_spl);
 	}
 
 	/* send audio from frame */
@@ -577,6 +598,11 @@ again:
 	case DSP_MODE_AUDIO:
 	case DSP_MODE_DTMF:
 		jitter_load(&nmt->sender.audio, samples, length);
+		/* send after dejitter, so audio is flushed */
+		if (nmt->dms.frame_valid) {
+			fsk_dms_frame(nmt, samples, length);
+			break;
+		}
 		if (nmt->supervisory)
 			super_encode(nmt, samples, length);
 		break;

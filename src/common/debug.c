@@ -50,6 +50,7 @@ struct debug_cat {
 	{ "mncc", "\033[1;32m" },
 	{ "database", "\033[0;33m" },
 	{ "transaction", "\033[0;32m" },
+	{ "dms", "\033[0;33m" },
 	{ NULL, NULL }
 };
 

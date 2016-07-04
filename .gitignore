@@ -27,3 +27,4 @@ src/nmt/nmt
 src/amps/amps
 src/test/test_compandor
 src/test/test_emphasis
+src/test/test_dms

@@ -1,6 +1,7 @@
 #include "../common/sender.h"
 #include "../common/compandor.h"
 #include "../common/dtmf.h"
+#include "dms.h"
 
 enum dsp_mode {
 	DSP_MODE_DIALTONE,	/* stream dial tone to mobile phone */
@@ -84,6 +85,7 @@ typedef struct nmt {
 	int			tx_frame_count;		/* transmit frame counter */
 	char			dialing[33];		/* dialed digits */
 	int			page_try;		/* number of paging try */
+	int			mft_num;		/* counter for digit for MFT */
 
 	/* special state for paging on different CC */
 	struct nmt		*page_for_nmt;		/* only page and assign channel for nmt instance as set */
@@ -128,7 +130,10 @@ typedef struct nmt {
 	uint64_t		rx_sample_count_last;	/* sample counter of last frame */
 	int			super_detected;		/* current detection state flag */
 	int			super_detect_count;	/* current number of consecutive detections/losses */
-	int			mft_num;		/* counter for digit */
+
+	/* DMS states */
+	int			dms_call;		/* indicates that this call is a DMS call */
+	dms_t			dms;			/* DMS states */
 } nmt_t;
 
 void nmt_channel_list(void);

@@ -337,6 +337,13 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 		goto error;
 	}
 
+	/* init audio processing */
+	rc = dms_init_sender(nmt);
+	if (rc < 0) {
+		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init DMS processing!\n");
+		goto error;
+	}
+
 	timer_init(&nmt->timer, nmt_timeout, nmt);
 	nmt->sysinfo.chan_type = chan_type;
 	nmt->sysinfo.ms_power = ms_power;
@@ -363,6 +370,7 @@ void nmt_destroy(sender_t *sender)
 
 	PDEBUG(DNMT, DEBUG_DEBUG, "Destroying 'NMT' instance for channel = %d.\n", sender->kanal);
 	dsp_cleanup_sender(nmt);
+	dms_cleanup_sender(nmt);
 	timer_exit(&nmt->timer);
 	sender_destroy(&nmt->sender);
 	free(nmt);
@@ -373,12 +381,20 @@ static void nmt_go_idle(nmt_t *nmt)
 {
 	timer_stop(&nmt->timer);
 	nmt->page_for_nmt = NULL;
+	nmt->dms_call = 0;
 
 	PDEBUG(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.chan_type));
 	nmt_new_state(nmt, STATE_IDLE);
 	nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
 	memset(&nmt->subscriber, 0, sizeof(nmt->subscriber));
 	memset(&nmt->dialing, 0, sizeof(nmt->dialing));
+
+#if 0
+	/* go active for loopback tests */
+	nmt_new_state(nmt, STATE_ACTIVE);
+	nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
+	nmt->dms_call = 1;
+#endif
 }
 
 /* release an ongoing connection, this is used by roaming update and release initiated by MTX */
@@ -744,7 +760,11 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			break;
 		PDEBUG(DNMT, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", &nmt->subscriber.country, nmt->dialing);
 		/* setup call */
-		{
+		if (!strcmp(nmt->dialing, "767")) {
+			/* SMS */
+			dms_reset(nmt);
+			nmt->dms_call = 1;
+		} else {
 			int callref = ++new_callref;
 			int rc;
 			PDEBUG(DNMT, DEBUG_INFO, "Setup call to network.\n");
@@ -1163,7 +1183,7 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	frame_t frame;
 	int rc;
 
-	PDEBUG(DFRAME, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0 + 0.5, quality * 100.0 + 0.5);
+	PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0 + 0.5, quality * 100.0 + 0.5);
 
 	rc = decode_frame(&frame, bits, (nmt->sender.loopback) ? MTX_TO_XX : XX_TO_MTX, (nmt->state == STATE_MT_PAGING));
 	if (rc < 0) {

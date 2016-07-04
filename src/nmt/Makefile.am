@@ -7,6 +7,7 @@ nmt_SOURCES = \
 	nmt.c \
 	dsp.c \
 	frame.c \
+	dms.c \
 	image.c \
 	tones.c \
 	announcement.c \
