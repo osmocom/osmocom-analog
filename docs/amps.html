@@ -54,6 +54,10 @@ History
 *TBD*
 </p>
 
+<p>
+*TBD* SID and System A/B
+</p>
+
 <p class="toppic">
 <a name="basestation"></a>
 Setup of a base station
@@ -84,6 +88,13 @@ frame.c:3658 info   : RX Level: 53% Quality: 65% Polarity: NEGATIVE
 frame.c:3658 info   : RX Level: 52% Quality: 60% Polarity: NEGATIVE
 
 </pre>
+
+<p>
+You should tune the receiver to 880.020 first, to check if you can hear and decode the idle signal from the base station.
+Then tune to actually uplink frequency 835.020 MHz.
+The actual level is not yet relevant.
+(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
+</p>
 
 <pre>
 

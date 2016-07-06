@@ -346,12 +346,15 @@ The duration is *TBD* ms and the frequency deviation *TBD* KHz.
 </p>
 
 <p>
-While dialing is received by the base station, it repeats the 5 digits of mobile identy.
-This takes place after *TBD*.
+While dialing is received by the base station, the base station repeats the 5 digits of mobile identity.
+It is repeated right after the 5th digit of the mobile identity was received.
+Only the (bare) 5 digits of the mobile identity are repeated, not the other digits.
 </p>
 
 <p>
-The mobile station compares the repeated identiy and *TBD* if it mismatches.
+The mobile station compares the repeated identiy and turns transmitter off, if it mismatches.
+No clear signal is sent.
+If another mobile station dials at the same time, this wrong identity indicates that the base station receives the other mobile station and not our mobile station.
 </p>
 
 <p>
@@ -499,7 +502,7 @@ But you get a busy signal, that means there is no channel.
 Now run your base station on channel 1.
 You may add '-g x' or '--gfs x' command line option to change the station ID from default to any value you like. (see help)
 Tune the transmitter to 153.010 and the receiver to 148.410.
-You should tune the receiver to 153.010 first, to check if you hear the idle signal from the base station.
+You should tune the receiver to 153.010 first, to check if you can hear and decode the idle signal from the base station.
 Then tune to actually uplink frequency 148.410 MHz.
 The actual level is not yet relevant.
 (You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
