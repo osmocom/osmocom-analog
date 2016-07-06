@@ -560,15 +560,16 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				bnetz->dial_mode = DIAL_MODE_NUMBER;
 				memset(bnetz->dial_number, 0, sizeof(bnetz->dial_number));
 				bnetz->dial_pos = 0;
+				/* reply station ID */
+				PDEBUG(DBNETZ, DEBUG_INFO, "Sending station id back to phone: %s.\n", bnetz->station_id);
+				bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
+				bnetz->station_id_pos = 0;
 			}
 			break;
 		case DIAL_MODE_NUMBER:
 			if (digit == 'e') {
 				PDEBUG(DBNETZ, DEBUG_INFO, "Received number from mobile phone: %s\n", bnetz->dial_number);
 				bnetz->dial_mode = DIAL_MODE_START2;
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending station id back to phone: %s.\n", bnetz->station_id);
-				bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
-				bnetz->station_id_pos = 0;
 				break;
 			}
 			if (digit < '0' || digit > '9') {
