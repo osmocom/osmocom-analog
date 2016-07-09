@@ -277,7 +277,7 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_loop(int *quit, int latency, int interval)
+void main_loop(int *quit, int latency, int interval, void (*myhandler)(void))
 {
 	int latspl;
 	sender_t *sender;
@@ -331,6 +331,9 @@ next_char:
 
 		/* process audio of built-in call control */
 		process_call(c);
+
+		if (myhandler)
+			myhandler();
 
 		/* sleep a while */
 		usleep(interval * 1000);
