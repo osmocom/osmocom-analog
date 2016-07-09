@@ -612,6 +612,11 @@ void process_call(int c)
 /* Setup is received from transceiver. */
 int call_in_setup(int callref, const char *callerid, const char *dialing)
 {
+	if (!callref) {
+		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring setup, because callref not set. (not for us)\n");
+		return -CAUSE_INVALCALLREF;
+	}
+
 	if (callref < 0x4000000) {
 		PDEBUG(DCALL, DEBUG_ERROR, "Invalid callref from mobile station, please fix!\n");
 		abort();
@@ -676,6 +681,11 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 /* Transceiver indicates alerting. */
 void call_in_alerting(int callref)
 {
+	if (!callref) {
+		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring alerting, because callref not set. (not for us)\n");
+		return;
+	}
+
 	PDEBUG(DCALL, DEBUG_INFO, "Call is alerting\n");
 
 	if (use_mncc_sock) {
@@ -719,6 +729,11 @@ static void _indicate_answer(int callref, const char *connectid)
 }
 void call_in_answer(int callref, const char *connectid)
 {
+	if (!callref) {
+		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring answer, because callref not set. (not for us)\n");
+		return;
+	}
+
 	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connectid);
 
 	if (use_mncc_sock) {
@@ -741,6 +756,11 @@ void call_in_answer(int callref, const char *connectid)
 /* Transceiver indicates release. */
 void call_in_release(int callref, int cause)
 {
+	if (!callref) {
+		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring release, because callref not set. (not for us)\n");
+		return;
+	}
+
 	PDEBUG(DCALL, DEBUG_INFO, "Call has been released with cause=%d\n", cause);
 
 	if (use_mncc_sock) {
@@ -784,6 +804,8 @@ void call_in_release(int callref, int cause)
 /* forward audio to MNCC or call instance */
 void call_tx_audio(int callref, int16_t *samples, int count)
 {
+	if (!callref)
+		return;
 
 	if (use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_data_frame) + count * sizeof(int16_t)];
