@@ -126,7 +126,6 @@ static int mncc_accept(void)
 
 	mncc_sock = rc;
 	flags = fcntl(mncc_sock, F_GETFL, 0);
-		flags = 0;
 	rc = fcntl(mncc_sock, F_SETFL, flags | O_NONBLOCK);
 	if (rc < 0) {
 		PDEBUG(DMNCC, DEBUG_ERROR, "Failed to set socket into non-blocking IO mode.\n");
