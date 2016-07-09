@@ -936,10 +936,15 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 			break;
 		nmt_value2digits(frame->ms_password, nmt->subscriber.password, 3);
 		PDEBUG(DNMT, DEBUG_INFO, "Received identity (password %s).\n", nmt->subscriber.password);
-		nmt_new_state(nmt, STATE_MT_RINGING);
-		nmt->tx_frame_count = 0;
-		timer_start(&nmt->timer, RINGING_TO);
-		call_in_alerting(nmt->sender.callref);
+		if (nmt->dms_call) {
+			nmt_new_state(nmt, STATE_MT_COMPLETE);
+			nmt->tx_frame_count = 0;
+		} else {
+			nmt_new_state(nmt, STATE_MT_RINGING);
+			nmt->tx_frame_count = 0;
+			timer_start(&nmt->timer, RINGING_TO);
+			call_in_alerting(nmt->sender.callref);
+		}
 		break;
 	default:
 		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
@@ -978,11 +983,16 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 
 static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 {
-	set_line_signal(nmt, frame, 5);
 	++nmt->tx_frame_count;
+	if (nmt->dms_call) {
+		if (nmt->tx_frame_count == 1)
+			PDEBUG(DNMT, DEBUG_INFO, "Send 'autoanswer'.\n");
+		set_line_signal(nmt, frame, 12);
+	} else
 	if (nmt->compandor) {
 		if (nmt->tx_frame_count == 1)
 			PDEBUG(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
+		set_line_signal(nmt, frame, 5);
 	} else
 		frame->index = NMT_MESSAGE_6;
 	if (nmt->tx_frame_count == 5) {
