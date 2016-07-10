@@ -77,7 +77,7 @@ To adjust input and output levels of your sound card, run 'alsamixer'.
 <p>
 To avoid echo of audio input (mic), mute the input (select item and press 'm').
 We want to capture microphone, but not echo it back to the audio output.
-Also we want audio on line/headset output and capture from microphone imput.
+Also we want audio on line/headset output and capture from microphone input.
 Do not use input gain on the microphone.
 </p>
 
@@ -97,19 +97,19 @@ To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
 </pre>
 
 <p>
-Tune your transmitter AND reciever to 153.010 MHz.
+Tune your transmitter AND receiver to 153.010 MHz.
 Press the PTT button on you transmitter and talk into it.
 Check if you hear your voice at a normal level from the receiver.
 Then connect the audio output (headphone) of your sound adapter to your transmitter, by using a variable resistor.
 You should hear now the whistle sound clearly on the receiver, once you turn up the variable resistor.
-Adjust the audio output so that the tone is not overdriven, but the volume similar to your voice when you talked into the transmitter.
+Adjust the audio output so that the tone is not over-driven, but the volume similar to your voice when you talked into the transmitter.
 The sound must be clear without any background noise or distortion.
 </p>
 
 <p>
 Now connect the audio input (microphone) to your receiver, by using a variable resistor.
 Enable the transmitter. (PTT button)
-You should now see the signal beeing decoded by the base station:
+You should now see the signal being decoded by the base station:
 </p>
 
 <pre>
@@ -126,12 +126,12 @@ bnetz.c:478 notice : Round trip delay is 0.054 seconds
 </pre>
 
 <p>
-Adjust the input level so that the received signal level is arround 100%.
-If the input level cannot be ajusted up to 100%, leave it as it is.
+Adjust the input level so that the received signal level is around 100%.
+If the input level cannot be adjusted up to 100%, leave it as it is.
 There is an option later in this manual to add RX gain.
 The quality should be 90% or better.
-Now you have connected the base station to your radio eqipment and roughly adjusted the levels.
-For finetuning, refer to each network description.
+Now you have connected the base station to your radio equipment and roughly adjusted the levels.
+For fine-tuning, refer to each network description.
 </p>
 
 <p>
@@ -217,7 +217,7 @@ In my experiments it helps to amplify the amplitude by factor two in order adjus
 A gain of 6 dB will amplify the amplitude by factor two.
 Also the noise of the sound adapter will be amplified by factor two, but this is not relevant at 16 bit resolution.
 Use the command line option '-G 6' or '--rx-gain 6'.
-In this example I use both, transmitter and receiver without emphasis and add extra 6 dB gain to the input from the receiver:
+In this example I use both, transmitter and receiver without emphasis (so software must do it) and add extra 6 dB gain to the input from the receiver:
 </p>
 
 <pre>
@@ -227,15 +227,15 @@ In this example I use both, transmitter and receiver without emphasis and add ex
 </pre>
 
 <p class="toppic">
-Loopback Test
+Loop-back Test
 </p>
 
 <p>
-As used before, the loopback test can be used to verify the signal process, such as level, delay and quality.
+As used before, the loop-back test can be used to verify the signal process, such as level, delay and quality.
 </p>
 
 <p>
-If command line option '-L 1' or '--loopback 1' is given, a loopback inside the software is performed.
+If command line option '-L 1' or '--loopback 1' is given, a loop-back inside the software is performed.
 Also the audio signal is sent to the audio adapter, but not received from it.
 This test is used to debug the software.
 It can be used to see what the output of an external loop would look like.
@@ -266,7 +266,7 @@ bnetz.c:528 notice : Round trip delay is 0.001 seconds
 </pre>
 
 <p>
-If command line option '-L 2' or '--loopback 2' is given, an external loopback is performed.
+If command line option '-L 2' or '--loopback 2' is given, an external loop-back is performed.
 The receiver needs to be tuned to transmitter, so the software receives its own signal.
 The received quality level is relevant. It should be not less than 90 for B-Netz.
 </p>

@@ -10,33 +10,963 @@
 
 <center><img src="nmt.jpg"/></center>
 
-<p>
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks">How it works</a>
+	<li><a href="#basestation">Setup of a base station</a>
+	<li><a href="#sms">Sending and receiving SMS</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
 </p>
 
-*TBD*
-
 <p>
-Now run your base station on channel 1.
-Tune the transmitter to 463.000 MHz and the receiver to 453.000.
-You should tune the receiver to 463.000 first, to check if you hear the idle signal from the base station.
-Then tune to actually uplink frequency 453.000 MHz.
-(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
+NMT was a Scandinavian cellular network, developed by and used in Scandinavian countries.
+If was used in the Baltic countries, Switzerland, Netherlands, Hungary, Poland, Bulgaria, Romania, Czech Republic, Slovakia, Slovenia, Serbia, Turkey, Croatia, Bosnia, Russia, Ukraine and in Asia.
+The NMT network was opened in Sweden and Norway in 1981, and in Denmark and Finland in 1982. Iceland joined in 1986.
+Networks where shut down in 2000 (Estonia), 2002 (Finland), 2004 (Norway), 2007 (Sweden), 2010 (Iceland).
+In 1989, the German Wall came down and C-Netz was quickly deployed in eastern Germany to support the congested fixed network.
+It was a cellular system, so frequencies could be used efficiently..
+It offered handover capability, so moving phones could change cells during a call.
+Authentication was introduces (SIS), to prevent fraud, but it was optional.
+Older phones without SIS could be cloned by receiving and decoding the roaming update message.
+Extra services (e. g. conditional call forwarding, answering machine) were installed in the mobile exchange.
+Phones were build in cars but also hand-held phones were available.
+All phones were available under a dedicated prefix, so the caller must only dial the phone number to reach the phone anywhere.
+The networks offered a data service (DMS) that re-used the signaling modem to transfer data to a terminal or PC.
+This data service was used to transfer short messages (SMS) between service center (SMSC) and the mobile phone.
 </p>
 
+<p>
+NMT-450:
+</p>
+
+<p>
+<ul>
+	<li>Frequency range: 462.500 - 467.500 MHz (down-link); 452.500 - 467.500 MHz (up-link)
+	<li>181 voice channels (463.000 - 467.500)
+	<li>20 optional channels (462.500 - 462.975)
+	<li>any channel can be control channel or traffic channel or combined channel
+	<li>Duplex distance: 10 MHz
+	<li>Channel spacing: 25 KHz and optionally 12.5 KHz
+	<li>Voice modulation: FM
+	<li>Signaling modulation: carrier FSK
+	<li>Frequency deviation: 3.5 KHz mean (FSK)
+	<li>Mobile station transmit power: to 15 Watts (1 Watts hand-held)
+	<li>Base station transmit power: 50 Watts
+	<li>Features: Speech Compandor, DMS (data service), SMS
+</ul>
+</p>
+
+<p>
+NMT-900:
+</p>
+
+<p>
+<ul>
+	<li>Frequency range: 935 - 960 MHz (down-link); 890 - 915 MHz (up-link)
+	<li>100 voice channels
+	<li>any channel can be control channel or traffic channel or combined channel
+	<li>Duplex distance: 45 MHz
+	<li>Channel spacing: 25 KHz and optionally 12.5 KHz
+	<li>Voice modulation: FM
+	<li>Signaling modulation: carrier FSK
+	<li>Frequency deviation: 3.5 KHz mean (FSK)
+	<li>Mobile station transmit power: to 6 Watts (1 Watts hand-held)
+	<li>Base station transmit power: 25 Watts
+	<li>Features: Speech Compandor, DMS (data service), SMS
+</ul>
+</p>
+
+<p class="toppic">
+<a name="howitworks"></a>
+How it works
+</p>
+
+<p>
+The NMT system is made up of 3 major parts:
+</p>
+
+<ul>
+<li><b>The Mobile Telephone Exchange (MTX)</b> is the brain of the system and is technically the most complicated part.
+Several MTXs form the interface between the NMT system and the fixed telephone network.
+Whereas signaling and other system components of NMT are the same in all countries, their telephone networks differ in some respects.
+One of the functions of the MTXs is therefore to compensate for these differences.
+<br><br>
+<li><b>The Base Station (BS)</b> are intermediary links without switching function between the wire (MTX) and radio path.
+It is basically a transmitter, connected to the MTX via leased line.
+<br><br>
+<li><b>The Mobile Station (MS)</b> is the telephone itself.
+It can be vehicle-borne, portable, hand-held or of coin-box type.
+A mobile station is owned or leased by the subscriber.
+</ul>
+
+<center><img src="nmt_ta.jpg"/></center>
+
+<p>
+Each country is divided into a number of traffic areas.
+In a traffic ares there are a number of base stations spaced about between 8 and 80 km apart.
+Each traffic area belongs to a single exchange (MTX).
+This means that all base stations in the area are connected to this exchange and that all traffic in the are is channeled through it.
+The exchange communicates with the telephone network via trunk exchanges.
+</p>
+
+<p>
+Every mobile subscriber is registered in a so-called home MTX, usually the MTX controlling the traffic area in which the subscriber normally resides.
+</p>
+
+<p>
+Setting up of calls
+</p>
+
+<p>
+A call from an ordinary telephone subscriber is connected on the basis of the first digits of the mobile subscriber's number to his home MTX.
+The latter stores the data of his present location and transmits a call signal over all base stations in that traffic area.
+The mobile station answers automatically with a call acknowledgment and the MTX then assigns the mobile station a traffic channel.
+The call is set up.
+</p>
+
+<p>
+A call by a mobile subscriber causes the mobile station to search for a traffic channel in the current traffic area automatically.
+The call is set up and forwarded through the current MTX to the destination network.
+</p>
+
+<p>
+If the mobile subscriber is in a traffic are not belonging to his home MTX, the home MTX hands over the call to the MTX controlling the visited traffic areas, and then latter MTX takes over the subsequent setting up of the call.
+</p>
+
+<p>
+In this example charging is done in the calling subscriber's local exchange.
+If the call had been initiated by the mobile subscriber, it would have been charged in the MTX.
+</p>
+
+<p>
+Roaming
+</p>
+
+<p>
+The special function which enables a person to call a mobile subscriber without knowing where he or she is, is called roaming.
+One need not even know whether the mobile subscriber has gone to another country.
+Roaming is made possible by the fact that a mobile station which leaves a traffic areas and enters a new one automatically notifies the MTX that it has entered the new areas. (location update)
+The location of the mobile station is stored in the mobile station's home MTX and used for routing calls to the correct area.
+</p>
+
+<p>
+Transfer of calls to other base station
+</p>
+
+<p>
+During a conversion it may happen that a mobile subscriber leaves the coverage area of the base station in which the conversation started.
+This results in impaired speech quality.
+The conversation should then be conducted over another base station.
+</p>
+
+<p>
+The speech quality is supervised by means of a supervisory signal (&Oslash; signal) one of four tones around 4 kHz.
+The base station sends the &Oslash; signal to the mobile station, which sends it back to the base station.
+The quality of the returned &Oslash; signal is measured in the base station and, if it is unsatisfactory, the base station transmits alarm to the MTX.
+The latter then orders the base station and neighboring base stations to measure the field-strength of the radio signal from the mobile station.
+The base stations transmit the results to the MTX, which then switches the call to the base station with the best reception.
+</p>
+
+<center><img src="nmt_freq.jpg"/></center>
+
+<p>
+Small cell technique
+</p>
+
+<p>
+The NMT system has been allotted 180 (and optional 20) radio channels.
+In the high-traffic urban areas this number of channels would not suffice the future with conventional cell size (the coverage area of a base station).
+To increase the traffic capacity in these areas the small-cell technique will be adopted, i. e. the cell size is considerably reduced, so that this distance between base stations having the same radio channel can be reduced.
+The channels are thus used more efficiently.
+
+In small-cell areas both base stations and mobile stations transmit with reduced power.
+Change of power output of a mobile station takes place automatically on order from the MTX.
+</p>
+
+<center><img src="nmt_routing.jpg"/></center>
+
+<p>
+The Danish and Norwegian telephone networks permit a maximum of 7 digits after the trunk prefix P<sub>N</sub>.
+With an access code of type P<sub>N</sub> M<sub>1</sub> M<sub>2</sub> there remain 5 digits for the subscriber number.
+It was anticipated, however, that the system would be constructed for 6-digit subscriber number.
+The problem was solved by adding a sixth digit (X<sub>1</sub>) to the dialed number (X<sub>2</sub> X<sub>3</sub> X<sub>4</sub> X<sub>5</sub> X<sub>6</sub>) in all signaling in the NMT system and between MTXs.
+The sixth digit will be added automatically by the mobile subscriber's home MTX.
+The system thus provides for 6-digit subscriber number in the countries which cannot introduce this length of number when their systems first come into operation.
+</p>
+
+<p>
+In the Finnish and Swedish fixed telephone network the setting up of calls is done with the digits P<sub>N</sub> M<sub>1</sub> M<sub>2</sub> X<sub>1</sub> X<sub>2</sub>.
+The digits X<sub>1</sub> X<sub>2</sub> are the code for the subscriber's home-traffic area.
+P<sub>N</sub> M<sub>1</sub> M<sub>2</sub> X<sub>1</sub> X<sub>2</sub> thus constitutes sufficient information for routing the call to the mobile subscriber's home MTX.
+In Denmark and Norway the connection is similarly set up with the digits P<sub>N</sub> M<sub>1</sub> M<sub>2</sub> X<sub>2</sub>.
+</p>
+
+<p>
+To distinguish between subscribers with the same number in different countries and additional digit, the nationality digit Z, is required.
+This number is not dialed by the subscriber but added to the subscriber number by the mobile subscriber's home MTX.
+The digit Z then accompanies the other signaling in the NMT system.
+On signaling from a mobile subscriber, Z is sent automatically by the mobile station.
+The receiving MTX can thus distinguish between calling mobile subscribers from different countries.
+</p>
+
+<p>
+Charging principles
+</p>
+
+<p>
+The NMT system's character of joint Nordic mobile telephone network has made it natural to adopt common principles als for charging of call.
+An important principle is that the charge should be the same in both directions.
+A NMT subscriber will pay three compulsory charges:
+</p>
+
+<p>
+<ul>
+<li><b>Initial charge.</b> This charge shall cover the costs involved in opening a subscription, e. g. correspondence, introduction in the accounting routines, registration in the central equipment, directory listing.
+<br><br>
+<li><b>Subscription fee.</b> A recurring fixed charge for coverage of traffic unrelated costs, e. g. MTX equipment dependent on number of subscribers, costs relating to roaming, administrative costs for billing, keeping of records and telephone directory.
+<br><br>
+<li><b>Call charge.</b> Variable charge covering traffic-related costs, e. g. transmission in telephone network, operation/maintenance of MTS and base stations, lines to base station, data transfer between MTXs.
+</ul>
+</p>
+
+<p>
+The NMT system will offer a number of special facilities, e. g. barring of certain outgoing calls, transfer to other telephone number/announcing macine.
+Special charges will be made for these facilities.
+</p>
+
+<p>
+The technical form of the system imposes certain limitation on the rate structure.
+Charging in the NMT system will thus differ in some respects from that in the fixed telephone network:
+</p>
+
+<p>
+<ul>
+<li><b>Domestic traffic.</b> A Call from an ordinary telephone subscriber to a mobile subscriber <i>registered</i> in the same country is charged in the ordinary subscriber's local exchange.
+The charge is based on the digits dialed and the call is routed to the mobile subscriber's home MTX.
+In this case there is a technical possibility of price differentiation only between calls to different MTXs.
+For the eventual transfer to another MTS (possibly abroad) and for the link MTX - base station there are no means for price differentiation.
+Bit as all mobile telephone calls are switched over the trunk network, it may very well happen that local calls as well are routed over long distances.
+The cost difference for different domestic calls will therefore in fact be small.
+It has therefore been considered that a uniform rate should be charged.
+<br><br>
+For calls from home mobile to ordinary subscriber in the same country there are technical possibilities for price differentiation, but in accordance with the principle of equal charge in both directions a uniform rate is adopted here as well.
+<br><br>
+<li><b>Inter-Nordic traffic.</b> For calls from an ordinary to a mobile subscriber <i>registered</i> abroad the charge is based on the international prefix.
+The following digits, which route the call to a MTX, cannot be analyzed by the caller's local exchange.
+The call will therefore be charged as an ordinary international call.
+<br><br>
+For calls in the other direction the mobile subscriber is charged by toll ticketing in MTX.
+In this case price differentiation is possible, but owing to the desire for equal rates, the international rate is used here as well.
+The national mobile telephone rate is used, however, if the international rate is lower than the mobile telephone rate.
+</ul>
+</p>
+
+<p>
+Many types of signal are used between the different parts of the NMT system.
+The signals have the following main objectives:
+</p>
+
+<p>
+<b>MTX - MS</b>
+</p>
+
+<ul>
+<li>Setting up and clearing of calls
+<li>Switching of call in progress
+<li>Updating
+<li>Ordering of power-reduction
+</ul>
+
+<p>
+<b>MTX - BS</b>
+</p>
+
+<ul>
+<li>Remote control of base station
+<li>Transmission of alarm / measurement
+</ul>
+
+<p>
+<b>MTX - MTX</b>
+</p>
+
+<ul>
+<li>Updating of subscriber register and roaming register
+<li>Transfer of call to roaming subscriber
+</ul>
+
+<p>
+<b>MTX - Telephone Network</b>
+</p>
+
+<ul>
+<li>Setting up of calls
+</ul>
+
+<p>
+<b>BS - MS</b>
+</p>
+
+<ul>
+<li>Supervision of transmission quality
+</ul>
+
+<p>
+Signals are sent in the form of so-called frames.
+All frames have the same length.
+They are divided into fields, each of which contains a given type of information.
+Two frame formats exist depending on whether the frame is sent to or from MTX.
+</p>
+
+<p>
+From MTX:
+<table class="nmt">
+	<tr>
+		<td class="nmt">
+			N<sub>1</sub>
+			N<sub>2</sub>
+			N<sub>3</sub>
+		</td>
+		<td class="nmt">
+			P
+		</td>
+		<td class="nmt">
+			Y<sub>1</sub>
+			Y<sub>2</sub>
+		</td>
+		<td class="nmt">
+			Z
+			X<sub>1</sub>
+			X<sub>2</sub>
+			X<sub>3</sub>
+			X<sub>4</sub>
+			X<sub>5</sub>
+			X<sub>6</sub>
+		</td>
+		<td class="nmt">
+			J<sub>1</sub>
+			J<sub>2</sub>
+			J<sub>3</sub>
+		</td>
+	</tr>
+</table>
+</p>
+
+<p>
+To MTX:
+<table class="nmt">
+	<tr>
+		<td class="nmt">
+			N<sub>1</sub>
+			N<sub>2</sub>
+			N<sub>3</sub>
+		</td>
+		<td class="nmt">
+			P
+		</td>
+		<td class="nmt">
+			Z
+			X<sub>1</sub>
+			X<sub>2</sub>
+			X<sub>3</sub>
+			X<sub>4</sub>
+			X<sub>5</sub>
+			X<sub>6</sub>
+		</td>
+		<td class="nmt">
+			J<sub>1</sub>
+			J<sub>2</sub>
+			J<sub>3</sub>
+			J<sub>4</sub>
+			J<sub>5</sub>
+		</td>
+	</tr>
+</table>
+</p>
+
+<p>
+N = Channel Number<br>
+P = Prefix (frame ID)<br>
+Y = Traffic area number<br>
+Z/X = Subscriber number<br>
+J = Information<br>
+</p>
+
+<p>
+Each character (N, P etc) consists of a hexadecimal digit, i. e. four bits.
+All frames start with the number of the channel on which the frame is sent.
+If the number does not match with that of the channel to which the receiver is locked, the frame is ignored.
+Faults due to inter-modulation are thus avoided.
+The character after the channel number, the prefix P, defines the kind of message to which the frame relates.
+The actual message is found in the information field.
+On signaling from a mobile station the mobile subscriber's number is always sent.
+It is also sent on signaling from MTX to a specific subscriber.
+Furthermore the MTX always sends the traffic area number of the base station in use.
+</p>
+
+<p>
+Examples of signal frames:
+</p>
+
+<pre class="doc">
+1.a    Calling channel indication
+
+Channel No. Prefix     TA No. Additional info
+----------------------------------------------------
+N1N2N3      P(12)      Y1Y2   H1H2H3H4H5H6H7H8H9H10
+----------------------------------------------------
+</pre>
+
+<p>
+Calling channel indication.
+The frame is recognized by the prefix P, which has the value 12.
+N<sub>1</sub>..N<sub>3</sub> = the number of the calling channel, on which the frame is sent.
+Y<sub>1</sub>Y<sub>2</sub> = the number of the traffic area in which the base station is situated.
+H<sub>1</sub>..H<sub>10</sub> = additional information, like battery saving info and additional information.
+</p>
+
+<pre class="doc">
+3.a    Traffic channel allocation on traffic channel
+
+Channel No. Prefix TA No. Mobile         TC No.
+                          subscriber no
+----------------------------------------------------
+N1N2N3      P(5)   Y1Y2   ZX1X2X3X4X5X6  NaNbNc
+----------------------------------------------------
+</pre>
+
+<p>
+Allocation of traffic channel.
+The frame is sent on the calling channel N<sub>1</sub>..N<sub>3</sub>.
+The mobile station ZX<sub>1</sub>..X<sub>6</sub> to which a connection is to be set up is ordered over to traffic channel number N<sub>a</sub>..N<sub>c</sub>.
+</p>
+
+<pre class="doc">
+10.b    Seizure from ordinary MS and identity on traffic
+        channel
+
+Channel No. Prefix Mobile          Area Pass-
+                   subscriber No   info word
+----------------------------------------------------
+N1N2N3      P(1)   ZX1X2X3X4X5X6   TY2  K1K2K3
+----------------------------------------------------
+</pre>
+
+<p>
+Transmission of identity on traffic channel.
+The frame is sent on traffic channel by the mobile station, either as acknowledegment of an identity request or as seizure signal on a call from the mobile station.
+</p>
+
+<p>
+As appears from the above, a frame consists of 4 x 16 = 64 bits.
+To increase the reliability the frame is sent with an error-correcting code, so that the length of the message will be 140 bits.
+An additional 15 + 11 bit are used for synchronization.
+The transmitted signal frame will have the following form:
+</p>
+
+<pre class="doc">
+   Bit sync      Frame Sync   Message (example) 140 bits
+101010101010101  11100010010  10010001101...011010010111
+</pre>
+
+<p>
+The selected error-correcting code is of convolution type and permits correction of error bursts with up to 6 false bits in sequence for at least 19 correct bits between error bursts.
+</p>
+
+<center><img src="nmt_mod.jpg"/></center>
+
+<p>
+The binary position in the signal frames are transmitted by FFSK (Fast Frequency Shift Keying) modulation.
+Logic "1" is represented by a cycle of the frequency 1200 Hz and a logic "0" by 1.5 cycles of 1800 Hz.
+Changes between "1" and "0" takes place at the zero crossing of the signal.
+The data speed is thus 1200 bits per second.
+</p>
+
+<p>
+Call from mobile station:
+</p>
+
+<center><img src="nmt_mo_call.jpg"/></center>
+
+<p>
+Call to mobile station:
+</p>
+
+<center><img src="nmt_mt_call.jpg"/></center>
+
+<p>
+Handover to another cell:
+</p>
+
+<center><img src="nmt_handover.jpg"/></center>
+
+<p>
+Roaming:
+</p>
+
+<center><img src="nmt_roaming.jpg"/></center>
+
+<p>
+Other features:
+</p>
+
+<p>
+To reduce radio noise, a syllabic compandor is used on both ends.
+This compresses the audio level dynamics by 2.
+An audio level of 25% is raised to 50% by the compressor and lowered to 25% by the expander.
+A radio noise floor of 10% would be reduced to 1% by the expander.
+</p>
+
+<p>
+SMS transmitted via a protocol that it similar to the GSM 04.11 standard.
+To transport SMS data, the user data facility (DMS) of the NMT network is used.
+DMS re-uses the existing signaling hardware of the mobile phone and offers a data link protocol with backward error correction.
+</p>
+
+<p>
+Caller ID was added to the system.
+The caller ID is transmitted before the first ringing order.
+It is repeated between ringing orders, in case of lost frames.
+</p>
+
+<p class="toppic">
+<a name="basestation"></a>
+Setup of a base station
+</p>
+
+<p>
+Before running the base station, you need to select a network.
+To make the phone access the network, it needs to have the same network selected.
+Check out what networks are available:
+</p>
 
 <pre>
 
-# src/nmt/nmt -k 1 -y SE,1
+# nmt -y list
+TA      Short   Country (Provider)
+------------------------------------------------------------------------
+5       DK      Denmark (Tele Danmark Mobile)
+6       SE      Sweden (Telia Mobitel)
+7       NO      Norway (Telenor Mobil)
+8       FI      Finland (Telecom Finland)
+8       IS      Iceland (Post &amp; Telecom)
+5       FO      Faroe Island (Faroese Telecom)
+7       EE      Estonia (Eesti Mobiiltelefon)
 ...
-nmt.c:376 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
-Base station ready, please tune transmitter to 463.000 MHz and receiver to 453.000 MHz.
-on-hook: ....... (enter 0..9 or d=dial)
 
 </pre>
 
 <p>
+In this example we select 'Sweden'.
+You must set you phone to network 'Sweden' or 'SE'.
+Then use the command line parameter '-y SE,1' or '--traffic-area SE,1' to select cell area 1 in Sweden.
+In this example we set the two digits 'traffic area' to 61.
+If the phone was not in this area recently, it will send roaming update, as soon as it finds our network.
 </p>
 
+<p>
+Now run your base station on channel 1.
+Tune the transmitter to 463.000 MHz and the receiver to 453.000 MHz.
+You should tune the receiver to 463.000 MHz first, to check if you can hear and decode the idle signal from the base station.
+Then tune to actually up-link frequency 453.000 MHz.
+The actual level is not yet relevant.
+</p>
+
+<p>
+Whenever you want to make your phone register to the network again, change the traffic area.
+Use a traffic are of 'SE,2', so the phone registers, if it was previously registered to 'SE,1'.
+</p>
+
+<pre>
+
+nmt -k 1 -y SE,2
+nmt.c:278 info   : Selecting country code 6 of SE,Sweden (provider 'Telia Mobitel')
+...
+nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+Base station on channel 1 ready, please tune transmitter to 463.000 MHz and receiver to 453.000 MHz.
+nmt.c:1364 info   : RX Level: 181% Quality=68
+nmt.c:663 info   : Received roaming seizure from subscriber 3,735859
+nmt.c:703 info   : Sending identity request.
+nmt.c:1364 info   : RX Level: 182% Quality=82
+nmt.c:1364 info   : RX Level: 181% Quality=76
+nmt.c:725 info   : Received identity confirm (password 949).
+nmt.c:738 info   : Send 'Roaming updating confirmation'.
+nmt.c:1364 info   : RX Level: 181% Quality=69
+nmt.c:421 info   : Releasing connection towards mobile station.
+nmt.c:1364 info   : RX Level: 182% Quality=80
+nmt.c:1194 info   : Send release.
+nmt.c:1364 info   : RX Level: 183% Quality=96
+nmt.c:1364 info   : RX Level: 182% Quality=70
+nmt.c:1207 info   : Received release guard.
+nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+nmt.c:1364 info   : RX Level: 183% Quality=68
+nmt.c:1364 info   : RX Level: 184% Quality=79
+nmt.c:1364 info   : RX Level: 186% Quality=95
+
+</pre>
+
+<p>
+The phone searches for the previous traffic area it was registered to.
+If it does not find it, it searches for the strongest calling channel.
+Because this channel has different traffic area, the phone registers to it sending a channel seizure.
+The base station requests identity, so the phone sends its secret password.
+The base station accepts the password and send the line signal 'Roaming updating confirmation' and releases the connection.
+The phone stores the new traffic area and acknowledges the release request.
+</p>
+
+<p>
+Level adjustment:
+We see a receive level of around 182%.
+Tune your receiver to the up-link frequency, so you get loop-back of base station broadcast.
+Use the variable resistor (connecting your transmitter) to adjust the volume until the received level matches the same level of your previously received bust.
+In my case I adjust the transmitter to match around 182%. (+- 10% is good)
+Now, whatever frequency deviation the phone transmits for signaling, so does your base station. Use the other variable resistor (connecting your receiver) to adjust the volume until the level matches about 100%. (+- 10% is good)
+Switch back the receiver to up-link frequency and change the traffic area to see the result of your adjustment.
+</p>
+
+<p>
+Enter a phone number (just a few digits, like "0310") on your phone.
+Start dialing and watch the base station receiving the call.
+The output looks like this:
+</p>
+
+<pre>
+
+nmt.c:682 info   : Received call from subscriber 3,735859
+nmt.c:758 info   : Sending identity request.
+nmt.c:1364 info   : RX Level: 102% Quality=67
+nmt.c:1364 info   : RX Level: 104% Quality=97
+nmt.c:779 info   : Received identity confirm (password 949).
+nmt.c:793 info   : Send 'Proceed to send'.
+nmt.c:1364 info   : RX Level: 101% Quality=68
+nmt.c:1364 info   : RX Level: 103% Quality=70
+nmt.c:796 info   : Send dial tone.
+nmt.c:1364 info   : RX Level: 103% Quality=89
+nmt.c:1364 info   : RX Level: 103% Quality=92
+nmt.c:1364 info   : RX Level: 102% Quality=67
+nmt.c:829 info   : Received (odd)  digit 0.
+nmt.c:1364 info   : RX Level: 104% Quality=70
+nmt.c:1364 info   : RX Level: 103% Quality=89
+nmt.c:855 info   : Received (even) digit 1.
+nmt.c:1364 info   : RX Level: 104% Quality=95
+nmt.c:1364 info   : RX Level: 103% Quality=67
+nmt.c:829 info   : Received (odd)  digit 3.
+nmt.c:1364 info   : RX Level: 104% Quality=70
+nmt.c:1364 info   : RX Level: 103% Quality=87
+nmt.c:829 info   : Received (odd)  digit 0.
+nmt.c:1364 info   : RX Level: 104% Quality=71
+nmt.c:861 info   : Dialing complete 3735859-&gt;0130, call established.
+nmt.c:870 info   : Setup call to network.
+call.c:629 info   : Incoming call from '3735859' to '0130'
+nmt.c:899 info   : Send 'address complete'.
+nmt.c:1364 info   : RX Level: 104% Quality=94
+nmt.c:1364 info   : RX Level: 102% Quality=69
+nmt.c:904 info   : Send 'compandor in'.
+nmt.c:908 info   : Connect audio.
+
+</pre>
+
+<p>
+The first thing the phone does is to tune to the channel.
+It sweeps through all the supported channels.
+On the channel it decodes the channel type and selects the channel, if it is a traffic channel type.
+Then the phone sends a seizure.
+Similar to registration, the base station acknowledges the call after receiving the the identity.
+Then the phone dials the number.
+The base station then accepts the number, switches the compandor in and through-connects audio path.
+</p>
+
+<p>
+To make a call to the phone, enter the 7 digits of the phone number.
+You know this number already, since you saw it while register to the network or start a call from the phone.
+</p>
+
+<pre>
+
+call.c:491 info   : Outgoing call to 3735859
+nmt.c:1598 info   : Call to mobile station, paging station id '3735859'
+nmt.c:434 info   : Entering paging state (try 1), sending call to '3,735859'.
+nmt.c:443 info   : Paging on our channel 1.
+nmt.c:941 info   : Send call to mobile.
+nmt.c:1364 info   : RX Level: 108% Quality=91
+nmt.c:971 info   : Received call acknowledgment on channel 1.
+nmt.c:995 info   : Send channel activation to mobile.
+nmt.c:1007 info   : Sending identity request.
+nmt.c:1364 info   : RX Level: 103% Quality=96
+nmt.c:1024 info   : Received identity (password 949).
+call.c:690 info   : Call is alerting
+nmt.c:1095 info   : Send 'ringing order'.
+nmt.c:1364 info   : RX Level: 101% Quality=68
+nmt.c:1364 info   : RX Level: 102% Quality=70
+nmt.c:1364 info   : RX Level: 103% Quality=87
+nmt.c:1364 info   : RX Level: 103% Quality=95
+nmt.c:1364 info   : RX Level: 102% Quality=69
+nmt.c:1364 info   : RX Level: 102% Quality=71
+nmt.c:1364 info   : RX Level: 103% Quality=85
+nmt.c:1095 info   : Send 'ringing order'.
+nmt.c:1095 info   : Send 'ringing order'.
+nmt.c:1095 info   : Send 'ringing order'.
+...
+nmt.c:1364 info   : RX Level: 102% Quality=73
+nmt.c:1129 info   : Received 'answer' from phone.
+call.c:743 info   : Call has been answered by '3735859'
+nmt.c:1144 info   : Send 'compandor in'.
+nmt.c:1364 info   : RX Level: 103% Quality=93
+nmt.c:1364 info   : RX Level: 102% Quality=86
+nmt.c:1364 info   : RX Level: 101% Quality=68
+nmt.c:1149 info   : Connect audio.
+
+</pre>
+
+<p>
+The base station transmit a paging message on the control channel.
+If the station ID matches, the phone will send an acknowledgment.
+After requesting identity, the base station orders the phone to ring.
+After answering the call, the compander is switched in and the audio is through-connected.
+</p>
+
+<pre>
+
+nmt.c:1363 info   : RX Level: 102% Quality=68
+nmt.c:1389 info   : Received clearing by mobile phone in state ACTIVE.
+nmt.c:1394 info   : Release call towards network.
+call.c:788 info   : Call has been released with cause=16
+nmt.c:1180 info   : Send release.         
+nmt.c:1363 info   : RX Level: 103% Quality=68
+nmt.c:1363 info   : RX Level: 104% Quality=83
+nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+
+</pre>
+
+<p>
+If the phone hangs up, the base station releases the call towards the network and acknowledge the release towards the phone.
+</p>
+
+<pre>
+
+call.c:513 info   : Call hangup
+nmt.c:1672 info   : Call has been released by network, releasing call.
+nmt.c:1689 notice : Outgoing release, during active call, releasing!
+nmt.c:421 info   : Releasing connection towards mobile station.
+nmt.c:1194 info   : Send release.
+nmt.c:1364 info   : RX Level: 105% Quality=95
+nmt.c:1207 info   : Received release guard.
+nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+
+</pre>
+
+<p>
+If the network hangs up, the base station sends a release towards the phone.
+The phone acknowledges the release.
+</p>
+
+<p class="toppic">
+<a name="sms"></a>
+Sending and receiving SMS
+</p>
+
+<p>
+NMT supports SMS protocol.
+It uses the lower DMS layer to transfer data between network and mobile station
+If the phone supports SMS, try sending a test SMS to any number.
+Be sure to set the SMSC (Short Message Service Center) to '767'.
+This software will detect SMS call when the phone dials '767'.
+If you cannot define the SMSC on your phone, send an SMS and check what number was dialed, then use '-I <number>' to define SMSC at this software.
+Also be sure not to enable encryption for SMS.
+The process looks like this:
+</p>
+
+<pre>
+
+nmt.c:1363 info   : RX Level: 102% Quality=95
+nmt.c:682 info   : Received call from subscriber 3,735859
+nmt.c:758 info   : Sending identity request.
+nmt.c:1363 info   : RX Level: 100% Quality=68
+nmt.c:1363 info   : RX Level: 102% Quality=96
+nmt.c:779 info   : Received identity confirm (password 949).
+nmt.c:793 info   : Send 'Proceed to send'.
+nmt.c:1363 info   : RX Level: 100% Quality=67
+nmt.c:1363 info   : RX Level: 101% Quality=70
+nmt.c:796 info   : Send dial tone.     
+nmt.c:1363 info   : RX Level: 102% Quality=87
+nmt.c:1363 info   : RX Level: 102% Quality=94
+nmt.c:1363 info   : RX Level: 100% Quality=67
+nmt.c:829 info   : Received (odd)  digit 7.
+nmt.c:1363 info   : RX Level: 101% Quality=69
+nmt.c:1363 info   : RX Level: 100% Quality=87
+nmt.c:855 info   : Received (even) digit 6.
+nmt.c:1363 info   : RX Level: 101% Quality=97
+nmt.c:1363 info   : RX Level: 100% Quality=68
+nmt.c:829 info   : Received (odd)  digit 7.
+nmt.c:1363 info   : RX Level: 101% Quality=69
+nmt.c:1363 info   : RX Level: 102% Quality=85
+nmt.c:861 info   : Dialing complete 3735859-&gt;767, call established.
+nmt.c:865 info   : Setup call to SMSC. 
+nmt.c:899 info   : Send 'address complete'.
+nmt.c:1363 info   : RX Level: 102% Quality=95
+nmt.c:1363 info   : RX Level: 100% Quality=69
+nmt.c:904 info   : Send 'compandor in'.
+nmt.c:908 info   : Connect audio.      
+dms.c:460 info   : Starting DMS transfer (mobile originated)
+dms.c:481 info   : Received valid DMS frame: CT(0) = ID    73  51   0   0   0   0   0   0
+dms.c:481 info   : Received valid DMS frame: CT(1) = RAND  82   0  40   0 116   0 120  56
+dms.c:252 info   : Sending DMS frame: CT(0) = RAND  82  64 109   0   3  64  68  56
+dms.c:252 info   : Sending DMS frame: CT(0) = RAND  82  64 109   0   3  64  68  56
+dms.c:567 info   : Received valid DMS frame: RR(1) (s = 1)
+dms.c:481 info   : Received valid DMS frame: DT(2) =      0x00 0x01 0x00 0xa1 0x41 0x10 0x11
+dms.c:481 info   : Received valid DMS frame: DT(3) =      0x01 0x04 0xa1 0x1a 0xa3 0x00 0x00
+dms.c:481 info   : Received valid DMS frame: DT(4) =      0x00 0x00 0xff 0x06 0xc8 0x22 0x93
+dms.c:481 info   : Received valid DMS frame: DT(5) =      0x09 0x0b 0xa1 0x00 0x00 0x00 0x00
+sms.c:546 info   : Submitting SMS to upper layer
+nmt.c:1743 notice : Received SMS from '3735859' to '0130'
+SMS received '3735859' -&gt; '0130': HELL0!
+sms.c:342 info   : Sending Submit Report (ok)
+dms.c:252 info   : Sending DMS frame: DT(1) =      0x01 0x18 0x53 0x4d 0x53 0x48 0x18
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:567 info   : Received valid DMS frame: RR(2) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x41 0x42 0x43 0x02 0x03 0x01 0x00
+nmt.c:1363 info   : RX Level: 103% Quality=81
+nmt.c:1389 info   : Received clearing by mobile phone in state ACTIVE.
+nmt.c:1180 info   : Send release.      
+nmt.c:1363 info   : RX Level: 102% Quality=66
+nmt.c:1363 info   : RX Level: 103% Quality=75
+nmt.c:1363 info   : RX Level: 104% Quality=92
+nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+
+</pre>
+
+<p>
+After establishing the call, the SMS is received via DMS frames.
+The DMS protocol assembles all chunks of the SMS forwards it to the SMS protocol.
+The SMS protocol decodes the SMS and appends it to the file "/tmp/nmt_sms_submit":
+</p>
+
+<pre>
+
+# cat /tmp/nmt_sms_submit 
+3735859,0130,HELL0!
+#
+
+</pre>
+
+<p>
+To deliver an SMS to the phone, run the base station and write to the socket "/tmp/nmt_sms_deliver":
+</p>
+
+<pre>
+
+# echo "1234,3735859,This is a test!" &gt;/tmp/nmt_sms_deliver
+#
+
+</pre>
+
+<p>
+The process looks like this:
+</p>
+
+<pre>
+
+nmt.c:1807 info   : SMS for subscriber '3735859'
+SMS sending '1234' -&gt; '3735859': 1234,3735859,This is a test!
+nmt.c:1597 info   : Call to mobile station, paging station id '3735859'
+nmt.c:434 info   : Entering paging state (try 1), sending call to '3,735859'.
+nmt.c:443 info   : Paging on our channel 1.
+nmt.c:941 info   : Send call to mobile.
+nmt.c:1363 info   : RX Level: 107% Quality=86
+nmt.c:971 info   : Received call acknowledgment on channel 1.
+nmt.c:995 info   : Send channel activation to mobile.
+nmt.c:1007 info   : Sending identity request.
+nmt.c:1363 info   : RX Level: 102% Quality=94
+nmt.c:1024 info   : Received identity (password 949).
+nmt.c:1363 info   : RX Level: 101% Quality=80
+nmt.c:1363 info   : RX Level: 101% Quality=68
+nmt.c:1363 info   : RX Level: 101% Quality=76
+nmt.c:1363 info   : RX Level: 102% Quality=93
+nmt.c:1056 info   : Send 'autoanswer order'.
+nmt.c:1363 info   : RX Level: 101% Quality=78
+nmt.c:1363 info   : RX Level: 101% Quality=69
+nmt.c:1363 info   : RX Level: 103% Quality=76
+nmt.c:1081 info   : Received acknowledge to autoanswer.
+nmt.c:1363 info   : RX Level: 103% Quality=94
+nmt.c:1363 info   : RX Level: 102% Quality=80
+nmt.c:1363 info   : RX Level: 101% Quality=66
+nmt.c:1148 info   : Connect audio.     
+sms.c:295 info   : Delivering SMS from upper layer
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:252 info   : Sending DMS frame: CT(0) = ID    73   3   0   0   0   0   0   0
+dms.c:567 info   : Received valid DMS frame: RR(1) (s = 1)
+dms.c:252 info   : Sending DMS frame: CT(1) = RAND  82   0  93  64  81   0   0  56
+dms.c:481 info   : Received valid DMS frame: CT(0) = RAND  82  64 117   0  12  64  92  56
+dms.c:567 info   : Received valid DMS frame: RR(2) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(2) =      0x01 0x18 0x53 0x4d 0x53 0x48 0x18
+dms.c:252 info   : Sending DMS frame: DT(3) =      0x41 0x42 0x43 0x02 0x01 0x00 0x41
+dms.c:252 info   : Sending DMS frame: DT(4) =      0x1d 0x04 0x04 0xa1 0x21 0x43 0x00
+dms.c:567 info   : Received valid DMS frame: RR(3) (s = 1)
+dms.c:567 info   : Received valid DMS frame: RR(4) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(5) =      0x00 0x00 0x61 0x7a 0x42 0x9a 0x23
+dms.c:252 info   : Sending DMS frame: DT(6) =      0x62 0x48 0x0f 0x54 0x74 0x7a 0x0e
+dms.c:567 info   : Received valid DMS frame: RR(5) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(7) =      0x4a 0xcf 0x41 0x61 0x10 0xbd 0x3c
+dms.c:567 info   : Received valid DMS frame: RR(6) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(0) =      0xa7 0x87 0x00 0x00 0x00 0x00 0x00
+dms.c:252 info   : Sending DMS frame: DT(1) =      0x00 0x00 0x00 0x00 0x00 0x00 0x00
+dms.c:252 info   : Sending DMS frame: DT(6) =      0x62 0x48 0x0f 0x54 0x74 0x7a 0x0e
+dms.c:252 info   : Sending DMS frame: DT(7) =      0x4a 0xcf 0x41 0x61 0x10 0xbd 0x3c
+dms.c:252 info   : Sending DMS frame: DT(0) =      0xa7 0x87 0x00 0x00 0x00 0x00 0x00
+dms.c:567 info   : Received valid DMS frame: RR(7) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(1) =      0x00 0x00 0x00 0x00 0x00 0x00 0x00
+dms.c:252 info   : Sending DMS frame: DT(7) =      0x4a 0xcf 0x41 0x61 0x10 0xbd 0x3c
+dms.c:252 info   : Sending DMS frame: DT(0) =      0xa7 0x87 0x00 0x00 0x00 0x00 0x00
+dms.c:252 info   : Sending DMS frame: DT(1) =      0x00 0x00 0x00 0x00 0x00 0x00 0x00
+dms.c:567 info   : Received valid DMS frame: RR(0) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(0) =      0xa7 0x87 0x00 0x00 0x00 0x00 0x00
+dms.c:567 info   : Received valid DMS frame: RR(1) (s = 1)
+dms.c:252 info   : Sending DMS frame: DT(1) =      0x00 0x00 0x00 0x00 0x00 0x00 0x00
+dms.c:567 info   : Received valid DMS frame: RR(2) (s = 1)
+dms.c:481 info   : Received valid DMS frame: DT(1) =      0x02 0x00 0x00 0x00 0x00 0x00 0x00
+dms.c:481 info   : Received valid DMS frame: DT(2) =      0x00 0x00 0x00 0x00 0x00 0x00 0x00
+sms.c:578 info   : Received Delivery report: OK
+nmt.c:1753 notice : Got SMS deliver report
+SMS sent!
+nmt.c:1732 notice : Outgoing release, by SMS layer!
+nmt.c:421 info   : Releasing connection towards mobile station.
+nmt.c:1193 info   : Send release.      
+nmt.c:1363 info   : RX Level: 103% Quality=69
+nmt.c:1206 info   : Received release guard.
+nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.
+
+</pre>
+
+<p>
+The base station calls the mobile phone.
+Instead of ringing, the phone is ordered to answer the call.
+If it does not support auto answer, the user must accept the call.
+The SMS, which was encoded by the SMS layer, is delivered using DMS frames.
+After sending all DMS frames, the call is released toward the mobile station.
+</p>
 
 [<a href="index.html">Back to main page</a>]
 </td></tr></table></center>

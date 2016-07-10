@@ -24,35 +24,39 @@ History
 <p>
 C-Netz was the third mobile telephone network in Germany.
 It existed between 1984 (officially Mai 1985) and December 2000.
-In 1989, the German Wall came down and C-Netz was quickly deployed in eastern Germany to support the congested fixed network.
-It was the first cellular system, so frequencies could be used more efficiently.
-It offered handover capability, so moving phones could change cells during a call.
+In 1989, the German Wall came down and C-Netz was quickly deployed in eastern Germany to support the congested telephone network.
+It was the first cellular system in Germany, so frequencies could be used more efficiently, as it had been done in the USA with AMPS.
+It offered handover capability, so moving phones could change the smaller cells during a call.
 The SIM card was introduced, which is similar to GSM.
 This card allowed to use phones by different subscribers with different subscriber numbers.
-Authentication was used to prevent fraud, but it was used only with SIM card phones. The magnetic cards could be cloned by receiving 'roaming' messages.
-Extra services (e.g. conditional call forwarding, answering machine) were installed in the mobile exchange.
-A scrambler inside the phone and base station prevented eavedropping with radio scanners.
-Phones became smaller and portable, even handheld phones were available.
-All phones were available under a dedicated prefix, so the caller must not know the location of the phone anymore.
-
+Authentication was used to prevent fraud, but it was used only with SIM card phones.
+The magnetic cards could be cloned by receiving 'roaming update' messages.
+Extra services (e. g. conditional call forwarding, answering machine) were installed in the mobile exchange.
+A voice scrambler inside the phone and base station prevented eavesdropping with radio scanners.
+The scrambler inverted the audio spectrum, so one cannot understand any word without de-scrambling.
+Phones became smaller and portable, even hand-held phones were available.
+In Germany these hand-held phones are called 'Handies'.
+All phones were available under a dedicated prefix.
+A caller must not know the location of the phone anymore to reach the right base station.
 </p>
 
 <center><img src="c-netz-c130.jpg"/></center>
 
 <p>
 <ul>
-	<li>Frequency range: 461.300 - 465.740 MHz (downlink); 451.300 - 465.740 MHz (uplink)
+	<li>Frequency range: 461.300 - 465.740 MHz (down-link); 451.300 - 465.740 MHz (up-link)
 	<li>222 voice channels
 	<li>237 voice channels since Mai 1988
 	<li>287 voice channels since September 1989
-	<li>1 organisation channel (call setup and paging)
+	<li>1 organization channel (call setup and paging)
 	<li>Duplex distance: 10 MHz
 	<li>Channel spacing: 10 KHz and optionally 12.5 KHz
 	<li>Voice modulation: FM
-	<li>Signalling modulation: carrier FSK
+	<li>Signaling modulation: carrier FSK
 	<li>Frequency deviation: 2.4 KHz (FSK)
 	<li>Mobile station transmit power: 50 mW up to 15 Watts
 	<li>Base station transmit power: 25 Watts
+	<li>Features: Speech Compandor, Audio scrambling
 </ul>
 </p>
 
@@ -64,66 +68,68 @@ How it works
 
 <p>
 Like AMPS (Advanced Mobile Phone Service), the C-Netz is a cellular network.
+Smaller cells allowed more calls to be made with same amount of radio channels.
 </p>
 
 <center><img src="c-netz_zellstruktur.png"/></center>
 
 <p>
 Base stations are grouped into clusters.
-Each cluster has arround 7 base stations.
+Each cluster is made of around 7 base stations.
 Each base station in a cluster must have different channels.
-As depictet, the frequency of a base station marked with "1" can be re-used in other clusters.
-To handle more calls with the same amount of channels, the size of a cell must be reduced.
-By using small cell structure, it is likely to loose radio link while calling and moving at the same time.
-To prevent loss of radio link while moving to far away from a cell, handover to stronger or closer cell is performed.
+As depicted, the channels of a base station marked with "1" can be re-used in other clusters that is marked "1" also.
+To handle more calls with the same amount of channels, the size of a cell was reduced in highly populated areas.
+By using small cell structure, it was likely to loose radio link while calling and moving at the same time.
+To prevent loss of radio link while moving too far away from a cell, handover to stronger or closer cell is performed.
 </p>
 
 <center><img src="c-netz_frequenzen.png"/></center>
 
 <p>
-Two frequency bands are used, one for uplink and one downlink.
-Only one exception is the control channel "131".
-It is the same for all base stations.
+Two frequency bands are used, one for up-link and one down-link.
+Only one exception is the control channel #131 ('Orgakanal').
+It is the same channels for all base stations.
 To avoid collisions, the channel is divided into time slots.
 The time slots are re-used in the same way as channels are re-used in other clusters.
-This reduces the number of channels for call setup to only one channel.
-The mobile phone does not have to search for a valid control channel first.
+This reduces the number of channels for call setup and paging to only one single channel.
+The mobile phone does not have to search for a valid control channel first, it just has to tune to channel 131.
 Also it is possible to have a dedicated control channel for cells in high traffic areas.
 </p>
 
 <center><img src="c-netz_zeitschlitze.png"/></center>
 
 <p>
-As depicted, the base station and mobile station use one or more time slots.
-Generally every 8th time slot is used.
-In this case the base station transmits every 600ms.
-The mobile phone transmits two time slots later.
+As depicted, the base station and mobile station use one or more time slots on the control channel.
+Generally, every 8th time slot was used and is used by this project.
+The base station transmits every 600ms in this case.
+The mobile phone transmits two time slots later, if required.
 Every time slot contains two message blocks.
 One block is used for call setup.
-The other block is used for periodic check if the phone is still available.
+The other block is used for periodic check, if the phone is still available.
 </p>
 
 <p>
-Message blocks contain 70 bits.
+Message blocks have 70 bits.
 The first 6 bits define the message type.
-The other 64 bits depend on the message type.
+The other 64 bits are information elements, depend on the message type.
 The 70 bits are grouped into 10 words of 7 bits each.
-Eeach word gets 8 redudancy bits by using a BCH code.
-The redundany allows to correct up to two bit errors in a word.
+Each word gets additional 8 bits redundancy from a BCH code.
+The redundancy allows to correct up to two bit errors in a word.
 </p>
 
 <center><img src="c-netz_interleaving.png"/></center>
 
 <p>
-To correct burst errors (several bit errors after each other), the bits are interleaved before transmitted.
+To correct burst errors (up to 20 bits), the bits are interleaved before transmitted.
 As depicted above, the first bit of all words are transmitted first, then the next bit and so on.
 </p>
 
 <center><img src="c-netz_frame_k.png"/></center>
 
 <p>
-A sync word of 11 bits is added in front of each message three times.
+A sync word of 11 bits is added in front of each message three times, followed by one unused bit.
 Additional 14 guard bits are used to allow the transmitter to ramp up and down RF power between time slots.
+This gives a total of 198 bits per message and a duration of 37.5 ms.
 </p>
 
 <center><img src="c-netz_frame_v.png"/></center>
@@ -131,53 +137,70 @@ Additional 14 guard bits are used to allow the transmitter to ramp up and down R
 <p>
 Also message blocks are transmitted during voice conversation.
 The blocks are used to terminate the call, perform handover, measure link or transmit metering information.
-4 bits the message is transmitted every 12.5 ms. After 600 ms, the complete frame is transmitted.
+4 bits of the message is transmitted every 12.5 ms. After 600 ms, the complete frame is transmitted.
 To remove the 4 bits from audio stream, the voice is time compressed (speed up) to 10/11th.
-The 4 bits + 2 guard bits are transmitted in the 1/11th gap between voice chunks.
+The 4 bits + 2 guard bits are inserted in the gap between voice chunks.
 On the receiving end, the voice chunks are expanded again.
-The phone will keep in sync with the voice chunks by keeping in sync with the message bits.
+The phone will keep in sync with the voice chunks by keeping the decoder in sync with the received message bits.
 </p>
 
 <center><img src="c-netz_frame_v2.png"/></center>
 
 <p>
-The level at the end of one voice chunk may not match the level of the beginning of the next chunk.
-The offset must be removed by the receiver.
+The audio level at the end of one voice chunk may not match the level at the beginning of the next chunk.
+This offset must be removed by the receiver using a filter.
 </p>
 
 <center><img src="c-netz_lr.png"/></center>
 
 <p>
 This is an example of a broadcast message by a base station on the control channel.
-The message type 'O' (letter o) is "100111", so this message block contains cell informations and access informations.
+The message type 'O' (letter o) is "100111", so this message block contains cell and access information.
 </p>
 
 <center><img src="c-netz_symbole.png"/></center>
 
 <p>
 The location of parameters inside a message (information elements) are shown by letters.
-Each letter is a different parameter as depicted above.
+Each letter is a different information element as depicted above.
 </p>
 
 <center><img src="c-netz_call.png"/></center>
 
 <p>
-The first thing a phone does is looking for a strongest cell.
+The first thing a phone does is looking for the strongest cell.
 The phone accesses the cell by transmitting a location update message.
 The cell acknowledges or rejects the phone.
 </p>
 
 <p>
-The call setup is depiced above.
+The call setup is depicted above.
 The mobile phone transmits a message that it wishes to make a normal call or emergency call.
 If the channel is available, the base station requests the dialed number from the phone.
 The phone transmits the dialed number.
 If the number is ok, the base station acknowledges the dialed number.
-After a voice channel is allocated, the phone is requested to change to that channel two time slots later.
-On this voice channel, the mobe phone and the base station transmit 8 messages to prove quality of channel.
+After a voice channel is allocated, the base station orders the phone to change to that channel two time slots later.
+On this voice channel, the mobile phone and the base station transmit 8 messages to prove quality of channel.
 Messages VH1 and VHK are transmitted while the call is set up.
 Then the phone is ordered to switch to voice conversation.
-The following messages are transmitted between the voice chunks.
+All following messages are then transmitted between the voice chunks.
+</p>
+
+<p>
+To reduce radio noise, a syllabic compandor is used on both ends.
+This compresses the audio level dynamics by 2.
+An audio level of 25% is raised to 50% by the compressor and lowered to 25% by the expander.
+A radio noise floor of 10% would be reduced to 1% this way.
+</p>
+
+<p>
+Scrambling is used to prevent eavesdropping with radio scanners.
+The audio spectrum of 300 - 3300 Hz is inverted by mirroring frequencies about 1650 Hz at the transmitter.
+(1000 Hz becomes 2300 Hz and vice versa.)
+The receiver mirrors again to unscramble audio.
+To scramble audio efficiently, a carrier frequency of 3300 Hz is amplitude modulated (multiplied) by the audio signal.
+The result is a shifted spectrum above 3300 Hz and a mirrored spectrum below 3300 Hz.
+The spectrum above 3300 Hz is filtered out, so the mirrored spectrum remains.
 </p>
 
 <p class="toppic">
@@ -186,14 +209,14 @@ Setup of a base station
 </p>
 
 <p>
-When I first started with testing early C-Netz implementation, I had great trouble getting a response from a mobile phone.
+When I first started testing my early C-Netz implementation, I had great trouble getting a response from any mobile phone.
 The main problem was clock speed of the transmitted signal.
-The base stations were all synchronized with a high precision clock.
+In the real network, the base stations were all synchronized with a high precision clock.
 All base stations transmit on the same control channel 131 ('Orgakanal'), but at different time slots.
 The phone expects that the time slots repeat precisely every 2.4 seconds.
-The specs say that the phone requires clock speed deviation of +- 1 PPM (Parts Per Million) or less.
+The specification say that the mobile phone requires clock speed deviation of +- 1 PPM (Parts Per Million) or less.
 To comply with the specs, the base stations needs to have a clock deviation far below 1 PPM.
-(I guess that there is a tollerance, so maybe a few PPM deviation would make no big problem.)
+(I guess that there is a tolerance, so maybe a few PPM deviation would make no big problem.)
 We need to calibrate the speed of our transmit signal (and receive signal as well).
 </p>
 
@@ -203,14 +226,15 @@ We need to calibrate the speed of our transmit signal (and receive signal as wel
 
 <p>
 First of all we need a reference clock.
-Since most computer systems have standard crystals, we cannot use our system clock as reference without any help.
-I decided to use the NTP daemon.
-After running the system for several days, the clock speed should be accurate enough for our needs.
+Since most computers have standard crystal clocks, we cannot use our system clock without any help.
+I decided to use the help of the NTP daemon.
+After running my system for several days (5 days), the clock speed was accurate enough for a base station.
 Be sure to choose a place for your PC with constant temperature.
+A room inside a building is sufficient.
 </p>
 
 <p>
-In /etc/ntp.conf define one or more servers to get the time from. I suggest to use the German atom clock of the PTB:
+In /etc/ntp.conf define one or more NTP servers to get the time from. I use the German atom clock of the PTB:
 </p>
 
 <pre>
@@ -221,7 +245,7 @@ server ntp3.ptb.de
 
 <p>
 This clock provides time base for European radio clocks and most German clocks.
-It accurate enough for this project, so please use this clock.
+It accurate enough for this project, so please use this clock for my project.
 </p>
 
 <pre>
@@ -240,26 +264,25 @@ ntp_adjtime() returns code 0 (<font color="red">OK</font>)
 </pre>
 
 <p>
-One notices that I have quite an unprecise crystal in my test machine.
-Since I have NTP running, the system clock is now far below 1 PPM.
+One notices that I have quite an low precision crystal in my test machine.
+Since I have NTP running for at least 5 days, the system clock is now far below 1 PPM.
 </p>
 
 <p>
 The second problem is the clock of our sound adapter.
-They use own crystals.
+They use own crystals that are also not accurate.
 Because they are made for audio signals (and not for high precise base stations), they can't be used without calibration.
 Cheap USB adapters may even have different clocks on TX and RX.
-I found out that the clock speed changes when the USB voltage changes.
-The USB voltage changes, when the current changes, due to different volumes on the output.
-To minimize this effect, don't use extension cables.
+Be sure to use no extension cables for USB sound adapters, since the voltage may drop undefined and so the clock speed will change.
 </p>
 
 <p>
-Since we have precise system clock now, we can measure the speed of our sound adapter.
-Later we will use the measurement result to adjust our signal processor.
+Since we have precise system clock now (thanx to NTP), we can measure the speed difference of our sound adapter.
+Later we will use the measurement result to adjust our signal processor, so the signal clock is below 1 ppm.
 Be sure to have your machine running for at least 5 to 7 days (with your sound adapter attached, in case you have USB sound adapter).
 The machine must have network connection to the NTP server.
 I suggest to use 'ntp1.ptb.de' and 'ntp2.ptb.de' as reference.
+Use other servers if you are sure that the source is an atomic clock.
 Use command line option '-M' or '--measure' to measure my sound adapter.
 Let it run for one hour.
 </p>
@@ -282,9 +305,9 @@ dsp.c:218 notice : Clock: RX=19.44 TX=19.49; Signal: RX=19.35 TX=19.43 ppm
 
 <p>
 One can see that the measured clock from the sound card (sample rate) differs about +19.45 PPM.
-Because I did not do any correction to the signal processing, the same error applies to the signal.
+Because I did not do any correction to the signal processing, the same error applies to the signal processing.
 Use command line option '-S 19.45,19.45' or '--clock-speed 19.45,19.45' to compensate the clock error by adjusting the signal processor.
-Let it run again for one hour and you will see that clock deviation is below 1 PPM.
+Let it run again for one hour and you will see that clock deviation of the signal is below 1 PPM.
 </p>
 
 <p>
@@ -292,7 +315,7 @@ Let it run again for one hour and you will see that clock deviation is below 1 P
 </p>
 
 <p>
-C-Netz does not use a modulated tone to carry bits of information, instead it modulates the carrier directly.
+C-Netz does not use a modulated tone to carry bits of information, instead it modulates the radio carrier directly.
 This image shows the demodulated signal from a receiver:
 </p>
 
@@ -301,15 +324,17 @@ This image shows the demodulated signal from a receiver:
 <p>
 Generally a receiver will do de-emphasis and filtering after demodulating the signal.
 We don't want that.
-It may work, but be sure to get a receiver with disciminator output.
-Many receivers can be modified, so search the Web for more infos.
+It may work, but be sure to use a receiver with discriminator output.
+This output gives direct signal of the frequency deviation of the received signal.
+The signal on the sound card represents the frequency shift of the received signal.
+Many receivers can be modified, so search the Web for more info.
 </p>
 
 <p>
 On the transmitter we don't want to have filtering and pre-emphasis.
-It may work, but be sure to get a transmitter that allows to disable emphasis.
-I took the schematics of my transmitter and connected the sound card
-directly to the PLL.
+It may work, but be sure to use a transmitter that allows to disable emphasis.
+I took the schematics of my transmitter and connected the sound card directly to the PLL.
+The transmitter will now shift frequency according the the level of the sound card.
 </p>
 
 <p>
@@ -319,34 +344,36 @@ directly to the PLL.
 <center><img src="c-netz-burst_part.png"/></center>
 
 <p>
-C-Netz uses FSK (Frequency Shift Keying) by directly modulating the carrier, rather than modulating a tone, which is then transmitted via FM.
+C-Netz uses FSK (Frequency Shift Keying) by directly modulating the carrier frequency, rather than modulating a tone.
 The advantage is much higher data rate.
 The base station's carrier frequency is raised by 2.5 KHz to transmit a logical "1" and lowered by 2.5 KHz to transmit a logial "0".
 (The mobile station transmits reversed polarity.)
-The mobile station will only detect the correct polarity.
+The mobile station will only decode signals with the correct polarity.
 The three sync words of "11100010010", is shown in the picture above.
 In the picture above, the polarity is wrong.
 (The logical "1" points down and the logical "0" points up.)
-To change polarty, use command line option '-F yes|no|auto' or '--flip-polarity yes|no|auto'.
+To change transmitted polarity, use command line option '-F yes|no|auto' or '--flip-polarity yes|no|auto'.
 (Note: don't confuse with '-P'!)
 </p>
 
 <p>
 The 'auto' option (default) will generate a signal of two base stations.
-Since we have time division multiplex on the main control channel, we can transmit a second base station easily.
+If we don't know the polarity of our sound card or transmitter, this helps to detect the right polarity.
+Since we have time division multiplex on the main control channel, we can transmit a second base station by using different time slots.
 The second base station uses reversed polarity, so there is one base station with correct and one with wrong polarity.
 The two base stations have different time slots and different IDs.
-If a first registration message is received from the phone, we check which base station this response belongs to.
+If a first registration message is received from the mobile phone, the software checks to which base station this response belongs to.
 Then we found the correct polarity and turn off the base station with the wrong polarity.
 </p>
 
 <p>
 The decoder itself does not care about what polarity it receives from the mobile station.
-It just checks for sync words with both polarities and chooses right polarity automatically.
+We don't need to know the polarity of the receiver or the sound card's input.
+The software just checks for sync words with both possible polarities and chooses right polarity automatically.
 </p>
 
 <p>
-I have a transmitter and a receiver without emphasis, my soundcard has a clock error of about 19.2 PPM.
+I have a transmitter and a receiver without emphasis, my sound card has a clock error of about 19.2 PPM.
 To run the base station I the following command line options:
 </p>
 
@@ -365,28 +392,28 @@ ceiver to 455.090 MHz.
 </pre>
 
 <p>
-The sofware complains about using control channel 131 for voice traffic too.
+The software complains about using control channel 131 for voice traffic too.
 This is the easiest way to use a single transmitter and receiver without switching.
 But this is not compliant, so especially newer phone will reject this, like the Nokia C130.
 Old phones like BSA, Storno or Phillips phones don't care.
-When we make a call and another phone is regisered, the phone will loose coverage when we switch from control channel to traffic channel.
-After the call, the other phone re-registers again.
+When we make a call and another phone is registered, the other phone will loose coverage when the software switches from control channel to traffic channel.
+After the call has been terminated, the control channel is restored and the other phone re-registers again.
 </p>
 
 <p>
 You should tune the receiver to 465.090 first, to check if you can hear and decode the idle signal from the base station.
-Then tune to actually uplink frequency 455.090 MHz.
+Then tune to actually up-link frequency 455.090 MHz.
 The actual level is not yet relevant.
 (You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
 <p>
 Now power up a phone.
-Depening on your card reader, insert chip or magnetic card.
+Depending on your card reader, insert chip or magnetic card.
 Hopefully you get a response from the phone.
 If it responds, you will hear a short burs on receiver.
 This bursts is just 37.5 ms long and sounds a bit less noisy than the noise floor.
-If the burst is received and correctly decoded, the base station knows the transmitter's polarty and selects it.
+If the burst is received and correctly decoded, the base station knows the transmitter's polarity and selects it.
 </p>
 
 <pre>
@@ -410,14 +437,14 @@ transaction.c:208 info   : Transaction state EM -&gt; IDLE
 
 <p>
 Level adjustment:
-We see a receive level of arround 96%.
+We see a receive level of around 96%.
 This is already good, since I did the adjustment previously.
-Tune your receiver to the uplink frequency, so you get loopback of base station broadcast.
-Use the variable resistor (connecting your transmitter) to adjust the volume until the RX level matches the same level of your previously received bust.
-In my case I adjust the transmitter to match arround 96%. (+- 10% is good)
-Now, whatever frequency deviation the phone transmits for signalling, so does your base station.
-Use the other variable resistor (connecting your receviver) to adjust the volume until the level matches about 100%. (+- 10% is good)
-Switch back the receiver to uplink frequency and restart the phone.
+Tune your receiver to the up-link frequency, so you get loop-back of base station broadcast.
+Use the variable resistor (connecting your transmitter) to adjust the volume until the received level matches the same level of your previously received bust.
+In my case I adjust the transmitter to match around 96%. (+- 10% is good)
+Now, whatever frequency deviation the phone transmits for signaling, so does your base station.
+Use the other variable resistor (connecting your receiver) to adjust the volume until the level matches about 100%. (+- 10% is good)
+Switch back the receiver to up-link frequency and restart the phone.
 </p>
 
 <p>
@@ -444,7 +471,7 @@ transaction.c:208 info   : Transaction state MFT -&gt; IDLE
 </pre>
 
 <p>
-To make a call from the phone to the base station, just enter some digits and press the dial button on the phone.
+To make a call from the mobile phone to the base station, just enter some digits at the mobile phone and press the dial button.
 The phone requests a call (VWG).
 The base station requests dialed number (WAF).
 The phone transmits dialed number (WUE).
@@ -486,7 +513,7 @@ cnetz.c:1024 info   : Sending 'Quittung Verbindung halten' on traffic channel
 telegramm.c:1486 info   : RX Level: 96% Jitter: 0.03 Sync Time: 10691.98 (TS 27.00) POSITIVE
 cnetz.c:1118 info   : Received allocation 'Belegung' message.
 ...
-call.c:623 info   : Incomming call from '6215784' to '02123839349'
+call.c:623 info   : Incoming call from '6215784' to '02123839349'
 transaction.c:208 info   : Transaction state VHQ -&gt; DS
 telegramm.c:1486 info   : RX Level: 96% Jitter: 0.02 Sync Time: 11286.00 (TS 28.50) POSITIVE
 cnetz.c:1145 info   : Received connection hold 'Verbindung halten' message.
@@ -521,9 +548,9 @@ cnetz.c:1238 info   : Sending 'Quittung Verbindung halten' on traffic channel
 </pre>
 
 <p>
-When calling to the phone, enter the mobile station's ID and press 'd' for dial.
+To call to the mobile phone, enter the mobile station's ID and press 'd' for dial.
 If the phone is attached, the base station orders the phone to switch to speech channel (VAK).
-The rest is similar to incomming calls, excpet the the phone has to answer before the speech is throughconnected:
+The rest is similar to incoming calls, except the the phone has to answer before the speech is through-connected:
 </p>
 
 <pre>
@@ -549,7 +576,7 @@ cnetz.c:1118 info   : Received allocation 'Belegung' message.
 </pre>
 
 <p>
-When the mobile phon terminates, it sends the AT message.
+When the mobile phone is hung up, it sends the AT message.
 The base station responds with AF message and switches back to control channel.
 </p>
 
@@ -570,7 +597,7 @@ cnetz.c:274 info   : Entering IDLE state on channel 131.
 telegramm.c:1486 info   : RX Level: 96% Jitter: 0.06 Sync Time: 5543.98 (TS 14.00) POSITIVE
 dsp.c:641 info   : Switching channel (mode)
 telegramm.c:1484 info   : RX Level: 97% Jitter: 0.08 Sync Time: 9333.99 (TS 23.57) Bit errors: 6 POSITIVE
-telegramm.c:1525 notice : Received Telegramm that is not used OgK channel signalling, ignoring! (opcode 22 = AT(V))
+telegramm.c:1525 notice : Received Telegramm that is not used OgK channel signaling, ignoring! (opcode 22 = AT(V))
 
 </pre>
 

@@ -38,7 +38,7 @@ History
 	<li>Duplex distance: 45 MHz
 	<li>Channel spacing: 30 KHz
 	<li>Voice modulation: FM
-	<li>Signalling modulation: carrier FSK
+	<li>Signaling modulation: carrier FSK
 	<li>Frequency deviation: 8 KHz (FSK)
 	<li>Mobile station transmit power: 4 Watts (vehicular) 1.6 or 0.6 Watts
 	<li>Base station transmit power: ??? (around 50 Watts)
@@ -56,6 +56,13 @@ History
 
 <p>
 *TBD* SID and System A/B
+</p>
+
+<p>
+To reduce radio noise, a syllabic compandor is used on both ends.
+This compresses the audio level dynamics by 2.
+An audio level of 25% is raised to 50% by the compressor and lowered to 25% by the expandor.
+A radio noise floor of 10% would be reduced to 1% by the expandor.
 </p>
 
 <p class="toppic">
@@ -140,7 +147,7 @@ frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
 transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING SEND -&gt; CALL
 amps.c:951 info   : Staying on combined control + voice channel 334
 amps.c:959 info   : Setup call to network.
-call.c:590 info   : Incomming call from '617XXXXXXX' to '5551212'
+call.c:590 info   : Incoming call from '617XXXXXXX' to '5551212'
 dsp.c:678 notice : SAT level 72.31% quality 98%p)
 dsp.c:678 notice : SAT level 78.63% quality 100%)
 dsp.c:678 notice : SAT level 78.76% quality 100%)
@@ -151,7 +158,7 @@ dsp.c:678 notice : SAT level 78.66% quality 100%)
 
 <pre>
 
-amps.c:525 info   : Detected Signalling Tone with quality=100.
+amps.c:525 info   : Detected Signaling Tone with quality=100.
 transaction.c:117 info   : Destroying transaction for subscriber '617XXXXXXX'
 transaction.c:175 info   : Transaction state CALL -&gt; IDLE
 call.c:711 info   : Call has been released with cause=16
@@ -203,7 +210,7 @@ dsp.c:678 notice : SAT level 78.58% quality 99%
 amps.c:585 info   : Detected SAT signal with quality=99.
 frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
 dsp.c:678 notice : SAT level 79.75% quality 100%
-amps.c:525 info   : Detected Signalling Tone with quality=100.
+amps.c:525 info   : Detected Signaling Tone with quality=100.
 call.c:646 info   : Call is alerting
 transaction.c:175 info   : Transaction state CALL ALERT MOBILE TERMINATING -&gt;
 CALL ALERT MOBILE TERMINATING SEND
@@ -216,7 +223,7 @@ dsp.c:678 notice : SAT level 80.08% quality 100%
 
 <pre>
 
-mps.c:527 info   : Lost Signalling Tone signal
+mps.c:527 info   : Lost Signaling Tone signal
 call.c:689 info   : Call has been answered by '617XXXXXXX'
 transaction.c:175 info   : Transaction state CALL ALERT MOBILE TERMINATING SEND -&gt; CALL
 

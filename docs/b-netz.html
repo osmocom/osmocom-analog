@@ -27,7 +27,7 @@ It was the successor of the A-Netz.
 It existed between 1972 and 1994.
 Using digital technology and later microprocessors, the phone were still as big as a suitcase.
 It used full duplex radio link.
-The call was placed by atomatic dialing in both direction, so no requirement for an operator.
+The call was placed by automatic dialing in both direction, so no requirement for an operator.
 After full deployment in 1986, there were 158 base stations.
 Early devices used up to 38 voice channels. Later units used up to 75 voice channels.
 A maximum of about 27,000 subscribers were counted 1986.
@@ -42,7 +42,7 @@ This helped to lower the channel allocation time.
 
 <p>
 <ul>
-	<li>Frequency range: 153.01 - 153.73 MHz (downlink); 148.41 - 149.13 MHz (uplink)
+	<li>Frequency range: 153.01 - 153.73 MHz (down-link); 148.41 - 149.13 MHz (up-link)
 	<li>38 voice channels for B1-Netz
 	<li>75 voice channels for B2-Netz
 	<li>1 paging channel
@@ -65,7 +65,7 @@ Note that the following protocol description is based on my research. It may be 
 </p>
 
 <p>
-Two tones are used for signalling:
+Two tones are used for signaling:
 </p>
 
 <p>
@@ -87,7 +87,7 @@ Continuous tones used by mobile station:
 <p>
 <ul>
 	<li>Kanalbelegung: F0 is sent by the mobile to allocate a channel for outgoing call.
-	<li>Rufbest&auml;tigung: F1 is sent by the mobile to acknowledge incomming call.
+	<li>Rufbest&auml;tigung: F1 is sent by the mobile to acknowledge incoming call.
 	<li>Beginnsignal: F0 is sent by mobile to indicate answer of the mobile subscriber.
 </ul>
 </p>
@@ -107,7 +107,7 @@ Continuous tones used by base station:
 
 <p>
 Digits are coded as 16 bits and transferred at a rate of 100 bits per second.
-Each bit consists of the signalling tones F0 and F1 and has a duration of 10 ms.
+Each bit consists of the signaling tones F0 and F1 and has a duration of 10 ms.
 All digit starts with sync pattern ("0 1 1 1 0").
 </p>
 
@@ -279,7 +279,7 @@ Idle base station:
 </p>
 
 <p>
-When a base station transceiver is idle, it repeatingly sends one idle pattern ("Gruppenfreisignal") on downlink.
+When a base station transceiver is idle, it repeatedly sends one idle pattern ("Gruppenfreisignal") on down-link.
 This signal can be used by the mobile subscriber to select a particular base stations to lower call fees or to select the base station that a car is driving close to.
 If no pattern is selected, the mobile station selects any base station on mobile originated call.
 If a pattern 1..9 is selected, the mobile station selects only the base stations which sends that idle pattern.
@@ -306,7 +306,7 @@ If no channel is found, a busy signal is indicated to the mobile subscriber.
 </p>
 
 <p>
-If a free and suitable channel was found, the mobile station sends channel allocation signal ("Kanalbelegung") on uplink channel and waits for dial request signal ("Wahlabruf") from the base station.
+If a free and suitable channel was found, the mobile station sends channel allocation signal ("Kanalbelegung") on up-link channel and waits for dial request signal ("Wahlabruf") from the base station.
 </p>
 
 <p>
@@ -352,18 +352,18 @@ Only the (bare) 5 digits of the mobile identity are repeated, not the other digi
 </p>
 
 <p>
-The mobile station compares the repeated identiy and turns transmitter off, if it mismatches.
+The mobile station compares the repeated identity and turns transmitter off, if it mismatches.
 No clear signal is sent.
 If another mobile station dials at the same time, this wrong identity indicates that the base station receives the other mobile station and not our mobile station.
 </p>
 
 <p>
 The dial string is repeated once again by the mobile station.
-Afterwards the mobile station connects the speech path and conversation takes place.
+Afterward the mobile station connects the speech path and conversation takes place.
 </p>
 
 <p>
-If the dial string is received correctly once again by the base station, it connectes the speech path and conversation takes place.
+If the dial string is received correctly once again by the base station, it connects the speech path and conversation takes place.
 </p>
 
 <p>
@@ -403,7 +403,7 @@ The transceiver of the base station switches to channel 19 and sends a paging se
 <p>
 Then the base station returns to the ordered channel and waits 2 seconds for the mobile station to send the call acknowledge signal ("Rufbest&auml;tigung").
 If it is not received, the base station repeats the paging sequence again.
-If there is still no call acknowledge signal, it returns to idle state and indicates announcenemnt to the calling party that the mobile station is (currently) not available.
+If there is still no call acknowledge signal, it returns to idle state and indicates announcement to the calling party that the mobile station is (currently) not available.
 (German announcement sais: "Dieser Anschlu&szlig; ist vorr&uuml;bergehend nicht erreichbar!")
 </p>
 
@@ -485,6 +485,15 @@ When the signal gets lost for more than 9,6 seconds, the mobile station will ret
 The base station will *TBD*, clears the call and returns to idle state.
 </p>
 
+<p>
+Reduced transmit power:
+</p>
+
+<p>
+When the mobile phone starts outgoing call on a channel that uses GFS ('Gruppenfreisignal') 19, the transmit power is reduced to 100 mW.
+Even if no GFS is selected, the power is reduced on a channel that broadcasts GFS 19.
+</p>
+
 <p class="toppic">
 <a name="basestation"></a>
 Setup of a base station
@@ -492,20 +501,21 @@ Setup of a base station
 
 <p>
 Before testing this software, power on your B-Netz.
-Refer to the manual how to dial a number.
+Refer to the phone's manual on how to dial a number.
 Start dialing and after some seconds you should hear a busy signal.
-This means that the phone sweeps over all channels to find a base startion.
+This means that the phone sweeps over all channels to find a base station.
 But you get a busy signal, that means there is no channel.
 </p>
 
 <p>
 Now run your base station on channel 1.
 You may add '-g x' or '--gfs x' command line option to change the station ID from default to any value you like. (see help)
-Tune the transmitter to 153.010 and the receiver to 148.410.
-You should tune the receiver to 153.010 first, to check if you can hear and decode the idle signal from the base station.
-Then tune to actually uplink frequency 148.410 MHz.
+If you have a phone that supports GFS 19, please use this GFS 19 to reduce the transmit power of the phone to 100 mW instead of 15 Watts.
+To see if your phone supports it, try to preselect GFS 19.
+Tune the transmitter to 153.010 MHz and the receiver to 148.410 MHz.
+You should tune the receiver to 153.010 MHz first, to check if you can hear and decode the idle signal from the base station.
+Then tune to actually up-link frequency 148.410 MHz.
 The actual level is not yet relevant.
-(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
 <pre>
@@ -525,7 +535,7 @@ on-hook: ..... (enter 0..9 or d=dial)
 Enter a phone number (just a few digits, like "0310") on your phone.
 Start dialing and watch the base station receiving the call.
 If there is no reaction from the base station, check the volume again.
-Also check if you can receive yourself, if you tune the receiver to the downlink channel.
+Also check if you can receive yourself, if you tune the receiver to the down-link channel.
 Set the selector for the base station ID ("Gruppenfreisignal") to 0.
 </p>
 
@@ -582,7 +592,7 @@ bnetz.c:509 info   : Digit RX Level: 81% Quality=100
 bnetz.c:524 info   : Received telegramm digit 'Funkwahlende'.
 bnetz.c:629 info   : Dialing complete 50993-&gt;0310, call established.
 bnetz.c:635 info   : Setup call to network.
-call.c:585 info   : Incomming call from '50993' to '0310'
+call.c:585 info   : Incoming call from '50993' to '0310'
 call.c:606 info   : Sending MNCC call towards Network
 ...
 bnetz.c:509 info   : Digit RX Level: 86% Quality=98
@@ -615,21 +625,21 @@ The base station returns to idle.
 
 <p>
 Level adjustment:
-We see a receive level of arround 85%.
-Use the variable resistor (connecting your receiver) to reduce the volume until the level matches about 100% (+- 10%).
-Then start the base station using '-L 2' option for loopback and tune receiver to the transmitter.
-The base station generates test digits and displays them after decodeing.
-Use the other variable resistor (connecting your transmitter) to match the same level of your phone.
-In this case it is the 100% you adjusted the receiver to.
-Now, whatever frequency deviation the phone transmits for signalling, so does your base station.
+We see a receive level of around 85%.
+Tune your receiver to the up-link frequency, so you get loop-back of base station broadcast.
+Use the variable resistor (connecting your transmitter) to adjust the volume until the received level matches the same level of your previously received bust.
+In my case I adjust the transmitter to match around 85%. (+- 10% is good)
+Now, whatever frequency deviation the phone transmits for signaling, so does your base station.
+Use the other variable resistor (connecting your receiver) to adjust the volume until the level matches about 100%. (+- 10% is good)
+Switch back the receiver to up-link frequency and restart the phone.
 </p>
 
 <p>
 In order to call the phone from the base station, you need to transmit channel 19.
 Your transmitter must temporarily tune to 153.370 MHz in order to page the phone.
-The phones listens to incomming signals from the base station.
+The phones listens to incoming signals from the base station.
 In order to transmit on channel 19, you may use a second transmitter or re-tune your single transmitter.
-There are many ways todo that, but it is actually up to your own how to couple it and how to control your transmitter.
+There are many ways to do that, but it is actually up to your own how to couple it and how to control your transmitter.
 I use an optocoupler to tell my transmitter to switch to channel 19.
 </p>
 
@@ -638,8 +648,8 @@ I use an optocoupler to tell my transmitter to switch to channel 19.
 <center><img src="trigger-2.jpg"/><img src="trigger-3.jpg"/></center>
 
 <p>
-I measure about 3 Volts peak on the ouput of the USB chip I use.
-Since my optocoupler triggers at arround 1 Volts, I have two Volts on the Resistor, which results in 10 mA current.
+I measure about 3 Volts peak on the output of the USB chip I use.
+Since my optocoupler triggers at around 1 Volts, I have two Volts on the Resistor, which results in 10 mA current.
 In order to check and change the voltage, use '-P positive' or '-P negative' option to select trigger level on one audio channel.
 Run the base station and enter a 5 digit number.
 Measure the voltage on both audio output channels.
@@ -651,10 +661,10 @@ Once the base station timed out, press 'h' for hangup and try again.
 
 <p>
 Instead of using a tone or a level, the base station can write to a file. Use '-P &lt;file&gt;=&lt;on&gt;:&lt;off&gt;'.
-When switching to channel 19, the base station writes the string &lt;on&gt; to &lt;file&gt;, afterwards it writes &lt;off&gt; to &lt;file&gt;.
+When switching to channel 19, the base station writes the string &lt;on&gt; to &lt;file&gt;, afterward it writes &lt;off&gt; to &lt;file&gt;.
 You may write your own tool that uses a pipe to receive the switching information. Then set &lt;file&gt; to your pipe.
 I tried it with a Raspberry PI and used GPIO to switch: '-P /sys/class/gpio/gpio17/value=1:0'
-This writes a 1 to GPIO 17 when switchting to channel 19 and a 0 when switching back.
+This writes a 1 to GPIO 17 when switching to channel 19 and a 0 when switching back.
 </p>
 
 <pre>

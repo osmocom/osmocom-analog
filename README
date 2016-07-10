@@ -15,19 +15,24 @@ USE AT YOUR OWN RISK!
 
 Acknowledgements:
 
-Hans Wigger for providing valuable informations about A-Netz and B-Netz.
+Carsten Wollesen for donating Telefunken 4015 B-Netz phone back in the 90's.
+
+Klaus Adler for helping me to retrieve complete NMT specification and donating
+a BSA44 (magnetic card C-Netz hackable phone) back in the 90's.
+
+Andy Zauner for providing signalling specification of C-Netz back in the 90's.
+
+Hans Wigger for providing valuable informations about A-Netz and B-Netz and
+helping me to get an A-Netz phone.
 
 Stephan Hessberger for his work on oebl.de, that provides valuable informations
 about A-Netz, B-Netz and C-Netz.
 
-Friedhelm Hillebrand for providing complete specification for mobile phone of
-C-Netz.
+Friedhelm Hillebrand for providing complete specification of the mobile phone
+of C-Netz.
 
-Klaus Adler for helping me to retrieve complete NMT specification back in the
-90's.
+Mikko Ristila for providing newer NMT specs (with DMS/SMS specifications).
 
-Andy Zauner for providing me signalling specification of C-Netz back in the
-90's.
-
-Carsten Wollesen for donating Telefunken 4015 B-Netz phone back in the 90's.
+Dieter and Mark for prividing AMPS specifications and tester recordings to
+verify and debug AMPS support.
 
