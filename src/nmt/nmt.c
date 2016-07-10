@@ -1570,11 +1570,19 @@ void sms_release(nmt_t *nmt)
  	nmt_release(nmt);
 }
 
-void sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
+int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
 {
+	char sms[512];
+
+	if (!orig_address[0])
+		orig_address = &nmt->subscriber.country;
+
 	PDEBUG(DNMT, DEBUG_NOTICE, "Received SMS from '%s' to '%s'\n", orig_address, dest_address);
 	printf("SMS received '%s' -> '%s': %s\n", orig_address, dest_address, message);
+	snprintf(sms, sizeof(sms) - 1, "%s,%s,%s", orig_address, dest_address, message);
+	sms[sizeof(sms) - 1] = '\0';
 
+	return submit_sms(sms);
 }
 
 void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)

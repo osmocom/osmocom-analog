@@ -156,4 +156,5 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 const char *nmt_get_frame(nmt_t *nmt);
 void nmt_rx_super(nmt_t *nmt, int tone, double quality);
 void deliver_sms(const char *sms);
+int submit_sms(const char *sms);
 

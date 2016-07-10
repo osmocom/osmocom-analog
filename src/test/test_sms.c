@@ -55,9 +55,14 @@ static uint8_t dms_buffer[256];
 static int dms_buffer_count;
 void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 {
-	memcpy(dms_buffer, data, length);
-	dms_buffer_count = length;
 //	int i;
+
+	/* skip deliver report */
+	if (length == 13)
+		return;
+
+	dms_buffer_count = length;
+	memcpy(dms_buffer, data, length);
 
 	assert(length == sizeof(test_mt_sms_data), "Expecting SMS binary data length to match");
 	assert(!memcmp(data, test_mt_sms_data, length), "Expecting SMS binary data to match");
@@ -71,10 +76,12 @@ void sms_release(nmt_t *nmt)
 	printf("(got release from SMS layer)\n");
 }
 
-void sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
+int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
 {
 	strcpy((char *)dms_buffer, message);
 	dms_buffer_count = strlen(message);
+
+	return 0;
 }
 
 void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
@@ -92,6 +99,7 @@ int main(void)
 	debuglevel = DEBUG_DEBUG;
 
 	nmt = calloc(sizeof(*nmt), 1);
+	sms_init_sender(nmt);
 	sms_reset(nmt);
 
 	/* deliver */
@@ -99,10 +107,13 @@ int main(void)
 	rc = sms_deliver(nmt, 1, test_mt_sms_tel, SMS_TYPE_INTERNATIONAL, SMS_PLAN_ISDN_TEL, test_mt_sms_time, test_mt_sms_text);
 	assert(rc == 0, "Expecting sms_deliver() to return 0");
 
+	sms_cleanup_sender(nmt);
+	free(nmt);
+
 	ok();
 
-	free(nmt);
 	nmt = calloc(sizeof(*nmt), 1);
+	sms_init_sender(nmt);
 	sms_reset(nmt);
 
 	printf("(submitting SMS)\n");
@@ -112,6 +123,9 @@ int main(void)
 
 	assert(dms_buffer_count == strlen(test_mo_sms_text), "Expecting SMS text length to match");
 	assert(!memcmp(dms_buffer, test_mo_sms_text, dms_buffer_count), "Expecting SMS text to match");
+
+	sms_cleanup_sender(nmt);
+	free(nmt);
 
 	ok();
 

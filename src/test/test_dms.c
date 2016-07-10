@@ -68,6 +68,7 @@ nmt_t *alloc_nmt(void)
 	nmt_t *nmt;
 
 	nmt = calloc(sizeof(*nmt), 1);
+	dms_init_sender(nmt);
 	nmt->dms.frame_spl = calloc(1000000, 1);
 	nmt->samples_per_bit = 40;
 
@@ -78,6 +79,7 @@ nmt_t *alloc_nmt(void)
 
 void free_nmt(nmt_t *nmt)
 {
+	dms_cleanup_sender(nmt);
 	free(nmt->dms.frame_spl);
 	free(nmt);
 }

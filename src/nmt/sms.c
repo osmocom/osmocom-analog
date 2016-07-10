@@ -106,8 +106,8 @@ int sms_init_sender(nmt_t *nmt)
 /* Cleanup transceiver instance. */
 void sms_cleanup_sender(nmt_t *nmt)
 {
-	timer_exit(&nmt->sms_timer);
 	sms_reset(nmt);
+	timer_exit(&nmt->sms_timer);
 }
 
 /*
@@ -292,7 +292,7 @@ int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_
 	int orig_len;
 	int msg_len;
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Delivering SMS from upper layer\n");
+	PDEBUG(DSMS, DEBUG_INFO, "Delivering SMS from upper layer\n");
 
 	orig_len = strlen(orig_address);
 	msg_len = strlen(message);
@@ -339,7 +339,7 @@ static void sms_submit_report(nmt_t *nmt, uint8_t ref, int error)
 	uint8_t data[64];
 	int length = 0;
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Sending Submit Report (%s)\n", (error) ? "error" : "ok");
+	PDEBUG(DSMS, DEBUG_INFO, "Sending Submit Report (%s)\n", (error) ? "error" : "ok");
 
 	/* HEADER */
 	length = encode_header(data);
@@ -403,6 +403,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	int orig_digits, dest_digits, msg_chars;
 	uint8_t orig_type, orig_plan, dest_type, dest_plan;
 	int tp_vpf_present = 0;
+	int rc;
 
 	/* decode ref */
 	ref = data[1];
@@ -433,7 +434,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	}
 	if (data[0] != RP_IE_USER_DATA) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "missing user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	tpdu_len = data[1];
 	tpdu_data = 2 + data;
@@ -456,11 +457,11 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* check msg_type */
 	if (length < 1) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	if ((data[0] & MTI_MASK) != MTI_SMS_SUBMIT) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "especting SUBMIT MTI, but got 0x%02x\n", data[0]);
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	if ((data[0] & VPF_MASK))
 		tp_vpf_present = 1;
@@ -470,7 +471,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* decode msg ref */
 	if (length < 1) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	msg_ref = data[0];
 	data++;
@@ -479,7 +480,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* decode dest address */
 	if (length < 2) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	dest_data = 2 + data;
 	dest_digits = data[0];
@@ -488,7 +489,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	dest_len = (dest_digits + 1) >> 1;
 	if (length < 2 + dest_len) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	data += 2 + dest_len;
 	length -= 2 + dest_len;
@@ -499,7 +500,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* skip above protocol identifier */
 	if (length < 1) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read above protocol identifier IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	data++;
 	length--;
@@ -507,11 +508,11 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* decode data coding scheme */
 	if (length < 1) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short data coding scheme IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	if (data[0] != 0) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "SMS coding unsupported (got 0x%02x)\n", data[0]);
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	data++;
 	length--;
@@ -520,7 +521,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	if (tp_vpf_present) {
 		if (length < 1) {
 			PDEBUG(DSMS, DEBUG_NOTICE, "short read validity period IE\n");
-			return -1;
+			return -FSC_ERROR_IN_MS;
 		}
 		data++;
 		length--;
@@ -529,20 +530,24 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* decode data message text */
 	if (length < 1) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	msg_data = data + 1;
 	msg_chars = data[0];
 	msg_len = (msg_chars * 7 + 7) / 8;
 	if (length < 1 + msg_len) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
-		return -1;
+		return -FSC_ERROR_IN_MS;
 	}
 	char message[msg_chars + 1];
 	decode_message(msg_data, msg_len, message);
 	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded message: '%s'\n", message);
 
-	sms_submit(nmt, ref, orig_address, orig_type, orig_plan, msg_ref, dest_address, dest_type, dest_plan, message);
+	PDEBUG(DSMS, DEBUG_INFO, "Submitting SMS to upper layer\n");
+
+	rc = sms_submit(nmt, ref, orig_address, orig_type, orig_plan, msg_ref, dest_address, dest_type, dest_plan, message);
+	if (rc < 0)
+		return -FSC_SC_SYSTEM_FAILURE;
 
 	return 1;
 }
@@ -568,9 +573,9 @@ static int decode_deliver_report(nmt_t *nmt, const uint8_t *data, int length)
 		}
 		if (data[2] == RP_IE_CAUSE && data[3] > 0)
 			cause = data[4];
-		PDEBUG(DSMS, DEBUG_DEBUG, "Decoded delivery report: ERROR, cause=%d\n", cause);
+		PDEBUG(DSMS, DEBUG_INFO, "Received Delivery report: ERROR, cause=%d\n", cause);
 	} else
-		PDEBUG(DSMS, DEBUG_DEBUG, "Decoded delivery report: OK\n");
+		PDEBUG(DSMS, DEBUG_INFO, "Received Delivery report: OK\n");
 
 	sms_deliver_report(nmt, ref, error, cause);
 
@@ -625,7 +630,7 @@ release:
 	case RP_MO_DATA:
 		rc = decode_sms_submit(nmt, data, length);
 		if (rc < 0)
-			sms_submit_report(nmt, data[1], FSC_UNSPECIFIED_ERROR);
+			sms_submit_report(nmt, data[1], -rc);
 		else if (rc > 0) {
 			sms_submit_report(nmt, data[1], 0);
 		}

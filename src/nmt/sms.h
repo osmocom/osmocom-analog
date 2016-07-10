@@ -26,7 +26,7 @@ typedef struct sms {
 
 int sms_init_sender(nmt_t *nmt);
 void sms_cleanup_sender(nmt_t *nmt);
-void sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message);
+int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message);
 void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause);
 int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t type, uint8_t plan, time_t timestamp, const char *message);
 void sms_release(nmt_t *nmt);

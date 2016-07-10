@@ -40,8 +40,9 @@
 #include "tones.h"
 #include "announcement.h"
 
-#define SMS_FIFO "/tmp/nmt_sms_deliver"
-static int sms_fd = -1;
+#define SMS_DELIVER "/tmp/nmt_sms_deliver"
+#define SMS_SUBMIT "/tmp/nmt_sms_submit"
+static int sms_deliver_fd = -1;
 
 /* settings */
 int num_chan_type = 0;
@@ -208,7 +209,7 @@ static void myhandler(void)
 	static int pos = 0, rc, i;
 	int space = sizeof(buffer) - pos;
 
-	rc = read(sms_fd, buffer + pos, space);
+	rc = read(sms_deliver_fd, buffer + pos, space);
 	if (rc > 0) {
 		pos += rc;
 		if (pos == space) {
@@ -227,6 +228,23 @@ static void myhandler(void)
 			deliver_sms(buffer);
 		}
 	}
+}
+
+int submit_sms(const char *sms)
+{
+	FILE *fp;
+
+	fp = fopen(SMS_SUBMIT, "a");
+	if (!fp) {
+		fprintf(stderr, "Failed to open SMS submit file '%s'!\n", SMS_SUBMIT);
+		return -1;
+	}
+
+	fprintf(fp, "%s\n", sms);
+
+	fclose(fp);
+
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -281,15 +299,15 @@ int main(int argc, char *argv[])
 	}
 
 	/* create pipe for SMS delivery */
-	unlink(SMS_FIFO);
-	rc = mkfifo(SMS_FIFO, 0666);
+	unlink(SMS_DELIVER);
+	rc = mkfifo(SMS_DELIVER, 0666);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to create SMS deliver FIFO!\n");
+		fprintf(stderr, "Failed to create SMS deliver FIFO '%s'!\n", SMS_DELIVER);
 		goto fail;
 	} else {
-		sms_fd = open(SMS_FIFO, O_RDONLY | O_NONBLOCK);
-		if (sms_fd < 0) {
-			fprintf(stderr, "Failed to open SMS deliver FIFO!\n");
+		sms_deliver_fd = open(SMS_DELIVER, O_RDONLY | O_NONBLOCK);
+		if (sms_deliver_fd < 0) {
+			fprintf(stderr, "Failed to open SMS deliver FIFO! '%s'\n", SMS_DELIVER);
 			goto fail;
 		}
 	}
@@ -355,9 +373,9 @@ int main(int argc, char *argv[])
 
 fail:
 	/* fifo */
-	if (sms_fd > 0)
-		close(sms_fd);
-	unlink(SMS_FIFO);
+	if (sms_deliver_fd > 0)
+		close(sms_deliver_fd);
+	unlink(SMS_DELIVER);
 
 	/* cleanup functions */
 	call_cleanup();
