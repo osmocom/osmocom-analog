@@ -51,6 +51,10 @@ void print_help(const char *arg0)
 	printf("        Alternative give your coordinates of your location, to find closest\n");
 	printf("        base station. (e.g. '--gfs 54.487291,9.069993') Or use '--gfs list' to\n");
 	printf("        get a list of all base station locations.\n");
+	printf(" -g --gfs 19\n");
+	printf("        Set to 19 in order to make the phone transmit at 100 mW instead of\n");
+	printf("        full 15 Watts. If supported, the phone uses the channel with low power\n");
+	printf("        (Kanal kleiner Leistung).\n");
 	printf(" -P --pilot tone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");
