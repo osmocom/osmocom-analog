@@ -31,6 +31,13 @@ enum dial_mode {
 	DIAL_MODE_NUMBER2,
 };
 
+/* current dialing type (metering support) */
+enum dial_type {
+	DIAL_TYPE_NOMETER,
+	DIAL_TYPE_METER,
+	DIAL_TYPE_UNKNOWN,
+};
+
 /* current state of paging mobile station */
 enum page_mode {
 	PAGE_MODE_NUMBER,
@@ -53,7 +60,7 @@ typedef struct bnetz {
 	/* all bnetz states */
 	enum bnetz_state	state;			/* main state of sender */
 	enum dial_mode		dial_mode;		/* sub state while dialing is received */
-	int			dial_metering;		/* set, if phone supports metering pulses */
+	enum dial_type		dial_type;		/* defines if mobile supports metering pulses */
 	char			dial_number[14];	/* dial string received */
 	int			dial_pos;		/* current position while receiving digits */
 	char			station_id[6];		/* current station ID */

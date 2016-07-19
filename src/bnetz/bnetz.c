@@ -87,6 +87,7 @@ static struct impulstelegramme {
 	/* Signale */
 	{ 's',	"0111001000100010", 0x0000, "Funkwahl ohne Gebuehrenuebermittlung" },
 	{ 'S',	"0111000100100100", 0x0000, "Funkwahl mit Gebuehrenuebermittlung" },
+	{ 'U',	"0111000010101000", 0x0000, "Funkwahl (unbekannte Variante)" },
 	{ 'e',	"0111010000100001", 0x0000, "Funkwahlende" },
 	{ 't',	"0111010101010101", 0x0000, "Trennsignal/Schlusssignal" },
 	/* Kanalbefehl B1 */
@@ -555,15 +556,21 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 		timer_start(&bnetz->timer, DIALING_TO);
 		switch (bnetz->dial_mode) {
 		case DIAL_MODE_START:
-			if (digit != 's' && digit != 'S') {
+			switch (digit) {
+			case 's':
+				bnetz->dial_type = DIAL_TYPE_NOMETER;
+				break;
+			case 'S':
+				bnetz->dial_type = DIAL_TYPE_METER;
+				break;
+			case 'U':
+				bnetz->dial_type = DIAL_TYPE_UNKNOWN;
+				break;
+			default:
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), aborting.\n");
 				bnetz_go_idle(bnetz);
 				return;
 			}
-			if (digit == 'S')
-				bnetz->dial_metering = 1;
-			else
-				bnetz->dial_metering = 0;
 			bnetz->dial_mode = DIAL_MODE_STATIONID;
 			memset(bnetz->station_id, 0, sizeof(bnetz->station_id));
 			bnetz->dial_pos = 0;
@@ -605,13 +612,30 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 			bnetz->dial_number[bnetz->dial_pos++] = digit;
 			break;
 		case DIAL_MODE_START2:
-			if (digit != 's' && digit != 'S') {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a start message('Funkwahl'), aborting.\n");
-				bnetz_go_idle(bnetz);
-				return;
-			}
-			if ((digit == 'S' && bnetz->dial_metering != 1) || (digit == 's' && bnetz->dial_metering != 0)) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one, aborting.\n");
+			switch (digit) {
+			case 's':
+				if (bnetz->dial_type != DIAL_TYPE_NOMETER) {
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (no metering), aborting.\n");
+					bnetz_go_idle(bnetz);
+					return;
+				}
+				break;
+			case 'S':
+				if (bnetz->dial_type != DIAL_TYPE_METER) {
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering), aborting.\n");
+					bnetz_go_idle(bnetz);
+					return;
+				}
+				break;
+			case 'U':
+				if (bnetz->dial_type != DIAL_TYPE_UNKNOWN) {
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (unknwon type), aborting.\n");
+					bnetz_go_idle(bnetz);
+					return;
+				}
+				break;
+			default:
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), aborting.\n");
 				bnetz_go_idle(bnetz);
 				return;
 			}
