@@ -1,6 +1,7 @@
 #include "../common/sender.h"
 #include "../common/compandor.h"
 #include "../common/dtmf.h"
+#include "../common/call.h"
 #include "dms.h"
 #include "sms.h"
 
@@ -86,7 +87,10 @@ typedef struct nmt {
 	struct timer		timer;
 	int			rx_frame_count;		/* receive frame counter */
 	int			tx_frame_count;		/* transmit frame counter */
+	int			tx_callerid_count;	/* counter for caller ID repetition */
 	char			dialing[33];		/* dialed digits */
+	char			caller_id[33];		/* caller id digits */
+	enum number_type	caller_type;		/* caller id type */
 	int			page_try;		/* number of paging try */
 	int			mft_num;		/* counter for digit for MFT */
 
@@ -97,6 +101,7 @@ typedef struct nmt {
 	/* features */
 	int			compandor;		/* if compandor shall be used */
 	int			supervisory;		/* if set, use supervisory signal 1..4 */
+	int			send_callerid;		/* if set, send caller ID while ringing the phone */
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
@@ -152,7 +157,7 @@ const char *chan_type_long_name(enum nmt_chan_type chan_type);
 double nmt_channel2freq(int channel, int uplink);
 void nmt_country_list(void);
 uint8_t nmt_country_by_short_name(const char *short_name);
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int loopback);
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
 void nmt_destroy(sender_t *sender);
 void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);
 const char *nmt_get_frame(nmt_t *nmt);

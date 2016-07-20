@@ -274,7 +274,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				int rc;
 
 				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
-				rc = call_in_setup(callref, anetz->station_id, "0");
+				rc = call_in_setup(callref, "", "0");
 				if (rc < 0) {
 					PDEBUG(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
 					anetz_release(anetz);
@@ -331,7 +331,7 @@ static void anetz_timeout(struct timer *timer)
 }
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, char *dialing)
+int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
 {
 	sender_t *sender;
 	anetz_t *anetz;

@@ -31,7 +31,6 @@
 #include "../common/main.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
-#include "../common/call.h"
 #include "../common/mncc_sock.h"
 #include "nmt.h"
 #include "frame.h"
@@ -53,10 +52,11 @@ char area_no = 0;
 int compandor = 1;
 int supervisory = 0;
 const char *smsc_number = "767";
+int send_callerid = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-y <traffic area> | list ");
+	print_help_common(arg0, "-y <traffic area> | list  [-I]");
 	/*      -                                                                             - */
 	printf(" -t --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
@@ -81,6 +81,8 @@ void print_help(const char *arg0)
 	printf(" -S --smsc-number <digits>\n");
 	printf("        If this number is dialed, the mobile is connected to the SMSC (Short\n");
 	printf("        Message Service Center). (default = '%s')\n", smsc_number);
+	printf(" -I --caller-id 1 | 0\n");
+	printf("        If set, the caller ID is sent while ringing the phone. (default = '%d')\n", send_callerid);
 	printf("\nstation-id: Give 7 digits of station-id, you don't need to enter it\n");
 	printf("        for every start of this program.\n");
 }
@@ -98,10 +100,11 @@ static int handle_options(int argc, char **argv)
 		{"compandor", 1, 0, 'C'},
 		{"supervisory", 1, 0, '0'},
 		{"smsc-number", 1, 0, 'S'},
+		{"caller-id", 1, 0, 'I'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:P:a:y:C:0:S:", long_options_special);
+	set_options_common("t:P:a:y:C:0:S:I:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c, rc;
@@ -191,6 +194,10 @@ error_ta:
 			break;
 		case 'S':
 			smsc_number = strdup(optarg);
+			skip_args += 2;
+			break;
+		case 'I':
+			send_callerid = atoi(optarg);
 			skip_args += 2;
 			break;
 		default:
@@ -337,7 +344,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, loopback);
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;

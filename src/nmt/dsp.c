@@ -25,7 +25,6 @@
 #include <math.h>
 #include "../common/debug.h"
 #include "../common/timer.h"
-#include "../common/call.h"
 #include "../common/goertzel.h"
 #include "nmt.h"
 #include "dsp.h"

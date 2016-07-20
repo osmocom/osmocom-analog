@@ -491,7 +491,7 @@ dial_after_hangup:
 				call.dialing[0] = '\0';
 				call_new_state(CALL_SETUP_MT);
 				call.callref = callref;
-				rc = call_out_setup(callref, call.station_id);
+				rc = call_out_setup(callref, "", TYPE_NOTAVAIL, call.station_id);
 				if (rc < 0) {
 					PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
 					call_new_state(CALL_DISCONNECTED);
@@ -712,7 +712,7 @@ void call_in_alerting(int callref)
 }
 
 /* Transceiver indicates answer. */
-static void _indicate_answer(int callref, const char *connectid)
+static void _indicate_answer(int callref, const char *connect_id)
 {
 	uint8_t buf[sizeof(struct gsm_mncc)];
 	struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
@@ -721,23 +721,28 @@ static void _indicate_answer(int callref, const char *connectid)
 	mncc->msg_type = MNCC_SETUP_CNF;
 	mncc->callref = callref;
 	mncc->fields |= MNCC_F_CONNECTED;
-	strncpy(mncc->connected.number, connectid, sizeof(mncc->connected.number) - 1);
-	mncc->connected.type = 0;
+	/* copy connected number as subscriber number */
+	strncpy(mncc->connected.number, connect_id, sizeof(mncc->connected.number));
+	mncc->connected.type = 4;
+	mncc->connected.plan = 1;
+	mncc->connected.present = 0;
+	mncc->connected.screen = 3;
+
 
 	PDEBUG(DMNCC, DEBUG_INFO, "Indicate MNCC answer towards Network\n");
 	mncc_write(buf, sizeof(struct gsm_mncc));
 }
-void call_in_answer(int callref, const char *connectid)
+void call_in_answer(int callref, const char *connect_id)
 {
 	if (!callref) {
 		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring answer, because callref not set. (not for us)\n");
 		return;
 	}
 
-	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connectid);
+	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connect_id);
 
 	if (use_mncc_sock) {
-		_indicate_answer(callref, connectid);
+		_indicate_answer(callref, connect_id);
 		set_pattern_process(callref, PATTERN_NONE);
 		set_state_process(callref, CALL_CONNECT);
 		return;
@@ -749,7 +754,7 @@ void call_in_answer(int callref, const char *connectid)
 		return;
 	}
 	call_new_state(CALL_CONNECT);
-	strncpy(call.station_id, connectid, call.dial_digits);
+	strncpy(call.station_id, connect_id, call.dial_digits);
 	call.station_id[call.dial_digits] = '\0';
 }
 
@@ -856,6 +861,8 @@ void call_mncc_recv(uint8_t *buf, int length)
 {
 	struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
 	char number[sizeof(mncc->called.number)];
+	char caller_id[sizeof(mncc->calling.number)];
+	enum number_type caller_type;
 	int callref;
 	int rc;
 
@@ -870,7 +877,6 @@ void call_mncc_recv(uint8_t *buf, int length)
 	}
 
 	callref = mncc->callref;
-	strcpy(number, mncc->called.number);
 
 	if (is_process_disconnected(callref)) {
 		switch(mncc->msg_type) {
@@ -898,7 +904,30 @@ void call_mncc_recv(uint8_t *buf, int length)
 
 	switch(mncc->msg_type) {
 	case MNCC_SETUP_REQ:
-		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC call from Network to '%s'\n", mncc->called.number);
+		strcpy(number, mncc->called.number);
+
+		/* caller ID conversion */
+		strcpy(caller_id, mncc->calling.number);
+		switch(mncc->calling.type) {
+		case 1:
+			caller_type = TYPE_INTERNATIONAL;
+			break;
+		case 2:
+			caller_type = TYPE_NATIONAL;
+			break;
+		case 4:
+			caller_type = TYPE_SUBSCRIBER;
+			break;
+		default: /* or 0 */
+			caller_type = TYPE_UNKNOWN;
+			break;
+		}
+		if (!caller_id[0])
+			caller_type = TYPE_NOTAVAIL;
+		if (mncc->calling.present == 1)
+			caller_type = TYPE_ANONYMOUS;
+
+		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC call from Network to '%s'\n", caller_id);
 
 		if (mncc->callref >= 0x4000000) {
 			fprintf(stderr, "Invalid callref from network, please fix!\n");
@@ -916,11 +945,11 @@ void call_mncc_recv(uint8_t *buf, int length)
 
 		mncc_write(buf, sizeof(struct gsm_mncc));
 
-		PDEBUG(DCALL, DEBUG_INFO, "Outgoing call from to '%s'\n", number);
+		PDEBUG(DCALL, DEBUG_INFO, "Outgoing call from '%s' to '%s'\n", caller_id, number);
 
 		create_process(callref, CALL_SETUP_MT);
 
-		rc = call_out_setup(callref, number);
+		rc = call_out_setup(callref, caller_id, caller_type, number);
 		if (rc < 0) {
 			PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
 			if (send_patterns) {

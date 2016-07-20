@@ -25,7 +25,6 @@
 #include <time.h>
 #include "../common/debug.h"
 #include "../common/timer.h"
-#include "../common/call.h"
 #include "../common/cause.h"
 #include "nmt.h"
 #include "dsp.h"
@@ -288,7 +287,7 @@ static void nmt_timeout(struct timer *timer);
 static void nmt_go_idle(nmt_t *nmt);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int loopback)
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -363,6 +362,7 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 	nmt->sysinfo.area_no = area_no;
 	nmt->compandor = compandor;
 	nmt->supervisory = supervisory;
+	nmt->send_callerid = send_callerid;
 	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
 
 	/* go into idle state */
@@ -519,6 +519,110 @@ static int match_subscriber(nmt_t *nmt, frame_t *frame)
 }
 
 /*
+ * helper functions to generate frames
+ */
+
+static void tx_ident(nmt_t *nmt, frame_t *frame)
+{
+	frame->index = NMT_MESSAGE_3b;
+	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
+	frame->ms_number = nmt_digits2value(nmt->subscriber.number, 6);
+	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
+}
+
+static void set_line_signal(nmt_t *nmt, frame_t *frame, uint8_t signal)
+{
+	frame->index = NMT_MESSAGE_5a;
+	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
+	frame->ms_number = nmt_digits2value(nmt->subscriber.number, 6);
+	frame->line_signal = (signal << 8) | (signal << 4) | signal;
+}
+
+/* convert given number to caller ID frame with given index
+ * return next index */
+static int encode_a_number(nmt_t *nmt, frame_t *frame, int index, enum number_type type, const char *number)
+{
+	int number_offset = 0;
+	int number_len = strlen(number);
+	int nframes;
+	uint8_t sum, ntype = 0, digit;
+	int i, shift;
+
+	/* number of frames
+	 * 0..5 digits need one frame, 6..12 digits need two frames, ... */
+	nframes = (number_len + 8) / 7;
+
+	/* cycle index */
+	index %= nframes;
+
+	/* number offset for second frame is 5, and then additional 7 for the following frames */
+	if (index)
+		number_offset = index * 7 - 2;
+
+	/* encode */
+	frame->index = NMT_MESSAGE_8;
+	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->seq_number = index;
+	if (index == 0) {
+		/* number type */
+		switch (type) {
+		case TYPE_NOTAVAIL:
+			ntype = 3;
+			break;
+		case TYPE_ANONYMOUS:
+			ntype = 4;
+			break;
+		case TYPE_UNKNOWN:
+			ntype = 0;
+			break;
+		case TYPE_SUBSCRIBER:
+			ntype = 0;
+			break;
+		case TYPE_NATIONAL:
+			ntype = 1;
+			break;
+		case TYPE_INTERNATIONAL:
+			ntype = 2;
+			break;
+		}
+		/* first 5 digits */
+		frame->additional_info = ((nframes - 1) << 24) | (ntype << 20);
+		shift = 16;
+	} else {
+		/* next digits */
+		frame->additional_info = 0;
+		shift = 24;
+	}
+	for (i = number_offset; number[i] && shift >= 0; i++, shift -= 4) {
+		digit = number[i];
+		if (digit >= '1' && digit <= '9')
+			digit -= '0';
+		else if (digit == '0')
+			digit = 10;
+		else
+			digit = 13; /* '+' and illegal digits */
+		frame->additional_info |= (digit << shift);
+	}
+
+	/* checksum */
+	sum = (frame->seq_number << 4) | frame->additional_info >> 24;
+	sum += (frame->additional_info >> 16);
+	sum += (frame->additional_info >> 8);
+	sum += frame->additional_info;
+	frame->checksum = sum;
+
+	/* return next frame index or cycle to first frame */
+	if (++index == nframes)
+		index = 0;
+	return index;
+}
+
+/*
  * handle idle channel
  */
 
@@ -592,26 +696,6 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 /*
  * handle roaming
  */
-
-static void tx_ident(nmt_t *nmt, frame_t *frame)
-{
-	frame->index = NMT_MESSAGE_3b;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
-	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
-	frame->ms_number = nmt_digits2value(nmt->subscriber.number, 6);
-	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
-}
-
-static void set_line_signal(nmt_t *nmt, frame_t *frame, uint8_t signal)
-{
-	frame->index = NMT_MESSAGE_5a;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
-	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
-	frame->ms_number = nmt_digits2value(nmt->subscriber.number, 6);
-	frame->line_signal = (signal << 8) | (signal << 4) | signal;
-}
 
 static void tx_roaming_ident(nmt_t *nmt, frame_t *frame)
 {
@@ -1009,11 +1093,26 @@ static void tx_mt_ringing(nmt_t *nmt, frame_t *frame)
 	set_line_signal(nmt, frame, 9);
 	if (++nmt->tx_frame_count == 1)
 		PDEBUG(DNMT, DEBUG_INFO, "Send 'ringing order'.\n");
-	if (nmt->tx_frame_count >= 4)
-		frame->index = NMT_MESSAGE_6;
-	/* repeat ringing after 5 seconds */
-	if (nmt->tx_frame_count == 36)
-		nmt->tx_frame_count = 0;
+	if (nmt->tx_frame_count >= 4) {
+		if (nmt->tx_callerid_count) {
+			if (nmt->tx_frame_count == 5)
+				PDEBUG(DNMT, DEBUG_INFO, "Send 'A-number'.\n");
+			encode_a_number(nmt, frame, nmt->tx_frame_count - 4, nmt->caller_type, nmt->caller_id);
+		} else
+			frame->index = NMT_MESSAGE_6;
+	}
+	if (nmt->tx_callerid_count == 1) {
+		/* start ringing after first caller ID of 6 frames */
+		if (nmt->tx_frame_count == 10) {
+			nmt->tx_frame_count = 0;
+			nmt->tx_callerid_count++;
+		}
+	} else {
+		/* repeat ringing after 5 seconds */
+		if (nmt->tx_frame_count == 36) {
+			nmt->tx_frame_count = 0;
+		}
+	}
 }
 
 static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
@@ -1056,7 +1155,7 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 		}
 		if (nmt->dms_call) {
 			time_t ti = time(NULL);
-			sms_deliver(nmt, sms_ref, "", SMS_TYPE_UKNOWN, SMS_PLAN_ISDN_TEL, ti, nmt->sms_string);
+			sms_deliver(nmt, sms_ref, nmt->caller_id, nmt->caller_type, SMS_PLAN_ISDN_TEL, ti, nmt->sms_string);
 		}
 	}
 }
@@ -1449,7 +1548,7 @@ const char *nmt_get_frame(nmt_t *nmt)
  */
 
 /* Call control starts call towards mobile station. */
-int _out_setup(int callref, char *dialing, const char *sms)
+int _out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing, const char *sms)
 {
 	sender_t *sender;
 	nmt_t *nmt;
@@ -1501,17 +1600,23 @@ inval:
 		strncpy(nmt->sms_string, sms, sizeof(nmt->sms_string) - 1);
 		nmt->dms_call = 1;
 	}
+	if (caller_type == TYPE_INTERNATIONAL) {
+		nmt->caller_id[0] = '+'; /* not done by phone */
+		strncpy(nmt->caller_id + 1, caller_id, sizeof(nmt->caller_id) - 2);
+	} else
+		strncpy(nmt->caller_id, caller_id, sizeof(nmt->caller_id) - 1);
+	nmt->caller_type = caller_type;
 	nmt_page(nmt, ms_country, ms_number, 1);
 
 	return 0;
 }
-int call_out_setup(int callref, char *dialing)
+int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
 {
-	return _out_setup(callref, dialing, NULL);
+	return _out_setup(callref, caller_id, caller_type, dialing, NULL);
 }
-int sms_out_setup(char *dialing, const char *sms)
+int sms_out_setup(char *dialing, const char *caller_id, enum number_type caller_type, const char *sms)
 {
-	return _out_setup(0, dialing, sms);
+	return _out_setup(0, caller_id, caller_type, dialing, sms);
 }
 
 /* Call control sends disconnect (with tones).
@@ -1655,25 +1760,52 @@ void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
 /* application sends ud a message, we need to deliver */
 void deliver_sms(const char *sms)
 {
-	int i, rc;
-	char number[8];
+	int rc;
+	char buffer[strlen(sms) + 1], *p = buffer, *caller_id, *number, *message;
+	enum number_type caller_type;
 
-	/* check for number digits */
-	for (i = 0; i < 7; i++) {
-		if (sms[i] < '0' || sms[i] > '9')
-			break;
-	}
-	if (i < 7 || sms[7] != ',') {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Given SMS MUST start with the 7 digits phone number, followed by a comma (no spaces)\n");
+	strcpy(buffer, sms);
+	caller_id = strsep(&p, ",");
+	number = strsep(&p, ",");
+	message = p;
+	if (!caller_id || !number || !message) {
+inval:
+		PDEBUG(DNMT, DEBUG_NOTICE, "Given SMS MUST be in the following format: [i|n|s|u]<caller ID>,<7 digits number>,<message with comma and spaces> (i, n, s, u indicate the type of number)\n");
 		return;
 	}
-	strncpy(number, sms, 7);
-	number[7] = '\0';
-	sms += 8;
-	PDEBUG(DNMT, DEBUG_INFO, "SMS for subscriber '%s'\n", number);
-	printf("SMS sending SMSC -> '%s': %s\n", number, sms);
+	if (strlen(number) != 7) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "Given number must be 7 digits\n");
+		goto inval;
+	}
 
-	rc = sms_out_setup(number, sms);
+	switch(caller_id[0]) {
+		case '\0':
+			caller_type = TYPE_NOTAVAIL;
+			break;
+		case 'i':
+			caller_type = TYPE_INTERNATIONAL;
+			caller_id++;
+			break;
+		case 'n':
+			caller_type = TYPE_NATIONAL;
+			caller_id++;
+			break;
+		case 's':
+			caller_type = TYPE_SUBSCRIBER;
+			caller_id++;
+			break;
+		case 'u':
+			caller_type = TYPE_UNKNOWN;
+			caller_id++;
+			break;
+		default:
+			caller_type = TYPE_UNKNOWN;
+	}
+
+	PDEBUG(DNMT, DEBUG_INFO, "SMS for subscriber '%s'\n", number);
+	printf("SMS sending '%s' -> '%s': %s\n", caller_id, number, sms);
+
+	rc = sms_out_setup(number, caller_id, caller_type, message);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_INFO, "SMS delivery failed with cause '%d'\n", -rc);
 		return;
