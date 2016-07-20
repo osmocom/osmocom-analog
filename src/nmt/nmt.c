@@ -1641,8 +1641,8 @@ void call_out_disconnect(int callref, int cause)
 		return;
 	}
 
-	/* Release when not active */
-	if (nmt->state == STATE_ACTIVE)
+	/* Release when not active and not waiting for answer */
+	if (nmt->state == STATE_ACTIVE || nmt->state == STATE_MO_COMPLETE)
 		return;
 	switch (nmt->state) {
 	case STATE_MT_RINGING:

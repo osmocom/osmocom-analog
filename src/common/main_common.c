@@ -47,6 +47,7 @@ int do_de_emphasis = 0;
 double rx_gain = 1.0;
 int use_mncc_sock = 0;
 int send_patterns = 1;
+int release_on_disconnect = 1;
 int loopback = 0;
 int rt_prio = 0;
 const char *read_wave = NULL;
@@ -94,7 +95,8 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -c --call-device hw:<card>,<device>\n");
 	printf("        Sound card and device number for headset (default = '%s')\n", call_sounddev);
 	printf(" -p --send-patterns 0 | 1\n");
-	printf("        Connect call on setup/release to provide classic tones (default = '%d')\n", send_patterns);
+	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
+	printf("        network (default = '%d')\n", send_patterns);
 	printf(" -L --loopback <type>\n");
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");

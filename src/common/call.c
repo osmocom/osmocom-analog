@@ -35,6 +35,7 @@
 
 extern int use_mncc_sock;
 extern int send_patterns;
+extern int release_on_disconnect;
 
 /* stream patterns/announcements */
 int16_t *ringback_spl = NULL;
@@ -972,7 +973,6 @@ void call_mncc_recv(uint8_t *buf, int length)
 
 		if (send_patterns) {
 			PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
-			set_state_process(callref, CALL_CONNECT);
 			_indicate_answer(callref, number);
 			break;
 		}
@@ -984,6 +984,14 @@ void call_mncc_recv(uint8_t *buf, int length)
 	case MNCC_DISC_REQ:
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC disconnect from Network with cause %d\n", mncc->cause.value);
 
+		if (is_process_state(callref) == CALL_CONNECT && release_on_disconnect) {
+			PDEBUG(DCALL, DEBUG_INFO, "Releaseing, because we don't send disconnect tones to mobile phone\n");
+
+			PDEBUG(DMNCC, DEBUG_INFO, "Releasing MNCC call towards Network\n");
+			mncc->msg_type = MNCC_REL_IND;
+			mncc_write(buf, sizeof(struct gsm_mncc));
+			goto release;
+		}
 		set_state_process(callref, CALL_DISCONNECTED);
 		PDEBUG(DCALL, DEBUG_INFO, "Call disconnected\n");
 		call_out_disconnect(callref, mncc->cause.value);
@@ -991,6 +999,7 @@ void call_mncc_recv(uint8_t *buf, int length)
 	case MNCC_REL_REQ:
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC release from Network with cause %d\n", mncc->cause.value);
 
+release:
 		destroy_process(callref);
 		PDEBUG(DCALL, DEBUG_INFO, "Call released\n");
 		call_out_release(callref, mncc->cause.value);
