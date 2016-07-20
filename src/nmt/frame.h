@@ -49,7 +49,7 @@ enum nmt_mt {
 };
 	
 typedef struct frame {
-	uint8_t		index;
+	enum nmt_mt	mt;
 	uint16_t	channel_no;
 	uint16_t	tc_no;
 	uint8_t		traffic_area;
@@ -84,7 +84,7 @@ uint64_t nmt_digits2value(const char *digits, int num);
 char nmt_value2digit(uint64_t value);
 uint16_t nmt_encode_area_no(uint8_t area_no);
 
-const char *nmt_frame_name(int index);
+const char *nmt_frame_name(enum nmt_mt mt);
 
 const char *encode_frame(frame_t *frame, int debug);
 int decode_frame(frame_t *frame, const char *bits, enum nmt_direction direction, int callack);

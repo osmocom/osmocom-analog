@@ -524,7 +524,7 @@ static int match_subscriber(nmt_t *nmt, frame_t *frame)
 
 static void tx_ident(nmt_t *nmt, frame_t *frame)
 {
-	frame->index = NMT_MESSAGE_3b;
+	frame->mt = NMT_MESSAGE_3b;
 	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt->sysinfo.traffic_area;
 	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
@@ -534,7 +534,7 @@ static void tx_ident(nmt_t *nmt, frame_t *frame)
 
 static void set_line_signal(nmt_t *nmt, frame_t *frame, uint8_t signal)
 {
-	frame->index = NMT_MESSAGE_5a;
+	frame->mt = NMT_MESSAGE_5a;
 	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt->sysinfo.traffic_area;
 	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
@@ -564,7 +564,7 @@ static int encode_a_number(nmt_t *nmt, frame_t *frame, int index, enum number_ty
 		number_offset = index * 7 - 2;
 
 	/* encode */
-	frame->index = NMT_MESSAGE_8;
+	frame->mt = NMT_MESSAGE_8;
 	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt->sysinfo.traffic_area;
 	frame->seq_number = index;
@@ -630,16 +630,16 @@ static void tx_idle(nmt_t *nmt, frame_t *frame)
 {
 	switch (nmt->sysinfo.chan_type) {
 	case CHAN_TYPE_CC:
-		frame->index = NMT_MESSAGE_1a;
+		frame->mt = NMT_MESSAGE_1a;
 		break;
 	case CHAN_TYPE_TC:
-		frame->index = NMT_MESSAGE_4;
+		frame->mt = NMT_MESSAGE_4;
 		break;
 	case CHAN_TYPE_CC_TC:
-		frame->index = NMT_MESSAGE_1b;
+		frame->mt = NMT_MESSAGE_1b;
 		break;
 	case CHAN_TYPE_TEST:
-		frame->index = NMT_MESSAGE_30;
+		frame->mt = NMT_MESSAGE_30;
 		break;
 	}
 	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
@@ -649,7 +649,7 @@ static void tx_idle(nmt_t *nmt, frame_t *frame)
 
 static void rx_idle(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_11a: /* roaming update and seizure */
 		if (!match_channel(nmt, frame))
 			break;
@@ -675,7 +675,7 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 		/* set subscriber */
 		nmt_value2digits(frame->ms_country, &nmt->subscriber.country, 1);
 		nmt_value2digits(frame->ms_number, nmt->subscriber.number, 6);
-		if (frame->index == NMT_MESSAGE_12)
+		if (frame->mt == NMT_MESSAGE_12)
 			nmt->subscriber.coinbox = 1;
 		nmt->subscriber.number[6] = '\0';
 
@@ -689,7 +689,7 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 	case NMT_MESSAGE_13a: /* line signal */
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -709,7 +709,7 @@ static void tx_roaming_ident(nmt_t *nmt, frame_t *frame)
 
 static void rx_roaming_ident(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_11a: /* roaming update */
 		if (!match_channel(nmt, frame))
 			break;
@@ -727,7 +727,7 @@ static void rx_roaming_ident(nmt_t *nmt, frame_t *frame)
 		nmt->tx_frame_count = 0;
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -742,9 +742,9 @@ static void tx_roaming_confirm(nmt_t *nmt, frame_t *frame)
 
 static void rx_roaming_confirm(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -764,7 +764,7 @@ static void tx_mo_ident(nmt_t *nmt, frame_t *frame)
 
 static void rx_mo_ident(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_10b: /* seizure */
 	case NMT_MESSAGE_12: /* seizure */
 		if (!match_channel(nmt, frame))
@@ -781,7 +781,7 @@ static void rx_mo_ident(nmt_t *nmt, frame_t *frame)
 		nmt->tx_frame_count = 0;
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -805,7 +805,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 {
 	int len = strlen(nmt->dialing);
 
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_14a: /* digits */
 		if (!match_channel(nmt, frame))
 			break;
@@ -881,7 +881,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 		nmt->tx_frame_count = 0;
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 
 	return;
@@ -903,7 +903,7 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 			if (nmt->tx_frame_count == 5)
 				PDEBUG(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
 		} else
-			frame->index = NMT_MESSAGE_6;
+			frame->mt = NMT_MESSAGE_6;
 		if (nmt->tx_frame_count == 9) {
 			PDEBUG(DNMT, DEBUG_INFO, "Connect audio.\n");
 			nmt_new_state(nmt, STATE_ACTIVE);
@@ -931,7 +931,7 @@ static void timeout_mo_dialing(nmt_t *nmt)
  */
 static void tx_mt_paging(nmt_t *nmt, frame_t *frame)
 {
-	frame->index = NMT_MESSAGE_2a;
+	frame->mt = NMT_MESSAGE_2a;
 	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt->sysinfo.traffic_area;
 	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
@@ -962,7 +962,7 @@ static void tx_mt_paging(nmt_t *nmt, frame_t *frame)
 
 static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_10a: /* call acknowledgement */
 		if (!match_channel(nmt, frame))
 			break;
@@ -980,13 +980,13 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 		}
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
 static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 {
-	frame->index = NMT_MESSAGE_2b;
+	frame->mt = NMT_MESSAGE_2b;
 	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt->sysinfo.traffic_area;
 	frame->ms_country = nmt_digits2value(&nmt->subscriber.country, 1);
@@ -1016,7 +1016,7 @@ static void tx_mt_ident(nmt_t *nmt, frame_t *frame)
 
 static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_10b: /* seizure */
 		if (!match_subscriber(nmt, frame))
 			break;
@@ -1041,7 +1041,7 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 		}
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1049,7 +1049,7 @@ static void tx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 {
 	/* first we need to wait for autoanswer */
 	if (nmt->wait_autoanswer) {
-		frame->index = NMT_MESSAGE_6;
+		frame->mt = NMT_MESSAGE_6;
 		return;
 	}
 	if (++nmt->tx_frame_count == 1)
@@ -1067,7 +1067,7 @@ static void tx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 
 static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_15: /* idle */
 		nmt->wait_autoanswer = 0;
 		break;
@@ -1084,7 +1084,7 @@ static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 		call_in_answer(nmt->sender.callref, &nmt->subscriber.country);
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1099,7 +1099,7 @@ static void tx_mt_ringing(nmt_t *nmt, frame_t *frame)
 				PDEBUG(DNMT, DEBUG_INFO, "Send 'A-number'.\n");
 			encode_a_number(nmt, frame, nmt->tx_frame_count - 4, nmt->caller_type, nmt->caller_id);
 		} else
-			frame->index = NMT_MESSAGE_6;
+			frame->mt = NMT_MESSAGE_6;
 	}
 	if (nmt->tx_callerid_count == 1) {
 		/* start ringing after first caller ID of 6 frames */
@@ -1117,7 +1117,7 @@ static void tx_mt_ringing(nmt_t *nmt, frame_t *frame)
 
 static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_13a: /* line signal */
 		if (!match_channel(nmt, frame))
 			break;
@@ -1131,7 +1131,7 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 		call_in_answer(nmt->sender.callref, &nmt->subscriber.country);
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1143,7 +1143,7 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 			PDEBUG(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
 		set_line_signal(nmt, frame, 5);
 	} else
-		frame->index = NMT_MESSAGE_6;
+		frame->mt = NMT_MESSAGE_6;
 	if (nmt->tx_frame_count == 5) {
 		PDEBUG(DNMT, DEBUG_INFO, "Connect audio.\n");
 		nmt_new_state(nmt, STATE_ACTIVE);
@@ -1195,7 +1195,7 @@ static void tx_mt_release(nmt_t *nmt, frame_t *frame)
 
 static void rx_mt_release(nmt_t *nmt, frame_t *frame)
 {
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_13a: /* line signal */
 		if (!match_channel(nmt, frame))
 			break;
@@ -1207,7 +1207,7 @@ static void rx_mt_release(nmt_t *nmt, frame_t *frame)
 		nmt_go_idle(nmt);
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1261,7 +1261,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 	if (nmt->supervisory)
 		timer_start(&nmt->timer, SUPERVISORY_TO2);
 
-	switch (frame->index) {
+	switch (frame->mt) {
 	case NMT_MESSAGE_13a: /* line signal */
 		if (!match_channel(nmt, frame))
 			break;
@@ -1319,7 +1319,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 		nmt->mft_num++;
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1371,13 +1371,13 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	/* frame counter */
 	nmt->rx_frame_count += (int)(frames_elapsed + 0.5);
 
-	PDEBUG(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received frame %s\n", nmt_frame_name(frame.index));
+	PDEBUG(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received frame %s\n", nmt_frame_name(frame.mt));
 
 	if (nmt->sender.loopback)
 		return;
 
 	/* MS releases, but this is not the acknowledge of MTX release */
-	if (frame.index == NMT_MESSAGE_13a
+	if (frame.mt == NMT_MESSAGE_13a
 	 && (frame.line_signal & 0xf) == 1
 	 && nmt->state != STATE_MO_RELEASE
 	 && nmt->state != STATE_MT_RELEASE) {
@@ -1436,7 +1436,7 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 		rx_active(nmt, &frame);
 		break;
 	default:
-		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame.index), nmt_state_name(nmt->state));
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame.mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1524,12 +1524,14 @@ const char *nmt_get_frame(nmt_t *nmt)
 	}
 
 	/* no encoding debug for certain (idle) frames */
-	switch(frame.index) {
+	switch(frame.mt) {
 	case NMT_MESSAGE_1a:
 	case NMT_MESSAGE_4:
 	case NMT_MESSAGE_1b:
 	case NMT_MESSAGE_30:
 		debug = 0;
+		break;
+	default:
 		break;
 	}
 
@@ -1539,7 +1541,7 @@ const char *nmt_get_frame(nmt_t *nmt)
 
 	bits = encode_frame(&frame, debug);
 
-	PDEBUG(DNMT, DEBUG_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.index));
+	PDEBUG(DNMT, DEBUG_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
 	return bits;
 }
 

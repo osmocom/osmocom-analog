@@ -133,7 +133,7 @@ int nmt_encode_a_number(frame_t *frame, int index, enum number_type type, const 
 		number_offset = index * 7 - 2;
 
 	/* encode */
-	frame->index = NMT_MESSAGE_8;
+	frame->mt = NMT_MESSAGE_8;
 	frame->seq_number = index;
 	if (index == 0) {
 		/* number type */
@@ -251,11 +251,11 @@ static struct nmt_frame {
 /* store actual number of frames for run-time range check */
 static int num_frames;
 
-const char *nmt_frame_name(int index)
+const char *nmt_frame_name(enum nmt_mt mt)
 {
-	if (index < 0 || index >= num_frames)
+	if (mt < 0 || mt >= num_frames)
 		return "invalid";
-	return nmt_frame[index].nr;
+	return nmt_frame[mt].nr;
 }
 
 static const char *param_integer(uint64_t value, int ndigits, enum nmt_direction direction)
@@ -483,7 +483,7 @@ static struct nmt_parameter {
 /* Depending on P-value, direction and additional info, frame index (used for
  * nmt_frame[]) is decoded.
  */
-static int decode_frame_index(const uint8_t *digits, enum nmt_direction direction, int callack)
+enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction, int callack)
 {
 	if (direction == MS_TO_MTX || direction == BS_TO_MTX || direction == XX_TO_MTX) {
 		/* MS/BS TO MTX */
@@ -672,30 +672,30 @@ int init_frame(void)
 /* decode 16 digits frame */
 static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_direction direction, int callack)
 {
-	int index;
+	enum nmt_mt mt;
 	int i, j, ndigits;
 	char digit;
 	uint64_t value;
 
 	memset(frame, 0, sizeof(*frame));
 
-	/* index of frame */
-	index = decode_frame_index(digits, direction, callack);
-	frame->index = index;
+	/* message type of frame */
+	mt = decode_frame_mt(digits, direction, callack);
+	frame->mt = mt;
 
 	/* update direction */
-	direction = nmt_frame[index].direction;
+	direction = nmt_frame[mt].direction;
 
-	PDEBUG(DFRAME, DEBUG_DEBUG, "Decoding %s %s %s\n", nmt_dir_name(direction), nmt_frame[index].nr, nmt_frame[index].description);
+	PDEBUG(DFRAME, DEBUG_DEBUG, "Decoding %s %s %s\n", nmt_dir_name(direction), nmt_frame[mt].nr, nmt_frame[mt].description);
 
 	for (i = 0; i < 16; i++) {
-		digit = nmt_frame[index].digits[i];
+		digit = nmt_frame[mt].digits[i];
 		if (digit == '-')
 			continue;
 		value = digits[i];
 		ndigits = 1;
 		for (j = i + 1; j < 16; j++) {
-			if (nmt_frame[index].digits[j] != digit)
+			if (nmt_frame[mt].digits[j] != digit)
 				break;
 			value = (value << 4) | digits[j];
 			ndigits++;
@@ -790,7 +790,7 @@ static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_di
 		for (i = 0; i < 16; i++)
 			debug_digits[i] = "0123456789abcdef"[digits[i]];
 		debug_digits[i] = '\0';
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", nmt_frame[index].digits);
+		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", nmt_frame[mt].digits);
 		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", debug_digits);
 	}
 }
@@ -798,30 +798,30 @@ static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_di
 /* encode 16 digits frame */
 static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 {
-	int index;
+	enum nmt_mt mt;
 	int i, j;
 	char digit;
 	uint64_t value;
 	enum nmt_direction direction;
 
-	index = frame->index;
+	mt = frame->mt;
 
-	if (index >= num_frames) {
-		PDEBUG(DFRAME, DEBUG_ERROR, "Frame index %d out of range (0..%d), please fix!\n", index, num_frames - 1);
+	if (mt >= num_frames) {
+		PDEBUG(DFRAME, DEBUG_ERROR, "Frame mt %d out of range (0..%d), please fix!\n", mt, num_frames - 1);
 		abort();
 	}
 
 	/* set prefix of frame */
-	frame->prefix = nmt_frame[index].prefix;
+	frame->prefix = nmt_frame[mt].prefix;
 
 	/* retrieve direction */
-	direction = nmt_frame[index].direction;
+	direction = nmt_frame[mt].direction;
 
 	if (debug)
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Coding %s %s %s\n", nmt_dir_name(direction), nmt_frame[index].nr, nmt_frame[index].description);
+		PDEBUG(DFRAME, DEBUG_DEBUG, "Coding %s %s %s\n", nmt_dir_name(direction), nmt_frame[mt].nr, nmt_frame[mt].description);
 
 	for (i = 15; i >= 0; i--) {
-		digit = nmt_frame[index].digits[i];
+		digit = nmt_frame[mt].digits[i];
 		if (digit == '-') {
 			digits[i] = 0;
 			continue;
@@ -904,7 +904,7 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 		digits[i] = (value & 0xf);
 		value >>= 4;
 		for (j = i - 1; j >= 0; j--) {
-			if (nmt_frame[index].digits[j] != digit)
+			if (nmt_frame[mt].digits[j] != digit)
 				break;
 			digits[j] = (value & 0xf);
 			value >>= 4;
@@ -916,13 +916,13 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 		int ndigits;
 
 		for (i = 0; i < 16; i++) {
-			digit = nmt_frame[index].digits[i];
+			digit = nmt_frame[mt].digits[i];
 			if (digit == '-')
 				continue;
 			value = digits[i];
 			ndigits = 1;
 			for (j = i + 1; j < 16; j++) {
-				if (nmt_frame[index].digits[j] != digit)
+				if (nmt_frame[mt].digits[j] != digit)
 					break;
 				value = (value << 4) | digits[j];
 				ndigits++;
@@ -938,7 +938,7 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 		for (i = 0; i < 16; i++)
 			debug_digits[i] = "0123456789abcdef"[digits[i]];
 		debug_digits[i] = '\0';
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", nmt_frame[index].digits);
+		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", nmt_frame[mt].digits);
 		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", debug_digits);
 	}
 }
