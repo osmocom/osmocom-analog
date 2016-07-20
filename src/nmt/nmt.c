@@ -75,6 +75,8 @@ const char *nmt_state_name(enum nmt_state state)
 		return "MT CALL CHANNEL";
 	case STATE_MT_IDENT:
 		return "MT CALL IDENT";
+	case STATE_MT_AUTOANSWER:
+		return "MT CALL AUTOANSWER";
 	case STATE_MT_RINGING:
 		return "MT CALL RINGING";
 	case STATE_MT_COMPLETE:
@@ -810,7 +812,7 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 	if (++nmt->tx_frame_count <= 4) {
 		set_line_signal(nmt, frame, 6);
 		if (nmt->tx_frame_count == 1)
-			PDEBUG(DNMT, DEBUG_INFO, "Send 'addess complete'.\n");
+			PDEBUG(DNMT, DEBUG_INFO, "Send 'address complete'.\n");
 	} else {
 		if (nmt->compandor) {
 			set_line_signal(nmt, frame, 5);
@@ -937,14 +939,65 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 		nmt_value2digits(frame->ms_password, nmt->subscriber.password, 3);
 		PDEBUG(DNMT, DEBUG_INFO, "Received identity (password %s).\n", nmt->subscriber.password);
 		if (nmt->dms_call) {
-			nmt_new_state(nmt, STATE_MT_COMPLETE);
+			nmt_new_state(nmt, STATE_MT_AUTOANSWER);
+			nmt->wait_autoanswer = 1;
 			nmt->tx_frame_count = 0;
 		} else {
 			nmt_new_state(nmt, STATE_MT_RINGING);
-			nmt->tx_frame_count = 0;
+			/* start with caller ID before ringing */
+			if (nmt->send_callerid) {
+				nmt->tx_frame_count = 4;
+				nmt->tx_callerid_count = 1;
+			} else {
+				nmt->tx_frame_count = 0;
+				nmt->tx_callerid_count = 0;
+			}
 			timer_start(&nmt->timer, RINGING_TO);
 			call_in_alerting(nmt->sender.callref);
 		}
+		break;
+	default:
+		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
+	}
+}
+
+static void tx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
+{
+	/* first we need to wait for autoanswer */
+	if (nmt->wait_autoanswer) {
+		frame->index = NMT_MESSAGE_6;
+		return;
+	}
+	if (++nmt->tx_frame_count == 1)
+		PDEBUG(DNMT, DEBUG_INFO, "Send 'autoanswer order'.\n");
+	set_line_signal(nmt, frame, 12);
+	if (nmt->tx_frame_count == 4) {
+		PDEBUG(DNMT, DEBUG_INFO, "No reaction to autoanswer, proceed with ringing.\n");
+		nmt_new_state(nmt, STATE_MT_RINGING);
+		nmt->tx_frame_count = 0;
+		nmt->tx_callerid_count = 0;
+		timer_start(&nmt->timer, RINGING_TO);
+		call_in_alerting(nmt->sender.callref);
+	}
+}
+
+static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
+{
+	switch (frame->index) {
+	case NMT_MESSAGE_15: /* idle */
+		nmt->wait_autoanswer = 0;
+		break;
+	case NMT_MESSAGE_13a: /* line signal */
+		if (!match_channel(nmt, frame))
+			break;
+		if (!match_subscriber(nmt, frame))
+			break;
+		if ((frame->line_signal & 0xf) != 12)
+			break;
+		PDEBUG(DNMT, DEBUG_INFO, "Received acknowlege to autoanswer.\n");
+		nmt_new_state(nmt, STATE_MT_COMPLETE);
+		nmt->tx_frame_count = 0;
+		call_in_answer(nmt->sender.callref, &nmt->subscriber.country);
 		break;
 	default:
 		PDEBUG(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->index), nmt_state_name(nmt->state));
@@ -967,6 +1020,8 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 {
 	switch (frame->index) {
 	case NMT_MESSAGE_13a: /* line signal */
+		if (!match_channel(nmt, frame))
+			break;
 		if (!match_subscriber(nmt, frame))
 			break;
 		if ((frame->line_signal & 0xf) != 14)
@@ -984,12 +1039,7 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 {
 	++nmt->tx_frame_count;
-	if (nmt->dms_call) {
-		if (nmt->tx_frame_count == 1)
-			PDEBUG(DNMT, DEBUG_INFO, "Send 'autoanswer'.\n");
-		set_line_signal(nmt, frame, 12);
-	} else
-	if (nmt->compandor) {
+	if (nmt->compandor && !nmt->dms_call) {
 		if (nmt->tx_frame_count == 1)
 			PDEBUG(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
 		set_line_signal(nmt, frame, 5);
@@ -1274,6 +1324,9 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	case STATE_MT_IDENT:
 		rx_mt_ident(nmt, &frame);
 		break;
+	case STATE_MT_AUTOANSWER:
+		rx_mt_autoanswer(nmt, &frame);
+		break;
 	case STATE_MT_RINGING:
 		rx_mt_ringing(nmt, &frame);
 		break;
@@ -1351,6 +1404,9 @@ const char *nmt_get_frame(nmt_t *nmt)
 		break;
 	case STATE_MT_IDENT:
 		tx_mt_ident(nmt, &frame);
+		break;
+	case STATE_MT_AUTOANSWER:
+		tx_mt_autoanswer(nmt, &frame);
 		break;
 	case STATE_MT_RINGING:
 		tx_mt_ringing(nmt, &frame);

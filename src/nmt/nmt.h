@@ -31,6 +31,7 @@ enum nmt_state {
 	STATE_MT_PAGING,	/* paging mobile phone */
 	STATE_MT_CHANNEL,	/* assigning traffic channel */
 	STATE_MT_IDENT,		/* waiting for identity */
+	STATE_MT_AUTOANSWER,	/* sending autoanswer, waiting for reply */
 	STATE_MT_RINGING,	/* mobile phone is ringing, waiting for answer */
 	STATE_MT_COMPLETE,	/* mobile phone has answered, completing call */
 	STATE_ACTIVE,		/* during active call */
@@ -79,6 +80,7 @@ typedef struct nmt {
 
 	/* sender's states */
 	enum nmt_state		state;
+	int			wait_autoanswer;	/* wait for frame 15 before we can send autoanswer */
 	enum nmt_active_state	active_state;
 	nmt_subscriber_t	subscriber;		/* current subscriber */
 	struct timer		timer;
