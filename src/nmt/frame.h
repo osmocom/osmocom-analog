@@ -1,48 +1,53 @@
 
-#define NMT_MESSAGE_1a	0
-#define NMT_MESSAGE_1b	1
-#define NMT_MESSAGE_2a	2
-#define NMT_MESSAGE_2b	3
-#define NMT_MESSAGE_2c	4
-#define NMT_MESSAGE_2d	5
-#define NMT_MESSAGE_2f	6
-#define NMT_MESSAGE_3a	7
-#define NMT_MESSAGE_3b	8
-#define NMT_MESSAGE_3c	9
-#define NMT_MESSAGE_4	10
-#define NMT_MESSAGE_5a	11
-#define NMT_MESSAGE_5b	12
-#define NMT_MESSAGE_6	13
-#define NMT_MESSAGE_7	14
-#define NMT_MESSAGE_10a	15
-#define NMT_MESSAGE_10b	16
-#define NMT_MESSAGE_10c	17
-#define NMT_MESSAGE_11a	18
-#define NMT_MESSAGE_11b	19
-#define NMT_MESSAGE_12	20
-#define NMT_MESSAGE_13a	21
-#define NMT_MESSAGE_13b	22
-#define NMT_MESSAGE_14a	23
-#define NMT_MESSAGE_14b	24
-#define NMT_MESSAGE_15	25
-#define NMT_MESSAGE_16	26
-#define NMT_MESSAGE_20a	27
-#define NMT_MESSAGE_20b	28
-#define NMT_MESSAGE_20c	29
-#define NMT_MESSAGE_20d	30
-#define NMT_MESSAGE_20e	31
-#define NMT_MESSAGE_21b	32
-#define NMT_MESSAGE_21c	33
-#define NMT_MESSAGE_22	34
-#define NMT_MESSAGE_25a	35
-#define NMT_MESSAGE_25b	36
-#define NMT_MESSAGE_25c	37
-#define NMT_MESSAGE_25d	38
-#define NMT_MESSAGE_26	39
-#define NMT_MESSAGE_27	40
-#define NMT_MESSAGE_28	41
-#define NMT_MESSAGE_30	42
-
+enum nmt_mt {
+	NMT_MESSAGE_1a = 0,
+	NMT_MESSAGE_1b,
+	NMT_MESSAGE_2a,
+	NMT_MESSAGE_2b,
+	NMT_MESSAGE_2c,
+	NMT_MESSAGE_2d,
+	NMT_MESSAGE_2f,
+	NMT_MESSAGE_3a,
+	NMT_MESSAGE_3b,
+	NMT_MESSAGE_3c,
+	NMT_MESSAGE_4,
+	NMT_MESSAGE_5a,
+	NMT_MESSAGE_5b,
+	NMT_MESSAGE_6,
+	NMT_MESSAGE_7,
+	NMT_MESSAGE_8,
+	NMT_MESSAGE_10a,
+	NMT_MESSAGE_10b,
+	NMT_MESSAGE_10c,
+	NMT_MESSAGE_11a,
+	NMT_MESSAGE_11b,
+	NMT_MESSAGE_12,
+	NMT_MESSAGE_13a,
+	NMT_MESSAGE_13b,
+	NMT_MESSAGE_14a,
+	NMT_MESSAGE_14b,
+	NMT_MESSAGE_15,
+	NMT_MESSAGE_16,
+	NMT_MESSAGE_20_1,
+	NMT_MESSAGE_20_2,
+	NMT_MESSAGE_20_3,
+	NMT_MESSAGE_20_4,
+	NMT_MESSAGE_20_5,
+	NMT_MESSAGE_21b,
+	NMT_MESSAGE_21c,
+	NMT_MESSAGE_22,
+	NMT_MESSAGE_25_1,
+	NMT_MESSAGE_25_2,
+	NMT_MESSAGE_25_3,
+	NMT_MESSAGE_25_4,
+	NMT_MESSAGE_26,
+	NMT_MESSAGE_27,
+	NMT_MESSAGE_28,
+	NMT_MESSAGE_30,
+	NMT_MESSAGE_UKN_MTX,
+	NMT_MESSAGE_UKN_B,
+};
+	
 typedef struct frame {
 	uint8_t		index;
 	uint16_t	channel_no;
@@ -66,6 +71,8 @@ typedef struct frame {
 	uint64_t	sres;
 	uint16_t	limit_strength_eval;
 	uint16_t	c;
+	uint8_t		seq_number;
+	uint16_t	checksum;
 } frame_t;
 
 int init_frame(void);

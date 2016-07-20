@@ -323,7 +323,11 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	init_frame();
+	rc = init_frame();
+	if (rc < 0) {
+		fprintf(stderr, "Failed to setup frames. Quitting!\n");
+		return -1;
+	}
 	dsp_init();
 	rc = call_init(station_id, call_sounddev, samplerate, latency, 7, loopback);
 	if (rc < 0) {

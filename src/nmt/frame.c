@@ -113,59 +113,61 @@ uint16_t nmt_encode_area_no(uint8_t area_no)
 
 /* NMT Doc 450-1 4.3.2 */
 static struct nmt_frame {
+	enum nmt_mt message_type;
 	const char *digits;
 	enum nmt_direction direction;
 	int prefix;
 	const char *nr;
 	const char *description;
 } nmt_frame[] = {
-/*	  Digits              Dir.       Prefix	Nr.	Description */
-/*0*/	{ "NNNPYYHHHHHHHHHH", MTX_TO_MS, 12,	"1a",	"Calling channel indication" },
-/*1*/	{ "NNNPYYHHHHHHHHHH", MTX_TO_MS, 4,	"1b",	"Combined calling and traffic channel indication" },
-/*2*/	{ "NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2a",	"Call to mobile subscriber on calling channel" },
-/*3*/	{ "NNNPYYZXXXXXXnnn", MTX_TO_MS, 12,	"2b",	"Traffic channel allocation on calling channel" },
-/*4*/	{ "NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2c",	"Queueing information to MS with priority on calling channel" },
-/*5*/	{ "NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2d",	"Traffic channel scanning order on calling channel" },
-/*6*/	{ "NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2f",	"Queuing information to ordinary MS" },
-/*7*/	{ "NNNPYYZXXXXXXnnn", MTX_TO_MS, 5,	"3a",	"Traffic channel allocation on traffic channel" },
-/*8*/	{ "NNNPYYZXXXXXXHHH", MTX_TO_MS, 5,	"3b",	"Identity request on traffic channel" },
-/*9*/	{ "NNNPYYZXXXXXXnnn", MTX_TO_MS, 9,	"3c",	"Traffic channel allocation on traffic channel, short procedure" },
-/*10*/	{ "NNNPYYJJJJJJJHHH", MTX_TO_MS, 3,	"4",	"Free traffic channel indication" },
-/*11*/	{ "NNNPYYZXXXXXXLLL", MTX_TO_MS, 6,	"5a",	"Line signal" },
-/*12*/	{ "NNNPYYZXXXXXXLQQ", MTX_TO_MS, 6,	"5b",	"Line signal: Answer to coin-box" },
-/*13*/	{ "JJJPJJJJJJJJJJJJ", MTX_TO_XX, 0,	"6",	"Idle frame" },
-/*14*/	{ "NNNPYYCCCCCCCJJJ", MTX_TO_MS, 8,	"7",	"Authentication request" },
-/*15*/	{ "NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgement from MS on calling channel (shortened frame)" },
-/*16*/	{ "NNNPZXXXXXXTYKKK", MS_TO_MTX, 1,	"10b",	"Seizure from ordinary MS and identity on traffic channel" },
-/*17*/	{ "NNNPZXXXXXXTYKKK", MS_TO_MTX, 6,	"10c",	"Seizure and identity from called MS on traffic channel" },
-/*18*/	{ "NNNPZXXXXXXTYKKK", MS_TO_MTX, 14,	"11a",	"Roaming updating seizure and identity on traffic channel" },
-/*19*/	{ "NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgement on calling channel from MS with priority (shortened frame)" },
-/*20*/	{ "NNNPZXXXXXXTYKKK", MS_TO_MTX, 11,	"12",	"Seizure from coin-box on traffic channel" },
-/*21*/	{ "NNNPZXXXXXXLLLLL", MS_TO_MTX, 8,	"13a",	"Line signal" },
-/*22*/	{ "NNNPZXXXXXXLLLQQ", MS_TO_MTX, 8,	"13b",	"Line signal: Answer acknowledgement from coin box" },
-/*23*/	{ "NNNPZXXXXXXSSSSS", MS_TO_MTX, 7,	"14a",	"Digit signal (1st, 3rd, 5th ........digit)" },
-/*24*/	{ "NNNPZXXXXXXSSSSS", MS_TO_MTX, 7,	"14b",	"Digit signal (2nd, 4th, 6th ........digit)" },
-/*25*/	{ "JJJPJJJJJJJJJJJJ", XX_TO_MTX, 0,	"15",	"Idle frame" },
-/*26*/	{ "NNNPRRRRRRRRRRRR", MS_TO_MTX, 12,	"16",	"Signed response" },
-/*27*/	{ "NNNPYYZJJJAfffff", MTX_TO_BS, 15,	"20",	"Channel activation order" },
-/*28*/	{ "NNNPYYZJJJAJJJJJ", MTX_TO_BS, 15,	"20",	"Channel activation order" },
-/*29*/	{ "NNNPYYZJJJAfffff", MTX_TO_BS, 15,	"20",	"Channel activation order" },
-/*30*/	{ "NNNPYYZJJJAlllff", MTX_TO_BS, 15,	"20",	"Channel activation order" },
-/*31*/	{ "NNNPYYZJJJAlllJJ", MTX_TO_BS, 15,	"20",	"Channel activation order" },
-/*32*/	{ "NNNPYYZJJJVJJnnn", MTX_TO_BS, 3,	"21b",	"Signal strength measurement order on data channel or idle or free marked traffic channel" },
-/*33*/	{ "NNNPYYZJJJVJJnnn", MTX_TO_BS, 5,	"21c",	"Signal strength measurement order on traffic actually used" },
-/*34*/	{ "NNNPYYZJJJVVVVVV", MTX_TO_BS, 14,	"22",	"Order management/maintenance order on idle channel or data channel" },
-/*35*/	{ "NNNPZJJAJJJJJJJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
-/*36*/	{ "NNNPZJJAJJJfllJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
-/*37*/	{ "NNNPZJJAJJJJllJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
-/*38*/	{ "NNNPZJJAJJJcccJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
-/*39*/	{ "NNNPZJJnnnrrrrrr", BS_TO_MTX, 2,	"26",	"Signal strength measurement result" },
-/*40*/	{ "NNNPZJJVVVVJJJJJ", BS_TO_MTX, 4,	"27",	"Response on other management/maintenance order on idle channel or data channel" },
-/*41*/	{ "NNNPZJJVVVVJJJJJ", BS_TO_MTX, 13,	"28",	"Other maintenance information from BS" },
-/*42*/	{ "NNNPYYJJJJJJJHHH", MTX_TO_MS, 10,	"30",	"Test channel indication" },
-/*43*/	{ "---P------------", MTX_TO_XX, 0,	"",	"illegal (Spare)" },
-/*44*/	{ "---P------------", XX_TO_MTX, 0,	"",	"illegal (Spare)" },
-	{ NULL, 0, 0, NULL, NULL }
+/*	  Define		Digits              Dir.       Prefix	Nr.	Description */
+	{ NMT_MESSAGE_1a,	"NNNPYYHHHHHHHHHH", MTX_TO_MS, 12,	"1a",	"Calling channel indication" },
+	{ NMT_MESSAGE_1b,	"NNNPYYHHHHHHHHHH", MTX_TO_MS, 4,	"1b",	"Combined calling and traffic channel indication" },
+	{ NMT_MESSAGE_2a,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2a",	"Call to mobile subscriber on calling channel" },
+	{ NMT_MESSAGE_2b,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 12,	"2b",	"Traffic channel allocation on calling channel" },
+	{ NMT_MESSAGE_2c,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2c",	"Queueing information to MS with priority on calling channel" },
+	{ NMT_MESSAGE_2d,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2d",	"Traffic channel scanning order on calling channel" },
+	{ NMT_MESSAGE_2f,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2f",	"Queuing information to ordinary MS" },
+	{ NMT_MESSAGE_3a,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 5,	"3a",	"Traffic channel allocation on traffic channel" },
+	{ NMT_MESSAGE_3b,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 5,	"3b",	"Identity request on traffic channel" },
+	{ NMT_MESSAGE_3c,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 9,	"3c",	"Traffic channel allocation on traffic channel, short procedure" },
+	{ NMT_MESSAGE_4,	"NNNPYYJJJJJJJHHH", MTX_TO_MS, 3,	"4",	"Free traffic channel indication" },
+	{ NMT_MESSAGE_5a,	"NNNPYYZXXXXXXLLL", MTX_TO_MS, 6,	"5a",	"Line signal" },
+	{ NMT_MESSAGE_5b,	"NNNPYYZXXXXXXLQQ", MTX_TO_MS, 6,	"5b",	"Line signal: Answer to coin-box" },
+	{ NMT_MESSAGE_6,	"JJJPJJJJJJJJJJJJ", MTX_TO_XX, 0,	"6",	"Idle frame" },
+	{ NMT_MESSAGE_7,	"NNNPYYCCCCCCCJJJ", MTX_TO_MS, 8,	"7",	"Authentication request" },
+	{ NMT_MESSAGE_8,	"NNNPYYMHHHHHHHWW", MTX_TO_MS, 1,	"8",	"A-subscriber number" },
+	{ NMT_MESSAGE_10a,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgement from MS on calling channel (shortened frame)" },
+	{ NMT_MESSAGE_10b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 1,	"10b",	"Seizure from ordinary MS and identity on traffic channel" },
+	{ NMT_MESSAGE_10c,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 6,	"10c",	"Seizure and identity from called MS on traffic channel" },
+	{ NMT_MESSAGE_11a,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 14,	"11a",	"Roaming updating seizure and identity on traffic channel" },
+	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgement on calling channel from MS with priority (shortened frame)" },
+	{ NMT_MESSAGE_12,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 11,	"12",	"Seizure from coin-box on traffic channel" },
+	{ NMT_MESSAGE_13a,	"NNNPZXXXXXXLLLLL", MS_TO_MTX, 8,	"13a",	"Line signal" },
+	{ NMT_MESSAGE_13b,	"NNNPZXXXXXXLLLQQ", MS_TO_MTX, 8,	"13b",	"Line signal: Answer acknowledgement from coin box" },
+	{ NMT_MESSAGE_14a,	"NNNPZXXXXXXSSSSS", MS_TO_MTX, 7,	"14a",	"Digit signal (1st, 3rd, 5th ........digit)" },
+	{ NMT_MESSAGE_14b,	"NNNPZXXXXXXSSSSS", MS_TO_MTX, 7,	"14b",	"Digit signal (2nd, 4th, 6th ........digit)" },
+	{ NMT_MESSAGE_15,	"JJJPJJJJJJJJJJJJ", XX_TO_MTX, 0,	"15",	"Idle frame" },
+	{ NMT_MESSAGE_16,	"NNNPRRRRRRRRRRRR", MS_TO_MTX, 12,	"16",	"Signed response" },
+	{ NMT_MESSAGE_20_1,	"NNNPYYZJJJAfffff", MTX_TO_BS, 15,	"20",	"Channel activation order" },
+	{ NMT_MESSAGE_20_2,	"NNNPYYZJJJAJJJJJ", MTX_TO_BS, 15,	"20",	"Channel activation order" },
+	{ NMT_MESSAGE_20_3,	"NNNPYYZJJJAfffff", MTX_TO_BS, 15,	"20",	"Channel activation order" },
+	{ NMT_MESSAGE_20_4,	"NNNPYYZJJJAlllff", MTX_TO_BS, 15,	"20",	"Channel activation order" },
+	{ NMT_MESSAGE_20_5,	"NNNPYYZJJJAlllJJ", MTX_TO_BS, 15,	"20",	"Channel activation order" },
+	{ NMT_MESSAGE_21b,	"NNNPYYZJJJVJJnnn", MTX_TO_BS, 3,	"21b",	"Signal strength measurement order on data channel or idle or free marked traffic channel" },
+	{ NMT_MESSAGE_21c,	"NNNPYYZJJJVJJnnn", MTX_TO_BS, 5,	"21c",	"Signal strength measurement order on traffic actually used" },
+	{ NMT_MESSAGE_22,	"NNNPYYZJJJVVVVVV", MTX_TO_BS, 14,	"22",	"Order management/maintenance order on idle channel or data channel" },
+	{ NMT_MESSAGE_25_1,	"NNNPZJJAJJJJJJJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
+	{ NMT_MESSAGE_25_2,	"NNNPZJJAJJJfllJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
+	{ NMT_MESSAGE_25_3,	"NNNPZJJAJJJJllJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
+	{ NMT_MESSAGE_25_4,	"NNNPZJJAJJJcccJJ", BS_TO_MTX, 9,	"25",	"Channel status information" },
+	{ NMT_MESSAGE_26,	"NNNPZJJnnnrrrrrr", BS_TO_MTX, 2,	"26",	"Signal strength measurement result" },
+	{ NMT_MESSAGE_27,	"NNNPZJJVVVVJJJJJ", BS_TO_MTX, 4,	"27",	"Response on other management/maintenance order on idle channel or data channel" },
+	{ NMT_MESSAGE_28,	"NNNPZJJVVVVJJJJJ", BS_TO_MTX, 13,	"28",	"Other maintenance information from BS" },
+	{ NMT_MESSAGE_30,	"NNNPYYJJJJJJJHHH", MTX_TO_MS, 10,	"30",	"Test channel indication" },
+	{ NMT_MESSAGE_UKN_MTX,	"---P------------", MTX_TO_XX, 0,	"",	"illegal (Spare)" },
+	{ NMT_MESSAGE_UKN_B,	"---P------------", XX_TO_MTX, 0,	"",	"illegal (Spare)" },
+	{ 0, NULL, 0, 0, NULL, NULL }
 };
 
 /* store actual number of frames for run-time range check */
@@ -395,11 +397,13 @@ static struct nmt_parameter {
 	{ 'R',	"Signed response",		param_hex },
 	{ 'l',	"Limit strength evaluation",	param_hex },
 	{ 'c',	"c",				param_hex },
+	{ 'M',	"Sequence Number",		param_integer },
+	{ 'W',	"Checksum",			param_hex },
 	{ 0,	NULL }
 };
 
 /* Depending on P-value, direction and additional info, frame index (used for
- * nmt_frame[]) is recoded.
+ * nmt_frame[]) is decoded.
  */
 static int decode_frame_index(const uint8_t *digits, enum nmt_direction direction, int callack)
 {
@@ -407,151 +411,151 @@ static int decode_frame_index(const uint8_t *digits, enum nmt_direction directio
 		/* MS/BS TO MTX */
 		switch (digits[3]) {
 		case 0:
-			return 25;
+			return NMT_MESSAGE_15;
 		case 1:
 			if (callack)
-				return 15;
-			return 16;
+				return NMT_MESSAGE_10a;
+			return NMT_MESSAGE_10b;
 		case 2:
-			return 39;
+			return NMT_MESSAGE_26;
 		case 3:
 			break;
 		case 4:
-			return 40;
+			return NMT_MESSAGE_27;
 		case 5:
 			break;
 		case 6:
-			return 17;
+			return NMT_MESSAGE_10c;
 		case 7:
 			if (digits[11] == 0)
-				return 23;
+				return NMT_MESSAGE_14a;
 			if (digits[11] == 15)
-				return 24;
+				return NMT_MESSAGE_14b;
 			return -1;
 		case 8:
 			if (digits[11] == 2)
-				return 22;
-			return 21;
+				return NMT_MESSAGE_13b;
+			return NMT_MESSAGE_13a;
 		case 9:
 			switch((digits[13] << 8) + (digits[14] << 4) + digits[15]) {
 			case 2:
 			case 6:
-				return 36;
+				return NMT_MESSAGE_25_2;
 			case 14:
-				return 37;
+				return NMT_MESSAGE_25_3;
 			case 7:
 			case 8:
-				return 38;
+				return NMT_MESSAGE_25_4;
 			default:
-				return 35;
+				return NMT_MESSAGE_25_1;
 			}
 		case 10:
 			break;
 		case 11:
-			return 20;
+			return NMT_MESSAGE_12;
 		case 12:
-			return 26;
+			return NMT_MESSAGE_16;
 		case 13:
-			return 41;
+			return NMT_MESSAGE_28;
 		case 14:
-			return 18;
+			return NMT_MESSAGE_11a;
 		case 15:
-			return 19;
+			return NMT_MESSAGE_11b;
 		}
-		return 44;
+		return NMT_MESSAGE_UKN_B;
 	} else {
 		/* MTX to MS/BS */
 		switch (digits[3]) {
 		case 0:
-			return 13;
+			return NMT_MESSAGE_6;
 		case 1:
-			break;
+			return NMT_MESSAGE_8;
 		case 2:
 			break;
 		case 3:
 			if (digits[6] == 15)
-				return 32;
-			return 10;
+				return NMT_MESSAGE_21b;
+			return NMT_MESSAGE_4;
 		case 4:
-			return 1;
+			return NMT_MESSAGE_1b;
 		case 5:
 			if (digits[6] == 15)
-				return 33;
+				return NMT_MESSAGE_21c;
 			switch((digits[13] << 8) + (digits[14] << 4) + digits[15]) {
 			case 0x3f3:
 			case 0x3f4:
 			case 0x3f5:
 			case 0x3f6:
 			case 0x000:
-				return 8;
+				return NMT_MESSAGE_3b;
 			default:
-				return 7;
+				return NMT_MESSAGE_3a;
 			}
 		case 6:
 			if (digits[13] == 0)
-				return 12;
-			return 11;
+				return NMT_MESSAGE_5b;
+			return NMT_MESSAGE_5a;
 		case 7:
 			break;
 		case 8:
-			return 14;
+			return NMT_MESSAGE_7;
 		case 9:
-			return 9;
+			return NMT_MESSAGE_3c;
 		case 10:
-			return 42;
+			return NMT_MESSAGE_30;
 		case 11:
 			break;
 		case 12:
 			/* no subscriber */
 			if (digits[6] == 0)
-				return 0;
+				return NMT_MESSAGE_1a;
 			/* battery saving */
 			if (digits[6] == 14)
-				return 0;
+				return NMT_MESSAGE_1a;
 			/* info to BS (should not happen here) */
 			if (digits[6] == 15)
-				return 0;
+				return NMT_MESSAGE_1a;
 			switch((digits[13] << 8) + (digits[14] << 4) + digits[15]) {
 			case 0x3f3:
 			case 0x3f4:
 			case 0x3f5:
 			case 0x3f6:
 			case 0x000:
-				return 2;
+				return NMT_MESSAGE_2a;
 			case 0x3f0:
-				return 6;
+				return NMT_MESSAGE_2f;
 			case 0x3f1:
-				return 4;
+				return NMT_MESSAGE_2c;
 			case 0x3f2:
-				return 5;
+				return NMT_MESSAGE_2d;
 			default:
-				return 3;
+				return NMT_MESSAGE_2b;
 			}
 		case 13:
 			break;
 		case 14:
 			if (digits[13] != 15)
 				break;
-			return 34;
+			return NMT_MESSAGE_22;
 		case 15:
 			if (digits[13] != 15)
 				break;
 			switch (digits[10]) {
 			case 3:
-				return 27;
+				return NMT_MESSAGE_20_1;
 			case 6:
 			case 13:
-				return 29;
+				return NMT_MESSAGE_20_3;
 			case 7:
 			case 14:
-				return 30;
+				return NMT_MESSAGE_20_4;
 			case 15:
-				return 31;
+				return NMT_MESSAGE_20_5;
 			default:
-				return 28;
+				return NMT_MESSAGE_20_2;
 			}
 		}
-		return 43;
+		return NMT_MESSAGE_UKN_MTX;
 	}
 }
 
@@ -562,6 +566,12 @@ int init_frame(void)
 
 	/* check if all digits actually exist */
 	for (i = 0; nmt_frame[i].digits; i++) {
+		/* check mesage type */
+		if (nmt_frame[i].message_type != i) {
+			PDEBUG(DFRAME, DEBUG_ERROR, "Message type at message index #%d does not have a value of %d, but has %d, please fix!\n", i, i + 1, nmt_frame[i].message_type);
+			return -1;
+		}
+		/* check IEs */
 		for (j = 0; j < 16; j++) {
 			digit = nmt_frame[i].digits[j];
 			if (digit == '-')
@@ -676,6 +686,12 @@ static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_di
 			break;
 		case 'c':
 			frame->c = value;
+			break;
+		case 'M':
+			frame->seq_number = value;
+			break;
+		case 'W':
+			frame->checksum = value;
 			break;
 		default:
 			PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
@@ -795,6 +811,12 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 			break;
 		case 'c':
 			value = frame->c;
+			break;
+		case 'M':
+			value = frame->seq_number;
+			break;
+		case 'W':
+			value = frame->checksum;
 			break;
 		default:
 			PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
