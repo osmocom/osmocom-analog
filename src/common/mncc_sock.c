@@ -114,12 +114,12 @@ static int mncc_accept(void)
 	if (rc < 0) {
 		if (errno == EWOULDBLOCK)
 			return 0;
-		PDEBUG(DMNCC, DEBUG_ERROR, "Failed to accept incomming connection (errno=%d).\n", errno);
+		PDEBUG(DMNCC, DEBUG_ERROR, "Failed to accept incoming connection (errno=%d).\n", errno);
 		return rc;
 	}
 
 	if (mncc_sock > 0) {
-		PDEBUG(DMNCC, DEBUG_NOTICE, "Rejecting multiple incomming connections.\n");
+		PDEBUG(DMNCC, DEBUG_NOTICE, "Rejecting multiple incoming connections.\n");
 		close(rc);
 		return -EIO;
 	}

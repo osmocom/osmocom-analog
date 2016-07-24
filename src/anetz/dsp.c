@@ -42,7 +42,7 @@
 #define CHUNK_DURATION	0.010	/* 10 ms */
 
 // FIXME: how long until we detect a tone?
-#define TONE_DETECT_TH	8	/* chunk intervals to detect continous tone */
+#define TONE_DETECT_TH	8	/* chunk intervals to detect continuous tone */
 
 /* carrier loss detection */
 #define LOSS_INTERVAL	100	/* filter steps (chunk durations) for one second interval */
@@ -152,7 +152,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	if (anetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&anetz->sender.loss);
 	if (anetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DDSP, DEBUG_INFO, "Detecting continous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100.0 + 0.5));
+		PDEBUG(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100.0 + 0.5));
 		anetz_receive_tone(anetz, anetz->tone_detected);
 	}
 }

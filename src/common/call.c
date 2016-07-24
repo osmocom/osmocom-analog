@@ -644,7 +644,7 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 	if (!strcmp(dialing, "0"))
 		dialing = "operator";
 
-	PDEBUG(DCALL, DEBUG_INFO, "Incomming call from '%s' to '%s'\n", callerid, dialing);
+	PDEBUG(DCALL, DEBUG_INFO, "Incoming call from '%s' to '%s'\n", callerid, dialing);
 
 	if (use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_mncc)];

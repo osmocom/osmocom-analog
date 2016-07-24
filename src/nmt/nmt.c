@@ -1078,7 +1078,7 @@ static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 			break;
 		if ((frame->line_signal & 0xf) != 12)
 			break;
-		PDEBUG(DNMT, DEBUG_INFO, "Received acknowlege to autoanswer.\n");
+		PDEBUG(DNMT, DEBUG_INFO, "Received acknowledge to autoanswer.\n");
 		nmt_new_state(nmt, STATE_MT_COMPLETE);
 		nmt->tx_frame_count = 0;
 		call_in_answer(nmt->sender.callref, &nmt->subscriber.country);

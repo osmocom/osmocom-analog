@@ -38,7 +38,7 @@
 #define FILTER_STEP	0.001	/* step every 1 ms */
 #define METERING_HZ	2900	/* metering pulse frequency */
 
-#define TONE_DETECT_TH	70	/* 70 milliseconds to detect continous tone */
+#define TONE_DETECT_TH	70	/* 70 milliseconds to detect continuous tone */
 
 /* carrier loss detection */
 #define LOSS_INTERVAL	1000	/* filter steps (milliseconds) for one second interval */
@@ -156,7 +156,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 	if (bnetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&bnetz->sender.loss);
 	if (bnetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DDSP, DEBUG_INFO, "Detecting continous tone: %.0f:Level=%3.0f%% Quality=%3.0f%%\n", fsk_bits[bnetz->tone_detected], level * 100.0, quality * 100.0);
+		PDEBUG(DDSP, DEBUG_INFO, "Detecting continuous tone: %.0f:Level=%3.0f%% Quality=%3.0f%%\n", fsk_bits[bnetz->tone_detected], level * 100.0, quality * 100.0);
 		bnetz_receive_tone(bnetz, bnetz->tone_detected);
 	}
 }
