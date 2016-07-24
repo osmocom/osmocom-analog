@@ -775,7 +775,7 @@ It uses the lower DMS layer to transfer data between network and mobile station
 If the phone supports SMS, try sending a test SMS to any number.
 Be sure to set the SMSC (Short Message Service Center) to '767'.
 This software will detect SMS call when the phone dials '767'.
-If you cannot define the SMSC on your phone, send an SMS and check what number was dialed, then use '-I <number>' to define SMSC at this software.
+If you cannot define the SMSC on your phone, send an SMS and check what number was dialed, then use '-S &lt;number&gt;' or '--smsc-number &lt;number&gt;' to define SMSC at this software.
 Also be sure not to enable encryption for SMS.
 The process looks like this:
 </p>
@@ -879,7 +879,7 @@ The process looks like this:
 <pre>
 
 nmt.c:1807 info   : SMS for subscriber '3735859'
-SMS sending '1234' -&gt; '3735859': 1234,3735859,This is a test!
+SMS sending '1234' -&gt; '3735859': This is a test!
 nmt.c:1597 info   : Call to mobile station, paging station id '3735859'
 nmt.c:434 info   : Entering paging state (try 1), sending call to '3,735859'.
 nmt.c:443 info   : Paging on our channel 1.
