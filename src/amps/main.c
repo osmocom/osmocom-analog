@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "*******************************************************************************\n");
 		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -E -e)!\n");
 		fprintf(stderr, "Use a transmitter/receiver without emphasis and let me do that!\n");
-		fprintf(stderr, "Because carrier FSK signalling does not use emphasis, I like to control\n");
+		fprintf(stderr, "Because carrier FSK signaling does not use emphasis, I like to control\n");
 		fprintf(stderr, "emphasis by myself for best results.\n");
 		fprintf(stderr, "*******************************************************************************\n");
 	}

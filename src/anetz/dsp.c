@@ -32,8 +32,8 @@
 
 #define PI		3.1415927
 
-/* signalling */
-/* NOTE: The peak deviation is similar for paging tone and signalling tone,
+/* signaling */
+/* NOTE: The peak deviation is similar for paging tone and signaling tone,
  * so both tones should be equal after pre-emphasis. This is why the paging
  * tones is so much louder.*/
 #define TX_PEAK_TONE	8192.0	/* peak amplitude for all tones */
@@ -50,7 +50,7 @@
 
 extern int page_sequence;
 
-/* two signalling tones */
+/* two signaling tones */
 static double fsk_tones[2] = {
 	2280.0,
 	1750.0,

@@ -963,12 +963,12 @@ static void tx_mt_paging(nmt_t *nmt, frame_t *frame)
 static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 {
 	switch (frame->mt) {
-	case NMT_MESSAGE_10a: /* call acknowledgement */
+	case NMT_MESSAGE_10a: /* call acknowledgment */
 		if (!match_channel(nmt, frame))
 			break;
 		if (!match_subscriber(nmt, frame))
 			break;
-		PDEBUG(DNMT, DEBUG_INFO, "Received call acknowledgement on channel %d.\n", nmt->sender.kanal);
+		PDEBUG(DNMT, DEBUG_INFO, "Received call acknowledgment on channel %d.\n", nmt->sender.kanal);
 		nmt_new_state(nmt, STATE_MT_CHANNEL);
 		nmt->tx_frame_count = 0;
 		if (nmt->page_for_nmt) {

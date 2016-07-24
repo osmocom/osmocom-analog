@@ -31,9 +31,9 @@
 
 #define PI			M_PI
 
-/* signalling */
+/* signaling */
 #define COMPANDOR_0DB		32767	/* works quite well */
-#define TX_PEAK_FSK		10000.0	/* peak amplitude of signalling FSK */
+#define TX_PEAK_FSK		10000.0	/* peak amplitude of signaling FSK */
 #define TX_PEAK_SUPER		1000.0	/* peak amplitude of supervisory signal */
 #define BIT_RATE		1200	/* baud rate */
 #define STEPS_PER_BIT		10	/* step every 1/12000 sec */
@@ -43,7 +43,7 @@
 #define SUPER_DETECT_COUNT	4	/* number of measures to detect supervisory signal */
 #define MUTE_DURATION		0.280	/* a tiny bit more than two frames */
 
-/* two signalling tones */
+/* two signaling tones */
 static double fsk_bits[2] = {
 	1800.0,
 	1200.0,

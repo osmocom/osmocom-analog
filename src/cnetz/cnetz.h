@@ -30,12 +30,12 @@ enum cnetz_state {
 
 /* timers */
 #define F_BQ		8		/* number of not received frames at BQ state */
-#define F_VHQK		16		/* number of not received frames at VHQ state during concentrated signalling */
-#define F_VHQ		16		/* number of not received frames at VHQ state during distributed signalling */
+#define F_VHQK		16		/* number of not received frames at VHQ state during concentrated signaling */
+#define F_VHQ		16		/* number of not received frames at VHQ state during distributed signaling */
 #define F_DS		16		/* number of not received frames at DS state */
 #define F_RTA		16		/* number of not received frames at RTA state */
-#define N_AFKT		6		/* number of release frames to send during concentrated signalling */
-#define N_AFV		4		/* number of release frames to send during distributed signalling */
+#define N_AFKT		6		/* number of release frames to send during concentrated signaling */
+#define N_AFV		4		/* number of release frames to send during distributed signaling */
 
 /* clear causes */
 #define CNETZ_CAUSE_TEILNEHMERBESETZT	0	/* subscriber busy */

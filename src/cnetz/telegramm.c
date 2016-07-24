@@ -1522,7 +1522,7 @@ selected:
 	switch (cnetz->dsp_mode) {
 	case DSP_MODE_OGK:
 		if (definition_opcode[opcode].block != BLOCK_R && definition_opcode[opcode].block != BLOCK_M) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used OgK channel signalling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used OgK channel signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
 		/* determine block by last timeslot sent and by message type */
@@ -1533,14 +1533,14 @@ selected:
 		break;
 	case DSP_MODE_SPK_K:
 		if (definition_opcode[opcode].block != BLOCK_K) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used for concentrated signalling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used for concentrated signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
 		cnetz_receive_telegramm_spk_k(cnetz, &telegramm);
 		break;
 	case DSP_MODE_SPK_V:
 		if (definition_opcode[opcode].block != BLOCK_V) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used for distributed signalling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used for distributed signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
 		cnetz_receive_telegramm_spk_v(cnetz, &telegramm);

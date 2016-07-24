@@ -27,7 +27,7 @@ typedef struct fsk_fm_demod {
 	int		level_threshold;	/* threshold for detection of next level change */
 	double		bits_per_sample;	/* duration of one sample in bits */
 	double		next_bit;		/* count time to detect bits */
-	int		bit_count;		/* counts bits, to match 4 bits at distributed signalling */
+	int		bit_count;		/* counts bits, to match 4 bits at distributed signaling */
 	int		last_change_positive;	/* flags last level change direction */
 	enum fsk_sync	sync;			/* set, if we are in sync and what polarity we receive */
 	double		sync_level;		/* what was the level, when we received the sync */

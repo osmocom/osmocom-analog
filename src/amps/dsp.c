@@ -78,14 +78,14 @@
 #define COMPANDOR_0DB		45000	/* works quite well */
 #define BITRATE			10000
 #define SIG_TONE_CROSSINGS	2000	/* 2000 crossings are 100ms @ 10 KHz */
-#define SIG_TONE_MINBITS	950	/* minimum bit durations to detect signalling tone (1000 is perfect for 100 ms) */
+#define SIG_TONE_MINBITS	950	/* minimum bit durations to detect signaling tone (1000 is perfect for 100 ms) */
 #define SIG_TONE_MAXBITS	1050	/* as above, maximum bits */
 #define SAT_DURATION		0.100	/* duration of SAT signal measurement */
 #define SAT_QUALITY		0.85	/* quality needed to detect sat */
 #define SAT_DETECT_COUNT	3	/* number of measures to detect SAT signal (specs say 250ms) */
 #define SAT_LOST_COUNT		3	/* number of measures to loose SAT signal (specs say 250ms) */
-#define SIG_DETECT_COUNT	3	/* number of measures to detect Signalling Tone */
-#define SIG_LOST_COUNT		2	/* number of measures to loose Signalling Tone */
+#define SIG_DETECT_COUNT	3	/* number of measures to detect Signaling Tone */
+#define SIG_LOST_COUNT		2	/* number of measures to loose Signaling Tone */
 #define CUT_OFF_HIGHPASS	300.0   /* cut off frequency for high pass filter to remove dc level from sound card / sample */
 #define BEST_QUALITY		0.68	/* Best possible RX quality */
 
@@ -96,7 +96,7 @@ static double sat_freq[5] = {
 	6000.0,
 	6030.0,
 	5800.0, /* noise level to check against */
-	10000.0, /* signalling tone */
+	10000.0, /* signaling tone */
 };
 
 static int dsp_sine_sat[256];
@@ -652,7 +652,7 @@ void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
 }
 
 
-/* decode signalling tone */
+/* decode signaling tone */
 /* compare supervisory signal against noise floor on 5800 Hz */
 static void sat_decode(amps_t *amps, int16_t *samples, int length)
 {
@@ -661,7 +661,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 
 	coeff[0] = amps->sat_coeff[amps->sat];
 	coeff[1] = amps->sat_coeff[3]; /* noise floor detection */
-	coeff[2] = amps->sat_coeff[4]; /* signalling tone */
+	coeff[2] = amps->sat_coeff[4]; /* signaling tone */
 	audio_goertzel(samples, length, 0, coeff, result, 3);
 
 	quality[0] = (result[0] - result[1]) / result[0];
@@ -673,7 +673,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 
 	PDEBUG(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] * 32767.0 / SAT_DEVIATION / 0.63662 * 100.0, quality[0] * 100.0);
 	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
-		PDEBUG(DDSP, debuglevel, "Signalling Tone level %.2f%% quality %.0f%%\n", result[2] * 32767.0 / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
+		PDEBUG(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] * 32767.0 / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
 	}
 	if (quality[0] > SAT_QUALITY) {
 		if (amps->sat_detected == 0) {
@@ -704,8 +704,8 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 			if (amps->sig_detect_count == SIG_DETECT_COUNT) {
 				amps->sig_detected = 1;
 				amps->sig_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "Signalling Tone detected with level=%.0f%%, quality=%.0f%%.\n", result[2] / 0.63662 * 100.0, quality[1] * 100.0);
-				amps_rx_signalling_tone(amps, 1, quality[1]);
+				PDEBUG(DDSP, DEBUG_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", result[2] / 0.63662 * 100.0, quality[1] * 100.0);
+				amps_rx_signaling_tone(amps, 1, quality[1]);
 			}
 		} else
 			amps->sig_detect_count = 0;
@@ -715,15 +715,15 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 			if (amps->sig_detect_count == SIG_LOST_COUNT) {
 				amps->sig_detected = 0;
 				amps->sig_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "Signalling Tone lost.\n");
-				amps_rx_signalling_tone(amps, 0, 0.0);
+				PDEBUG(DDSP, DEBUG_DEBUG, "Signaling Tone lost.\n");
+				amps_rx_signaling_tone(amps, 0, 0.0);
 			}
 		} else
 			amps->sig_detect_count = 0;
 	}
 }
 
-/* decode signalling/audio */
+/* decode signaling/audio */
 /* Count SIG_TONE_CROSSINGS of zero crossings, then check if the elapsed bit
  * time is between SIG_TONE_MINBITS and SIG_TONE_MAXBITS. If it is, the
  * frequency is close to the singalling tone, so it is detected

@@ -510,21 +510,21 @@ static void amps_release(transaction_t *trans, uint8_t cause)
 }
 
 /*
- * receive signalling
+ * receive signaling
  */
 
-void amps_rx_signalling_tone(amps_t *amps, int tone, double quality)
+void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 {
 	transaction_t *trans = amps->trans_list;
 	if (trans == NULL) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Signalling Tone without transaction, please fix!\n");
+		PDEBUG(DAMPS, DEBUG_ERROR, "Signaling Tone without transaction, please fix!\n");
 		return;
 	}
 	
 	if (tone)
-		PDEBUG(DAMPS, DEBUG_INFO, "Detected Signalling Tone with quality=%.0f.\n", quality * 100.0);
+		PDEBUG(DAMPS, DEBUG_INFO, "Detected Signaling Tone with quality=%.0f.\n", quality * 100.0);
 	else
-		PDEBUG(DAMPS, DEBUG_INFO, "Lost Signalling Tone signal\n");
+		PDEBUG(DAMPS, DEBUG_INFO, "Lost Signaling Tone signal\n");
 
 	switch (trans->state) {
 	case TRANS_CALL:
@@ -559,7 +559,7 @@ void amps_rx_signalling_tone(amps_t *amps, int tone, double quality)
 		}
 		break;
 	default:
-		PDEBUG(DAMPS, DEBUG_ERROR, "Signalling Tone without active call, please fix!\n");
+		PDEBUG(DAMPS, DEBUG_ERROR, "Signaling Tone without active call, please fix!\n");
 	}
 }
 
@@ -625,7 +625,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 	transaction_t *trans;
 	const char *callerid = amps_min2number(min1, min2);
 
-	/* check if we are busy, so we ignore all signalling */
+	/* check if we are busy, so we ignore all signaling */
 	if (amps->state == STATE_BUSY) {
 		PDEBUG(DAMPS, DEBUG_NOTICE, "Ignoring RECC messages from phone while using this channel for voice.\n");
 		return;

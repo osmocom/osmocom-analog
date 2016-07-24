@@ -757,12 +757,12 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 		telegramm.futln_rest_nr = trans->futln_rest;
 		switch (trans->state) {
 		case TRANS_EM:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgement 'Einbuchquittung' to Attachment request.\n");
+			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Einbuchquittung' to Attachment request.\n");
 			telegramm.opcode = OPCODE_EBQ_R;
 			destroy_transaction(trans);
 			break;
 		case TRANS_UM:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgement 'Umbuchquittung' to Roaming requuest.\n");
+			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Umbuchquittung' to Roaming requuest.\n");
 			telegramm.opcode = OPCODE_UBQ_R;
 			destroy_transaction(trans);
 			break;
@@ -851,7 +851,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 	if (trans) {
 		switch (trans->state) {
 		case TRANS_VWG:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgement 'Wahlaufforderung' to outging call\n");
+			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Wahlaufforderung' to outging call\n");
 			telegramm.opcode = OPCODE_WAF_M;
 			telegramm.futln_nationalitaet = trans->futln_nat;
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;

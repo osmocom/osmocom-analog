@@ -38,7 +38,7 @@
  *
  * To determine a change from noise, we use a theshold. This is set to half of
  * the level of last received change. This means that the next change may be
- * down to a half lower.  There is a special case during distributed signalling.
+ * down to a half lower.  There is a special case during distributed signaling.
  * The first level change of each data chunk raises or falls from 0-level
  * (unmodulated carrier), so the threshold for this bit is only a quarter of the
  * last received change.
@@ -418,7 +418,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 	bit_time_uncorrected = fsk->bit_time_uncorrected;
 	bit_count = fsk->bit_count;
 
-	/* process signalling block, sample by sample */
+	/* process signaling block, sample by sample */
 	for (i = 0; i < length; i++) {
 		spl[pos++] = samples[i];
 		if (pos == len)
@@ -431,7 +431,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 #endif
 			find_change(fsk);
 		} else {
-			/* in distributed signalling, measure over 5 bits, but ignore 5th bit.
+			/* in distributed signaling, measure over 5 bits, but ignore 5th bit.
 			 * also reset next_bit, as soon as we reach the window */
 
 			/* note that we start from 0.5, because we detect change 0.5 bits later,

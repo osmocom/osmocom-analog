@@ -124,7 +124,7 @@ enum gsm48_bcap_ra {
 	GSM48_BCAP_RA_OTHER	= 3,
 };
 
-/* GSM 04.08 Bearer Capability: Signalling access protocol */
+/* GSM 04.08 Bearer Capability: Signaling access protocol */
 enum gsm48_bcap_sig_access {
 	GSM48_BCAP_SA_I440_I450	= 1,
 	GSM48_BCAP_SA_X21	= 2,

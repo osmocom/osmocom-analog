@@ -9,8 +9,8 @@ enum amps_trans_state {
 	TRANS_CALL_MO_ASSIGN_SEND,	/* assigning channel, sending assignment */
 	TRANS_CALL_MT_ASSIGN,		/* assigning channel, waiting to send */
 	TRANS_CALL_MT_ASSIGN_SEND,	/* assigning channel, sending assignment */
-	TRANS_CALL_MT_ALERT,		/* ringing the phone, sending alert order until signalling tone is received */
-	TRANS_CALL_MT_ALERT_SEND,	/* ringing the phone, signalling tone is received */
+	TRANS_CALL_MT_ALERT,		/* ringing the phone, sending alert order until signaling tone is received */
+	TRANS_CALL_MT_ALERT_SEND,	/* ringing the phone, signaling tone is received */
 	TRANS_CALL_REJECT,		/* rejecting channel, waiting to send */
 	TRANS_CALL_REJECT_SEND,		/* rejecting channel, sending reject */
 	TRANS_CALL,			/* active call */

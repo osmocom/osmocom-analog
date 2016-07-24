@@ -215,14 +215,14 @@ static struct nmt_frame {
 	{ NMT_MESSAGE_6,	"JJJPJJJJJJJJJJJJ", MTX_TO_XX, 0,	"6",	"Idle frame" },
 	{ NMT_MESSAGE_7,	"NNNPYYCCCCCCCJJJ", MTX_TO_MS, 8,	"7",	"Authentication request" },
 	{ NMT_MESSAGE_8,	"NNNPYYMHHHHHHHWW", MTX_TO_MS, 1,	"8",	"A-subscriber number" },
-	{ NMT_MESSAGE_10a,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgement from MS on calling channel (shortened frame)" },
+	{ NMT_MESSAGE_10a,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgment from MS on calling channel (shortened frame)" },
 	{ NMT_MESSAGE_10b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 1,	"10b",	"Seizure from ordinary MS and identity on traffic channel" },
 	{ NMT_MESSAGE_10c,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 6,	"10c",	"Seizure and identity from called MS on traffic channel" },
 	{ NMT_MESSAGE_11a,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 14,	"11a",	"Roaming updating seizure and identity on traffic channel" },
-	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgement on calling channel from MS with priority (shortened frame)" },
+	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgment on calling channel from MS with priority (shortened frame)" },
 	{ NMT_MESSAGE_12,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 11,	"12",	"Seizure from coin-box on traffic channel" },
 	{ NMT_MESSAGE_13a,	"NNNPZXXXXXXLLLLL", MS_TO_MTX, 8,	"13a",	"Line signal" },
-	{ NMT_MESSAGE_13b,	"NNNPZXXXXXXLLLQQ", MS_TO_MTX, 8,	"13b",	"Line signal: Answer acknowledgement from coin box" },
+	{ NMT_MESSAGE_13b,	"NNNPZXXXXXXLLLQQ", MS_TO_MTX, 8,	"13b",	"Line signal: Answer acknowledgment from coin box" },
 	{ NMT_MESSAGE_14a,	"NNNPZXXXXXXSSSSS", MS_TO_MTX, 7,	"14a",	"Digit signal (1st, 3rd, 5th ........digit)" },
 	{ NMT_MESSAGE_14b,	"NNNPZXXXXXXSSSSS", MS_TO_MTX, 7,	"14b",	"Digit signal (2nd, 4th, 6th ........digit)" },
 	{ NMT_MESSAGE_15,	"JJJPJJJJJJJJJJJJ", XX_TO_MTX, 0,	"15",	"Idle frame" },
@@ -383,7 +383,7 @@ static const char *param_line_signal(uint64_t value, int ndigits, enum nmt_direc
 			desc = "Clearing, release guard";
 			break;
 		case 2:
-			desc = "Answer acknowledgement, (coin-box)";
+			desc = "Answer acknowledgment, (coin-box)";
 			break;
 		case 5:
 			desc = "Register recall ";

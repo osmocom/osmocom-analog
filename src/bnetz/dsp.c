@@ -32,7 +32,7 @@
 
 #define PI		3.1415927
 
-/* signalling */
+/* signaling */
 #define TX_PEAK_TONE	5000.0	/* peak amplitude for all tones */
 #define BIT_DURATION	0.010	/* bit length: 10 ms */
 #define FILTER_STEP	0.001	/* step every 1 ms */
@@ -44,7 +44,7 @@
 #define LOSS_INTERVAL	1000	/* filter steps (milliseconds) for one second interval */
 #define LOSS_TIME	12	/* duration of signal loss before release */
 
-/* two signalling tones */
+/* two signaling tones */
 static double fsk_bits[2] = {
 	2070.0,
 	1950.0,
