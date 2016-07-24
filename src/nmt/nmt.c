@@ -735,7 +735,7 @@ static void tx_roaming_confirm(nmt_t *nmt, frame_t *frame)
 {
 	set_line_signal(nmt, frame, 3);
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG(DNMT, DEBUG_INFO, "Send 'ready to receive'.\n");
+		PDEBUG(DNMT, DEBUG_INFO, "Send 'Roaming updating confirmation'.\n");
 	if (nmt->tx_frame_count == 2)
 		nmt_release(nmt); /* continue with this frame, then release */
 }
@@ -790,7 +790,7 @@ static void tx_mo_confirm(nmt_t *nmt, frame_t *frame)
 	set_line_signal(nmt, frame, 3);
 	if (++nmt->tx_frame_count <= 2) {
 		if (nmt->tx_frame_count == 1)
-			PDEBUG(DNMT, DEBUG_INFO, "Send 'ready to receive'.\n");
+			PDEBUG(DNMT, DEBUG_INFO, "Send 'Proceed to send'.\n");
 	} else {
 		if (nmt->tx_frame_count == 3) {
 			PDEBUG(DNMT, DEBUG_INFO, "Send dial tone.\n");
