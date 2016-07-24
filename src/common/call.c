@@ -472,6 +472,10 @@ void call_cleanup(void)
 	}
 }
 
+static char console_text[256];
+static char console_clear[256];
+static int console_len = 0;
+
 static void process_ui(int c)
 {
 	switch (call.state) {
@@ -501,7 +505,7 @@ dial_after_hangup:
 				}
 			}
 		}
-		printf("on-hook: %s%s (enter 0..9 or d=dial)\r", call.station_id, "..............." + 15 - call.dial_digits + strlen(call.station_id));
+		sprintf(console_text, "on-hook: %s%s (enter 0..9 or d=dial)\r", call.station_id, "..............." + 15 - call.dial_digits + strlen(call.station_id));
 		break;
 	case CALL_SETUP_MO:
 	case CALL_SETUP_MT:
@@ -521,21 +525,35 @@ dial_after_hangup:
 			}
 		}
 		if (call.state == CALL_SETUP_MT)
-			printf("call setup: %s (enter h=hangup)\r", call.station_id);
+			sprintf(console_text, "call setup: %s (enter h=hangup)\r", call.station_id);
 		if (call.state == CALL_ALERTING)
-			printf("call ringing: %s (enter h=hangup)\r", call.station_id);
+			sprintf(console_text, "call ringing: %s (enter h=hangup)\r", call.station_id);
 		if (call.state == CALL_CONNECT) {
 			if (call.dialing[0])
-				printf("call active: %s->%s (enter h=hangup)\r", call.station_id, call.dialing);
+				sprintf(console_text, "call active: %s->%s (enter h=hangup)\r", call.station_id, call.dialing);
 			else
-				printf("call active: %s (enter h=hangup)\r", call.station_id);
+				sprintf(console_text, "call active: %s (enter h=hangup)\r", call.station_id);
 		}
 		if (call.state == CALL_DISCONNECTED)
-			printf("call disconnected: %s (enter h=hangup)\r", cause_name(call.disc_cause));
+			sprintf(console_text, "call disconnected: %s (enter h=hangup)\r", cause_name(call.disc_cause));
 		break;
 	}
+	console_len = strlen(console_text);
+	memset(console_clear, ' ', console_len - 1);
+	console_clear[console_len - 1] = '\r';
+	fwrite(console_text, console_len, 1, stdout);
 	fflush(stdout);
 }
+
+void clear_console_text(void)
+{
+	if (!console_len)
+		return;
+
+	fwrite(console_clear, console_len, 1, stdout);
+	// note: fflused by user of this function
+}
+
 
 /* get keys from keyboad to control call via console
  * returns 1 on exit (ctrl+c) */

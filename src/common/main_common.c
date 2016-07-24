@@ -341,6 +341,8 @@ next_char:
 		usleep(interval * 1000);
 	}
 
+	clear_console_text();
+
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);
 }

@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include "debug.h"
+#include "call.h"
 
 const char *debug_level[] = {
 	"debug  ",
@@ -78,6 +79,7 @@ void _printdebug(const char *file, const char *function, int line, int cat, int 
 	while ((p = strchr(file, '/')))
 		file = p + 1;
 
+	clear_console_text();
 //	printf("%s%s:%d %s() %s: %s\033[0;39m", debug_cat[cat].color, file, line, function, debug_level[level], buffer);
 	printf("%s%s:%d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
 	fflush(stdout);
