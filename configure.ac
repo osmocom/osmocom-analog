@@ -35,6 +35,7 @@ AC_OUTPUT(
     src/amps/Makefile
     src/test/Makefile
     src/Makefile
+    sim/Makefile
     Makefile)
 
 
