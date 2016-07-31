@@ -679,7 +679,8 @@ void sms_reset(nmt_t *nmt)
 	sms_t *sms = &nmt->sms;
 
 	PDEBUG(DSMS, DEBUG_DEBUG, "Resetting SMS states\n");
-	timer_stop(&nmt->sms_timer);
+	if (nmt->sms_timer.linked)
+		timer_stop(&nmt->sms_timer);
 
 	memset(sms, 0, sizeof(*sms));
 }
