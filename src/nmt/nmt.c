@@ -1804,8 +1804,8 @@ inval:
 			caller_type = TYPE_UNKNOWN;
 	}
 
-	PDEBUG(DNMT, DEBUG_INFO, "SMS for subscriber '%s'\n", number);
-	printf("SMS sending '%s' -> '%s': %s\n", caller_id, number, sms);
+	PDEBUG(DNMT, DEBUG_INFO, "SMS from '%s' for subscriber '%s' with message '%s'\n", caller_id, number, message);
+	printf("SMS sending '%s' -> '%s': %s\n", caller_id, number, message);
 
 	rc = sms_out_setup(number, caller_id, caller_type, message);
 	if (rc < 0) {
