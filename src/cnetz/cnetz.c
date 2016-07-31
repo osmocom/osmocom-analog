@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CHAN cnetz->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -77,7 +79,7 @@ static void cnetz_new_state(cnetz_t *cnetz, enum cnetz_state new_state)
 {
 	if (cnetz->state == new_state)
 		return;
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "State change: %s -> %s\n", cnetz_state_name(cnetz->state), cnetz_state_name(new_state));
+	PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "State change: %s -> %s\n", cnetz_state_name(cnetz->state), cnetz_state_name(new_state));
 	cnetz->state = new_state;
 }
 
@@ -622,7 +624,7 @@ void transaction_timeout(struct timer *timer)
 
 	switch (trans->state) {
 	case TRANS_WAF:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
 		if (++trans->count == 3) {
 			/* no response to dialing is like MA failed */
 			trans->ma_failed = 1;
@@ -632,7 +634,7 @@ void transaction_timeout(struct timer *timer)
 		trans_new_state(trans, TRANS_VWG);
 		break;
 	case TRANS_BQ:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after channel allocation 'Belegung Quittung'\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after channel allocation 'Belegung Quittung'\n");
 		if (trans->mt_call) {
 			call_in_release(cnetz->sender.callref, CAUSE_OUTOFORDER);
 			cnetz->sender.callref = 0;
@@ -641,9 +643,9 @@ void transaction_timeout(struct timer *timer)
 		break;
 	case TRANS_VHQ:
 		if (cnetz->dsp_mode != DSP_MODE_SPK_V)
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "No response hile holding call 'Quittung Verbindung halten'\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response hile holding call 'Quittung Verbindung halten'\n");
 		else
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Lost signal from 'FuTln' (mobile station)\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Lost signal from 'FuTln' (mobile station)\n");
 		if (trans->mt_call || trans->mo_call) {
 			call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
 			cnetz->sender.callref = 0;
@@ -651,30 +653,30 @@ void transaction_timeout(struct timer *timer)
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_DS:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after connect 'Durchschalten'\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after connect 'Durchschalten'\n");
 		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
 		cnetz->sender.callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_RTA:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after ringing order 'Rufton anschalten'\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after ringing order 'Rufton anschalten'\n");
 		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
 		cnetz->sender.callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_AHQ:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after answer 'Abhebequittung'\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after answer 'Abhebequittung'\n");
 		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
 		cnetz->sender.callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_MFT:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "No response after keepalive order 'Meldeaufruf'\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after keepalive order 'Meldeaufruf'\n");
 		trans->ma_failed = 1;
 		destroy_transaction(trans);
 		break;
 	default:
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
+		PDEBUG_CHAN(DCNETZ, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
 	}
 }
 
@@ -757,18 +759,18 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 		telegramm.futln_rest_nr = trans->futln_rest;
 		switch (trans->state) {
 		case TRANS_EM:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Einbuchquittung' to Attachment request.\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Einbuchquittung' to Attachment request.\n");
 			telegramm.opcode = OPCODE_EBQ_R;
 			destroy_transaction(trans);
 			break;
 		case TRANS_UM:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Umbuchquittung' to Roaming requuest.\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Umbuchquittung' to Roaming requuest.\n");
 			telegramm.opcode = OPCODE_UBQ_R;
 			destroy_transaction(trans);
 			break;
 		case TRANS_WBN:
 wbn:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending call reject 'Wahlbestaetigung negativ'.\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending call reject 'Wahlbestaetigung negativ'.\n");
 			telegramm.opcode = OPCODE_WBN_R;
 			destroy_transaction(trans);
 			cnetz_go_idle(cnetz);
@@ -779,17 +781,17 @@ wbn:
 				PDEBUG(DCNETZ, DEBUG_NOTICE, "No free channel anymore, rejecting call!\n");
 				goto wbn;
 			}
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending call accept 'Wahlbestaetigung positiv'.\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending call accept 'Wahlbestaetigung positiv'.\n");
 			telegramm.opcode = OPCODE_WBP_R;
 			trans_new_state(trans, TRANS_VAG);
 			break;
 		case TRANS_VAG:
 		case TRANS_VAK:
 			if (trans->state == TRANS_VAG) {
-				PDEBUG(DCNETZ, DEBUG_INFO, "Sending channel assignment 'Verbindungsaufbau gehend'.\n");
+				PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending channel assignment 'Verbindungsaufbau gehend'.\n");
 				telegramm.opcode = OPCODE_VAG_R;
 			} else {
-				PDEBUG(DCNETZ, DEBUG_INFO, "Sending channel assignment 'Verbindungsaufbau kommend'.\n");
+				PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending channel assignment 'Verbindungsaufbau kommend'.\n");
 				telegramm.opcode = OPCODE_VAK_R;
 			}
 			trans_new_state(trans, TRANS_BQ);
@@ -817,7 +819,7 @@ wbn:
 			/* change state to busy */
 			cnetz_new_state(spk, CNETZ_BUSY);
 			/* schedule switching two slots ahead */
-			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
+			cnetz_set_sched_dsp_mode(spk, DSP_MODE_SPK_K, 2);
 			/* relink */
 			unlink_transaction(trans);
 			link_transaction(trans, spk);
@@ -851,7 +853,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 	if (trans) {
 		switch (trans->state) {
 		case TRANS_VWG:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Wahlaufforderung' to outging call\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Wahlaufforderung' to outging call\n");
 			telegramm.opcode = OPCODE_WAF_M;
 			telegramm.futln_nationalitaet = trans->futln_nat;
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
@@ -860,7 +862,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			timer_start(&trans->timer, 4.0); /* Wait two slot cycles until resending */
 			break;
 		case TRANS_MA:
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending keepalive request 'Meldeaufruf'\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending keepalive request 'Meldeaufruf'\n");
 			telegramm.opcode = OPCODE_MA_M;
 			telegramm.futln_nationalitaet = trans->futln_nat;
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
@@ -890,9 +892,9 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		if (cnetz->auth && telegramm->chipkarten_futelg_bit)
-			PDEBUG(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
 		else
-			PDEBUG(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Attachment from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
@@ -909,9 +911,9 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		if (cnetz->auth && telegramm->chipkarten_futelg_bit)
-			PDEBUG(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
 		else
-			PDEBUG(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Roaming from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
@@ -928,7 +930,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '%s'\n", rufnummer);
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '%s'\n", rufnummer);
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Call from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
@@ -949,12 +951,12 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 	case OPCODE_WUE_M:
 		trans = search_transaction(cnetz, TRANS_WAF | TRANS_WBP | TRANS_VAG);
 		if (!trans) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Received dialing digits 'Wahluebertragung' message without transaction, ignoring!\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received dialing digits 'Wahluebertragung' message without transaction, ignoring!\n");
 			break;
 		}
 		rufnummer = transaction2rufnummer(trans);
 		strncpy(trans->dialing, telegramm->wahlziffern, sizeof(trans->dialing) - 1);
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received dialing digits 'Wahluebertragung' message from Subscriber '%s' to Number '%s'\n", rufnummer, trans->dialing);
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received dialing digits 'Wahluebertragung' message from Subscriber '%s' to Number '%s'\n", rufnummer, trans->dialing);
 		timer_stop(&trans->timer);
 		trans_new_state(trans, TRANS_WBP);
 		valid_frame = 1;
@@ -962,16 +964,16 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 	case OPCODE_MFT_M:
 		trans = search_transaction_number(cnetz, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 		if (!trans) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldung Funktelefonteilnehmer' message without transaction, ignoring!\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldung Funktelefonteilnehmer' message without transaction, ignoring!\n");
 			break;
 		}
 		rufnummer = transaction2rufnummer(trans);
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received acknowledge 'Meldung Funktelefonteilnehmer' message from Subscriber '%s'\n", rufnummer);
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received acknowledge 'Meldung Funktelefonteilnehmer' message from Subscriber '%s'\n", rufnummer);
 		destroy_transaction(trans);
 		valid_frame = 1;
 		break;
 	default:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Received unexpected Telegramm (opcode %d = %s)\n", opcode, telegramm_name(opcode));
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received unexpected Telegramm (opcode %d = %s)\n", opcode, telegramm_name(opcode));
 	}
 
 	if (cnetz->sender.loopback) {
@@ -1011,7 +1013,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 
 	switch (trans->state) {
 	case TRANS_BQ:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Belegungsquittung' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Belegungsquittung' on traffic channel\n");
 		telegramm.opcode = OPCODE_BQ_K;
 		if (++trans->count >= 8 && !timer_running(&trans->timer)) {
 			trans_new_state(trans, TRANS_VHQ);
@@ -1021,7 +1023,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		break;
 	case TRANS_VHQ:
 		if (!cnetz->sender.loopback)
-			PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
 		telegramm.opcode = OPCODE_VHQ_K;
 		if (!cnetz->sender.loopback && (cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m && !timer_running(&trans->timer)) {
 			/* next sub frame */
@@ -1048,7 +1050,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		}
 		break;
 	case TRANS_DS:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Durchschalten' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Durchschalten' on traffic channel\n");
 		telegramm.opcode = OPCODE_DSB_K;
 		if ((cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m && !timer_running(&trans->timer)) {
 			/* next sub frame */
@@ -1061,11 +1063,11 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		}
 		break;
 	case TRANS_RTA:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Rufton anschalten' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Rufton anschalten' on traffic channel\n");
 		telegramm.opcode = OPCODE_RTA_K;
 		break;
 	case TRANS_AHQ:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Abhebe Quittung' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Abhebe Quittung' on traffic channel\n");
 		telegramm.opcode = OPCODE_AHQ_K;
 		if ((cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m) {
 			/* next sub frame */
@@ -1077,7 +1079,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		break;
 	case TRANS_AF:
 call_failed:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_K;
 		if (++trans->count == N_AFKT) {
 			destroy_transaction(trans);
@@ -1085,7 +1087,7 @@ call_failed:
 		}
 		break;
 	case TRANS_AT:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_K;
 		if (++trans->count == 1) {
 			destroy_transaction(trans);
@@ -1115,7 +1117,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received allocation 'Belegung' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received allocation 'Belegung' message.\n");
 		valid_frame = 1;
 		if (trans->state != TRANS_BQ)
 			break;
@@ -1128,7 +1130,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received assignment confirm 'Durchschaltung Quittung' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received assignment confirm 'Durchschaltung Quittung' message.\n");
 		valid_frame = 1;
 		if (trans->state != TRANS_DS)
 			break;
@@ -1142,7 +1144,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received connection hold 'Verbindung halten' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received connection hold 'Verbindung halten' message.\n");
 		valid_frame = 1;
 		if (trans->state != TRANS_VHQ)
 			break;
@@ -1156,7 +1158,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 			break;
 		}
 		valid_frame = 1;
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received ringback 'Rufton anschalten Quittung' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received ringback 'Rufton anschalten Quittung' message.\n");
 		if (trans->state != TRANS_RTA)
 			break;
 		timer_start(&trans->timer, 0.0375 * F_RTA); /* F_RTA frames */
@@ -1168,7 +1170,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received answer frame 'Abheben' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received answer frame 'Abheben' message.\n");
 		valid_frame = 1;
 		/* if already received this frame, or if we are already on VHQ or if we are releasing */
 		if (trans->state == TRANS_AHQ || trans->state == TRANS_VHQ || trans->state == TRANS_AF)
@@ -1186,7 +1188,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received release frame 'Ausloesen durch FuTln' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received release frame 'Ausloesen durch FuTln' message.\n");
 		valid_frame = 1;
 		/* if already received this frame, if we are releasing */
 		if (trans->state == TRANS_AT || trans->state == TRANS_AF)
@@ -1200,7 +1202,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		}
 		break;
 	default:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Received unexpected Telegramm (opcode %d = %s)\n", opcode, telegramm_name(opcode));
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received unexpected Telegramm (opcode %d = %s)\n", opcode, telegramm_name(opcode));
 	}
 
 	if (valid_frame)
@@ -1235,14 +1237,14 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 
 	switch (trans->state) {
 	case TRANS_VHQ:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
 		if ((cnetz->sched_ts & 8) == 0) /* sub frame 1 and 3 */
 			telegramm.opcode = OPCODE_VHQ1_V;
 		else /* sub frame 2 and 4 */
 			telegramm.opcode = OPCODE_VHQ2_V;
 		break;
 	case TRANS_AF:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_V;
 		if (++trans->count == N_AFV) {
 			destroy_transaction(trans);
@@ -1250,7 +1252,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 		}
 		break;
 	case TRANS_AT:
-		PDEBUG(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_V;
 		if (++trans->count == 1) {
 			destroy_transaction(trans);
@@ -1283,7 +1285,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (trans->state != TRANS_VHQ)
 			break;
 		timer_start(&trans->timer, 0.6 * F_VHQ); /* F_VHQ frames */
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received supervisory frame 'Verbindung halten' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received supervisory frame 'Verbindung halten' message.\n");
 		valid_frame = 1;
 		cnetz->scrambler = telegramm->betriebs_art;
 		break;
@@ -1294,7 +1296,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		PDEBUG(DCNETZ, DEBUG_INFO, "Received release frame 'Ausloesen durch FuTln' message.\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received release frame 'Ausloesen durch FuTln' message.\n");
 		valid_frame = 1;
 		/* if already received this frame, if we are releasing */
 		if (trans->state == TRANS_AT || trans->state == TRANS_AF)
@@ -1309,7 +1311,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		}
 		break;
 	default:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Received unexpected Telegramm (opcode %d = %s)\n", opcode, telegramm_name(opcode));
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received unexpected Telegramm (opcode %d = %s)\n", opcode, telegramm_name(opcode));
 	}
 
 	if (valid_frame)

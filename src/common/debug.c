@@ -58,22 +58,30 @@ struct debug_cat {
 
 int debuglevel = DEBUG_INFO;
 uint64_t debug_mask = ~0;
+extern int num_kanal;
 
-void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...)
+void _printdebug(const char *file, const char *function, int line, int cat, int level, int chan, const char *fmt, ...)
 {
-	char buffer[4096];
+	char buffer[4096], *b = buffer;
 	const char *p;
 	va_list args;
 
 	if (debuglevel > level)
 		return;
 
+	buffer[sizeof(buffer) - 1] = '\0';
+
+	/* if chan is used, prefix the channel number */
+	if (num_kanal > 1 && chan >= 0) {
+		sprintf(buffer, "(chan %d) ", chan);
+		b = strchr(buffer, '\0');
+	}
+
 	if (!(debug_mask & (1 << cat)))
 		return;
 
 	va_start(args, fmt);
-	vsnprintf(buffer, sizeof(buffer) - 1, fmt, args);
-	buffer[sizeof(buffer) - 1] = '\0';
+	vsnprintf(b, sizeof(buffer) - strlen(buffer) - 1, fmt, args);
 	va_end(args);
 
 	while ((p = strchr(file, '/')))

@@ -20,8 +20,9 @@
 #define DDMS		13
 #define DSMS		14
 
-#define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, fmt, ## arg)
-void _printdebug(const char *file, const char *function, int line, int cat, int level, const char *fmt, ...);
+#define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, -1, fmt, ## arg)
+#define PDEBUG_CHAN(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, CHAN, fmt, ## arg)
+void _printdebug(const char *file, const char *function, int line, int cat, int level, int chan, const char *fmt, ...);
 
 const char *debug_amplitude(double level);
 

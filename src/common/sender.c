@@ -20,6 +20,8 @@
 /* Uncomment this for writing TX as wave (For debug purpose) */
 //#define WAVE_WRITE_TX
 
+#define CHAN sender->kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -38,7 +40,19 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 	sender_t *master;
 	int rc = 0;
 
-	PDEBUG(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
+	sender->kanal = kanal;
+	strncpy(sender->sounddev, sounddev, sizeof(sender->sounddev) - 1);
+	sender->samplerate = samplerate;
+	sender->cross_channels = cross_channels;
+	sender->rx_gain = rx_gain;
+	sender->pre_emphasis = pre_emphasis;
+	sender->de_emphasis = de_emphasis;
+	sender->loopback = loopback;
+	sender->loss_volume = loss_volume;
+	sender->use_pilot_signal = use_pilot_signal;
+	sender->pilotton_phaseshift = 1.0 / ((double)samplerate / 1000.0);
+
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
 
 	/* if we find a channel that uses the same device as we do,
 	 * we will link us as slave to this master channel. then we 
@@ -89,18 +103,6 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 		}
 	}
 
-	sender->samplerate = samplerate;
-	sender->cross_channels = cross_channels;
-	sender->rx_gain = rx_gain;
-	sender->pre_emphasis = pre_emphasis;
-	sender->de_emphasis = de_emphasis;
-	sender->kanal = kanal;
-	sender->loopback = loopback;
-	sender->loss_volume = loss_volume;
-	sender->use_pilot_signal = use_pilot_signal;
-	sender->pilotton_phaseshift = 1.0 / ((double)samplerate / 1000.0);
-	strncpy(sender->sounddev, sounddev, sizeof(sender->sounddev) - 1);
-
 	rc = init_samplerate(&sender->srstate, samplerate);
 	if (rc < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to init sample rate conversion!\n");
@@ -148,7 +150,7 @@ error:
 /* Destroy transceiver instance and unlink from list. */
 void sender_destroy(sender_t *sender)
 {
-	PDEBUG(DSENDER, DEBUG_DEBUG, "Destroying 'Sender' instance\n");
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Destroying 'Sender' instance\n");
 
 	sender_tailp = &sender_head;
 	while (*sender_tailp) {
