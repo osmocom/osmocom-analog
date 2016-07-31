@@ -305,16 +305,6 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 		PDEBUG(DNMT, DEBUG_NOTICE, "Extended channel numbers (181..200) have been specified, but never been supported for sure. There is no phone to test with, so don't use it!\n");
 	}
 
-	if (chan_type == CHAN_TYPE_CC) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for calling only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
-	}
-	if (chan_type == CHAN_TYPE_TC) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for traffic only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
-	}
 	if (chan_type == CHAN_TYPE_TEST && !loopback) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for nothing but testing signal decoder.\n");
 	}
@@ -374,6 +364,35 @@ error:
 	nmt_destroy(&nmt->sender);
 
 	return rc;
+}
+
+void nmt_check_channels(void)
+{
+	sender_t *sender;
+	nmt_t *nmt;
+	int cc = 0, tc = 0;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		nmt = (nmt_t *) sender;
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC)
+			cc = 1;
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_TC)
+			tc = 1;
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC_TC) {
+			cc = 1;
+			tc = 1;
+		}
+	}
+	if (cc && !tc) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+	}
+	if (tc && !cc) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+	}
 }
 
 /* Destroy transceiver instance and unlink from list. */

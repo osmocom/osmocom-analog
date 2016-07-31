@@ -356,6 +356,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	nmt_check_channels();
+
 	signal(SIGINT,sighandler);
 	signal(SIGHUP,sighandler);
 	signal(SIGTERM,sighandler);
