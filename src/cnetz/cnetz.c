@@ -236,6 +236,22 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 	}
 #endif
 
+#if 0
+	/* debug flushing transactions */
+	transaction_t *trans1, *trans2;
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784);
+	destroy_transaction(trans1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784);
+	destroy_transaction(trans1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002);
+	unlink_transaction(trans1);
+	link_transaction(trans1, cnetz);
+	cnetz_flush_other_transactions(cnetz, trans1);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002);
+	cnetz_flush_other_transactions(cnetz, trans2);
+#endif
+
 	return 0;
 
 error:
@@ -272,9 +288,10 @@ static void cnetz_go_idle(cnetz_t *cnetz)
 		cnetz->sender.callref = 0;
 	}
 
-	/* set scheduler to OgK */
 	PDEBUG(DCNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal);
 	cnetz_new_state(cnetz, CNETZ_IDLE);
+
+	/* set scheduler to OgK or turn off SpK */
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* go idle after next frame/slot */
 		cnetz_set_sched_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 1);
@@ -288,9 +305,9 @@ static void cnetz_go_idle(cnetz_t *cnetz)
 static void cnetz_release(transaction_t *trans, uint8_t cause)
 {
 	trans_new_state(trans, TRANS_AF);
+	trans->repeat = 0;
 	trans->release_cause = cause;
 	trans->cnetz->sched_switch_mode = 0;
-	trans->count = 0;
 	timer_stop(&trans->timer);
 }
 
@@ -341,6 +358,7 @@ cnetz_t *search_ogk(void)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *) sender;
+		/* if callref is set, we ignore busy channel with this callref */
 		if (cnetz->state != CNETZ_IDLE)
 			continue;
 		if (cnetz->chan_type == CHAN_TYPE_OGK)
@@ -426,6 +444,7 @@ inval:
 		sender->callref = 0;
 		return -CAUSE_TEMPFAIL;
 	}
+	trans->try = 1;
 
 	return 0;
 }
@@ -625,21 +644,30 @@ void transaction_timeout(struct timer *timer)
 	switch (trans->state) {
 	case TRANS_WAF:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
-		if (++trans->count == 3) {
+		if (trans->try == N) {
 			/* no response to dialing is like MA failed */
 			trans->ma_failed = 1;
 			trans_new_state(trans, TRANS_WBN);
+			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 			break;
 		}
+		trans->try++;
 		trans_new_state(trans, TRANS_VWG);
 		break;
 	case TRANS_BQ:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after channel allocation 'Belegung Quittung'\n");
-		if (trans->mt_call) {
-			call_in_release(cnetz->sender.callref, CAUSE_OUTOFORDER);
-			cnetz->sender.callref = 0;
+#if 0
+		if (trans->try == N) {
+			if (trans->mt_call) {
+				call_in_release(cnetz->sender.callref, CAUSE_OUTOFORDER);
+				cnetz->sender.callref = 0;
+			}
+			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+			break;
 		}
-		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+#endif
+		trans_new_state(trans, TRANS_AF);
+		trans->repeat = 0;
 		break;
 	case TRANS_VHQ:
 		if (cnetz->dsp_mode != DSP_MODE_SPK_V)
@@ -795,7 +823,7 @@ wbn:
 				telegramm.opcode = OPCODE_VAK_R;
 			}
 			trans_new_state(trans, TRANS_BQ);
-			trans->count = 0;
+			trans->repeat = 0;
 			timer_start(&trans->timer, 0.150 + 0.0375 * F_BQ); /* two slots + F_BQ frames */
 			/* select channel */
 			spk = search_free_spk();
@@ -859,7 +887,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_WAF);
-			timer_start(&trans->timer, 4.0); /* Wait two slot cycles until resending */
+			timer_start(&trans->timer, 1.0); /* Wait two slot cycles until resending */
 			break;
 		case TRANS_MA:
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending keepalive request 'Meldeaufruf'\n");
@@ -868,7 +896,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_MFT);
-			timer_start(&trans->timer, 4.0); /* Wait two slot cycles until timeout */
+			timer_start(&trans->timer, 1.0); /* Wait two slot cycles until timeout */
 			break;
 		default:
 			; /* MLR */
@@ -940,6 +968,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
 		}
+		trans->try = 1;
 		spk = search_free_spk();
 		if (!spk) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Rejecting call from subscriber '%s', because we have no free channel.\n", rufnummer);
@@ -959,6 +988,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received dialing digits 'Wahluebertragung' message from Subscriber '%s' to Number '%s'\n", rufnummer, trans->dialing);
 		timer_stop(&trans->timer);
 		trans_new_state(trans, TRANS_WBP);
+		trans->try = 1; /* try */
 		valid_frame = 1;
 		break;
 	case OPCODE_MFT_M:
@@ -994,6 +1024,8 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 {
 	static telegramm_t telegramm;
 	transaction_t *trans = cnetz->trans_list;
+	cnetz_t *ogk;
+	int callref;
 
 	memset(&telegramm, 0, sizeof(telegramm));
 	if (!trans)
@@ -1015,9 +1047,9 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	case TRANS_BQ:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Belegungsquittung' on traffic channel\n");
 		telegramm.opcode = OPCODE_BQ_K;
-		if (++trans->count >= 8 && !timer_running(&trans->timer)) {
+		if (++trans->repeat >= 8 && !timer_running(&trans->timer)) {
 			trans_new_state(trans, TRANS_VHQ);
-			trans->count = 0;
+			trans->repeat = 0;
 			timer_start(&trans->timer, 0.0375 * F_VHQK); /* F_VHQK frames */
 		}
 		break;
@@ -1038,13 +1070,13 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 				}
 				cnetz->sender.callref = callref;
 				trans_new_state(trans, TRANS_DS);
-				trans->count = 0;
+				trans->repeat = 0;
 				timer_start(&trans->timer, 0.0375 * F_DS); /* F_DS frames */
 			}
 			if (trans->mt_call) {
 				trans_new_state(trans, TRANS_RTA);
 				timer_start(&trans->timer, 0.0375 * F_RTA); /* F_RTA frames */
-				trans->count = 0;
+				trans->repeat = 0;
 				call_in_alerting(cnetz->sender.callref);
 			}
 		}
@@ -1055,7 +1087,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		if ((cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m && !timer_running(&trans->timer)) {
 			/* next sub frame */
 			trans_new_state(trans, TRANS_VHQ);
-			trans->count = 0;
+			trans->repeat = 0;
 			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
 #ifndef DEBUG_SPK
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
@@ -1072,7 +1104,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		if ((cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m) {
 			/* next sub frame */
 			trans_new_state(trans, TRANS_VHQ);
-			trans->count = 0;
+			trans->repeat = 0;
 			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
 		}
@@ -1081,15 +1113,50 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 call_failed:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_K;
-		if (++trans->count == N_AFKT) {
+		if (++trans->repeat < N_AFKT)
+			break;
+		if (!trans->try) {
+			/* no retry */
 			destroy_transaction(trans);
 			cnetz_go_idle(cnetz);
+			break;
 		}
+		if (trans->try == N) {
+			PDEBUG(DCNETZ, DEBUG_INFO, "Maximum retries, removing transaction\n");
+			destroy_transaction(trans);
+			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+			cnetz_go_idle(cnetz);
+			break;
+		}
+		/* remove call from SpK (or OgK) */
+		unlink_transaction(trans);
+		callref = cnetz->sender.callref;
+		cnetz->sender.callref = 0;
+		/* idle channel */
+		cnetz_go_idle(cnetz);
+		/* alloc ogk again */
+		ogk = search_ogk();
+		if (!ogk) {
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "Cannot retry, because currently no OgK available (busy)\n");
+			destroy_transaction(trans);
+			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+			break;
+		}
+		PDEBUG(DCNETZ, DEBUG_INFO, "Retry to assign channel.\n");
+		/* attach call to OgK */
+		ogk->sender.callref = callref;
+		link_transaction(trans, ogk);
+		/* change state */
+		if (trans->mo_call)
+			trans_new_state(trans, TRANS_WBP);
+		if (trans->mt_call)
+			trans_new_state(trans, TRANS_VAK);
+		trans->try++;
 		break;
 	case TRANS_AT:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_K;
-		if (++trans->count == 1) {
+		if (++trans->repeat == 1) {
 			destroy_transaction(trans);
 			cnetz_go_idle(cnetz);
 		}
@@ -1122,6 +1189,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (trans->state != TRANS_BQ)
 			break;
 		timer_stop(&trans->timer);
+		trans->try = 0;
 		break;
 	case OPCODE_DSQ_K:
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
@@ -1177,7 +1245,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 			break;
 		cnetz->scrambler = telegramm->betriebs_art;
 		trans_new_state(trans, TRANS_AHQ);
-		trans->count = 0;
+		trans->repeat = 0;
 		timer_stop(&trans->timer);
 		call_in_answer(cnetz->sender.callref, transaction2rufnummer(trans));
 		break;
@@ -1194,7 +1262,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (trans->state == TRANS_AT || trans->state == TRANS_AF)
 			break;
 		trans_new_state(trans, TRANS_AT);
-		trans->count = 0;
+		trans->repeat = 0;
 		timer_stop(&trans->timer);
 		if (cnetz->sender.callref) {
 			call_in_release(cnetz->sender.callref, CAUSE_NORMAL);
@@ -1246,7 +1314,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	case TRANS_AF:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_V;
-		if (++trans->count == N_AFV) {
+		if (++trans->repeat == N_AFV) {
 			destroy_transaction(trans);
 			cnetz_go_idle(cnetz);
 		}
@@ -1254,7 +1322,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	case TRANS_AT:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_V;
-		if (++trans->count == 1) {
+		if (++trans->repeat == 1) {
 			destroy_transaction(trans);
 			cnetz_go_idle(cnetz);
 		}
@@ -1303,7 +1371,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 			break;
 		cnetz->scrambler = telegramm->betriebs_art;
 		trans_new_state(trans, TRANS_AT);
-		trans->count = 0;
+		trans->repeat = 0;
 		timer_stop(&trans->timer);
 		if (cnetz->sender.callref) {
 			call_in_release(cnetz->sender.callref, CAUSE_NORMAL);

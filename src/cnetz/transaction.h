@@ -33,7 +33,8 @@ typedef struct transaction {
 	char			dialing[17];		/* number dialed by the phone */
 	int32_t			state;			/* state of transaction */
 	int8_t			release_cause;		/* reason for release, (c-netz coding) */
-	int			count;			/* counts resending things */
+	int			try;			/* counts resending messages */
+	int			repeat;			/* counts repeating messages */
 	struct timer		timer;			/* for varous timeouts */
 	int			mo_call;		/* flags a moile originating call */
 	int			mt_call;		/* flags a moile terminating call */

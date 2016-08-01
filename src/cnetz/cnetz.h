@@ -36,6 +36,7 @@ enum cnetz_state {
 #define F_RTA		16		/* number of not received frames at RTA state */
 #define N_AFKT		6		/* number of release frames to send during concentrated signaling */
 #define N_AFV		4		/* number of release frames to send during distributed signaling */
+#define N		3		/* now many times we repeat a message on OgK */
 
 /* clear causes */
 #define CNETZ_CAUSE_TEILNEHMERBESETZT	0	/* subscriber busy */
