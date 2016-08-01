@@ -1505,15 +1505,23 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 
 	/* auto select cell */
 	if (cnetz->cell_auto) {
-		if (!match_fuz(cnetz, &telegramm, 0)) {
-			cnetz->cell_nr = 1;
+		sender_t *sender;
+		cnetz_t *c;
+		int nr;
+		if (match_fuz(cnetz, &telegramm, 0)) {
+			nr = 0;
 selected:
-			cnetz->cell_auto = 0;
 			printf("***********************************************\n");
-			printf("*** Autoselecting %stive FSK TX polarity! ***\n", (si[cnetz->cell_nr].flip_polarity) ? "nega" : "posi");
+			printf("*** Autoselecting %stive FSK TX polarity! ***\n", (si[nr].flip_polarity) ? "nega" : "posi");
 			printf("***********************************************\n");
-		} else if (!match_fuz(cnetz, &telegramm, 1)) {
-			cnetz->cell_nr = 0;
+			/* select on all transceivers */
+			for (sender = sender_head; sender; sender = sender->next) {
+				c = (cnetz_t *) sender;
+				c->cell_auto = 0;
+				c->cell_nr = nr;
+			}
+		} else if (match_fuz(cnetz, &telegramm, 1)) {
+			nr = 1;
 			goto selected;
 		} else {
 			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm with no cell number, ignoring!\n");
