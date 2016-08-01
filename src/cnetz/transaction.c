@@ -162,6 +162,25 @@ transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint
 	return NULL;
 }
 
+transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref)
+{
+	transaction_t *trans = cnetz->trans_list;
+
+	/* just in case, this should not happen */
+	if (!callref)
+		return NULL;
+	while (trans) {
+		if (trans->callref == callref) {
+			const char *rufnummer = transaction2rufnummer(trans);
+			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			return trans;
+		}
+		trans = trans->next;
+	}
+
+	return NULL;
+}
+
 static const char *trans_state_name(int state)
 {
 	switch (state) {

@@ -27,6 +27,7 @@
 typedef struct transaction {
 	struct transaction	*next;			/* pointer to next node in list */
 	cnetz_t			*cnetz;			/* pointer to cnetz instance */
+	int			callref;		/* callref for transaction */
 	uint8_t			futln_nat;		/* current station ID (3 values) */
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
@@ -48,6 +49,7 @@ void link_transaction(transaction_t *trans, cnetz_t *cnetz);
 void unlink_transaction(transaction_t *trans);
 transaction_t *search_transaction(cnetz_t *cnetz, uint32_t state_mask);
 transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
+transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref);
 void trans_new_state(transaction_t *trans, int state);
 void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans);
 void transaction_timeout(struct timer *timer);
