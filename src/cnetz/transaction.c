@@ -101,7 +101,9 @@ void link_transaction(transaction_t *trans, cnetz_t *cnetz)
 	transaction_t **transp;
 
 	/* attach to end of list, so first transaction is served first */
+	PDEBUG(DTRANS, DEBUG_DEBUG, "Linking transaction %p to cnetz %p\n", trans, cnetz);
 	trans->cnetz = cnetz;
+	trans->next = NULL;
 	transp = &cnetz->trans_list;
 	while (*transp)
 		transp = &((*transp)->next);
@@ -114,6 +116,7 @@ void unlink_transaction(transaction_t *trans)
 	transaction_t **transp;
 
 	/* unlink */
+	PDEBUG(DTRANS, DEBUG_DEBUG, "Unlinking transaction %p from cnetz %p\n", trans, trans->cnetz);
 	transp = &trans->cnetz->trans_list;
 	while (*transp && *transp != trans)
 		transp = &((*transp)->next);
@@ -214,7 +217,7 @@ void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans)
 	/* flush after this very trans */
 	while (trans->next) {
 		PDEBUG(DTRANS, DEBUG_NOTICE, "Kicking other pending transaction\n");
-		destroy_transaction(trans);
+		destroy_transaction(trans->next);
 	}
 	/* flush before this very trans */
 	while (cnetz->trans_list != trans) {
