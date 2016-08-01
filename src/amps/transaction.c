@@ -131,7 +131,9 @@ void link_transaction(transaction_t *trans, amps_t *amps)
 	transaction_t **transp;
 
 	/* attach to end of list, so first transaction is served first */
+	PDEBUG(DTRANS, DEBUG_DEBUG, "Linking transaction %p to amps %p\n", trans, amps);
 	trans->amps = amps;
+	trans->next = NULL;
 	transp = &amps->trans_list;
 	while (*transp)
 		transp = &((*transp)->next);
@@ -144,6 +146,7 @@ void unlink_transaction(transaction_t *trans)
 	transaction_t **transp;
 
 	/* unlink */
+	PDEBUG(DTRANS, DEBUG_DEBUG, "Unlinking transaction %p from amps %p\n", trans, trans->amps);
 	transp = &trans->amps->trans_list;
 	while (*transp && *transp != trans)
 		transp = &((*transp)->next);
@@ -183,7 +186,7 @@ void amps_flush_other_transactions(amps_t *amps, transaction_t *trans)
 	/* flush after this very trans */
 	while (trans->next) {
 		PDEBUG(DTRANS, DEBUG_NOTICE, "Kicking other pending transaction\n");
-		destroy_transaction(trans);
+		destroy_transaction(trans->next);
 	}
 	/* flush before this very trans */
 	while (amps->trans_list != trans) {
