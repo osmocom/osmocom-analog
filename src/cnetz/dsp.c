@@ -66,12 +66,12 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating smooth ramp table.\n");
 	for (i = 0; i < 256; i++) {
 		c = cos((double)i / 256.0 * PI);
-#if 0
+		/* use cosine-square ramp. tests showed that phones are more
+		 * happy with that. */
 		if (c < 0)
 			c = -sqrt(-c);
 		else
 			c = sqrt(c);
-#endif
 		ramp_down[i] = (int)(c * (double)cnetz->fsk_deviation);
 		ramp_up[i] = -ramp_down[i];
 	}
