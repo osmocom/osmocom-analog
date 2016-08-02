@@ -759,6 +759,7 @@ inval:
 	PDEBUG(DAMPS, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
+#warning FIXME: Move callref to transaction, similar to the cnetz base station
 	amps->sender.callref = callref;
 
 	trans = create_transaction(amps, TRANS_PAGE, min1, min2, 0, 0, 0, 0);
