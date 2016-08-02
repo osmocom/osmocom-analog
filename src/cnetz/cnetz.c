@@ -1134,9 +1134,12 @@ call_failed:
 		if (trans->try == N) {
 			PDEBUG(DCNETZ, DEBUG_INFO, "Maximum retries, removing transaction\n");
 			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+			if (trans->callref) {
+				call_in_release(trans->callref, CAUSE_TEMPFAIL);
+				cnetz->sender.callref = 0;
+			}
 			/* must destroy transaction after cnetz_release */
 			destroy_transaction(trans);
-			cnetz->sender.callref = 0;
 			cnetz_go_idle(cnetz);
 			break;
 		}
@@ -1150,6 +1153,8 @@ call_failed:
 		if (!ogk) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Cannot retry, because currently no OgK available (busy)\n");
 			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+			if (trans->callref)
+				call_in_release(trans->callref, CAUSE_NOCHANNEL);
 			/* must destroy transaction after cnetz_release */
 			destroy_transaction(trans);
 			break;
@@ -1397,5 +1402,10 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 
 	if (valid_frame)
 		cnetz_sync_frame(cnetz, telegramm->sync_time, -1);
+}
+
+void dump_info(void)
+{
+	dump_db();
 }
 
