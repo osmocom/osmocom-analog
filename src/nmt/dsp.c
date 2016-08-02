@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CHAN nmt->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -97,7 +99,7 @@ int dsp_init_sender(nmt_t *nmt)
 		return -EINVAL;
 	}
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* allocate sample for 2 bits with 2 polarities */
 	nmt->samples_per_bit = nmt->sender.samplerate / BIT_RATE;
@@ -187,7 +189,7 @@ int dsp_init_sender(nmt_t *nmt)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(nmt_t *nmt)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (nmt->frame_spl) {
 		free(nmt->frame_spl);
@@ -377,14 +379,14 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 		quality = 0;
 
 	if (nmt->sender.loopback)
-		PDEBUG(DDSP, DEBUG_NOTICE, "Supervisory level %.2f%% quality %.0f%%\n", result[0] / 0.63662 * 100.0, quality * 100.0);
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.2f%% quality %.0f%%\n", result[0] / 0.63662 * 100.0, quality * 100.0);
 	if (quality > 0.5) {
 		if (nmt->super_detected == 0) {
 			nmt->super_detect_count++;
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 1;
 				nmt->super_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality * 100.0);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality * 100.0);
 				nmt_rx_super(nmt, 1, quality);
 			}
 		} else
@@ -395,7 +397,7 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 0;
 				nmt->super_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "Supervisory signal lost.\n");
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal lost.\n");
 				nmt_rx_super(nmt, 0, 0.0);
 			}
 		} else
@@ -406,7 +408,7 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 /* Reset supervisory detection states, so ongoing tone will be detected again. */
 void super_reset(nmt_t *nmt)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Supervisory detector reset.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory detector reset.\n");
 	nmt->super_detected = 0;
 	nmt->super_detect_count = 0;
 }
@@ -510,7 +512,7 @@ next_frame:
 		/* request frame */
 		frame = nmt_get_frame(nmt);
 		if (!frame) {
-			PDEBUG(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
 			return length;
 		}
 		nmt->frame = 1;
@@ -633,7 +635,7 @@ void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode)
 		nmt->frame = 0;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", nmt->dsp_mode, mode);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", nmt->dsp_mode, mode);
 	nmt->dsp_mode = mode;
 }
 
