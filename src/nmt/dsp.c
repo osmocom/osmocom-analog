@@ -33,10 +33,18 @@
 
 #define PI			M_PI
 
+/* Notes on frequency deviation of supervidory signal:
+ *
+ * The FSK deviation at 1500 Hz is 3.5 KHz. If we use a level of 10000
+ * The supervisory deviation shall be 0.3 KHz: 10000 / 3.5 * 0.3 = 857
+ * Supervisory is raised by pre-emphasis by factor 2.68 (4015 / 1500),
+ * so we need to lower it: 857 / 2.68 = 320
+ */
+
 /* signaling */
 #define COMPANDOR_0DB		32767	/* works quite well */
-#define TX_PEAK_FSK		10000.0	/* peak amplitude of signaling FSK */
-#define TX_PEAK_SUPER		1000.0	/* peak amplitude of supervisory signal */
+#define TX_PEAK_FSK		10000.0	/* peak amplitude of signaling FSK +-3.5 KHz @ 1500 Hz */
+#define TX_PEAK_SUPER		(TX_PEAK_FSK / 3.5 * 0.3 / 2.68) /* peak amplitude of supervisory signal +-0.3 KHz @ 4015 Hz */
 #define BIT_RATE		1200	/* baud rate */
 #define STEPS_PER_BIT		10	/* step every 1/12000 sec */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
@@ -114,6 +122,9 @@ int dsp_init_sender(nmt_t *nmt)
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
+
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.0f (3.5 KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.0f (0.3 KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER);
 
 	/* generate sines */
 	for (i = 0; i < nmt->samples_per_bit; i++) {
@@ -378,15 +389,15 @@ static void super_decode(nmt_t *nmt, int16_t *samples, int length)
 	if (quality < 0)
 		quality = 0;
 
-	if (nmt->sender.loopback)
-		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.2f%% quality %.0f%%\n", result[0] / 0.63662 * 100.0, quality * 100.0);
+	if (nmt->state == STATE_ACTIVE)
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", result[0] / 0.63662 * 32768.0 / TX_PEAK_SUPER * 100.0, quality * 100.0);
 	if (quality > 0.5) {
 		if (nmt->super_detected == 0) {
 			nmt->super_detect_count++;
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 1;
 				nmt->super_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality * 100.0);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 32768.0 / TX_PEAK_SUPER * 100.0, quality * 100.0);
 				nmt_rx_super(nmt, 1, quality);
 			}
 		} else
