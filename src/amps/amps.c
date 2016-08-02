@@ -1065,3 +1065,5 @@ again:
 	}
 }
 
+void dump_info(void) {}
+

@@ -1833,4 +1833,5 @@ inval:
 	}
 }
 
+void dump_info(void) {}
 

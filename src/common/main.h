@@ -39,3 +39,5 @@ void sighandler(int sigset);
 
 void main_loop(int *quit, int latency, int interval, void (*myhandler)(void));
 
+void dump_info(void);
+

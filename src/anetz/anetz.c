@@ -478,3 +478,5 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 	}
 }
 
+void dump_info(void) {}
+

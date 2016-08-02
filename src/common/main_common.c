@@ -329,6 +329,10 @@ next_char:
 			/* toggle display */
 			display_wave_on(-1);
 			goto next_char;
+		case 'i':
+			/* dump info */
+			dump_info();
+			goto next_char;
 		}
 
 		/* process audio of built-in call control */

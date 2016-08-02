@@ -155,3 +155,19 @@ void flush_db(void)
 		remove_db(cnetz_db_head);
 }
 
+void dump_db(void)
+{
+	cnetz_db_t *db = cnetz_db_head;
+
+	PDEBUG(DDB, DEBUG_NOTICE, "Dump of subscriber database:\n");
+	if (!db) {
+		PDEBUG(DDB, DEBUG_NOTICE, " - No subscribers attached!\n");
+		return;
+	}
+
+	while (db) {
+		PDEBUG(DDB, DEBUG_NOTICE, " - Subscriber '%d,%d,%d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		db = db->next;
+	}
+}
+

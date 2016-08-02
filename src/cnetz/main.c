@@ -81,6 +81,7 @@ void print_help(const char *arg0)
 	printf("	we just accept any card. With this we get the vendor IDs of the phone.\n");
 	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
+	printf("\nPress 'i' key for dumping currently attached subscribers.\n");
 }
 
 static int handle_options(int argc, char **argv)
