@@ -1177,6 +1177,7 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received 'answer' from phone.\n");
 		nmt_new_state(nmt, STATE_MT_COMPLETE);
 		nmt->tx_frame_count = 0;
+		timer_stop(&nmt->timer);
 		call_in_answer(nmt->sender.callref, &nmt->subscriber.country);
 		break;
 	default:
