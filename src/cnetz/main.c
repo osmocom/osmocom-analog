@@ -49,6 +49,7 @@ const char *flip_polarity = "auto";
 double noise = 0.0;
 int ms_power = 0; /* 0..3 */
 int auth = 0;
+int voice_deviation = 1;
 
 void print_help(const char *arg0)
 {
@@ -79,6 +80,9 @@ void print_help(const char *arg0)
 	printf("        Enable authentication on the base station. Since we cannot\n");
 	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
 	printf("	we just accept any card. With this we get the vendor IDs of the phone.\n");
+	printf(" -V --voice-deviation\n");
+	printf("	For some unknown reason, Siemens C5 use double deviation for voice.\n");
+	printf("	This option raises audio level on TX and lowers on RX.\n");
 	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 	printf("\nPress 'i' key for dumping currently attached subscribers.\n");
@@ -98,10 +102,11 @@ static int handle_options(int argc, char **argv)
 		{"noise", 1, 0, 'N'},
 		{"ms-power", 1, 0, 'P'},
 		{"authentication", 0, 0, 'A'},
+		{"voice-deviation", 0, 0, 'V'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:MS:F:N:P:A", long_options_special);
+	set_options_common("t:MS:F:N:P:AV", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -167,6 +172,10 @@ static int handle_options(int argc, char **argv)
 			break;
 		case 'A':
 			auth = 1;
+			skip_args += 1;
+			break;
+		case 'V':
+			voice_deviation = 2;
 			skip_args += 1;
 			break;
 		default:
