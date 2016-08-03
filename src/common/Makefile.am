@@ -17,6 +17,7 @@ libcommon_a_SOURCES = \
 	../common/call.c \
 	../common/freiton.c \
 	../common/besetztton.c \
+	../common/testton.c \
 	../common/mncc_sock.c \
 	../common/cause.c \
 	../common/emphasis.c \

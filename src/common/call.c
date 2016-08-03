@@ -30,6 +30,7 @@
 #include "call.h"
 #include "timer.h"
 #include "mncc_sock.h"
+#include "testton.h"
 
 #define DISC_TIMEOUT	30
 
@@ -38,6 +39,7 @@ extern int send_patterns;
 extern int release_on_disconnect;
 
 /* stream patterns/announcements */
+int16_t *test_spl = NULL;
 int16_t *ringback_spl = NULL;
 int16_t *hangup_spl = NULL;
 int16_t *busy_spl = NULL;
@@ -45,6 +47,7 @@ int16_t *noanswer_spl = NULL;
 int16_t *outoforder_spl = NULL;
 int16_t *invalidnumber_spl = NULL;
 int16_t *congestion_spl = NULL;
+int test_size = 0;
 int ringback_size = 0;
 int hangup_size = 0;
 int busy_size = 0;
@@ -52,6 +55,7 @@ int noanswer_size = 0;
 int outoforder_size = 0;
 int invalidnumber_size = 0;
 int congestion_size = 0;
+int test_max = 0;
 int ringback_max = 0;
 int hangup_max = 0;
 int busy_max = 0;
@@ -71,6 +75,7 @@ enum call_state {
 
 enum audio_pattern {
 	PATTERN_NONE = 0,
+	PATTERN_TEST,
 	PATTERN_RINGBACK,
 	PATTERN_HANGUP,
 	PATTERN_BUSY,
@@ -87,6 +92,11 @@ void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pa
 	*max = 0;
 
 	switch (pattern) {
+	case PATTERN_TEST:
+		*spl = test_spl;
+		*size = test_size;
+		*max = test_max;
+		break;
 	case PATTERN_RINGBACK:
 		*spl = ringback_spl;
 		*size = ringback_size;
@@ -153,6 +163,7 @@ typedef struct call {
 	samplerate_t srstate;	/* patterns/announcement upsampling */
 	jitter_t audio;		/* headphone audio dejittering */
 	int audio_pos;		/* position when playing patterns */
+	int test_audio_pos;	/* position for test tone toward mobile */
 	int dial_digits;	/* number of digits to be dialed */
 	int loopback;		/* loopback test for echo */
 } call_t;
@@ -163,6 +174,7 @@ static void call_new_state(enum call_state state)
 {
 	call.state = state;
 	call.audio_pos = 0;
+	call.test_audio_pos = 0;
 }
 
 static void get_call_patterns(int16_t *samples, int length, enum audio_pattern pattern)
@@ -183,6 +195,26 @@ static void get_call_patterns(int16_t *samples, int length, enum audio_pattern p
 			pos = 0;
 	}
 	call.audio_pos = pos;
+}
+
+static void get_test_patterns(int16_t *samples, int length)
+{
+	const int16_t *spl;
+	int size, max, pos;
+
+	get_pattern(&spl, &size, &max, PATTERN_TEST);
+
+	/* stream sample */
+	pos = call.test_audio_pos;
+	while(length--) {
+		if (pos >= size)
+			*samples++ = 0;
+		else
+			*samples++ = spl[pos] >> 1;
+		if (++pos == max)
+			pos = 0;
+	}
+	call.test_audio_pos = pos;
 }
 
 static enum audio_pattern cause2pattern(int cause)
@@ -416,6 +448,8 @@ int call_init(const char *station_id, const char *sounddev, int samplerate, int 
 {
 	int rc = 0;
 
+	init_testton();
+
 	if (use_mncc_sock)
 		return 0;
 
@@ -569,6 +603,7 @@ void process_call(int c)
 
 	if (!call.sound)
 		return;
+
 	/* handle audio, if sound device is used */
 
 	int16_t samples[call.latspl];
@@ -853,6 +888,11 @@ void call_tx_audio(int callref, int16_t *samples, int count)
 		int16_t up[(int)((double)count * call.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&call.srstate, samples, count, up);
 		jitter_save(&call.audio, up, count);
+	} else
+	/* else, if no sound is used, send test tone to mobile */
+	if (call.state == CALL_CONNECT) {
+		get_test_patterns(samples, count);
+		call_rx_audio(callref, samples, count);
 	}
 }
 
