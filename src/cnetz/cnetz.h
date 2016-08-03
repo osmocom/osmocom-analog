@@ -39,8 +39,8 @@ enum cnetz_state {
 #define N		3		/* now many times we repeat a message on OgK */
 
 /* clear causes */
-#define CNETZ_CAUSE_TEILNEHMERBESETZT	0	/* subscriber busy */
-#define CNETZ_CAUSE_GASSENBESETZT	1	/* network congested */
+#define CNETZ_CAUSE_GASSENBESETZT	0	/* network congested */
+#define CNETZ_CAUSE_TEILNEHMERBESETZT	1	/* subscriber busy */
 #define CNETZ_CAUSE_FUNKTECHNISCH	2	/* radio transmission fault */
 
 struct cnetz;
