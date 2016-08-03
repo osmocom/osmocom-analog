@@ -35,6 +35,7 @@ typedef struct cnetz_database {
 	uint8_t			futln_nat;	/* who ... */
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
+	int			extended;	/* mobile supports extended frequencies */
 	struct timer		timer;		/* timer for next availability check */
 	int			retry;		/* counts number of retries */
 } cnetz_db_t;
@@ -83,7 +84,7 @@ static void db_timeout(struct timer *timer)
 }
 
 /* create/update db entry */
-void update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int busy, int failed)
+int update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended, int busy, int failed)
 {
 	cnetz_db_t *db, **dbp;
 
@@ -100,7 +101,7 @@ void update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t 
 		db = calloc(1, sizeof(*db));
 		if (!db) {
 			PDEBUG(DDB, DEBUG_ERROR, "No memory!\n");
-			return;
+			return 0;
 		}
 		timer_init(&db->timer, db_timeout, db);
 
@@ -117,6 +118,9 @@ void update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t 
 		PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	}
 
+	if (extended >= 0)
+		db->extended = extended;
+
 	if (busy) {
 		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%d' busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		timer_stop(&db->timer);
@@ -129,10 +133,12 @@ void update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t 
 		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%d' failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->retry, MELDE_MAXIMAL);
 		if (db->retry == MELDE_MAXIMAL) {
 			remove_db(db);
-			return;
+			return db->extended;
 		}
 		timer_start(&db->timer, MELDE_WIEDERHOLUNG); /* when to do retry */
 	}
+
+	return db->extended;
 }
 
 int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)

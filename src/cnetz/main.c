@@ -246,7 +246,11 @@ int main(int argc, char *argv[])
 	scrambler_init();
 	init_sysinfo();
 	dsp_init();
-	init_telegramm();
+	rc = init_telegramm();
+	if (rc < 0) {
+		fprintf(stderr, "Error in Telegramm structure. Quitting!\n");
+		goto fail;
+	}
 	init_coding();
 	cnetz_init();
 	rc = call_init(station_id, call_sounddev, samplerate, latency, 7, loopback);

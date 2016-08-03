@@ -110,6 +110,7 @@ typedef struct telegramm {
 	uint8_t test_telefonteilnehmer_geraet;
 	uint8_t grenzwert_fuer_umschalten;
 	uint8_t vermittlungstechnische_sperren;
+	uint8_t erweitertes_frequenzbandbit;
 	uint8_t reduzierungsfaktor;
 	uint64_t illegaler_opcode;
 } telegramm_t;

@@ -31,6 +31,7 @@ typedef struct transaction {
 	uint8_t			futln_nat;		/* current station ID (3 values) */
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
+	int			extended;		/* extended frequency capability */
 	char			dialing[17];		/* number dialed by the phone */
 	int32_t			state;			/* state of transaction */
 	int8_t			release_cause;		/* reason for release, (c-netz coding) */
@@ -43,7 +44,7 @@ typedef struct transaction {
 } transaction_t;
 
 const char *transaction2rufnummer(transaction_t *trans);
-transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
+transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended);
 void destroy_transaction(transaction_t *trans);
 void link_transaction(transaction_t *trans, cnetz_t *cnetz);
 void unlink_transaction(transaction_t *trans);

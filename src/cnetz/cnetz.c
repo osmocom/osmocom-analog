@@ -124,13 +124,19 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 	cnetz_t *cnetz;
 	int rc;
 
-	if ((kanal & 1) && kanal < 1 && kanal > 947) {
+	if ((kanal & 1) && kanal < 1 && kanal > 1147) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid.\n", kanal);
 		return -EINVAL;
 	}
-	if (!(kanal & 1) && kanal < 2 && kanal > 758) {
+	if ((kanal & 1) && kanal > 947) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %d, only newer phones support this!\n", kanal);
+	}
+	if (!(kanal & 1) && kanal < 2 && kanal > 918) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid.\n", kanal);
 		return -EINVAL;
+	}
+	if (!(kanal & 1) && kanal > 758) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %d, only newer phones support this!\n", kanal);
 	}
 	if (kanal == 1 || kanal == 2) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Channel ('Kanal') number %d is specified as 'unused', it might not work!\n", kanal);
@@ -232,13 +238,13 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 	cnetz_go_idle(cnetz);
 
 #ifdef DEBUG_SPK
-	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002);
+	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002, -1);
 	trans->mo_call = 1;
 	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
 #else
 	/* create transaction for speech channel loopback */
 	if (loopback && chan_type == CHAN_TYPE_SPK) {
-		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ, 2, 2, 22002);
+		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ, 2, 2, 22002, -1);
 		trans->mo_call = 1;
 		cnetz_set_dsp_mode(cnetz, DSP_MODE_SPK_K);
 		cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 0);
@@ -248,16 +254,16 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 #if 0
 	/* debug flushing transactions */
 	transaction_t *trans1, *trans2;
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1);
 	destroy_transaction(trans1);
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1);
 	destroy_transaction(trans1);
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784);
-	trans2 = create_transaction(cnetz, 99, 2, 2, 22002);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1);
 	unlink_transaction(trans1);
 	link_transaction(trans1, cnetz);
 	cnetz_flush_other_transactions(cnetz, trans1);
-	trans2 = create_transaction(cnetz, 99, 2, 2, 22002);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1);
 	cnetz_flush_other_transactions(cnetz, trans2);
 #endif
 
@@ -340,13 +346,20 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 	}
 }
 
-cnetz_t *search_free_spk(void)
+cnetz_t *search_free_spk(int extended)
 {
 	sender_t *sender;
 	cnetz_t *cnetz, *ogk_spk = NULL;
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *) sender;
+		/* ignore extended frequency, if not supported */
+		if (!extended) {
+			if ((sender->kanal & 1) && sender->kanal > 947)
+				continue;
+			if (!(sender->kanal & 1) && sender->kanal > 758)
+				continue;
+		}
 		/* ignore busy channel */
 		if (cnetz->state != CNETZ_IDLE)
 			continue;
@@ -431,7 +444,7 @@ inval:
 	}
 
 	/* 4. check if all senders are busy, return NOCHANNEL */
-	if (!search_free_spk()) {
+	if (!search_free_spk(1)) { // FIXME: maybe lookup database for extended frequency band before calling subscriber
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
@@ -446,7 +459,7 @@ inval:
 	PDEBUG(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
-	trans = create_transaction(cnetz, TRANS_VAK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2));
+	trans = create_transaction(cnetz, TRANS_VAK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2), -1);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		sender->callref = 0;
@@ -584,7 +597,7 @@ int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_res
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "'Meldeaufruf', but OgK is currently busy!\n");
 		return -CAUSE_NOCHANNEL;
 	}
-	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest);
+	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest, -1);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
@@ -815,7 +828,7 @@ wbn:
 			cnetz_go_idle(cnetz);
 			break;
 		case TRANS_WBP:
-			spk = search_free_spk();
+			spk = search_free_spk(trans->extended);
 			if (!spk) {
 				PDEBUG(DCNETZ, DEBUG_NOTICE, "No free channel anymore, rejecting call!\n");
 				goto wbn;
@@ -837,7 +850,7 @@ wbn:
 			trans->repeat = 0;
 			timer_start(&trans->timer, 0.150 + 0.0375 * F_BQ); /* two slots + F_BQ frames */
 			/* select channel */
-			spk = search_free_spk();
+			spk = search_free_spk(trans->extended);
 			if (!spk) {
 				PDEBUG(DCNETZ, DEBUG_NOTICE, "No free channel anymore, rejecting call!\n");
 				destroy_transaction(trans);
@@ -933,11 +946,13 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
 		else
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
+		if (telegramm->erweitertes_frequenzbandbit)
+			PDEBUG(DCNETZ, DEBUG_INFO, " -> Phone support extended frequency band\n");
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Attachment from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->erweitertes_frequenzbandbit);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
@@ -952,11 +967,13 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
 		else
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
+		if (telegramm->erweitertes_frequenzbandbit)
+			PDEBUG(DCNETZ, DEBUG_INFO, " -> Phone support extended frequency band\n");
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Roaming from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->erweitertes_frequenzbandbit);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
@@ -973,15 +990,15 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Call from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_VWG, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		trans = create_transaction(cnetz, TRANS_VWG, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
 		}
 		trans->try = 1;
-		spk = search_free_spk();
+		spk = search_free_spk(trans->extended);
 		if (!spk) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Rejecting call from subscriber '%s', because we have no free channel.\n", rufnummer);
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "Rejecting call from subscriber '%s', because we have no free channel. (or not supported by phone)\n", rufnummer);
 			trans_new_state(trans, TRANS_WBN);
 			break;
 		}

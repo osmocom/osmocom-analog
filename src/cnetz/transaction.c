@@ -36,7 +36,7 @@ const char *transaction2rufnummer(transaction_t *trans)
 }
 
 /* create transaction */
-transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended)
 {
 	transaction_t *trans;
 
@@ -72,7 +72,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_
 	link_transaction(trans, cnetz);
 
 	/* update database: now busy */
-	update_db(cnetz, futln_nat, futln_fuvst, futln_rest, 1, 0);
+	trans->extended = update_db(cnetz, futln_nat, futln_fuvst, futln_rest, extended, 1, 0);
 
 	return trans;
 }
@@ -81,7 +81,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_
 void destroy_transaction(transaction_t *trans)
 {
 	/* update database: now idle */
-	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, 0, trans->ma_failed);
+	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, -1, 0, trans->ma_failed);
 
 	unlink_transaction(trans);
 	

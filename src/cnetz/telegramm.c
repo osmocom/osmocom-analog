@@ -52,7 +52,7 @@ static const char *param_gespraechsende[] = {
 	"bevorstehendes Gespraechsende",
 };
 
-static const char *param_frequenz[1024];
+static const char *param_frequenz[2048];
 
 static const char *param_anpassen[] = {
 	"Sendeleistung erhoehen",
@@ -257,7 +257,7 @@ static struct definition_parameter {
 	{ 'H',"OgK-Vorschlag",				10, param_frequenz },
 	{ 'I',"FuZ-Nationalitaet",			 3, NULL },
 	{ 'J',"Sendeleistungsanpassung",		 1, param_anpassen },
-	{ 'K',"Frequenz-Nr.",				10, param_frequenz },
+	{ 'K',"Frequenz-Nr.",				11, param_frequenz },
 	{ 'L',"Art der Signalisierung im OgK",		 1, param_signalisierung },
 	{ 'M',"OgK-Verkehrsanteil",			 5, param_verkehrsanteil },
 	{ 'N',"FuTln-Nationalitaet",			 3, NULL },
@@ -294,9 +294,10 @@ static struct definition_parameter {
 	{ 't',"Test-Telefonteilnehmer-Geraet",		 1, param_ja },
 	{ 'u',"Grenzwert fuer Umschalten",		 4, param_ausloesen },
 	{ 'v',"Vermittlungtechnische Sperren",		 2, param_sperren },
+	{ 'w',"Erweitertes Frequenzbandbit",		 1, NULL },
 	{ 'y',"Reduzierungsfaktor",			 2, param_reduzierung },
-	{ '_',"Illegaler Opcode",			64,NULL },
-	{ 0  ,"",					 0,NULL },
+	{ '_',"Illegaler Opcode",			64, NULL },
+	{ 0  ,"",					 0, NULL },
 };
 
 static struct definition_parameter *get_parameter(char digit)
@@ -318,19 +319,19 @@ static struct definition_opcode {
 	const char *message_text;
 } definition_opcode[64] = {
       /*   8888888877777777666666665555555544444444333333332222222211111111         message	block	text */
-	{ "-bRL----VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
-	        "-bRL-QQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "EM(R)",	BLOCK_R,"Erstmeldung" },
-	{ "-bRL----VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
-	        "-bRL-QQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "UM(R)",	BLOCK_R,"Umbuchantrag" },
-	{ "SbRL----VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
-	        "SbRL-QQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "UWG(R)",	BLOCK_R,"Umbuchantrag bei Warteschlange (gehende Verbindung)" },
+	{ "-bRLw---VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
+	        "-bRLwQQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "EM(R)",	BLOCK_R,"Erstmeldung" },
+	{ "-bRLw---VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
+	        "-bRLwQQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "UM(R)",	BLOCK_R,"Umbuchantrag" },
+	{ "SbRLw---VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
+	        "SbRLwQQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "UWG(R)",	BLOCK_R,"Umbuchantrag bei Warteschlange (gehende Verbindung)" },
 	{ "--RL-----hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "ATO(R)",	BLOCK_R,"Ausloesen des FuTelG im OgK-Betrieb bei WS" },
 	{ "--RL--WW-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VWG(R)",	BLOCK_R,"Verbindungswunsch gehend" },
 	{ "--RL-----hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "SRG(R)",	BLOCK_R,"Sonderruf (Notruf)" },
-	{ "SbRL----VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
-	        "SbRL-QQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "NUG(R)",	BLOCK_R,"Verbindungswunsch gehend bei Nachbarschaftsunterstuetzung" },
-	{ "-bRL----VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
-	        "-bRL-QQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "UWK(R)",	BLOCK_R,"Umbuchantrag bei Warteschlange (kommende Verbindung)" },
+	{ "SbRLw---VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
+	        "SbRLwQQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "NUG(R)",	BLOCK_R,"Verbindungswunsch gehend bei Nachbarschaftsunterstuetzung" },
+	{ "-bRLw---VVVVVVVVVVVVVVVVIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT",
+	        "-bRLwQQQ-hhhhhiiiiijjjjjIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", "UWK(R)",	BLOCK_R,"Umbuchantrag bei Warteschlange (kommende Verbindung)" },
 	{ "------------------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "MFT(M)",	BLOCK_M,"Meldung: Funktelefonteilnehmer" },
 	{ "________________________________________________________________", NULL, "opcode 9",	BLOCK_I,"Illegaler Opcode" },
 	{ "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", NULL, "WUE(M)",	BLOCK_M,"Wahluebertragung" },
@@ -343,12 +344,12 @@ static struct definition_opcode {
 	{ "------dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VH(K)",	BLOCK_K,"Verbindung halten" },
 	{ "------dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "RTAQ(K)",	BLOCK_K,"Quittung Rufton anschalten" },
 	{ "------dJBB------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AH(K)",	BLOCK_K,"Abhebe-Signal" },
-	{ "------dJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VH(V)",	BLOCK_V,"Verbindung halten" },
+	{ "-----wdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VH(V)",	BLOCK_V,"Verbindung halten" },
 	{ "------dJ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AT(K)",	BLOCK_K,"Ausloesen durch Funktelefonteilnehmer" },
 	{ "------dJBBC-------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AT(V)",	BLOCK_V,"Ausloesen durch Funktelefonteilnehmer" },
 	{ "------dJBB------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSQ(K)",	BLOCK_K,"Durchschalten Quittung" },
-	{ "------dJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAI(V)",	BLOCK_V,"Umschaltantrag intern" },
-	{ "------dJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAE(V)",	BLOCK_V,"Umschaltantrag extern" },
+	{ "-----wdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAI(V)",	BLOCK_V,"Umschaltantrag intern" },
+	{ "-----wdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAE(V)",	BLOCK_V,"Umschaltantrag extern" },
 	{ "------dJBB--------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USTLN(K)",	BLOCK_K,"Umschalten Funktelefonteilnehmer" },
 	{ "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo", NULL, "ZFZQ(K)",	BLOCK_K,"Zufallszahlquittung" },
 	{ "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", NULL, "AP(K)",	BLOCK_K,"Autorisierungsparameter" },
@@ -356,7 +357,7 @@ static struct definition_opcode {
 	{ "________________________________________________________________", NULL, "opcode 30",BLOCK_I,"Illegaler Opcode" },
 	{ "________________________________________________________________", NULL, "opcode 31",BLOCK_I,"Illegaler Opcode" },
 	{ "PP-MMMMMDDDDEEEE------HHHHHHHHHHFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "MA(M)",	BLOCK_M,"Meldeaufruf" },
-	{ "PPdZZZZZ------KKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VAK(R)",	BLOCK_R,"Verbindungsaufbau kommend" },
+	{ "PPdZZZZZ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VAK(R)",	BLOCK_R,"Verbindungsaufbau kommend" },
 	{ "________________________________________________________________", NULL, "opcode 34",BLOCK_I,"Illegaler Opcode" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "EBQ(R)",	BLOCK_R,"Einbuchquittung" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "UBQ(R)",	BLOCK_R,"Umbuchquittung" },
@@ -369,7 +370,7 @@ static struct definition_opcode {
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WBP(R)",	BLOCK_R,"Wahlbestaetigung positiv" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WBN(R)",	BLOCK_R,"Wahlbestaetigung negativ" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WWBP(R)",	BLOCK_R,"Wahlbestaetigung positiv in Warteschlange" },
-	{ "PPdZZZZZ------KKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VAG(R)",	BLOCK_R,"Verbindungsaufbau gehend" },
+	{ "PPdZZZZZ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VAG(R)",	BLOCK_R,"Verbindungsaufbau gehend" },
 	{ "PPdZZZZZ------cc--------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VA(R)",	BLOCK_R,"Vorzeitiges Ausloesen" },
 	{ "PP----dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "BQ(K)",	BLOCK_K,"Belegungsquittung" },
 	{ "PP----dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VHQ(K)",	BLOCK_K,"Quittung Verbindung halten" },
@@ -380,9 +381,9 @@ static struct definition_opcode {
 	{ "PP----dJ------cc--------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AF(K)",	BLOCK_K,"Ausloesen durch FuFSt in konzentr. Signalisierung" },
 	{ "PP----dJ------cc--------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AF(V)",	BLOCK_V,"Ausloesen durch FuFSt in verteilter Signalisierung" },
 	{ "PP----dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSB(K)",	BLOCK_K,"Durchschaltung" },
-	{ "PP----dJ------KKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSBI(V)",	BLOCK_V,"Umschaltbefehl intern (neuer SpK in der gleichen FuZ)" },
-	{ "PP----dJ------KKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USF(K)",	BLOCK_K,"Umschalten FuFst" },
-	{ "PP----dJ------KKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USBE(V)",	BLOCK_V,"Umschaltbefehl extern (neuer SpK in einer anderen Funkzelle)" },
+	{ "PP----dJ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSBI(V)",	BLOCK_V,"Umschaltbefehl intern (neuer SpK in der gleichen FuZ)" },
+	{ "PP----dJ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USF(K)",	BLOCK_K,"Umschalten FuFst" },
+	{ "PP----dJ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USBE(V)",	BLOCK_V,"Umschaltbefehl extern (neuer SpK in einer anderen Funkzelle)" },
 	{ "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo", NULL, "ZFZ(K)",	BLOCK_K,"Zufallszahl" },
 	{ "________________________________________________________________", NULL, "opcode 61",BLOCK_I,"Illegaler Opcode" },
 	{ "________________________________________________________________", NULL, "opcode 62",BLOCK_I,"Illegaler Opcode" },
@@ -434,7 +435,7 @@ int init_telegramm(void)
 	}
 
 	/* generate frequency names */
-	for (i = 0; i < 1024; i++) {
+	for (i = 0; i < 2048; i++) {
 		char *frequenz = calloc(16, 1);
 		if ((i & 1))
 			sprintf(frequenz, "%.4f MHz", 465.750 - (double)(i+1) / 2.0 * 0.010);
@@ -784,6 +785,9 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 		case 'v':
 			value = telegramm->vermittlungstechnische_sperren;
 			break;
+		case 'w':
+			value = telegramm->erweitertes_frequenzbandbit;
+			break;
 		case 'y':
 			value = telegramm->reduzierungsfaktor;
 			break;
@@ -989,6 +993,9 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 			break;
 		case 'v':
 			telegramm->vermittlungstechnische_sperren = value;
+			break;
+		case 'w':
+			telegramm->erweitertes_frequenzbandbit = value;
 			break;
 		case 'y':
 			telegramm->reduzierungsfaktor = value;
