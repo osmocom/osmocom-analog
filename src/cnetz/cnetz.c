@@ -1187,7 +1187,7 @@ call_failed:
 		trans->try++;
 		break;
 	case TRANS_AT:
-		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuFst' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_K;
 		if (++trans->repeat == 1) {
 			destroy_transaction(trans);
@@ -1339,11 +1339,13 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 
 	switch (trans->state) {
 	case TRANS_VHQ:
-		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
-		if ((cnetz->sched_ts & 8) == 0) /* sub frame 1 and 3 */
+		if ((cnetz->sched_ts & 8) == 0) { /* sub frame 1 and 3 */
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten 1' on traffic channel\n");
 			telegramm.opcode = OPCODE_VHQ1_V;
-		else /* sub frame 2 and 4 */
+		} else { /* sub frame 2 and 4 */
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten 2' on traffic channel\n");
 			telegramm.opcode = OPCODE_VHQ2_V;
+		}
 		break;
 	case TRANS_AF:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
@@ -1354,7 +1356,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 		}
 		break;
 	case TRANS_AT:
-		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuTln' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuFst' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_V;
 		if (++trans->repeat == 1) {
 			destroy_transaction(trans);
