@@ -1101,6 +1101,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 				timer_start(&trans->timer, 0.0375 * F_DS); /* F_DS frames */
 			}
 			if (trans->mt_call) {
+				cnetz->sender.callref = trans->callref;
 				trans_new_state(trans, TRANS_RTA);
 				timer_start(&trans->timer, 0.0375 * F_RTA); /* F_RTA frames */
 				trans->repeat = 0;
