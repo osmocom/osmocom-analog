@@ -73,6 +73,15 @@ enum call_state {
 	CALL_DISCONNECTED,
 };
 
+static const char *call_state_name[] = {
+	"IDLE",
+	"SETUP_MO",
+	"SETUP_MT",
+	"ALERTING",
+	"CONNECT",
+	"DISCONNECTED",
+};
+
 enum audio_pattern {
 	PATTERN_NONE = 0,
 	PATTERN_TEST,
@@ -172,6 +181,7 @@ static call_t call;
 
 static void call_new_state(enum call_state state)
 {
+	PDEBUG(DCALL, DEBUG_DEBUG, "Call state '%s' -> '%s'\n", call_state_name[call.state], call_state_name[state]);
 	call.state = state;
 	call.audio_pos = 0;
 	call.test_audio_pos = 0;
