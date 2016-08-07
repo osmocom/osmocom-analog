@@ -105,6 +105,29 @@ error:
 	return rc;
 }
 
+static int sound_prepare(sound_t *sound)
+{
+	int rc;
+	int16_t buff[2];
+
+	rc = snd_pcm_prepare(sound->phandle);
+	if (rc < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+		return rc;
+	}
+
+	rc = snd_pcm_prepare(sound->chandle);
+	if (rc < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+		return rc;
+	}
+
+	/* trigger capturing */
+	snd_pcm_readi(sound->chandle, buff, 1);
+
+	return 0;
+}
+
 void *sound_open(const char *device, int samplerate)
 {
 	sound_t *sound;
@@ -142,21 +165,9 @@ void *sound_open(const char *device, int samplerate)
 	}
 	PDEBUG(DSOUND, DEBUG_DEBUG, "Capture with %d channels.\n", sound->cchannels);
 
-	rc = snd_pcm_prepare(sound->phandle);
-	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+	rc = sound_prepare(sound);
+	if (rc < 0)
 		goto error;
-	}
-
-	rc = snd_pcm_prepare(sound->chandle);
-	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
-		goto error;
-	}
-
-	/* trigger capturing */
-	int16_t buff[2];
-	snd_pcm_readi(sound->chandle, buff, 1);
 
 	return sound;
 
@@ -197,7 +208,7 @@ int sound_write(void *inst, int16_t *samples_left, int16_t *samples_right, int n
 	if (rc < 0) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE)
-			snd_pcm_prepare(sound->phandle);
+			sound_prepare(sound);
 		return rc;
 	}
 
@@ -236,7 +247,7 @@ int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int nu
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to read audio from interface (%s)\n", snd_strerror(rc));
 		/* recover read */
 		if (rc == -EPIPE)
-			snd_pcm_prepare(sound->chandle);
+			sound_prepare(sound);
 		return rc;
 	}
 
@@ -268,7 +279,7 @@ int sound_get_inbuffer(void *inst)
 		else
 			PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE)
-			snd_pcm_prepare(sound->phandle);
+			sound_prepare(sound);
 		return rc;
 	}
 
