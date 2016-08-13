@@ -218,6 +218,8 @@ int sound_write(void *inst, int16_t *samples_left, int16_t *samples_right, int n
 	return rc;
 }
 
+#define KEEP_FRAMES	8	/* minimum frames not to read, due to bug in ALSA */
+
 int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int num)
 {
 	sound_t *sound = (sound_t *)inst;
@@ -227,12 +229,12 @@ int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int nu
 
 	/* get samples in rx buffer */
 	in = snd_pcm_avail(sound->chandle);
-	/* if less than 2 frames available, try next time */
-	if (in < 2)
+	/* if not more than KEEP_FRAMES frames available, try next time */
+	if (in <= KEEP_FRAMES)
 		return 0;
-	/* read one frame less than in buffer, because snd_pcm_readi() seems
-	 * to corrupt last frame */
-	in--;
+	/* read some frames less than in buffer, because snd_pcm_readi() seems
+	 * to corrupt last frames */
+	in -= KEEP_FRAMES;
 	if (in > num)
 		in = num;
 
