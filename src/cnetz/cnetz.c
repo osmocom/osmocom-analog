@@ -26,6 +26,64 @@
  *
  */
 
+/* Notes on transaction state:
+ *
+ * The state is used to define what is scheduled next, what message is awaited,
+ * what is done when timeout. The event (scheduler, message, timeout) is
+ * processed then and the state may change.
+ */
+
+/* Call control process:
+ *
+ * If an MT (mobile terminating) call is made, a transaction with callref is
+ * created. The transaction is linked to OgK. When the scheduler schedules
+ * VAK(R), the SpK is allocated and the transaction is linked to it.
+ *
+ * If an MO (mobile originating) call is made (received VWG(K)), a transaction
+ * with callref is created. The transaction is linked to OgK. When the
+ * scheduler schedules WAF(M), the process waits for WUE(M). If not received,
+ * the process is repeated. After N times WBN(R) is scheduled and transaction
+ * is destroyed.  If WUE(M) is received, the scheduler schedules WBP(R) and
+ * then schedules VAG(R), the SpK is allocated and the transaction is linked to
+ * it.
+ *
+ * Switching to SpK is performed two time slots after transmitting VAK(R) or
+ * VAG(R). The timer is started.  The schedulers schedules 8 times BQ(K) and
+ * awaits at least one BEL(K). If BEK(K) is received, the timer is stoped. If
+ * BQ(K) was sent at least 8 times and if timer is stopped, the scheduler
+ * schedules VHQ(K).  If no BEL(K) was received, AFK(K) is scheduled N_AFKT
+ * times, then the process on OgK (WBP+VAG or VAK) is repeated N times.
+ *
+ * Similar to BQ/BEL the DS/DSQ handing is performed. For MT calls, the BQ/BEL
+ * is followed by RTA/RTAQ handling. If the phone answers, the AT(K) is
+ * received and DS/DSQ handling is performed.
+ *
+ * After DS/DSQ handling, the SpK changes to distributed signalling mode.
+ * VHQ1/VHQ2(V) is transmitted and VH(V) is received. If VH(V) is not received
+ * F_VHQ times, the connection is terminated by sending AF(K) N_AFKT times.
+ * Transaction is released.
+ *
+ * If AT(K) or AT(V) is received, AF(K) or AF(V) is sent once and transaction
+ * is released.
+ *
+ * If call is released by upper layer, AF(K) is sent N_AFKT times or AF(V) is
+ * sent N_AFV times. The transaction is released.
+ *
+ * More details about the process can be read from the source code.
+ *
+ * Special timings and correct scheduling is defined in source code and can be
+ * read also in the C-Netz specs.
+ */
+
+/*
+ * Notes on the combined channel hack:
+ *
+ * For combined SpK+OgK hack, the channel is used as SpK as last choise. This
+ * allows to use only one transceiver for making C-Netz to work. Also it allows
+ * to use all transceivers for simultanious phone calls. Some phones may not
+ * work with that.
+ */
+
 #define CHAN cnetz->sender.kanal
 
 #include <stdio.h>
