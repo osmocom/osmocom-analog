@@ -29,6 +29,7 @@
 #include "../common/timer.h"
 #include "../common/goertzel.h"
 #include "nmt.h"
+#include "transaction.h"
 #include "dsp.h"
 
 #define PI			M_PI
@@ -470,7 +471,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	nmt->fsk_filter_pos = pos;
 
 	if ((nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF)
-	 && nmt->sender.callref) {
+	 && nmt->trans && nmt->trans->callref) {
 		int16_t down[length]; /* more than enough */
 		int count;
 
@@ -484,7 +485,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		for (i = 0; i < count; i++) {
 			spl[pos++] = down[i];
 			if (pos == 160) {
-				call_tx_audio(nmt->sender.callref, spl, 160);
+				call_tx_audio(nmt->trans->callref, spl, 160);
 				pos = 0;
 			}
 		}

@@ -5,6 +5,7 @@
 #include "dms.h"
 #include "sms.h"
 
+
 enum dsp_mode {
 	DSP_MODE_DIALTONE,	/* stream dial tone to mobile phone */
 	DSP_MODE_AUDIO,		/* stream audio */
@@ -63,14 +64,6 @@ typedef struct nmt_sysinfo {
 	uint8_t			area_no;		/* Area no. 1..4, 0 = no Area no. */
 } nmt_sysinfo_t;
 
-typedef struct nmt_subscriber {
-	/* NOTE: country must be followed by number, so both represent a string */
-	char			country;		/* country digit */
-	char			number[7];		/* phone suffix */
-	char			password[4];		/* phone's password + '\0' */
-	int			coinbox;		/* phone is a coinbox and accept tariff information */
-} nmt_subscriber_t;
-
 const char *nmt_dir_name(enum nmt_direction dir);
 
 typedef struct nmt {
@@ -78,25 +71,18 @@ typedef struct nmt {
 	nmt_sysinfo_t		sysinfo;
 	compandor_t		cstate;
 	dtmf_t			dtmf;
+	struct transaction	*trans;			/* pointer to transaction, if bound to channel */
 
 	/* sender's states */
 	enum nmt_state		state;
 	int			wait_autoanswer;	/* wait for frame 15 before we can send autoanswer */
 	enum nmt_active_state	active_state;
-	nmt_subscriber_t	subscriber;		/* current subscriber */
 	struct timer		timer;
 	int			rx_frame_count;		/* receive frame counter */
 	int			tx_frame_count;		/* transmit frame counter */
 	int			tx_callerid_count;	/* counter for caller ID repetition */
 	char			dialing[33];		/* dialed digits */
-	char			caller_id[33];		/* caller id digits */
-	enum number_type	caller_type;		/* caller id type */
-	int			page_try;		/* number of paging try */
 	int			mft_num;		/* counter for digit for MFT */
-
-	/* special state for paging on different CC */
-	struct nmt		*page_for_nmt;		/* only page and assign channel for nmt instance as set */
-	int			mt_channel;		/* channel to use */
 
 	/* features */
 	int			compandor;		/* if compandor shall be used */
@@ -139,15 +125,12 @@ typedef struct nmt {
 	int			super_detected;		/* current detection state flag */
 	int			super_detect_count;	/* current number of consecutive detections/losses */
 
-	/* DMS states */
-	int			dms_call;		/* indicates that this call is a DMS call */
+	/* DMS/SMS states */
 	dms_t			dms;			/* DMS states */
-
-	/* SMS states */
-	char			smsc_number[33];	/* digits to match SMSC */
+	int			dms_call;		/* indicates that this call is a DMS call */
 	sms_t			sms;			/* SMS states */
+	char			smsc_number[33];	/* digits to match SMSC */
 	struct timer		sms_timer;
-	char			sms_string[256];	/* current string to deliver */
 } nmt_t;
 
 void nmt_channel_list(void);
@@ -160,9 +143,11 @@ uint8_t nmt_country_by_short_name(const char *short_name);
 int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
 void nmt_check_channels(void);
 void nmt_destroy(sender_t *sender);
+void nmt_go_idle(nmt_t *nmt);
 void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);
 const char *nmt_get_frame(nmt_t *nmt);
 void nmt_rx_super(nmt_t *nmt, int tone, double quality);
+void timeout_mt_paging(struct transaction *trans);
 void deliver_sms(const char *sms);
 int submit_sms(const char *sms);
 
