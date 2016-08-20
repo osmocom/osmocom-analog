@@ -39,7 +39,8 @@ uint64_t nmt_encode_channel(int channel, int power)
 		value |= 0x100;
 		channel -= 100;
 	}
-	value |= channel;
+	value |= channel % 10;
+	value |= (channel / 10) << 4;
 	value |= power << 9;
 
 	return value;
@@ -47,10 +48,13 @@ uint64_t nmt_encode_channel(int channel, int power)
 
 int nmt_decode_channel(uint64_t value, int *channel, int *power)
 {
-	if ((value & 0xff) > 99)
+	if ((value & 0x00f) > 0x009)
+		return -1;
+	if ((value & 0x0f0) > 0x090)
 		return -1;
 
-	*channel = (value & 0xff) +
+	*channel = (value & 0x00f) +
+		((value & 0x0f0) >> 4) * 10 +
 		((value & 0x100) >> 8) * 100 +
 		((value & 0x800) >> 11) * 200;
 	*power = (value & 0x600) >> 9;
