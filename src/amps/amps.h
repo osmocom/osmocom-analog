@@ -43,7 +43,6 @@ typedef struct amps {
 	/* sender's states */
 	enum amps_chan_type	chan_type;
 	enum amps_state		state;
-	int			page_retry;		/* current number of paging (re)try */
 	int			channel_busy;		/* indicate channel is busy while receiving */
 
 	/* system info */

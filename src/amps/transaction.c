@@ -175,6 +175,25 @@ transaction_t *search_transaction_number(amps_t *amps, uint32_t min1, uint16_t m
 	return NULL;
 }
 
+transaction_t *search_transaction_callref(amps_t *amps, int callref)
+{
+	transaction_t *trans = amps->trans_list;
+
+	/* just in case, this should not happen */
+	if (!callref)
+		return NULL;
+	while (trans) {
+		if (trans->callref == callref) {
+			const char *number = amps_min2number(trans->min1, trans->min2);
+			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", number);
+			return trans;
+		}
+		trans = trans->next;
+	}
+
+	return NULL;
+}
+
 void trans_new_state(transaction_t *trans, int state)
 {
 	PDEBUG(DTRANS, DEBUG_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));

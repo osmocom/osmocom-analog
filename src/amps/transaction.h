@@ -24,6 +24,8 @@ enum amps_trans_state {
 typedef struct transaction {
 	struct transaction	*next;			/* pointer to next node in list */
 	amps_t			*amps;			/* pointer to amps instance */
+	int			callref;		/* call reference */
+	int			page_retry;		/* current number of paging (re)try */
 	uint32_t		min1;			/* current station ID (2 values) */
 	uint16_t		min2;
 	uint8_t			msg_type;		/* message type (3 values) */
@@ -42,6 +44,7 @@ void link_transaction(transaction_t *trans, amps_t *amps);
 void unlink_transaction(transaction_t *trans);
 transaction_t *search_transaction(amps_t *amps, uint32_t state_mask);
 transaction_t *search_transaction_number(amps_t *amps, uint32_t min1, uint16_t min2);
+transaction_t *search_transaction_callref(amps_t *amps, int callref);
 void trans_new_state(transaction_t *trans, int state);
 void amps_flush_other_transactions(amps_t *amps, transaction_t *trans);
 void transaction_timeout(struct timer *timer);

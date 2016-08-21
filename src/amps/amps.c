@@ -468,15 +468,15 @@ static void amps_go_idle(amps_t *amps)
 {
 	int frame_length;
 
-	if (amps->sender.callref) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Releasing but still having callref, please fix!\n");
-		call_in_release(amps->sender.callref, CAUSE_NORMAL);
-		amps->sender.callref = 0;
-	}
-
-	/* do not touch control channel */
 	if (amps->state == STATE_IDLE)
 		return;
+
+	if (amps->trans_list) {
+		PDEBUG(DAMPS, DEBUG_ERROR, "Releasing but still having transaction, please fix!\n");
+		if (amps->trans_list->callref)
+			call_in_release(amps->trans_list->callref, CAUSE_NORMAL);
+		destroy_transaction(amps->trans_list);
+	}
 
 	PDEBUG(DAMPS, DEBUG_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
 	if (amps->sender.loopback)
@@ -500,9 +500,9 @@ static void amps_release(transaction_t *trans, uint8_t cause)
 	trans->ordq = 0;
 	trans->order = 3;
 	/* release towards call control */
-	if (amps->sender.callref) {
-		call_in_release(amps->sender.callref, cause);
-		amps->sender.callref = 0;
+	if (trans->callref) {
+		call_in_release(trans->callref, cause);
+		trans->callref = 0;
 	}
 	/* change DSP mode to transmit release */
 	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX)
@@ -534,16 +534,16 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 			break;
 		timer_stop(&trans->timer);
 		destroy_transaction(trans);
-		if (amps->sender.callref) {
-			call_in_release(amps->sender.callref, CAUSE_NORMAL);
-			amps->sender.callref = 0;
+		if (trans->callref) {
+			call_in_release(trans->callref, CAUSE_NORMAL);
+			trans->callref = 0;
 		}
 		amps_go_idle(amps);
 		break;
 	case TRANS_CALL_MT_ALERT:
 		if (tone) {
 			timer_stop(&trans->timer);
-			call_in_alerting(amps->sender.callref);
+			call_in_alerting(trans->callref);
 			amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
 			trans_new_state(trans, TRANS_CALL_MT_ALERT_SEND);
 			timer_start(&trans->timer, ALERT_TO);
@@ -554,7 +554,7 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 			timer_stop(&trans->timer);
 			if (!trans->sat_detected)
 				timer_start(&trans->timer, SAT_TO1);
-			call_in_answer(amps->sender.callref, amps_min2number(trans->min1, trans->min2));
+			call_in_answer(trans->callref, amps_min2number(trans->min1, trans->min2));
 			trans_new_state(trans, TRANS_CALL);
 		}
 		break;
@@ -759,16 +759,13 @@ inval:
 	PDEBUG(DAMPS, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
-#warning FIXME: Move callref to transaction, similar to the cnetz base station
-	amps->sender.callref = callref;
-
 	trans = create_transaction(amps, TRANS_PAGE, min1, min2, 0, 0, 0, 0);
 	if (!trans) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
-		sender->callref = 0;
 		return -CAUSE_TEMPFAIL;
 	}
-	amps->page_retry = 1;
+	trans->callref = callref;
+	trans->page_retry = 1;
 
 	return 0;
 }
@@ -787,29 +784,14 @@ void call_out_disconnect(int callref, int cause)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		amps = (amps_t *) sender;
-		if (sender->callref == callref)
+		/* search transaction for this callref */
+		trans = search_transaction_callref(amps, callref);
+		if (trans)
 			break;
 	}
 	if (!sender) {
 		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_in_release(callref, CAUSE_INVALCALLREF);
-		return;
-	}
-
-#if 0
-	dont use this, because busy state is only entered when channel is actually used for voice
-	if (amps->state != STATE_BUSY) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing disconnect, but sender is not in busy state.\n");
-		call_in_release(callref, cause);
-		sender->callref = 0;
-		return;
-	}
-#endif
-
-	trans = amps->trans_list;
-	if (!trans) {
-		call_in_release(callref, cause);
-		sender->callref = 0;
 		return;
 	}
 
@@ -827,7 +809,7 @@ void call_out_disconnect(int callref, int cause)
 	default:
 		PDEBUG(DAMPS, DEBUG_INFO, "Call control disconnects on control channel, removing transaction.\n");
 		call_in_release(callref, cause);
-		sender->callref = 0;
+		trans->callref = 0;
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 	}
@@ -844,7 +826,9 @@ void call_out_release(int callref, int cause)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		amps = (amps_t *) sender;
-		if (sender->callref == callref)
+		/* search transaction for this callref */
+		trans = search_transaction_callref(amps, callref);
+		if (trans)
 			break;
 	}
 	if (!sender) {
@@ -853,19 +837,7 @@ void call_out_release(int callref, int cause)
 		return;
 	}
 
-	sender->callref = 0;
-
-#if 0
-	dont use this, because busy state is only entered when channel is actually used for voice
-	if (amps->state != STATE_BUSY) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing release, but sender is not in busy state.\n");
-		return;
-	}
-#endif
-
-	trans = amps->trans_list;
-	if (!trans)
-		return;
+	trans->callref = 0;
 
 	switch (amps->dsp_mode) {
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
@@ -888,7 +860,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		amps = (amps_t *) sender;
-		if (sender->callref == callref)
+		if (amps->trans_list && amps->trans_list->callref == callref)
 			break;
 	}
 	if (!sender)
@@ -926,7 +898,7 @@ void transaction_timeout(struct timer *timer)
 		amps_release(trans, CAUSE_NOANSWER);
 		break;
 	case TRANS_PAGE_REPLY:
-		if (amps->page_retry++ == PAGE_TRIES) {
+		if (trans->page_retry++ == PAGE_TRIES) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging timeout, destroying transaction\n");
 			amps_release(trans, CAUSE_OUTOFORDER);
 		} else {
@@ -954,14 +926,11 @@ static void assign_voice_channel(transaction_t *trans)
 		return;
 	}
 
-	if (vc == amps) {
+	if (vc == amps)
 		PDEBUG(DAMPS, DEBUG_INFO, "Staying on combined control + voice channel %d\n", vc->sender.kanal);
-	} else {
+	else
 		PDEBUG(DAMPS, DEBUG_INFO, "Moving to traffic channel %d\n", vc->sender.kanal);
-		vc->sender.callref = amps->sender.callref;
-		amps->sender.callref = 0;
-	}
-	if (!vc->sender.callref) {
+	if (!trans->callref) {
 		/* setup call */
 		PDEBUG(DAMPS, DEBUG_INFO, "Setup call to network.\n");
 		rc = call_in_setup(callref, callerid, trans->dialing);
@@ -970,7 +939,7 @@ static void assign_voice_channel(transaction_t *trans)
 			amps_release(trans, 0);
 			return;
 		}
-		vc->sender.callref = callref;
+		trans->callref = callref;
 	}
 	timer_start(&trans->timer, SAT_TO1);
 	/* make channel busy */
@@ -1034,7 +1003,7 @@ again:
 		return trans;
 	case TRANS_PAGE_SEND:
 		trans_new_state(trans, TRANS_PAGE_REPLY);
-		timer_start(&trans->timer, (amps->page_retry == PAGE_TRIES) ? PAGE_TO2 : PAGE_TO1);
+		timer_start(&trans->timer, (trans->page_retry == PAGE_TRIES) ? PAGE_TO2 : PAGE_TO1);
 		return NULL;
 	default:
 		return NULL;

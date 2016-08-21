@@ -752,7 +752,7 @@ void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
 	/* receive audio, but only if call established and SAT detected */
 
 	if ((amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX || amps->dsp_mode == DSP_MODE_AUDIO_RX_FRAME_TX)
-	 && amps->sender.callref && trans && trans->sat_detected) {
+	 && trans && trans->callref && trans->sat_detected) {
 		int16_t down[length]; /* more than enough */
 		int pos, count;
 		int16_t *spl;
@@ -769,7 +769,7 @@ void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
 		for (i = 0; i < count; i++) {
 			spl[pos++] = down[i];
 			if (pos == 160) {
-				call_tx_audio(amps->sender.callref, spl, 160);
+				call_tx_audio(trans->callref, spl, 160);
 				pos = 0;
 			}
 		}
