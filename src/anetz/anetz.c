@@ -235,8 +235,8 @@ void anetz_loss_indication(anetz_t *anetz)
 	if (anetz->state == ANETZ_GESPRAECH) {
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Detected loss of signal, releasing.\n");
 		anetz_release(anetz);
-		call_in_release(anetz->sender.callref, CAUSE_TEMPFAIL);
-		anetz->sender.callref = 0;
+		call_in_release(anetz->callref, CAUSE_TEMPFAIL);
+		anetz->callref = 0;
 	}
 }
 
@@ -269,7 +269,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 	case ANETZ_GESPRAECH:
 		/* throughconnect speech when calling/answer tone is gone */
 		if (tone != 1) {
-			if (!anetz->sender.callref) {
+			if (!anetz->callref) {
 				int callref = ++new_callref;
 				int rc;
 
@@ -280,10 +280,10 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 					anetz_release(anetz);
 					break;
 				}
-				anetz->sender.callref = callref;
+				anetz->callref = callref;
 			} else {
 				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
-				call_in_answer(anetz->sender.callref, anetz->station_id);
+				call_in_answer(anetz->callref, anetz->station_id);
 			}
 			anetz_set_dsp_mode(anetz, DSP_MODE_AUDIO);
 		}
@@ -291,8 +291,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		if (tone == 1) {
 			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
 			anetz_release(anetz);
-			call_in_release(anetz->sender.callref, CAUSE_NORMAL);
-			anetz->sender.callref = 0;
+			call_in_release(anetz->callref, CAUSE_NORMAL);
+			anetz->callref = 0;
 			break;
 		}
 		break;
@@ -319,8 +319,8 @@ static void anetz_timeout(struct timer *timer)
 	case ANETZ_ANRUF:
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Timeout while waiting for answer, releasing.\n");
 	 	anetz_go_idle(anetz);
-		call_in_release(anetz->sender.callref, CAUSE_NOANSWER);
-		anetz->sender.callref = 0;
+		call_in_release(anetz->callref, CAUSE_NOANSWER);
+		anetz->callref = 0;
 		break;
 	case ANETZ_AUSLOESEN:
 	 	anetz_go_idle(anetz);
@@ -374,7 +374,7 @@ inval:
 	PDEBUG(DANETZ, DEBUG_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
 
 	/* 4. trying to page mobile station */
-	sender->callref = callref;
+	anetz->callref = callref;
 	anetz_page(anetz, dialing, freq);
 
 	call_in_alerting(callref);
@@ -395,7 +395,7 @@ void call_out_disconnect(int callref, int cause)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		anetz = (anetz_t *) sender;
-		if (sender->callref == callref)
+		if (anetz->callref == callref)
 			break;
 	}
 	if (!sender) {
@@ -418,7 +418,7 @@ void call_out_disconnect(int callref, int cause)
 
 	call_in_release(callref, cause);
 
-	sender->callref = 0;
+	anetz->callref = 0;
 
 }
 
@@ -432,7 +432,7 @@ void call_out_release(int callref, int cause)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		anetz = (anetz_t *) sender;
-		if (sender->callref == callref)
+		if (anetz->callref == callref)
 			break;
 	}
 	if (!sender) {
@@ -441,7 +441,7 @@ void call_out_release(int callref, int cause)
 		return;
 	}
 
-	sender->callref = 0;
+	anetz->callref = 0;
 
 	switch (anetz->state) {
 	case ANETZ_GESPRAECH:
@@ -465,7 +465,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		anetz = (anetz_t *) sender;
-		if (sender->callref == callref)
+		if (anetz->callref == callref)
 			break;
 	}
 	if (!sender)

@@ -70,6 +70,7 @@ typedef struct cnetz {
 
 	/* all cnetz states */
 	enum cnetz_state	state;			/* main state of sender */
+	int			callref;		/* call reference while in SpK mode */
 
 	/* cell nr selection */
 	int			cell_auto;		/* if set, cell_nr is selected automatically */

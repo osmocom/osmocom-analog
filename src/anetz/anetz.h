@@ -19,6 +19,7 @@ typedef struct anetz {
 
 	/* sender's states */
 	enum anetz_state	state;			/* current sender's state */
+	int			callref;		/* call reference */
 	char			station_id[8];		/* current station ID */
 	struct timer		timer;
 

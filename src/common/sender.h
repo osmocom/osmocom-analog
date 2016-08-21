@@ -14,9 +14,6 @@ typedef struct sender {
 	struct sender		*slave;			/* points to audio device slave member */
 	struct sender		*master;		/* points to audio device master source */
 
-	/* call reference */
-	int			callref;
-
 	/* system info */
 	int			kanal;			/* channel number */
 

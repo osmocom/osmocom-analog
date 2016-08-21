@@ -209,7 +209,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	anetz->fsk_filter_pos = pos;
 
 	/* Forward audio to network (call process). */
-	if (anetz->dsp_mode == DSP_MODE_AUDIO && anetz->sender.callref) {
+	if (anetz->dsp_mode == DSP_MODE_AUDIO && anetz->callref) {
 		int16_t down[length]; /* more than enough */
 		int count;
 
@@ -219,7 +219,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		for (i = 0; i < count; i++) {
 			spl[pos++] = down[i];
 			if (pos == 160) {
-				call_tx_audio(anetz->sender.callref, spl, 160);
+				call_tx_audio(anetz->callref, spl, 160);
 				pos = 0;
 			}
 		}

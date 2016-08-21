@@ -355,10 +355,10 @@ void cnetz_destroy(sender_t *sender)
 /* Abort connection, if any and send idle broadcast */
 static void cnetz_go_idle(cnetz_t *cnetz)
 {
-	if (cnetz->sender.callref) {
+	if (cnetz->callref) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Releasing but still having callref, please fix!\n");
-		call_in_release(cnetz->sender.callref, CAUSE_NORMAL);
-		cnetz->sender.callref = 0;
+		call_in_release(cnetz->callref, CAUSE_NORMAL);
+		cnetz->callref = 0;
 	}
 
 	PDEBUG(DCNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal);
@@ -392,7 +392,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *) sender;
-		if (sender->callref == callref)
+		if (cnetz->callref == callref)
 			break;
 	}
 	if (!sender)
@@ -520,7 +520,7 @@ inval:
 	trans = create_transaction(cnetz, TRANS_VAK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2), -1);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
-		sender->callref = 0;
+		cnetz->callref = 0;
 		return -CAUSE_TEMPFAIL;
 	}
 	trans->callref = callref;
@@ -559,7 +559,7 @@ void call_out_disconnect(int callref, int cause)
 	if (cnetz->state != CNETZ_BUSY) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing disconnect, but sender is not in busy state.\n");
 		call_in_release(callref, cause);
-		sender->callref = 0;
+		cnetz->callref = 0;
 		return;
 	}
 #endif
@@ -568,7 +568,7 @@ void call_out_disconnect(int callref, int cause)
 	trans = cnetz->trans_list;
 	if (!trans) {
 		call_in_release(callref, cause);
-		sender->callref = 0;
+		cnetz->callref = 0;
 		return;
 	}
 #endif
@@ -582,13 +582,13 @@ void call_out_disconnect(int callref, int cause)
 		PDEBUG(DCNETZ, DEBUG_INFO, "Call control disconnects on speech channel, releasing towards mobile station.\n");
 		cnetz_release(trans, cnetz_cause_isdn2cnetz(cause));
 		call_in_release(callref, cause);
-		sender->callref = 0;
+		cnetz->callref = 0;
 		trans->callref = 0;
 		break;
 	default:
 		PDEBUG(DCNETZ, DEBUG_INFO, "Call control disconnects on organisation channel, removing transaction.\n");
 		call_in_release(callref, cause);
-		sender->callref = 0;
+		cnetz->callref = 0;
 		destroy_transaction(trans);
 		cnetz_go_idle(cnetz);
 	}
@@ -617,7 +617,7 @@ void call_out_release(int callref, int cause)
 		return;
 	}
 
-	sender->callref = 0;
+	cnetz->callref = 0;
 	trans->callref = 0;
 
 #if 0
@@ -754,29 +754,29 @@ void transaction_timeout(struct timer *timer)
 			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Lost signal from 'FuTln' (mobile station)\n");
 		if (trans->callref) {
 			call_in_release(trans->callref, CAUSE_TEMPFAIL);
-			cnetz->sender.callref = 0;
+			cnetz->callref = 0;
 			trans->callref = 0;
 		}
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_DS:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after connect 'Durchschalten'\n");
-		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
-		cnetz->sender.callref = 0;
+		call_in_release(cnetz->callref, CAUSE_TEMPFAIL);
+		cnetz->callref = 0;
 		trans->callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_RTA:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after ringing order 'Rufton anschalten'\n");
-		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
-		cnetz->sender.callref = 0;
+		call_in_release(cnetz->callref, CAUSE_TEMPFAIL);
+		cnetz->callref = 0;
 		trans->callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
 	case TRANS_AHQ:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after answer 'Abhebequittung'\n");
-		call_in_release(cnetz->sender.callref, CAUSE_TEMPFAIL);
-		cnetz->sender.callref = 0;
+		call_in_release(cnetz->callref, CAUSE_TEMPFAIL);
+		cnetz->callref = 0;
 		trans->callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 		break;
@@ -919,7 +919,7 @@ wbn:
 				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined calling + traffic channel %d\n", spk->sender.kanal);
 			} else {
 				PDEBUG(DCNETZ, DEBUG_INFO, "Assigning phone to traffic channel %d\n", spk->sender.kanal);
-				spk->sender.callref = trans->callref;
+				spk->callref = trans->callref;
 				/* sync RX time to current OgK time */
 				spk->fsk_demod.bit_time = cnetz->fsk_demod.bit_time;
 			}
@@ -1153,13 +1153,13 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 					cnetz_release(trans, cnetz_cause_isdn2cnetz(-rc));
 					goto call_failed;
 				}
-				cnetz->sender.callref = trans->callref;
+				cnetz->callref = trans->callref;
 				trans_new_state(trans, TRANS_DS);
 				trans->repeat = 0;
 				timer_start(&trans->timer, 0.0375 * F_DS); /* F_DS frames */
 			}
 			if (trans->mt_call) {
-				cnetz->sender.callref = trans->callref;
+				cnetz->callref = trans->callref;
 				trans_new_state(trans, TRANS_RTA);
 				timer_start(&trans->timer, 0.0375 * F_RTA); /* F_RTA frames */
 				trans->repeat = 0;
@@ -1212,7 +1212,7 @@ call_failed:
 			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 			if (trans->callref) {
 				call_in_release(trans->callref, CAUSE_TEMPFAIL);
-				cnetz->sender.callref = 0;
+				cnetz->callref = 0;
 			}
 			/* must destroy transaction after cnetz_release */
 			destroy_transaction(trans);
@@ -1221,7 +1221,7 @@ call_failed:
 		}
 		/* remove call from SpK (or OgK+SpK) */
 		unlink_transaction(trans);
-		cnetz->sender.callref = 0;
+		cnetz->callref = 0;
 		/* idle channel */
 		cnetz_go_idle(cnetz);
 		/* alloc ogk again */
@@ -1358,7 +1358,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		timer_stop(&trans->timer);
 		if (trans->callref) {
 			call_in_release(trans->callref, CAUSE_NORMAL);
-			cnetz->sender.callref = 0;
+			cnetz->callref = 0;
 			trans->callref = 0;
 		}
 		break;
@@ -1470,7 +1470,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		timer_stop(&trans->timer);
 		if (trans->callref) {
 			call_in_release(trans->callref, CAUSE_NORMAL);
-			cnetz->sender.callref = 0;
+			cnetz->callref = 0;
 			trans->callref = 0;
 		}
 		break;

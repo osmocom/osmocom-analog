@@ -468,8 +468,8 @@ void bnetz_loss_indication(bnetz_t *bnetz)
 	 || bnetz->state == BNETZ_RUFHALTUNG) {
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Detected loss of signal, releasing.\n");
 		bnetz_release(bnetz);
-		call_in_release(bnetz->sender.callref, CAUSE_TEMPFAIL);
-		bnetz->sender.callref = 0;
+		call_in_release(bnetz->callref, CAUSE_TEMPFAIL);
+		bnetz->callref = 0;
 	}
 }
 
@@ -502,7 +502,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			timer_stop(&bnetz->timer);
 			bnetz->state = BNETZ_RUFHALTUNG;
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
-			call_in_alerting(bnetz->sender.callref);
+			call_in_alerting(bnetz->callref);
 			timer_start(&bnetz->timer, ALERTING_TO);
 			break;
 		}
@@ -513,7 +513,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			timer_stop(&bnetz->timer);
 			bnetz->state = BNETZ_GESPRAECH;
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
-			call_in_answer(bnetz->sender.callref, bnetz->station_id);
+			call_in_answer(bnetz->callref, bnetz->station_id);
 			break;
 		}
 	default:
@@ -684,7 +684,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 					bnetz_release(bnetz);
 					return;
 				}
-				bnetz->sender.callref = callref;
+				bnetz->callref = callref;
 				break;
 			}
 			if (digit < '0' || digit > '9') {
@@ -711,8 +711,8 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 		if (digit == 't') {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Received 'Schlusssignal' from mobile station\n");
 			bnetz_go_idle(bnetz);
-			call_in_release(bnetz->sender.callref, CAUSE_NORMAL);
-			bnetz->sender.callref = 0;
+			call_in_release(bnetz->callref, CAUSE_NORMAL);
+			bnetz->callref = 0;
 			break;
 		}
 		break;
@@ -750,8 +750,8 @@ static void bnetz_timeout(struct timer *timer)
 		if (bnetz->page_try == PAGE_TRIES) {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for call acknowledge from mobile station, going idle.\n");
 			bnetz_go_idle(bnetz);
-			call_in_release(bnetz->sender.callref, CAUSE_OUTOFORDER);
-			bnetz->sender.callref = 0;
+			call_in_release(bnetz->callref, CAUSE_OUTOFORDER);
+			bnetz->callref = 0;
 			break;
 		}
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for call acknowledge from mobile station, trying again.\n");
@@ -760,8 +760,8 @@ static void bnetz_timeout(struct timer *timer)
 	case BNETZ_RUFHALTUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for answer of mobile station, releasing.\n");
 	 	bnetz_release(bnetz);
-		call_in_release(bnetz->sender.callref, CAUSE_NOANSWER);
-		bnetz->sender.callref = 0;
+		call_in_release(bnetz->callref, CAUSE_NOANSWER);
+		bnetz->callref = 0;
 		break;
 	default:
 		break;
@@ -813,7 +813,7 @@ inval:
 	PDEBUG(DBNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 4. trying to page mobile station */
-	sender->callref = callref;
+	bnetz->callref = callref;
 	bnetz_page(bnetz, dialing, 1);
 
 	return 0;
@@ -832,7 +832,7 @@ void call_out_disconnect(int callref, int cause)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		bnetz = (bnetz_t *) sender;
-		if (sender->callref == callref)
+		if (bnetz->callref == callref)
 			break;
 	}
 	if (!sender) {
@@ -861,7 +861,7 @@ void call_out_disconnect(int callref, int cause)
 
 	call_in_release(callref, cause);
 
-	sender->callref = 0;
+	bnetz->callref = 0;
 }
 
 /* Call control releases call toward mobile station. */
@@ -874,7 +874,7 @@ void call_out_release(int callref, int cause)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		bnetz = (bnetz_t *) sender;
-		if (sender->callref == callref)
+		if (bnetz->callref == callref)
 			break;
 	}
 	if (!sender) {
@@ -883,7 +883,7 @@ void call_out_release(int callref, int cause)
 		return;
 	}
 
-	sender->callref = 0;
+	bnetz->callref = 0;
 
 	switch (bnetz->state) {
 	case BNETZ_GESPRAECH:
@@ -913,7 +913,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		bnetz = (bnetz_t *) sender;
-		if (sender->callref == callref)
+		if (bnetz->callref == callref)
 			break;
 	}
 	if (!sender)
