@@ -33,6 +33,12 @@ of C-Netz.
 
 Mikko Ristila for providing newer NMT specs (with DMS/SMS specifications).
 
-Dieter and Mark for prividing AMPS specifications and tester recordings to
-verify and debug AMPS support.
+Dieter Spaar and Mark Atherton for prividing AMPS informations and recordings
+to verify and debug AMPS support.
+See http://www.idesignz.org/AMPS/AMPS_BS.html for first base station
+implementation of AMPS.
+
+Telecommunication Industry Association for providing TIA/EIA-533 documentation.
+"Reproduced under written permission from Telecommunications Industry
+Association."
 
