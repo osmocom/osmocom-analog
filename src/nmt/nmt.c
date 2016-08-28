@@ -480,7 +480,8 @@ static void nmt_page(transaction_t *trans, int try)
 		if (nmt->sysinfo.chan_type != CHAN_TYPE_CC
 		 && nmt->sysinfo.chan_type != CHAN_TYPE_CC_TC)
 			continue;
-		if (nmt->state != STATE_IDLE)
+		/* page on all idle channels and on channels we previously paged */
+		if (nmt->state != STATE_IDLE && nmt->trans != trans)
 			continue;
 		PDEBUG(DNMT, DEBUG_INFO, "Paging on channel %d.\n", sender->kanal);
 		nmt_new_state(nmt, STATE_MT_PAGING);
