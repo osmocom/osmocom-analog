@@ -51,10 +51,11 @@ double amps_channel2freq(int channel, int uplink)
 {
 	double freq;
 
-	if (channel < 1 || channel > 1023 || (channel >= 799 && channel <= 990))
+	/* 832 channels, 990 not used, see TIA/EIA-136-110 */
+	if (channel < 1 || channel > 1023 || (channel > 799 && channel < 991))
 		return 0;
 
-	if (channel >= 991)
+	if (channel >= 990) // 990 is not used
 		channel -= 1023;
 
 	freq = 870.030 + (channel - 1) * 0.030;
