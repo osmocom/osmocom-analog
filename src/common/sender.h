@@ -8,6 +8,15 @@
 
 #define MAX_SENDER	16
 
+/* how to send a 'pilot' signal (trigger transmitter) */
+enum pilot_signal {
+	PILOT_SIGNAL_NONE = 0,
+	PILOT_SIGNAL_TONE,
+	PILOT_SIGNAL_NOTONE,
+	PILOT_SIGNAL_POSITIVE,
+	PILOT_SIGNAL_NEGATIVE,
+};
+
 /* common structure of each transmitter */
 typedef struct sender {
 	struct sender		*next;
@@ -47,7 +56,7 @@ typedef struct sender {
 	loss_t			loss;
 
 	/* pilot tone */
-	int			use_pilot_signal;	/* -1 if not used, 1 for positive, 0 for negative, 2 for tone */
+	enum pilot_signal	pilot_signal;		/* if pilot signal is used and how it is performed */
 	int			pilot_on;		/* 1 or 0 for on or off */
 	double			pilotton_phaseshift;	/* phase to shift every sample */
 	double			pilotton_phase; 	/* current phase */
@@ -60,9 +69,10 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal);
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
 void sender_destroy(sender_t *sender);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, int16_t *samples, int count);
 void sender_receive(sender_t *sender, int16_t *samples, int count);
+void sender_pilot(sender_t *sender, int on);
 

@@ -334,7 +334,7 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, 
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, channel, sounddev, samplerate, cross_channels, rx_gain, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, 0, -1);
+	rc = sender_create(&nmt->sender, channel, sounddev, samplerate, cross_channels, rx_gain, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, 0, PILOT_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

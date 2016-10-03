@@ -207,17 +207,15 @@ static struct impulstelegramme *bnetz_telegramm(int digit)
 /* switch pilot signal (tone or file) */
 static void switch_channel_19(bnetz_t *bnetz, int on)
 {
-	if (bnetz->sender.use_pilot_signal >= 0) {
-		bnetz->sender.pilot_on = on;
-		return;
-	}
+	/* affects only if pilot signal is used */
+	sender_pilot(&bnetz->sender, on);
 
-	if (bnetz->pilot_file && bnetz->pilot_is_on != on) {
+	if (bnetz->pilot_file[0] && bnetz->pilot_is_on != on) {
 		FILE *fp;
 
 		fp = fopen(bnetz->pilot_file, "w");
 		if (!fp) {
-			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to open file '%s' to switch channel 19!\n");
+			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to open file '%s' to switch channel 19!\n", bnetz->pilot_file);
 			return;
 		}
 		fprintf(fp, "%s\n", (on) ? bnetz->pilot_on : bnetz->pilot_off);
@@ -250,7 +248,7 @@ static void bnetz_go_idle(bnetz_t *bnetz);
 int bnetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_factor, const char *pilot)
 {
 	bnetz_t *bnetz;
-	int use_pilot_tone = -1;
+	enum pilot_signal pilot_signal = PILOT_SIGNAL_NONE;
 	char pilot_file[256] = "", pilot_on[256] = "", pilot_off[256] = "";
 	int rc;
 
@@ -269,14 +267,17 @@ int bnetz_create(int kanal, const char *sounddev, int samplerate, int cross_chan
 		return -EINVAL;
 	}
 	
+	if (!strcmp(pilot, "notone"))
+		pilot_signal = PILOT_SIGNAL_NOTONE;
+	else
 	if (!strcmp(pilot, "tone"))
-		use_pilot_tone = 2;
+		pilot_signal = PILOT_SIGNAL_TONE;
 	else
 	if (!strcmp(pilot, "positive"))
-		use_pilot_tone = 1;
+		pilot_signal = PILOT_SIGNAL_POSITIVE;
 	else
 	if (!strcmp(pilot, "negative"))
-		use_pilot_tone = 0;
+		pilot_signal = PILOT_SIGNAL_NEGATIVE;
 	else {
 		char *p;
 
@@ -305,7 +306,7 @@ error_pilot:
 	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %d 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&bnetz->sender, kanal, sounddev, samplerate, cross_channels, rx_gain, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, loss_factor, use_pilot_tone);
+	rc = sender_create(&bnetz->sender, kanal, sounddev, samplerate, cross_channels, rx_gain, pre_emphasis, de_emphasis, write_wave, read_wave, loopback, loss_factor, pilot_signal);
 	if (rc < 0) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

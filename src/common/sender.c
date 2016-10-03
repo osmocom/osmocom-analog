@@ -35,7 +35,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, int use_pilot_signal)
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
 {
 	sender_t *master;
 	int rc = 0;
@@ -49,7 +49,7 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 	sender->de_emphasis = de_emphasis;
 	sender->loopback = loopback;
 	sender->loss_volume = loss_volume;
-	sender->use_pilot_signal = use_pilot_signal;
+	sender->pilot_signal = pilot_signal;
 	sender->pilotton_phaseshift = 1.0 / ((double)samplerate / 1000.0);
 
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
@@ -79,12 +79,12 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 			rc = -EBUSY;
 			goto error;
 		}
-		if (master->use_pilot_signal >= 0) {
+		if (master->pilot_signal != PILOT_SIGNAL_NONE) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share sound device with channel %d, because second channel is used for pilot signal!\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
-		if (use_pilot_signal >= 0) {
+		if (pilot_signal != PILOT_SIGNAL_NONE) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share sound device with channel %d, because we need a stereo channel for pilot signal!\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
@@ -277,8 +277,8 @@ cant_recover:
 			if (slave->pre_emphasis)
 				pre_emphasis(&slave->estate, slave_samples, count);
 		}
-		switch (sender->use_pilot_signal) {
-		case 2:
+		switch (sender->pilot_signal) {
+		case PILOT_SIGNAL_TONE:
 			/* tone if pilot signal is on */
 			if (sender->pilot_on)
 				gen_pilotton(sender, pilot, count);
@@ -289,7 +289,18 @@ cant_recover:
 			else
 				rc = sound_write(sender->sound, pilot, samples, count);
 			break;
-		case 1:
+		case PILOT_SIGNAL_NOTONE:
+			/* tone if pilot signal is off */
+			if (!sender->pilot_on)
+				gen_pilotton(sender, pilot, count);
+			else
+				memset(pilot, 0, count << 1);
+			if (!sender->cross_channels)
+				rc = sound_write(sender->sound, samples, pilot, count);
+			else
+				rc = sound_write(sender->sound, pilot, samples, count);
+			break;
+		case PILOT_SIGNAL_POSITIVE:
 			/* positive signal if pilot signal is on */
 			if (sender->pilot_on)
 				memset(pilot, 127, count << 1);
@@ -300,7 +311,7 @@ cant_recover:
 			else
 				rc = sound_write(sender->sound, pilot, samples, count);
 			break;
-		case 0:
+		case PILOT_SIGNAL_NEGATIVE:
 			/* negative signal if pilot signal is on */
 			if (sender->pilot_on)
 				memset(pilot, 128, count << 1);
@@ -391,5 +402,10 @@ cant_recover:
 				jitter_save(&slave->audio, slave_samples, count);
 		}
 	}
+}
+
+void sender_pilot(sender_t *sender, int on)
+{
+	sender->pilot_on = on;
 }
 

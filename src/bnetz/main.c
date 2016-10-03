@@ -55,11 +55,12 @@ void print_help(const char *arg0)
 	printf("        Set to 19 in order to make the phone transmit at 100 mW instead of\n");
 	printf("        full 15 Watts. If supported, the phone uses the channel with low power\n");
 	printf("        (Kanal kleiner Leistung).\n");
-	printf(" -P --pilot tone | positive | negative | <file>=<on>:<off>\n");
+	printf(" -P --pilot tone | notone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");
 	printf("        'tone', 'positive', 'negative' is sent on second audio channel.\n");
-	printf("        'tone' sends a tone whenever channel 19 is switchted.\n");
+	printf("        'tone' sends a tone whenever channel 19 is switched.\n");
+	printf("        'notone' sends a tone whenever channel 19 is NOT switched.\n");
 	printf("        'positive' sends a positive signal for channel 19, else negative.\n");
 	printf("        'negative' sends a negative signal for channel 19, else positive.\n");
 	printf("        Example: /sys/class/gpio/gpio17/value=1:0 writes a '1' to\n");

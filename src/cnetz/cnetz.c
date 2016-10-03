@@ -235,7 +235,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by cnetz code, not by common sender code */
-	rc = sender_create(&cnetz->sender, kanal, sounddev, samplerate, cross_channels, rx_gain, 0, 0, write_wave, read_wave, loopback, 0, -1);
+	rc = sender_create(&cnetz->sender, kanal, sounddev, samplerate, cross_channels, rx_gain, 0, 0, write_wave, read_wave, loopback, 0, PILOT_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

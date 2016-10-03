@@ -400,7 +400,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev
 	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&amps->sender, channel, sounddev, samplerate, cross_channels, rx_gain, 0, 0, write_wave, read_wave, loopback, 0, -1);
+	rc = sender_create(&amps->sender, channel, sounddev, samplerate, cross_channels, rx_gain, 0, 0, write_wave, read_wave, loopback, 0, PILOT_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
