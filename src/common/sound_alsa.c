@@ -70,7 +70,7 @@ static int set_hw_params(snd_pcm_t *handle, int samplerate, int *channels)
 		PDEBUG(DSOUND, DEBUG_ERROR, "cannot set sample rate (%s)\n", snd_strerror(rc));
 		goto error;
 	}
-	if (rrate != samplerate) {
+	if ((int)rrate != samplerate) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "Rate doesn't match (requested %dHz, get %dHz)\n", samplerate, rrate);
 		rc = -EIO;
 		goto error;
@@ -180,9 +180,9 @@ void sound_close(void *inst)
 {
 	sound_t *sound = (sound_t *)inst;
 
-	if (sound->phandle > 0)
+	if (sound->phandle != NULL)
 		snd_pcm_close(sound->phandle);
-	if (sound->chandle > 0)
+	if (sound->chandle != NULL)
 		snd_pcm_close(sound->chandle);
 	free(sound);
 }

@@ -251,10 +251,10 @@ static int encode_userdata(uint8_t *data, const char *message)
 	j = 0;
 	pos = 0;
 	for (i = 0; message[i]; i++) {
-		if (message[i] < 128)
-			character = message[i];
+		if (message[i] >= 0)
+			character = message[i]; /* 0..127 */
 		else
-			character = '?';
+			character = '?'; /* 128..255 */
 		j++;
 		if (pos == 0) {
 			/* character fits and is aligned to the right, new octet */
@@ -583,7 +583,7 @@ static int decode_deliver_report(nmt_t *nmt, const uint8_t *data, int length)
 }
 
 /* receive from DMS layer */
-void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
+void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int __attribute__((unused)) eight_bits)
 {
 	sms_t *sms = &nmt->sms;
 	int space;

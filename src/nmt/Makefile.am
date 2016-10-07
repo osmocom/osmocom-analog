@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -Wall -g $(all_includes)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 
 bin_PROGRAMS = \
 	nmt

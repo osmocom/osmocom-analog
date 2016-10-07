@@ -455,7 +455,7 @@ cnetz_t *search_ogk(void)
 	return NULL;
 }
 
-int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
+int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -784,13 +784,13 @@ void cnetz_sync_frame(cnetz_t *cnetz, double sync, int block)
 	/* if more than +- one bit out of sync */
 	if (offset < -0.5 || offset > 0.5) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Frame sync offset = %.2f, correcting!\n", offset);
-		fsk_correct_sync(cnetz, offset);
+		fsk_correct_sync(&cnetz->fsk_demod, offset);
 		return;
 	}
 
 	/* resync by some fraction of received sync error */
 	PDEBUG(DCNETZ, DEBUG_DEBUG, "Frame sync offset = %.2f, correcting.\n", offset);
-	fsk_correct_sync(cnetz, offset / 2.0);
+	fsk_correct_sync(&cnetz->fsk_demod, offset / 2.0);
 }
 
 /*

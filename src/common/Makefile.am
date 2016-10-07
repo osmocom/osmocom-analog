@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-AM_CPPFLAGS = -Wall -g $(all_includes)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 
 noinst_LIBRARIES = libcommon.a
 

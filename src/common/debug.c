@@ -60,7 +60,7 @@ int debuglevel = DEBUG_INFO;
 uint64_t debug_mask = ~0;
 extern int num_kanal;
 
-void _printdebug(const char *file, const char *function, int line, int cat, int level, int chan, const char *fmt, ...)
+void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, int chan, const char *fmt, ...)
 {
 	char buffer[4096], *b = buffer;
 	const char *p;

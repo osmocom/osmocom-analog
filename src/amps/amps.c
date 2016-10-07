@@ -699,7 +699,7 @@ reject:
  */
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
+int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	amps_t *amps;

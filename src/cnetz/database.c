@@ -84,7 +84,7 @@ static void db_timeout(struct timer *timer)
 }
 
 /* create/update db entry */
-int update_db(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended, int busy, int failed)
+int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended, int busy, int failed)
 {
 	cnetz_db_t *db, **dbp;
 

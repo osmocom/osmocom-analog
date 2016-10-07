@@ -1760,7 +1760,7 @@ void call_out_disconnect(int callref, int cause)
 }
 
 /* Call control releases call toward mobile station. */
-void call_out_release(int callref, int cause)
+void call_out_release(int callref, int __attribute__((unused)) cause)
 {
 	transaction_t *trans;
 	nmt_t *nmt;
@@ -1831,14 +1831,14 @@ void sms_release(nmt_t *nmt)
  	nmt_release(nmt);
 }
 
-int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
+int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t __attribute__((unused)) orig_type, uint8_t __attribute__((unused)) orig_plan, int __attribute__((unused)) msg_ref, const char *dest_address, uint8_t __attribute__((unused)) dest_type, uint8_t __attribute__((unused)) dest_plan, const char *message)
 {
 	char sms[512];
 
 	if (!orig_address[0])
 		orig_address = &nmt->trans->subscriber.country;
 
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Received SMS from '%s' to '%s'\n", orig_address, dest_address);
+	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Received SMS from '%s' to '%s' (ref=%d)\n", orig_address, dest_address, ref);
 	printf("SMS received '%s' -> '%s': %s\n", orig_address, dest_address, message);
 	snprintf(sms, sizeof(sms) - 1, "%s,%s,%s", orig_address, dest_address, message);
 	sms[sizeof(sms) - 1] = '\0';
@@ -1848,7 +1848,7 @@ int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_t
 
 void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
 {
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Got SMS deliver report\n");
+	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Got SMS deliver report (ref=%d)\n", ref);
 	if (error)
 		printf("SMS failed! (cause=%d)\n", cause);
 	else {

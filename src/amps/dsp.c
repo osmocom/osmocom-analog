@@ -307,7 +307,7 @@ static int fsk_encode(amps_t *amps, char bit)
 	return count;
 }
 
-int fsk_frame(amps_t *amps, int16_t *samples, int length)
+static int fsk_frame(amps_t *amps, int16_t *samples, int length)
 {
 	int count = 0, len, pos, copy, i;
 	int16_t *spl;
@@ -426,7 +426,7 @@ again:
 	}
 }
 
-void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos)
+static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos)
 {
 	int i, ii;
 	int32_t first, second;
@@ -546,7 +546,7 @@ prepare_frame:
 	}
 }
 
-void fsk_rx_dotting(amps_t *amps, double _elapsed, int dir)
+static void fsk_rx_dotting(amps_t *amps, double _elapsed)
 {
 	uint8_t pos = amps->fsk_rx_dotting_pos++;
 	double average, elapsed, offset;
@@ -598,7 +598,7 @@ void fsk_rx_dotting(amps_t *amps, double _elapsed, int dir)
 }
 
 /* decode frame */
-void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
+static void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
 {
 	int16_t *spl, last_sample;
 	int len, pos;
@@ -624,12 +624,12 @@ void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
 			/* check for change in polarity */
 			if (last_sample <= 0) {
 				if (samples[i] > 0) {
-					fsk_rx_dotting(amps, elapsed, 1);
+					fsk_rx_dotting(amps, elapsed);
 					elapsed = 0.0;
 				}
 			} else {
 				if (samples[i] <= 0) {
-					fsk_rx_dotting(amps, elapsed, 0);
+					fsk_rx_dotting(amps, elapsed);
 					elapsed = 0.0;
 				}
 			}
@@ -728,7 +728,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
  * time is between SIG_TONE_MINBITS and SIG_TONE_MAXBITS. If it is, the
  * frequency is close to the singalling tone, so it is detected
  */
-void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
+static void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
 {
 	transaction_t *trans = amps->trans_list;
 	int16_t *spl;

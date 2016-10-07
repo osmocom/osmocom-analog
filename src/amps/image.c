@@ -37,7 +37,7 @@ void print_image(void)
 	int i, j;
 
 	for (i = 0; image[i]; i++) {
-		for (j = 0; j < strlen(image[i]); j++) {
+		for (j = 0; j < (int)strlen(image[i]); j++) {
 			if (image[i][j] == '@') {
 				j++;
 				switch(image[i][j]) {

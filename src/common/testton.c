@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-static int16_t pattern[] = {
+static uint16_t pattern[] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0000,
 	0x0000, 0x0000, 0x0001, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0000, 0xffff,
@@ -30069,7 +30069,7 @@ extern int test_max;
 
 void init_testton(void)
 {
-	test_spl = pattern;
+	test_spl = (int16_t *)pattern;
 	test_size = sizeof(pattern) / sizeof(pattern[0]);
 	test_max = test_size;
 }

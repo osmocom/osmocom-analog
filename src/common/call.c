@@ -525,14 +525,14 @@ static void process_ui(int c)
 	switch (call.state) {
 	case CALL_IDLE:
 		if (c > 0) {
-			if (c >= '0' && c <= '9' && strlen(call.station_id) < call.dial_digits) {
+			if (c >= '0' && c <= '9' && (int)strlen(call.station_id) < call.dial_digits) {
 				call.station_id[strlen(call.station_id) + 1] = '\0';
 				call.station_id[strlen(call.station_id)] = c;
 			}
 			if ((c == 8 || c == 127) && strlen(call.station_id))
 				call.station_id[strlen(call.station_id) - 1] = '\0';
 dial_after_hangup:
-			if (c == 'd' && strlen(call.station_id) == call.dial_digits) {
+			if (c == 'd' && (int)strlen(call.station_id) == call.dial_digits) {
 				int rc;
 				int callref = ++new_callref;
 

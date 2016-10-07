@@ -60,7 +60,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 {
 	uint8_t buffer[256];
 	struct fmt fmt;
-	uint32_t size, chunk, len;
+	int32_t size, chunk, len;
 	int gotfmt = 0, gotdata = 0;
 	int rc = -EINVAL;
 
@@ -110,7 +110,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 			goto error;
 		}
 		if (!strncmp((char *)buffer, "fmt ", 4)) {
-			if (chunk < 16 || chunk > sizeof(buffer)) {
+			if (chunk < 16 || chunk > (int)sizeof(buffer)) {
 				fprintf(stderr, "WAVE error: Short or corrupt 'fmt' chunk!\n");
 				rc = -EINVAL;
 				goto error;
@@ -133,7 +133,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 			gotdata = 1;
 			break;
 		} else {
-			while(chunk > sizeof(buffer)) {
+			while(chunk > (int)sizeof(buffer)) {
 				len = fread(buffer, 1, sizeof(buffer), play->fp);
 				chunk -= sizeof(buffer);
 			}
@@ -158,7 +158,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 		rc = -EINVAL;
 		goto error;
 	}
-	if (fmt.sample_rate != samplerate) {
+	if ((int)fmt.sample_rate != samplerate) {
 		fprintf(stderr, "WAVE error: The WAVE file's sample rate (%d) does not match our sample rate (%d)!\n", fmt.sample_rate, samplerate);
 		rc = -EINVAL;
 		goto error;
@@ -187,7 +187,7 @@ int wave_read(wave_play_t *play, int16_t *samples, int length)
 	int __attribute__((__unused__)) len;
 	int i;
 
-	if (length > play->left) {
+	if (length > (int)play->left) {
 		memset(samples, 0, length << 1);
 		length = play->left;
 	}

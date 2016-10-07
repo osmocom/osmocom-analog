@@ -37,7 +37,7 @@
  * parity
  */
 
-uint64_t cut_bits[37] = {
+static uint64_t cut_bits[37] = {
 	0x0,
 	0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff,
 	0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff, 0x3fff, 0x7fff, 0xffff,
@@ -52,7 +52,7 @@ static char gp[12] = { 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1 };
  * given data and length, return 12 bits redundancy
  * all arrays are MSB first.
  */
-const char *encode_bch(const char *data, int length)
+static const char *encode_bch(const char *data, int length)
 {
 	static char redun[13];
 	int i, j, feedback;
@@ -84,7 +84,7 @@ const char *encode_bch(const char *data, int length)
 }
 
 /* same as above, but with binary data (without parity space holder) */
-uint16_t encode_bch_binary(uint64_t value, int length)
+static uint16_t encode_bch_binary(uint64_t value, int length)
 {
 	char data[length + 1];
 	const char *redun;
@@ -2304,7 +2304,7 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_TCI5,			"TCI5",			"Total Charing component", NULL },
 	{ AMPS_IE_VMAC,			"VMAC",			"Voice mobile attenuation code field", ie_cmac },
 	{ AMPS_IE_WFOM,			"WFOM",			"Wait-for-overhead-message field", ie_yes },
-	{ AMPS_IE_NUM, NULL, NULL }
+	{ AMPS_IE_NUM,			NULL,			NULL, NULL }
 };
 
 static int ie_desc_max_len;
@@ -2604,9 +2604,9 @@ void init_frame(void)
 
 	ie_desc_max_len = 0;
 	for (i = 0; amps_ie_desc[i].name; i++) {
-		if (strlen(amps_ie_desc[i].name) > ie_desc_max_len)
+		if ((int)strlen(amps_ie_desc[i].name) > ie_desc_max_len)
 			ie_desc_max_len = strlen(amps_ie_desc[i].name);
-		if (i != amps_ie_desc[i].ie) {
+		if (i != (int)amps_ie_desc[i].ie) {
 			fprintf(stderr, "IEs #%d in amps_ie_desc is different from definitions AMPS_IE_xxx (%d), please fix!\n", i, amps_ie_desc[i].ie);
 			abort();
 		}
@@ -2673,7 +2673,7 @@ void init_frame(void)
  * encode and decode words
  */
 
-uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
+static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 {
 	uint64_t word, value;
 	char spaces[ie_desc_max_len + 1];
@@ -2899,7 +2899,7 @@ uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t ma
 	return amps_encode_word(&frame, &access_attempt_parameters_global_action, -1);
 }
 
-uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t min1, int multiple)
+static uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t min1, int multiple)
 {
 	frame_t frame;
 
@@ -2913,7 +2913,7 @@ uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t min1, 
 	return amps_encode_word(&frame, &word1_abbreviated_address_word, DEBUG_INFO);
 }
 
-uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order)
+static uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order)
 {
 	frame_t frame;
 
@@ -2928,7 +2928,7 @@ uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t msg_ty
 	return amps_encode_word(&frame, &word2_extended_address_word_a, DEBUG_INFO);
 }
 
-uint64_t amps_encode_word1_extended_address_word_b(uint8_t scc, uint16_t min2, uint8_t vmac, uint16_t chan)
+static uint64_t amps_encode_word1_extended_address_word_b(uint8_t scc, uint16_t min2, uint8_t vmac, uint16_t chan)
 {
 	frame_t frame;
 
@@ -2941,7 +2941,7 @@ uint64_t amps_encode_word1_extended_address_word_b(uint8_t scc, uint16_t min2, u
 	return amps_encode_word(&frame, &word2_extended_address_word_b, DEBUG_INFO);
 }
 
-uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc, uint8_t msg_type, uint8_t ordq, uint8_t order)
+static uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc, uint8_t msg_type, uint8_t ordq, uint8_t order)
 {
 	frame_t frame;
 
@@ -2956,7 +2956,7 @@ uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc, uint8_
 	return amps_encode_word(&frame, &mobile_station_control_message_word1_a, DEBUG_INFO);
 }
 
-uint64_t amps_encode_mobile_station_control_message_word1_b(uint8_t scc, uint8_t pscc, uint8_t dtx, uint8_t pvi, uint8_t mem, uint8_t vmac, uint16_t chan)
+static uint64_t amps_encode_mobile_station_control_message_word1_b(uint8_t scc, uint8_t pscc, uint8_t dtx, uint8_t pvi, uint8_t mem, uint8_t vmac, uint16_t chan)
 {
 	frame_t frame;
 
@@ -3285,7 +3285,7 @@ static uint64_t string2bin(const char *string)
 }
 #endif
 
-void amps_encode_focc_bits(amps_t *amps, uint64_t word_a, uint64_t word_b, char *bits)
+static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 {
 	int i, j, k;
 
@@ -3336,7 +3336,7 @@ void amps_encode_focc_bits(amps_t *amps, uint64_t word_a, uint64_t word_b, char 
 	}
 }
 
-void amps_encode_fvc_bits(amps_t *amps, uint64_t word_a, char *bits)
+static void amps_encode_fvc_bits(uint64_t word_a, char *bits)
 {
 	int i, j, k;
 
@@ -3432,7 +3432,7 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 		amps->tx_focc_frame_count = 0;
 
 send:
-	amps_encode_focc_bits(amps, word, word, bits);
+	amps_encode_focc_bits(word, word, bits);
 
 	/* invert, if polarity of the cell is negative */
 	if (amps->flip_polarity) {
@@ -3475,7 +3475,7 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 	} else
 		return 1;
 
-	amps_encode_fvc_bits(amps, word, bits);
+	amps_encode_fvc_bits(word, bits);
 
 	/* invert, if polarity of the cell is negative */
 	if (amps->flip_polarity) {
@@ -3489,7 +3489,7 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 }
 
 /* assemble FOCC bits */
-void amps_decode_bits_focc(amps_t *amps, const char *bits)
+static void amps_decode_bits_focc(amps_t *amps, const char *bits)
 {
 	char word_string[41];
 	uint64_t word_a[5], word_b[5], word;
@@ -3562,7 +3562,7 @@ void amps_decode_bits_focc(amps_t *amps, const char *bits)
 }
 
 /* assemble RECC bits, return true, if more bits are expected */
-int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
+static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 {
 	char word_string[49];
 	int8_t dcc = -1;

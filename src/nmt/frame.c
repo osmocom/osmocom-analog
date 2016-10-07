@@ -257,12 +257,12 @@ static int num_frames;
 
 const char *nmt_frame_name(enum nmt_mt mt)
 {
-	if (mt < 0 || mt >= num_frames)
+	if (mt < 0 || (int)mt >= num_frames)
 		return "invalid";
 	return nmt_frame[mt].nr;
 }
 
-static const char *param_integer(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_integer(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 	sprintf(result, "%" PRIu64, value);
@@ -270,7 +270,7 @@ static const char *param_integer(uint64_t value, int ndigits, enum nmt_direction
 	return result;
 }
 
-static const char *param_hex(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_hex(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 	sprintf(result, "0x%" PRIx64, value);
@@ -278,7 +278,7 @@ static const char *param_hex(uint64_t value, int ndigits, enum nmt_direction dir
 	return result;
 }
 
-static const char *param_channel_no(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_channel_no(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 	int rc, channel, power;
@@ -292,7 +292,7 @@ static const char *param_channel_no(uint64_t value, int ndigits, enum nmt_direct
 	return result;
 }
 
-static const char *param_country(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_country(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 
@@ -321,7 +321,7 @@ static const char *param_country(uint64_t value, int ndigits, enum nmt_direction
 	}
 }
 
-static const char *param_number(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_number(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 
@@ -331,7 +331,7 @@ static const char *param_number(uint64_t value, int ndigits, enum nmt_direction 
 	return result;
 }
 
-static const char *param_ta(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_ta(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 
@@ -341,7 +341,7 @@ static const char *param_ta(uint64_t value, int ndigits, enum nmt_direction dire
 	return result;
 }
 
-static const char *param_line_signal(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_line_signal(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction direction)
 {
 	static char result[64], *desc = "Spare";
 
@@ -408,7 +408,7 @@ static const char *param_line_signal(uint64_t value, int ndigits, enum nmt_direc
 	return result;
 }
 
-static const char *param_digit(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_digit(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 
@@ -425,7 +425,7 @@ static const char *param_digit(uint64_t value, int ndigits, enum nmt_direction d
 	return result;
 }
 
-static const char *param_supervisory(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_supervisory(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	switch (value) {
 	case 0:
@@ -443,7 +443,7 @@ static const char *param_supervisory(uint64_t value, int ndigits, enum nmt_direc
 	}
 }
 
-static const char *param_password(uint64_t value, int ndigits, enum nmt_direction direction)
+static const char *param_password(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 
@@ -481,7 +481,7 @@ static struct nmt_parameter {
 	{ 'c',	"c",				param_hex },
 	{ 'M',	"Sequence Number",		param_integer },
 	{ 'W',	"Checksum",			param_hex },
-	{ 0,	NULL }
+	{ 0,	NULL,				NULL }
 };
 
 /* Depending on P-value, direction and additional info, frame index (used for
@@ -649,7 +649,7 @@ int init_frame(void)
 	/* check if all digits actually exist */
 	for (i = 0; nmt_frame[i].digits; i++) {
 		/* check mesage type */
-		if (nmt_frame[i].message_type != i) {
+		if ((int)nmt_frame[i].message_type != i) {
 			PDEBUG(DFRAME, DEBUG_ERROR, "Message type at message index #%d does not have a value of %d, but has %d, please fix!\n", i, i + 1, nmt_frame[i].message_type);
 			return -1;
 		}
@@ -810,7 +810,7 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 
 	mt = frame->mt;
 
-	if (mt >= num_frames) {
+	if ((int)mt >= num_frames) {
 		PDEBUG(DFRAME, DEBUG_ERROR, "Frame mt %d out of range (0..%d), please fix!\n", mt, num_frames - 1);
 		abort();
 	}

@@ -142,7 +142,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 	len = (int)((double)samplerate / bitrate + 0.5);
 	half = (int)((double)samplerate / bitrate / 2.0 + 0.5);
-	if (len > sizeof(fsk->bit_buffer_spl) / sizeof(fsk->bit_buffer_spl[0])) {
+	if (len > (int)(sizeof(fsk->bit_buffer_spl) / sizeof(fsk->bit_buffer_spl[0]))) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate too high for buffer, please use lower rate, like 192000 Hz!\n");
 		return -1;
 	}
@@ -496,9 +496,10 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 	fsk->bit_count = bit_count;
 }
 
-void fsk_correct_sync(cnetz_t *cnetz, double offset)
+void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset)
 {
 	bit_time = fmod(bit_time - offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
+	fsk->bit_time = bit_time;
 }
 
 void fsk_demod_reset(fsk_fm_demod_t *fsk)

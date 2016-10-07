@@ -231,7 +231,7 @@ int bnetz_init(void)
 
 	for (i = 0; impulstelegramme[i].digit; i++) {
 		uint16_t telegramm = 0;
-		for (j = 0; j < strlen(impulstelegramme[i].sequence); j++) {
+		for (j = 0; j < (int)strlen(impulstelegramme[i].sequence); j++) {
 			telegramm <<= 1;
 			telegramm |= (impulstelegramme[i].sequence[j] == '1');
 		}
@@ -667,7 +667,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				char dialing[sizeof(bnetz->dial_number) + 1] = "0";
 				strcpy(dialing + 1, bnetz->dial_number);
 
-				if (bnetz->dial_pos != strlen(bnetz->dial_number)) {
+				if (bnetz->dial_pos != (int)strlen(bnetz->dial_number)) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too few number digits the second time, aborting.\n");
 					bnetz_go_idle(bnetz);
 					return;
@@ -693,7 +693,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				bnetz_go_idle(bnetz);
 				return;
 			}
-			if (bnetz->dial_pos == strlen(bnetz->dial_number)) {
+			if (bnetz->dial_pos == (int)strlen(bnetz->dial_number)) {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, aborting.\n");
 				bnetz_go_idle(bnetz);
 				return;
@@ -770,7 +770,7 @@ static void bnetz_timeout(struct timer *timer)
 }
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
+int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;
@@ -866,7 +866,7 @@ void call_out_disconnect(int callref, int cause)
 }
 
 /* Call control releases call toward mobile station. */
-void call_out_release(int callref, int cause)
+void call_out_release(int callref, int __attribute__((unused)) cause)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;

@@ -137,7 +137,7 @@ void prepare_sysinfo(amps_si *si)
 		si->type[i++] = SYSINFO_ACC_ATTEMPT;
 	si->num = i; /* train is running */
 	si->count = 0; /* first message in train */
-	if (i > sizeof(si->type) / sizeof(si->type[0])) {
+	if (i > (int)(sizeof(si->type) / sizeof(si->type[0]))) {
 		fprintf(stderr, "si type array overflow, pleas fix!\n");
 		abort();
 	}

@@ -221,7 +221,7 @@ static void dms_frame_add_rand(nmt_t *nmt, int eight_bits)
  */
 
 /* init instance */
-int dms_init_sender(nmt_t *nmt)
+int dms_init_sender(nmt_t __attribute__((unused)) *nmt)
 {
 	/* we need some simple random */
 	srandom((unsigned int)(get_time() * 1000));
