@@ -621,14 +621,14 @@ again:
 				if (master->frame_last_count > 0 && master->frame_last_count < length - 1 && count > 0 && count < length - 1) {
 					/* if the sample count is one sample ahead, we go back one sample */
 					if (count == master->frame_last_count + 1) {
-						PDEBUG(DDSP, DEBUG_INFO, "Sync slave to master by going back one sample: phase(master) = %.15, phase(slave) = %.15\n", master->frame_last_phase, cnetz->frame_last_phase);
+						PDEBUG(DDSP, DEBUG_INFO, "Sync slave to master by going back one sample: phase(master) = %.15f, phase(slave) = %.15f\n", master->frame_last_phase, cnetz->frame_last_phase);
 						count--;
 						samples--;
 						cnetz->frame_last_phase = master->frame_last_phase;
 					}
 					/* if the sample count is one sample behind, we go forward one sample */
 					if (count == master->frame_last_count - 1) {
-						PDEBUG(DDSP, DEBUG_INFO, "Sync slave to master by going forth one sample: phase(master) = %.15, phase(slave) = %.15\n", master->frame_last_phase, cnetz->frame_last_phase);
+						PDEBUG(DDSP, DEBUG_INFO, "Sync slave to master by going forth one sample: phase(master) = %.15f, phase(slave) = %.15f\n", master->frame_last_phase, cnetz->frame_last_phase);
 						count++;
 						*samples = samples[-1];
 						samples++;

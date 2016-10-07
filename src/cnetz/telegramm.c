@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <string.h>
 #include <errno.h>
 #include <math.h>
@@ -602,13 +603,13 @@ static void debug_parameter(char digit, uint64_t value)
 	if (parameter->value_names)
 		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : %s\n", digit, parameter->param_name, parameter->value_names[value]);
 	else if (parameter->bits == 64)
-		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : 0x%016x\n", digit, parameter->param_name, value);
+		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : 0x%016" PRIx64 "\n", digit, parameter->param_name, value);
 	else if (digit == 'X') {
 		char wahlziffern[17];
 		decode_dialstring(wahlziffern, value);
 		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : '%s'\n", digit, parameter->param_name, wahlziffern);
 	} else
-		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : %d\n", digit, parameter->param_name, value);
+		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : %" PRIu64 "\n", digit, parameter->param_name, value);
 }
 
 /* encode telegram to 70 bits
@@ -806,7 +807,7 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 			val >>= 1;
 		}
 		if (val)
-			PDEBUG(DFRAME, DEBUG_ERROR, "Parameter '%c' value '0x%x' exceeds bit range!\n", parameter, value);
+			PDEBUG(DFRAME, DEBUG_ERROR, "Parameter '%c' value '0x%" PRIx64 "' exceeds bit range!\n", parameter, value);
 		i += j - 1;
 	}
 	bits[70] = '\0';

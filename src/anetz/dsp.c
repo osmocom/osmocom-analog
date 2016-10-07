@@ -135,7 +135,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || tone != anetz->tone_detected) {
 		if (anetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG(DDSP, DEBUG_INFO, "Lost %.0f Hz tone after %d ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
+			PDEBUG(DDSP, DEBUG_INFO, "Lost %.0f Hz tone after %.0f ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
 			anetz_receive_tone(anetz, -1);
 		}
 		if (goodtone)
