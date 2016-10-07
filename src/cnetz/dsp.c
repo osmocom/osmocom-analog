@@ -855,6 +855,8 @@ void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", cnetz->dsp_mode, mode);
 	cnetz->dsp_mode = mode;
+	/* we must get rid of partly received frame */
+	fsk_demod_reset(&cnetz->fsk_demod);
 }
 
 void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int frames_ahead)

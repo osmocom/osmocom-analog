@@ -501,3 +501,8 @@ void fsk_correct_sync(cnetz_t *cnetz, double offset)
 	bit_time = fmod(bit_time - offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 }
 
+void fsk_demod_reset(fsk_fm_demod_t *fsk)
+{
+	fsk->sync = FSK_SYNC_NONE;
+}
+
