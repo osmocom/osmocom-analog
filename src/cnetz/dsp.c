@@ -799,6 +799,13 @@ void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
 	int pos, i;
 	double x, y, x_last, y_last, factor;
 
+	/* check if we still have a transaction
+	 * this might not be true, if we just released transaction, but still
+	 * get a complete frame before we already switched back to OgK.
+	 */
+	if (!cnetz->trans_list)
+		return;
+
 	/* fix offset between speech blocks by using high pass filter */
 	/* use first sample as previous sample, so we don't have a level jump between two subsequent audio chunks */
 	x_last = speech_buffer[0];
