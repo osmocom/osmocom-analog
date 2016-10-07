@@ -115,23 +115,10 @@
 //#define DEBUG_DECODER	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V)
 //#define DEBUG_DECODER	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V && sync)
 
-static int len, half;
-static int16_t *spl;
-static int pos;
-static double bits_per_sample, next_bit;
-static int level_threshold;
-static double bit_time, bit_time_uncorrected;
-static enum fsk_sync sync;
-static int last_change_positive;
-static double sync_level;
-static double sync_time;
-static double sync_jitter;
-static int bit_count;
-static int16_t *speech_buffer;
-static int speech_size, speech_count;
-
 int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate)
 {
+	int len, half;
+
 	memset(fsk, 0, sizeof(*fsk));
 	if (samplerate < 48000) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 48000 Hz!\n");
@@ -177,7 +164,7 @@ static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_a
 			bit_offset = i + ((i + 2) >> 2) * 62;
 		else
 			bit_offset = i;
-		t = fmod(fsk->change_when[(fsk->change_pos - 1 - i) & 0xff] - bit_time + (double)bit_offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
+		t = fmod(fsk->change_when[(fsk->change_pos - 1 - i) & 0xff] - fsk->bit_time + (double)bit_offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 		if (t > BITS_PER_SUPERFRAME / 2)
 			t -= BITS_PER_SUPERFRAME;
 //if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V)
@@ -203,7 +190,7 @@ static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_a
 	 * sync_time is the absolute time within the super frame.
 	 */
 	sync_average = time / (double)count;
-	sync_time = fmod(sync_average + bit_time + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
+	sync_time = fmod(sync_average + fsk->bit_time + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 
 	*_probes = count;
 	*_min = min;
@@ -219,7 +206,7 @@ static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_a
 		 * for the time to sample the bit.
 		 * if sync is earlier, bit_time is already too late, so
 		 * we must wait less than 1.5 bits */
-		next_bit = 1.5 + sync_average;
+		fsk->next_bit = 1.5 + sync_average;
 		*_time = sync_time;
 	}
 	if (_jitter) {
@@ -250,19 +237,19 @@ static inline void got_bit(fsk_fm_demod_t *fsk, int bit, int change_level)
 	/* count bits, but do not exceed 4 bits per SPK block */
 	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* for first bit, we have only half of the modulation deviation, so we multiply level by two */
-		if (bit_count == 0)
+		if (fsk->bit_count == 0)
 			change_level *= 2;
-		if (bit_count == 4)
+		if (fsk->bit_count == 4)
 			return;
 	}
-	bit_count++;
+	fsk->bit_count++;
 
 //printf("bit %d\n", bit);
 	fsk->change_levels[fsk->change_pos] = change_level;
-	fsk->change_when[fsk->change_pos++] = bit_time;
+	fsk->change_when[fsk->change_pos++] = fsk->bit_time;
 
 
-	switch (sync) {
+	switch (fsk->sync) {
 	case FSK_SYNC_NONE:
 		fsk->rx_sync = (fsk->rx_sync << 1) | bit;
 		/* use half level of last change for threshold change detection.
@@ -274,26 +261,26 @@ static inline void got_bit(fsk_fm_demod_t *fsk, int bit, int change_level)
 		 * after sync, the theshold is set to half of the average of
 		 * all changes in the sync sequence */
 		if (change_level) {
-			level_threshold = (double)change_level / 2.0;
+			fsk->level_threshold = (double)change_level / 2.0;
 		} else if ((fsk->rx_sync & 0x1f) == 0x00 || (fsk->rx_sync & 0x1f) == 0x1f) {
 			if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V)
-				level_threshold = 655;
+				fsk->level_threshold = 655;
 		}
 		if (detect_sync(fsk->rx_sync)) {
-			sync = FSK_SYNC_POSITIVE;
+			fsk->sync = FSK_SYNC_POSITIVE;
 got_sync:
-			get_levels(fsk, &min, &max, &avg, &probes, 30, &sync_time, &sync_jitter);
-			sync_level = (double)avg / 65535.0;
-			if (sync == FSK_SYNC_NEGATIVE)
-				sync_level = -sync_level;
-//			printf("sync (change min=%d%% max=%d%% avg=%d%% sync_time=%.2f jitter=%.2f probes=%d)\n", min * 100 / 65535, max * 100 / 65535, avg * 100 / 65535, sync_time, sync_jitter, probes);
-			level_threshold = (double)avg / 2.0;
+			get_levels(fsk, &min, &max, &avg, &probes, 30, &fsk->sync_time, &fsk->sync_jitter);
+			fsk->sync_level = (double)avg / 65535.0;
+			if (fsk->sync == FSK_SYNC_NEGATIVE)
+				fsk->sync_level = -fsk->sync_level;
+//			printf("sync (change min=%d%% max=%d%% avg=%d%% sync_time=%.2f jitter=%.2f probes=%d)\n", min * 100 / 65535, max * 100 / 65535, avg * 100 / 65535, fsk->sync_time, fsk->sync_jitter, probes);
+			fsk->level_threshold = (double)avg / 2.0;
 			fsk->rx_sync = 0;
 			fsk->rx_buffer_count = 0;
 			break;
 		}
 		if (detect_sync(fsk->rx_sync ^ 0xfffffffff)) {
-			sync = FSK_SYNC_NEGATIVE;
+			fsk->sync = FSK_SYNC_NEGATIVE;
 			goto got_sync;
 		}
 		break;
@@ -303,15 +290,15 @@ got_sync:
 	case FSK_SYNC_POSITIVE:
 		fsk->rx_buffer[fsk->rx_buffer_count] = bit + '0';
 		if (++fsk->rx_buffer_count == 150) {
-			sync = FSK_SYNC_NONE;
+			fsk->sync = FSK_SYNC_NONE;
 			if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 				/* received 40 bits after start of block */
-				sync_time = fmod(sync_time - (7+33) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
+				fsk->sync_time = fmod(fsk->sync_time - (7+33) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 			} else {
 				/* received 662 bits after start of block (10 SPK blocks + 1 bit (== 2 level changes)) */
-				sync_time = fmod(sync_time - (66*10+2) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
+				fsk->sync_time = fmod(fsk->sync_time - (66*10+2) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 			}
-			cnetz_decode_telegramm(fsk->cnetz, fsk->rx_buffer, sync_level, sync_time, sync_jitter);
+			cnetz_decode_telegramm(fsk->cnetz, fsk->rx_buffer, fsk->sync_level, fsk->sync_time, fsk->sync_jitter);
 		}
 		break;
 	}
@@ -333,11 +320,11 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 	change_at = -1;
 	change_positive = -1;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < fsk->bit_buffer_len; i++) {
 		last_s = s;
-		s = spl[pos++];
-		if (pos == len)
-			pos = 0;
+		s = fsk->bit_buffer_spl[fsk->bit_buffer_pos++];
+		if (fsk->bit_buffer_pos == fsk->bit_buffer_len)
+			fsk->bit_buffer_pos = 0;
 		if (i > 0) {
 			if (s - last_s > change_max) {
 				change_max = s - last_s;
@@ -355,10 +342,10 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 			level_min = s;
 	}
 	/* for first bit, we have only half of the modulation deviation, so we divide the threshold by two */
-	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V && bit_count == 0)
-		threshold = level_threshold / 2;
+	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V && fsk->bit_count == 0)
+		threshold = fsk->level_threshold / 2;
 	else
-		threshold = level_threshold;
+		threshold = fsk->level_threshold;
 	/* if we are not in sync, for every detected change we set
 	 * next_bit to 1.5, so we wait 1.5 bits for next change
 	 * if it is not received within this time, there is no change,
@@ -367,30 +354,30 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 	 * bits after sync average, we measure the first bit
 	 * and then all subsequent bits after 1.0 bits */
 //DEBUG_DECODER printf("next_bit=%.4f\n", next_bit);
-	if (level_max - level_min > threshold && change_at == half) {
+	if (level_max - level_min > threshold && change_at == fsk->bit_buffer_half) {
 #ifdef DEBUG_DECODER
 		DEBUG_DECODER
 			printf("receive bit change to %d (level=%d, threshold=%d)\n", change_positive, level_max - level_min, threshold);
 #endif
-		last_change_positive = change_positive;
-		if (!sync) {
-			next_bit = 1.5;
+		fsk->last_change_positive = change_positive;
+		if (!fsk->sync) {
+			fsk->next_bit = 1.5;
 			got_bit(fsk, change_positive, level_max - level_min);
 		}
 	}
-	if (next_bit <= 0.0) {
+	if (fsk->next_bit <= 0.0) {
 #ifdef DEBUG_DECODER
 		DEBUG_DECODER {
-			if (sync)
-				printf("sampling here bit %d\n", last_change_positive);
+			if (fsk->sync)
+				printf("sampling here bit %d\n", fsk->last_change_positive);
 			else
 				printf("no bit change\n");
 		}
 #endif
-		next_bit += 1.0;
-		got_bit(fsk, last_change_positive, 0);
+		fsk->next_bit += 1.0;
+		got_bit(fsk, fsk->last_change_positive, 0);
 	}
-	next_bit -= bits_per_sample;
+	fsk->next_bit -= fsk->bits_per_sample;
 }
 
 /* receive FM signal from receiver */
@@ -399,30 +386,11 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 	int i;
 	double t;
 
-	len = fsk->bit_buffer_len;
-	half = fsk->bit_buffer_half;
-	spl = fsk->bit_buffer_spl;
-	speech_buffer = fsk->speech_buffer;
-	speech_size = fsk->speech_size;
-	speech_count = fsk->speech_count;
-	bits_per_sample = fsk->bits_per_sample;
-	level_threshold = fsk->level_threshold;
-	pos = fsk->bit_buffer_pos;
-	next_bit = fsk->next_bit;
-	sync = fsk->sync;
-	last_change_positive = fsk->last_change_positive;
-	sync_level = fsk->sync_level;
-	sync_time = fsk->sync_time;
-	sync_jitter = fsk->sync_jitter;
-	bit_time = fsk->bit_time;
-	bit_time_uncorrected = fsk->bit_time_uncorrected;
-	bit_count = fsk->bit_count;
-
 	/* process signaling block, sample by sample */
 	for (i = 0; i < length; i++) {
-		spl[pos++] = samples[i];
-		if (pos == len)
-			pos = 0;
+		fsk->bit_buffer_spl[fsk->bit_buffer_pos++] = samples[i];
+		if (fsk->bit_buffer_pos == fsk->bit_buffer_len)
+			fsk->bit_buffer_pos = 0;
 		/* for each sample process buffer */
 		if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 #ifdef DEBUG_DECODER
@@ -437,16 +405,16 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 			/* note that we start from 0.5, because we detect change 0.5 bits later,
 			 * because the detector of the change is in the middle of the 1 bit
 			 * search window */
-			t = fmod(bit_time, BITS_PER_SPK_BLOCK);
+			t = fmod(fsk->bit_time, BITS_PER_SPK_BLOCK);
 			if (t < 0.5) {
-				next_bit = 1.0 - bits_per_sample;
+				fsk->next_bit = 1.0 - fsk->bits_per_sample;
 #ifdef DEBUG_DECODER
-				if (bit_count) {
+				if (fsk->bit_count) {
 					DEBUG_DECODER
-						printf("start spk_block bit count=%d\n", bit_count);
+						printf("start spk_block bit count=%d\n", fsk->bit_count);
 				}
 #endif
-				bit_count = 0;
+				fsk->bit_count = 0;
 			} else
 			if (t >= 0.5 && t < 5.5) {
 #ifdef DEBUG_DECODER
@@ -459,47 +427,33 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 				/* get audio for the duration of 60 bits */
 				/* prevent overflow, if speech_size != 0 and SPK_V
 				 * has been restarted. */
-				if (speech_count <= speech_size)
-					speech_buffer[speech_count++] = samples[i];
+				if (fsk->speech_count <= fsk->speech_size)
+					fsk->speech_buffer[fsk->speech_count++] = samples[i];
 			} else
 			if (t >= 65.5) {
-				if (speech_count) {
-					unshrink_speech(fsk->cnetz, speech_buffer, speech_count);
-					speech_count = 0;
+				if (fsk->speech_count) {
+					unshrink_speech(fsk->cnetz, fsk->speech_buffer, fsk->speech_count);
+					fsk->speech_count = 0;
 				}
 			}
 
 		}
-		bit_time += bits_per_sample;
-		if (bit_time >= BITS_PER_SUPERFRAME) {
-			bit_time -= BITS_PER_SUPERFRAME;
+		fsk->bit_time += fsk->bits_per_sample;
+		if (fsk->bit_time >= BITS_PER_SUPERFRAME) {
+			fsk->bit_time -= BITS_PER_SUPERFRAME;
 		}
 		/* another clock is used to measure actual super frame time */
-		bit_time_uncorrected += bits_per_sample;
-		if (bit_time_uncorrected >= BITS_PER_SUPERFRAME) {
-			bit_time_uncorrected -= BITS_PER_SUPERFRAME;
+		fsk->bit_time_uncorrected += fsk->bits_per_sample;
+		if (fsk->bit_time_uncorrected >= BITS_PER_SUPERFRAME) {
+			fsk->bit_time_uncorrected -= BITS_PER_SUPERFRAME;
 			calc_clock_speed(fsk->cnetz, fsk->cnetz->sender.samplerate * 24 / 10, 0, 1);
 		}
 	}
-
-	fsk->level_threshold = level_threshold;
-	fsk->bit_buffer_pos = pos;
-	fsk->speech_count = speech_count;
-	fsk->next_bit = next_bit;
-	fsk->sync = sync;
-	fsk->last_change_positive = last_change_positive;
-	fsk->sync_level = sync_level;
-	fsk->sync_time = sync_time;
-	fsk->sync_jitter = sync_jitter;
-	fsk->bit_time = bit_time;
-	fsk->bit_time_uncorrected = bit_time_uncorrected;
-	fsk->bit_count = bit_count;
 }
 
 void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset)
 {
-	bit_time = fmod(bit_time - offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
-	fsk->bit_time = bit_time;
+	fsk->bit_time = fmod(fsk->bit_time - offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 }
 
 void fsk_demod_reset(fsk_fm_demod_t *fsk)
