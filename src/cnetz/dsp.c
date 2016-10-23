@@ -43,7 +43,7 @@ extern int voice_deviation;
 #define PI		M_PI
 
 #define FSK_DEVIATION	10000
-#define COMPANDOR_0DB	20000
+#define COMPANDOR_0DB	30000
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
 #define CUT_OFF_OFFSET	300.0	/* cut off frequency for offset filter (level correction between subsequent audio chunks) */
