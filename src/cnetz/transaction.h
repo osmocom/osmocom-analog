@@ -40,7 +40,7 @@ typedef struct transaction {
 	struct timer		timer;			/* for varous timeouts */
 	int			mo_call;		/* flags a moile originating call */
 	int			mt_call;		/* flags a moile terminating call */
-	int			ma_failed;		/* failed to get a response from MS */
+	int			page_failed;		/* failed to get a response from MS */
 } transaction_t;
 
 const char *transaction2rufnummer(transaction_t *trans);

@@ -704,8 +704,6 @@ void transaction_timeout(struct timer *timer)
 	case TRANS_WAF:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
 		if (trans->try == N) {
-			/* no response to dialing is like MA failed */
-			trans->ma_failed = 1;
 			trans_new_state(trans, TRANS_WBN);
 			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 			break;
@@ -749,7 +747,8 @@ void transaction_timeout(struct timer *timer)
 		break;
 	case TRANS_MFT:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after keepalive order 'Meldeaufruf'\n");
-		trans->ma_failed = 1;
+		/* no response to availability check */
+		trans->page_failed = 1;
 		destroy_transaction(trans);
 		break;
 	default:
@@ -1173,6 +1172,8 @@ call_failed:
 		}
 		if (trans->try == N) {
 			PDEBUG(DCNETZ, DEBUG_INFO, "Maximum retries, removing transaction\n");
+			/* no response to incomming call */
+			trans->page_failed = 1;
 			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 			if (trans->callref)
 				call_in_release(trans->callref, CAUSE_TEMPFAIL);

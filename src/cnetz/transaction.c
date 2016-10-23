@@ -81,7 +81,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_
 void destroy_transaction(transaction_t *trans)
 {
 	/* update database: now idle */
-	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, -1, 0, trans->ma_failed);
+	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, -1, 0, trans->page_failed);
 
 	unlink_transaction(trans);
 	
