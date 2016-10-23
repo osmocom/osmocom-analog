@@ -26,8 +26,12 @@
 #include "cnetz.h"
 #include "database.h"
 
-#define MELDE_INTERVAL		60.0
-#define MELDE_WIEDERHOLUNG	10.0
+/* the network specs say: check every 1 - 6.5 minutes for availability
+ * remove from database after 3 subsequent failures
+ * the phone will register 20 minutes after no call / no paging from network.
+ */
+#define MELDE_INTERVAL		120.0
+#define MELDE_WIEDERHOLUNG	60.0
 #define MELDE_MAXIMAL		3
 
 typedef struct cnetz_database {
