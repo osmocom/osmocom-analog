@@ -130,7 +130,7 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 		}
 	}
 
-	rc = init_emphasis(&sender->estate, samplerate);
+	rc = init_emphasis(&sender->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT);
 	if (rc < 0)
 		goto error;
 

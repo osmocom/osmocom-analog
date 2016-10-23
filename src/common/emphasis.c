@@ -26,10 +26,9 @@
 
 #define PI		M_PI
 
-#define CUT_OFF_E	300.0	/* cut-off frequency for emphasis filters */
-#define CUT_OFF_H	300.0	/* cut-off frequency for high-pass filters */
+#define CUT_OFF_H	200.0	/* cut-off frequency for high-pass filters */
 
-int init_emphasis(emphasis_t *state, int samplerate)
+int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 {
 	double factor, rc, dt;
 
@@ -40,13 +39,15 @@ int init_emphasis(emphasis_t *state, int samplerate)
 	}
 
 	/* exp (-2 * PI * CUT_OFF * delta_t) */
-	factor = exp(-2.0 * PI * CUT_OFF_E / samplerate); /* 1/samplerate == delta_t */
+	factor = exp(-2.0 * PI * cut_off / samplerate); /* 1/samplerate == delta_t */
 	PDEBUG(DDSP, DEBUG_DEBUG, "Emphasis factor = %.3f\n", factor);
 	state->p.factor = factor;
-	state->p.amp = samplerate / 6350.0;
+	state->p.amp = samplerate / 6400.0;
 	state->d.d_factor = factor;
-	state->d.amp = 1.0 / (samplerate / 5550.0);
+	state->d.amp = 1.0 / (samplerate / 5750.0);
 
+	/* high-pass filter prevents low frequency noise and dc level
+	 * from being amplified by de-emphasis */
 	rc = 1.0 / (CUT_OFF_H * 2.0 *3.14);
 	dt = 1.0 / samplerate;
 	state->d.h_factor = rc / (rc + dt);

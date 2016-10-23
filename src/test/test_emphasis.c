@@ -11,7 +11,7 @@
 #define SAMPLERATE	48000
 #define DEVIATION	8000.0
 
-static double test_freq[] = { 25, 50, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 4000, 0 };
+static double test_freq[] = { 25, 50, 100, 200, 250, 300, 400, 500, 1000, 2000, 4000, 0 };
 
 static void check_level(int16_t *samples, double freq, const char *desc)
 {
@@ -55,7 +55,7 @@ int main(void)
 
 	printf("1000 Hz shall be close to 0 dB, that is no significant change in volume.\n\n");
 
-	init_emphasis(&estate, SAMPLERATE);
+	init_emphasis(&estate, SAMPLERATE, CUT_OFF_EMPHASIS_DEFAULT);
 
 	for (i = 0; test_freq[i]; i++) {
 		gen_samples(samples, test_freq[i]);

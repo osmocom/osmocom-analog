@@ -105,6 +105,8 @@
 /* uncomment this to do echo debugging (-L) on Speech Channel */
 //#define DEBUG_SPK
 
+#define CUT_OFF_EMPHASIS_CNETZ	796 /* 200 uS time constant */
+
 /* Call reference for calls from mobile station to network
    This offset of 0x400000000 is required for MNCC interface. */
 static int new_callref = 0x40000000;
@@ -286,7 +288,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 
 	cnetz->pre_emphasis = pre_emphasis;
 	cnetz->de_emphasis = de_emphasis;
-	rc = init_emphasis(&cnetz->estate, samplerate);
+	rc = init_emphasis(&cnetz->estate, samplerate, CUT_OFF_EMPHASIS_CNETZ);
 	if (rc < 0)
 		goto error;
 

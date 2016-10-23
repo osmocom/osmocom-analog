@@ -422,7 +422,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev
 
 	amps->pre_emphasis = pre_emphasis;
 	amps->de_emphasis = de_emphasis;
-	rc = init_emphasis(&amps->estate, samplerate);
+	rc = init_emphasis(&amps->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT);
 	if (rc < 0)
 		goto error;
 
