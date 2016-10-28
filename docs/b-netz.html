@@ -14,6 +14,7 @@
 	<li><a href="#history">History</a>
 	<li><a href="#howitworks">How it works</a>
 	<li><a href="#basestation">Setup of a base station</a>
+	<li><a href="#hacking">Haking a Phone with security module (Kennungsspeicher)</a>
 </ul>
 
 <p class="toppic">
@@ -739,6 +740,64 @@ bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
 bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
 ...
 </pre>
+
+<p class="toppic">
+<a name="hacking"></a>
+Kennungsspeicher (The Security Module)
+</p>
+
+<p>
+Older phones used soldered jumpers to set the phone number (ID) of the phone.
+Just by soldering a different number, the network could be used without paying.
+So simple was hacking back then - if you could affort an expensive B-Netz phone.
+The security module "Kennungsspeicher" was introduced to prevent using the phone, if it is not inserted into the internal socket.
+The idea was to disable unsubscribed phones, just by removing the module.
+This module was owned by the German post office and I got a phone without it.
+The phone did not work until....
+I hacked this module connector by reverse engineering the firmware.
+It's pinout is like this:
+</p>
+
+<pre>
+-left side of the security module-
+Pin 1 : Select digit 3
+Pin 2 : Select digit 4
+Pin 3 : - (VSS)
+Pin 4 : D2
+Pin 5 : D3
+Pin 6 : Select digit 5
+Pin 7 : unknown / unused
+Pin 8 : D1
+Pin 9 : D0
+Pin 10: +5V (VDD)
+Pin 11: Select digit 2
+Pin 12: Select digit 1
+-right side of the security module-
+</pre>
+
+<p>
+D0...D3 must be pulled up (4.7 kOhm resistors to +5V).
+The phone will pull each select line to low to access each digit.
+The digit on D0...D3 is BCD encoded.
+</p>
+
+<p>
+The simplest hack is to connect D3 to +5V to get "88888" as number.
+The cool hack is to build a module replacement from diodes, resistors and jumpers.
+The jumpers connect the select lines via diodes to the D0...D3 lines.
+Each digit requires 4 diodes and 4 jumpers.
+The select lines pull the diodes to low voltage and so the D0...D3 lines.
+The D0...D3 lines must be pulled up to 5V using a resistor, so they are in high state if not pulled low by a diode.
+</p>
+
+<center><img src="b-netz_dioden1.jpg"/></center>
+
+<p>
+Now I can program any phone just by setting jumers.
+I call this "JPROM" (Jumper Programmable Read Only Memory).
+</p>
+
+<center><img src="b-netz_dioden2.jpg"/></center>
 
 [<a href="index.html">Back to main page</a>]
 </td></tr></table></center>
