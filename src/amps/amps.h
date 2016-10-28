@@ -87,9 +87,12 @@ typedef struct amps {
 	/* the ex buffer holds the duration of one bit, and wrapps every
 	 * bit. */
 	double			fsk_rx_bitcount;	/* counts the bit. if it reaches or exceeds 1, the bit is complete and the next bit starts */
-	int16_t			*fsk_rx_buffer;		/* rx buffer for one bit */
-	int			fsk_rx_buffer_length;	/* length of rx buffer */
-	int			fsk_rx_buffer_pos;	/* current position in buffer */
+	int16_t			*fsk_rx_window;		/* rx buffer for one bit */
+	int			fsk_rx_window_length;	/* length of rx buffer */
+	int			fsk_rx_window_half;	/* half of length of rx buffer */
+	int			fsk_rx_window_begin;	/* where to begin detecting level */
+	int			fsk_rx_window_end;	/* where to end detecting level */
+	int			fsk_rx_window_pos;	/* current position in buffer */
 	/* the rx bufffer received one frame until rx length */
 	char			fsk_rx_frame[FSK_MAX_BITS + 1];	/* +1 because 0-termination */
 	int			fsk_rx_frame_length;	/* length of expected frame */

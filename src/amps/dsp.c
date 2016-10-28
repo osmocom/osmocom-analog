@@ -43,6 +43,30 @@
  * the average sample value of the right side.  After the bit has been detected,
  * the samples for the next window will be received and detected.
  *
+ * +-----+-----+-----+-----+
+ * |     |     |   __|__   |
+ * |     |     |  /  |  \  |
+ * |     |     | /   |   \ |
+ * |     |     |/    |    \|
+ * +-----+-----+-----+-----+
+ * |\    |    /|     |     |
+ * | \   |   / |     |     |
+ * |  \__|__/  |     |     |
+ * |     |     |     |     |
+ * +-----+-----+-----+-----+
+ *       End   Half  Begin
+ *
+ * The Rx window is depiced above. In this example there is a raising edge.
+ * The window is analyzed in backward direction. The average level between
+ * 'Half' position and 'Begin' position is calculated, also the average level
+ * between 'End' position and 'Half' position. Because the right (second)
+ * side of the average level is higher than the left (first) side, a raising
+ * edge is detected.
+ *
+ * Tests showed that comparing half of the regions of the window will cause
+ * more errors than only quarter regions of the regions. Especially this is
+ * true with NBFM receivers that are normally not sufficient for AMPS signals.
+ *
  * As soon as a sync pattern is detected, the polarity of the pattern is used
  * to decode the following frame bits with correct polarity.  During reception
  * of the frame bits, no sync and no dotting sequnece is searched or detected.
@@ -143,6 +167,7 @@ int dsp_init_sender(amps_t *amps, int high_pass)
 	int i;
 	int rc;
 	double RC, dt;
+	int half;
 
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
 	init_compandor(&amps->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
@@ -166,9 +191,16 @@ int dsp_init_sender(amps_t *amps, int high_pass)
 		goto error;
 	}
 
-	amps->fsk_rx_buffer_length = ceil(amps->fsk_bitduration); /* buffer holds one bit (rounded up) */
-	amps->fsk_rx_buffer = calloc(sizeof(int16_t), amps->fsk_rx_buffer_length);
-	if (!amps->fsk_rx_buffer) {
+	amps->fsk_rx_window_length = ceil(amps->fsk_bitduration); /* buffer holds one bit (rounded up) */
+	half = amps->fsk_rx_window_length >> 1;
+	amps->fsk_rx_window_begin = half >> 1;
+	amps->fsk_rx_window_half = half;
+	amps->fsk_rx_window_end = amps->fsk_rx_window_length - (half >> 1);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Bit window length: %d\n", amps->fsk_rx_window_length);
+	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level left of edge: %d..%d\n", amps->fsk_rx_window_begin, amps->fsk_rx_window_half - 1);
+	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level right of edge: %d..%d\n", amps->fsk_rx_window_half, amps->fsk_rx_window_end - 1);
+	amps->fsk_rx_window = calloc(sizeof(int16_t), amps->fsk_rx_window_length);
+	if (!amps->fsk_rx_window) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
@@ -203,8 +235,8 @@ int dsp_init_sender(amps_t *amps, int high_pass)
 	/* use this filter to remove dc level for 0-crossing detection
 	 * if we have de-emphasis, we don't need it, so high_pass is not set. */
 	if (high_pass) {
-	        RC = 1.0 / (CUT_OFF_HIGHPASS * 2.0 *3.14);
-        	dt = 1.0 / amps->sender.samplerate;
+		RC = 1.0 / (CUT_OFF_HIGHPASS * 2.0 *3.14);
+		dt = 1.0 / amps->sender.samplerate;
 		amps->highpass_factor = RC / (RC + dt);
 	}
 
@@ -223,8 +255,8 @@ void dsp_cleanup_sender(amps_t *amps)
 
 	if (amps->fsk_tx_buffer)
 		free(amps->fsk_tx_buffer);
-	if (amps->fsk_rx_buffer)
-		free(amps->fsk_rx_buffer);
+	if (amps->fsk_rx_window)
+		free(amps->fsk_rx_window);
 	if (amps->sat_filter_spl) {
 		free(amps->sat_filter_spl);
 		amps->sat_filter_spl = NULL;
@@ -426,9 +458,9 @@ again:
 	}
 }
 
-static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos)
+static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos, int begin, int half, int end)
 {
-	int i, ii;
+	int i;
 	int32_t first, second;
 	int bit;
 	int32_t max = -32768, min = 32767;
@@ -436,11 +468,11 @@ static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos)
 	/* decode one bit. substact the first half from the second half.
 	 * the result shows the direction of the bit change: 1 == positive.
 	 */
-	ii = len >> 1;
+	pos -= begin; /* possible wrap is handled below */
 	second = first = 0;
-	for (i = 0; i < ii; i++) {
+	for (i = begin; i < half; i++) {
 		if (--pos < 0)
-			pos = len - 1;
+			pos += len;
 //printf("second %d: %d\n", pos, spl[pos]);
 		second += spl[pos];
 		if (spl[pos] > max)
@@ -448,10 +480,10 @@ static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos)
 		if (spl[pos] < min)
 			min = spl[pos];
 	}
-	second /= ii;
-	for (i = 0; i < ii; i++) {
+	second /= (half - begin);
+	for (i = half; i < end; i++) {
 		if (--pos < 0)
-			pos = len - 1;
+			pos += len;
 //printf("first %d: %d\n", pos, spl[pos]);
 		first += spl[pos];
 		if (spl[pos] > max)
@@ -459,7 +491,7 @@ static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos)
 		if (spl[pos] < min)
 			min = spl[pos];
 	}
-	first /= ii;
+	first /= (end - half);
 //printf("first = %d second = %d\n", first, second);
 	/* get bit */
 	if (second > first)
@@ -600,55 +632,47 @@ static void fsk_rx_dotting(amps_t *amps, double _elapsed)
 /* decode frame */
 static void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
 {
-	int16_t *spl, last_sample;
-	int len, pos;
-	double bitstep, elapsed;
 	int i;
-
-	bitstep = amps->fsk_bitstep;
-	spl = amps->fsk_rx_buffer;
-	pos = amps->fsk_rx_buffer_pos;
-	len = amps->fsk_rx_buffer_length;
-	last_sample = amps->fsk_rx_last_sample;
-	elapsed = amps->fsk_rx_elapsed;
 
 	for (i = 0; i < length; i++) {
 #ifdef DEBUG_DECODER
 		puts(debug_amplitude((double)samples[i] / (double)FSK_DEVIATION));
 #endif
 		/* push sample to detection window and shift */
-		spl[pos++] = samples[i];
-		if (pos == len)
-			pos = 0;
+		amps->fsk_rx_window[amps->fsk_rx_window_pos++] = samples[i];
+		if (amps->fsk_rx_window_pos == amps->fsk_rx_window_length)
+			amps->fsk_rx_window_pos = 0;
 		if (amps->fsk_rx_sync != FSK_SYNC_POSITIVE && amps->fsk_rx_sync != FSK_SYNC_NEGATIVE) {
 			/* check for change in polarity */
-			if (last_sample <= 0) {
+			if (amps->fsk_rx_last_sample <= 0) {
 				if (samples[i] > 0) {
-					fsk_rx_dotting(amps, elapsed);
-					elapsed = 0.0;
+					fsk_rx_dotting(amps, amps->fsk_rx_elapsed);
+					amps->fsk_rx_elapsed = 0.0;
 				}
 			} else {
 				if (samples[i] <= 0) {
-					fsk_rx_dotting(amps, elapsed);
-					elapsed = 0.0;
+					fsk_rx_dotting(amps, amps->fsk_rx_elapsed);
+					amps->fsk_rx_elapsed = 0.0;
 				}
 			}
 		}
-		last_sample = samples[i];
-		elapsed += bitstep;
+		amps->fsk_rx_last_sample = samples[i];
+		amps->fsk_rx_elapsed += amps->fsk_bitstep;
 //		printf("%.4f\n", bitcount);
 		if (amps->fsk_rx_sync != FSK_SYNC_NONE) {
-			amps->fsk_rx_bitcount += bitstep;
+			amps->fsk_rx_bitcount += amps->fsk_bitstep;
 			if (amps->fsk_rx_bitcount >= 1.0) {
 				amps->fsk_rx_bitcount -= 1.0;
-				fsk_rx_bit(amps, spl, len, pos);
+				fsk_rx_bit(amps,
+					amps->fsk_rx_window,
+					amps->fsk_rx_window_length,
+					amps->fsk_rx_window_pos,
+					amps->fsk_rx_window_begin,
+					amps->fsk_rx_window_half,
+					amps->fsk_rx_window_end);
 			}
 		}
 	}
-
-	amps->fsk_rx_last_sample = last_sample;
-	amps->fsk_rx_elapsed = elapsed;
-	amps->fsk_rx_buffer_pos = pos;
 }
 
 
