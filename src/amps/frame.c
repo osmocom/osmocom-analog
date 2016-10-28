@@ -3567,7 +3567,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 	char word_string[49];
 	int8_t dcc = -1;
 	uint64_t word_a[5], word;
-	int crc_a_ok[5], crc_ok;
+	int crc_a_ok[5], crc_ok, crc_ok_count = 0;
 	int i, j, k, crc_i;
 	const char *bits_ = bits; /* for extra check */
 
@@ -3588,21 +3588,17 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 			word = (word << 1) | ((*bits++) & 1);
 		}
 		word_string[k] = '\0';
-		if (!strncmp(encode_bch(word_string, 36), word_string + 36, 12))
+		if (!strncmp(encode_bch(word_string, 36), word_string + 36, 12)) {
 			crc_ok = 1;
-		else
+			crc_ok_count++;
+		} else
 			crc_ok = 0;
 		word_a[i % 5] = word;
 		crc_a_ok[i % 5] = crc_ok;
 	}
 	bits -= 240;
 
-	for (crc_i = 0; crc_i < 5; crc_i++) {
-		if (crc_a_ok[crc_i])
-			break;
-	}
-
-	if (crc_i == 5) {
+	if (crc_ok_count == 0) {
 		/* check if we receive frame in a loop */
 		crc_ok = 0;
 		bits_++; /* skip B/I after sync */
@@ -3627,14 +3623,22 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 		bits_ -= 221;
 	}
 
+	for (crc_i = 0; crc_i < 5; crc_i++) {
+		if (crc_a_ok[crc_i])
+			break;
+	}
+
 	if (first) {
-		if (debuglevel == DEBUG_DEBUG || crc_i < 5) {
-			PDEBUG(DFRAME, DEBUG_INFO, "RX RECC: DCC=%d\n", dcc);
+		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0) {
+			PDEBUG(DFRAME, DEBUG_INFO, "RX RECC: DCC=%d (%d of 5 CRCs are ok)\n", dcc, crc_ok_count);
 			if (dcc != amps->si.dcc) {
 				PDEBUG(DFRAME, DEBUG_INFO, "received DCC=%d missmatches the base station's DCC=%d\n", dcc, amps->si.dcc);
 				return 0;
 			}
 		}
+	} else {
+		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0)
+			PDEBUG(DFRAME, DEBUG_INFO, "RX RECC: (%d of 5 CRCs are ok)\n", crc_ok_count);
 	}
 	if (debuglevel == DEBUG_DEBUG) {
 		char text[64];
@@ -3646,7 +3650,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 		}
 	}
 
-	if (crc_i < 5)
+	if (crc_ok_count > 0)
 		return amps_decode_word_recc(amps, word_a[crc_i], first);
 	return 0;
 }
