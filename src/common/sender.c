@@ -165,8 +165,10 @@ void sender_destroy(sender_t *sender)
 	if (sender->master)
 		sender->master->slave = NULL;
 
-	if (sender->sound)
+	if (sender->sound) {
 		sound_close(sender->sound);
+		sender->sound = NULL;
+	}
 
 	wave_destroy_record(&sender->wave_rec);
 	wave_destroy_playback(&sender->wave_play);
