@@ -45,6 +45,7 @@ int num_chan_type = 0;
 enum amps_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_PC_VC };
 const char *flip_polarity = "";
 int ms_power = 4, dcc = 0, scc = 0, sid = 40, regh = 1, regr = 1, pureg = 1, pdreg = 1, locaid = -1, regincr = 300, bis = 0;
+int tolerant = 0;
 
 void print_help(const char *arg0)
 {
@@ -86,6 +87,8 @@ void print_help(const char *arg0)
 	printf(" -S --sysinfo bis=0 | bis=1\n");
 	printf("        If 0, phone ignores BUSY/IDLE bit on FOCC (default = '%d')\n", bis);
 	printf("        If 1, be sure to have a round-trip delay (latency) not more than 5 ms\n");
+	printf(" -T --tolerant\n");
+	printf("        Be more tolerant when hunting for sync sequence\n");
 	printf("\nstation-id: Give 10 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 }
@@ -101,10 +104,11 @@ static int handle_options(int argc, char **argv)
 		{"flip-polarity", 1, 0, 'F'},
 		{"ms-power", 1, 0, 'P'},
 		{"sysinfo", 1, 0, 'S'},
+		{"tolerant", 0, 0, 'T'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:F:P:S:", long_options_special);
+	set_options_common("t:F:P:S:T", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -206,6 +210,10 @@ static int handle_options(int argc, char **argv)
 				exit(0);
 			}
 			skip_args += 2;
+			break;
+		case 'T':
+			tolerant = 1;
+			skip_args += 1;
 			break;
 		default:
 			opt_switch_common(c, argv[0], &skip_args);
@@ -341,7 +349,7 @@ int main(int argc, char *argv[])
 		amps_si si;
 
 		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
-		rc = amps_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, &si, sid, scc, polarity, loopback);
+		rc = amps_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, &si, sid, scc, polarity, tolerant, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

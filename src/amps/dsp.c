@@ -125,6 +125,8 @@ static double sat_freq[5] = {
 
 static int dsp_sine_sat[256];
 
+static uint8_t dsp_sync_check[0x800];
+
 /* global init for FSK */
 void dsp_init(void)
 {
@@ -136,6 +138,17 @@ void dsp_init(void)
 		s = sin((double)i / 256.0 * 2.0 * PI);
 		dsp_sine_sat[i] = (int)(s * SAT_DEVIATION);
 	}
+
+	/* sync checker */
+	for (i = 0; i < 0x800; i++) {
+		dsp_sync_check[i] = 0xff; /* no sync */
+	}
+	for (i = 0; i < 11; i++) {
+		dsp_sync_check[0x712 ^ (1 << i)] = 0x01; /* one bit error */
+		dsp_sync_check[0x0ed ^ (1 << i)] = 0x81; /* one bit error */
+	}
+	dsp_sync_check[0x712] = 0x00; /* no bit error */
+	dsp_sync_check[0x0ed] = 0x80; /* no bit error */
 }
 
 static void dsp_init_ramp(amps_t *amps)
@@ -160,7 +173,7 @@ static void dsp_init_ramp(amps_t *amps)
 static void sat_reset(amps_t *amps, const char *reason);
 
 /* Init FSK of transceiver */
-int dsp_init_sender(amps_t *amps, int high_pass)
+int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 {
 	double coeff;
 	int16_t *spl;
@@ -239,6 +252,9 @@ int dsp_init_sender(amps_t *amps, int high_pass)
 		dt = 1.0 / amps->sender.samplerate;
 		amps->highpass_factor = RC / (RC + dt);
 	}
+
+	/* be more tolerant when syncing */
+	amps->fsk_rx_sync_tolerant = tolerant;
 
 	return 0;
 
@@ -508,7 +524,11 @@ static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos, int begin, 
 	if (amps->fsk_rx_sync != FSK_SYNC_POSITIVE && amps->fsk_rx_sync != FSK_SYNC_NEGATIVE) {
 		amps->fsk_rx_sync_register = (amps->fsk_rx_sync_register << 1) | bit;
 		/* check if we received a sync */
-		if ((amps->fsk_rx_sync_register & 0x7ff) == 0x712) {
+		switch (dsp_sync_check[amps->fsk_rx_sync_register & 0x7ff]) {
+		case 0x01:
+			if (!amps->fsk_rx_sync_tolerant)
+				break;
+		case 0x00:
 #ifdef DEBUG_DECODER
 			printf("Sync word detected (positive)\n");
 #endif
@@ -520,8 +540,10 @@ prepare_frame:
 			amps->fsk_rx_sync_register = 0x555;
 			amps->when_received = get_time() - (21.0 / (double)BITRATE);
 			return;
-		}
-		if ((amps->fsk_rx_sync_register & 0x7ff) == 0x0ed) {
+		case 0x81:
+			if (!amps->fsk_rx_sync_tolerant)
+				break;
+		case 0x80:
 #ifdef DEBUG_DECODER
 			printf("Sync word detected (negative)\n");
 #endif

@@ -340,7 +340,7 @@ static amps_t *search_pc(void)
 static void amps_go_idle(amps_t *amps);
 
 /* Create transceiver instance and link to a list. */
-int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int loopback)
+int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -407,7 +407,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev
 	}
 
 	/* init audio processing */
-	rc = dsp_init_sender(amps, (de_emphasis == 0));
+	rc = dsp_init_sender(amps, (de_emphasis == 0), tolerant);
 	if (rc < 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init audio processing!\n");
 		goto error;
