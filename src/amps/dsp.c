@@ -89,6 +89,8 @@
 #include "frame.h"
 #include "dsp.h"
 
+#define CHAN amps->sender.kanal
+
 /* uncomment this to debug the encoding process */
 //#define DEBUG_ENCODER
 
@@ -124,6 +126,7 @@ static double sat_freq[5] = {
 };
 
 static int dsp_sine_sat[256];
+static int dsp_sine_test[256];
 
 static uint8_t dsp_sync_check[0x800];
 
@@ -137,6 +140,7 @@ void dsp_init(void)
 	for (i = 0; i < 256; i++) {
 		s = sin((double)i / 256.0 * 2.0 * PI);
 		dsp_sine_sat[i] = (int)(s * SAT_DEVIATION);
+		dsp_sine_test[i] = (int)(s * FSK_DEVIATION);
 	}
 
 	/* sync checker */
@@ -244,6 +248,10 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 		}
 	}
 	sat_reset(amps, "Initial state");
+
+	/* test tone */
+	amps->test_phaseshift256 = 256.0 / ((double)amps->sender.samplerate / 1000.0);
+	PDEBUG(DDSP, DEBUG_DEBUG, "test_phaseshift256 = %.4f\n", amps->test_phaseshift256);
 
 	/* use this filter to remove dc level for 0-crossing detection
 	 * if we have de-emphasis, we don't need it, so high_pass is not set. */
@@ -442,6 +450,24 @@ static void sat_encode(amps_t *amps, int16_t *samples, int length)
 	amps->sat_phase256 = phase;
 }
 
+static void test_tone_encode(amps_t *amps, int16_t *samples, int length)
+{
+        double phaseshift, phase;
+	int i;
+
+	phaseshift = amps->test_phaseshift256;
+	phase = amps->test_phase256;
+
+	for (i = 0; i < length; i++) {
+		*samples++ = dsp_sine_test[((uint8_t)phase) & 0xff];
+		phase += phaseshift;
+		if (phase >= 256)
+			phase -= 256;
+	}
+
+	amps->test_phase256 = phase;
+}
+
 /* Provide stream of audio toward radio unit */
 void sender_send(sender_t *sender, int16_t *samples, int length)
 {
@@ -451,8 +477,8 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 again:
 	switch (amps->dsp_mode) {
 	case DSP_MODE_OFF:
-		/* silence, if transmitter is off */
-		memset(samples, 0, length * sizeof(*samples));
+		/* test tone, if transmitter is off */
+		test_tone_encode(amps, samples, length);
 		break;
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 		jitter_load(&amps->sender.audio, samples, length);
@@ -717,9 +743,9 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 	if (quality[1] < 0)
 		quality[1] = 0;
 
-	PDEBUG(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] * 32767.0 / SAT_DEVIATION / 0.63662 * 100.0, quality[0] * 100.0);
+	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] * 32767.0 / SAT_DEVIATION / 0.63662 * 100.0, quality[0] * 100.0);
 	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
-		PDEBUG(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] * 32767.0 / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
+		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] * 32767.0 / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
 	}
 	if (quality[0] > SAT_QUALITY) {
 		if (amps->sat_detected == 0) {
@@ -727,7 +753,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 			if (amps->sat_detect_count == SAT_DETECT_COUNT) {
 				amps->sat_detected = 1;
 				amps->sat_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "SAT signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality[0] * 100.0);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality[0] * 100.0);
 				amps_rx_sat(amps, 1, quality[0]);
 			}
 		} else
@@ -738,7 +764,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 			if (amps->sat_detect_count == SAT_LOST_COUNT) {
 				amps->sat_detected = 0;
 				amps->sat_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "SAT signal lost.\n");
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT signal lost.\n");
 				amps_rx_sat(amps, 0, 0.0);
 			}
 		} else
@@ -750,7 +776,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 			if (amps->sig_detect_count == SIG_DETECT_COUNT) {
 				amps->sig_detected = 1;
 				amps->sig_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", result[2] / 0.63662 * 100.0, quality[1] * 100.0);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", result[2] / 0.63662 * 100.0, quality[1] * 100.0);
 				amps_rx_signaling_tone(amps, 1, quality[1]);
 			}
 		} else
@@ -761,7 +787,7 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
 			if (amps->sig_detect_count == SIG_LOST_COUNT) {
 				amps->sig_detected = 0;
 				amps->sig_detect_count = 0;
-				PDEBUG(DDSP, DEBUG_DEBUG, "Signaling Tone lost.\n");
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signaling Tone lost.\n");
 				amps_rx_signaling_tone(amps, 0, 0.0);
 			}
 		} else
@@ -870,7 +896,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 /* Reset SAT detection states, so ongoing tone will be detected again. */
 static void sat_reset(amps_t *amps, const char *reason)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "SAT detector reset: %s.\n", reason);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT detector reset: %s.\n", reason);
 	amps->sat_detected = 0;
 	amps->sat_detect_count = 0;
 	amps->sig_detected = 0;
@@ -887,11 +913,24 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 	if (mode == DSP_MODE_FRAME_RX_FRAME_TX) {
 		/* reset SAT detection */
 		sat_reset(amps, "Change to FOCC");
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode to FOCC\n");
 	}
 	if (amps->dsp_mode == DSP_MODE_FRAME_RX_FRAME_TX
 	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX)) {
 		/* reset SAT detection */
 		sat_reset(amps, "Change from FOCC to FVC");
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from FOCC to FVC\n");
+	}
+	if (amps->dsp_mode == DSP_MODE_OFF
+	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX)) {
+		/* reset SAT detection */
+		sat_reset(amps, "Enable FVC");
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from OFF to FVC\n");
+	}
+	if (mode == DSP_MODE_OFF) {
+		/* reset SAT detection */
+		sat_reset(amps, "Disable FVC");
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from FVC to OFF\n");
 	}
 
 	amps->dsp_mode = mode;

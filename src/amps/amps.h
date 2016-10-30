@@ -140,6 +140,8 @@ typedef struct amps {
 	int			sat_detect_count;	/* current number of consecutive detections/losses */
 	int			sig_detected;		/* current detection state flag */
 	int			sig_detect_count;	/* current number of consecutive detections/losses */
+	double			test_phaseshift256;	/* how much the phase of sine wave changes per sample */
+	double			test_phase256;		/* current phase */
 
 	transaction_t		*trans_list;		/* list of transactions */
 

@@ -2919,7 +2919,7 @@ static uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 2;
-	frame.ie[AMPS_IE_SCC] = 11;
+	frame.ie[AMPS_IE_SCC] = 3;
 	frame.ie[AMPS_IE_MIN2] = min2;
 	frame.ie[AMPS_IE_EF] = 0;
 	frame.ie[AMPS_IE_LOCAL_MSG_TYPE] = msg_type;
@@ -2947,7 +2947,7 @@ static uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc,
 
 	memset(&frame, 0, sizeof(frame));
 	frame.ie[AMPS_IE_T1T2] = 2;
-	frame.ie[AMPS_IE_SCC] = 11;
+	frame.ie[AMPS_IE_SCC] = 3;
 	frame.ie[AMPS_IE_PSCC] = pscc;
 	frame.ie[AMPS_IE_EF] = 0;
 	frame.ie[AMPS_IE_LOCAL_MSG_TYPE] = msg_type;

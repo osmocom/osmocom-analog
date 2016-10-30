@@ -354,7 +354,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
-		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], amps_channel2freq(kanal[i], 0), amps_channel2freq(kanal[i], 1));
+		printf("Base station on channel %d ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0), amps_channel2freq(kanal[i], 1));
 	}
 
 	signal(SIGINT,sighandler);

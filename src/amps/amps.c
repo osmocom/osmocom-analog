@@ -36,8 +36,8 @@
 #define SAT_TO1		5.0	/* 5 sec to detect after setup */
 #define SAT_TO2		5.0	/* 5 sec lost until abort (specs say 5) */
 #define PAGE_TRIES	2	/* how many times to page the phone */
-#define PAGE_TO1	5.0	/* max time to wait for paging reply */
-#define PAGE_TO2	7.0	/* max time to wait for last paging reply */
+#define PAGE_TO1	8.0	/* max time to wait for paging reply */
+#define PAGE_TO2	4.0	/* max time to wait for last paging reply */
 #define ALERT_TO	60.0	/* max time to wait for answer */
 #define RELEASE_TIMER	5.0	/* max time to send release messages */
 
@@ -297,6 +297,22 @@ const char *chan_type_long_name(enum amps_chan_type chan_type)
 	return "invalid";
 }
 
+static amps_t *search_channel(int channel)
+{
+	sender_t *sender;
+	amps_t *amps;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		if (sender->kanal != channel)
+			continue;
+		amps = (amps_t *) sender;
+		if (amps->state == STATE_IDLE)
+			return amps;
+	}
+
+	return NULL;
+}
+
 static amps_t *search_free_vc(void)
 {
 	sender_t *sender;
@@ -306,10 +322,10 @@ static amps_t *search_free_vc(void)
 		amps = (amps_t *) sender;
 		if (amps->state != STATE_IDLE)
 			continue;
-		/* return first free SpK */
+		/* return first free voice channel */
 		if (amps->chan_type == CHAN_TYPE_VC)
 			return amps;
-		/* remember OgK/SpK combined channel as second alternative */
+		/* remember combined voice/control/paging channel as second alternative */
 		if (amps->chan_type == CHAN_TYPE_CC_PC_VC)
 			cc_pc_vc = amps;
 	}
@@ -354,11 +370,17 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev
 		return -EINVAL;
 	}
 
+	/* no paging channel (without control channel) support */
+	if (chan_type == CHAN_TYPE_PC) {
+		PDEBUG(DAMPS, DEBUG_ERROR, "Dedicated paging channel currently not supported. Please select CC/PC or CC/PC/VC instead.\n");
+		return -EINVAL;
+	}
+
 	/* check if there is only one paging channel */
 	if (chan_type == CHAN_TYPE_PC || chan_type == CHAN_TYPE_CC_PC || chan_type == CHAN_TYPE_CC_PC_VC) {
 		for (sender = sender_head; sender; sender = sender->next) {
 			amps = (amps_t *)sender;
-			if (amps->chan_type == CHAN_TYPE_PC || chan_type == CHAN_TYPE_CC_PC || chan_type == CHAN_TYPE_CC_PC_VC) {
+			if (amps->chan_type == CHAN_TYPE_PC || amps->chan_type == CHAN_TYPE_CC_PC || amps->chan_type == CHAN_TYPE_CC_PC_VC) {
 				PDEBUG(DAMPS, DEBUG_ERROR, "Only one paging channel is currently supported. Please check your channel types.\n");
 				return -EINVAL;
 			}
@@ -377,11 +399,11 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev
 
 	/* check if sid machtes channel band */
 	band = amps_channel2band(channel);
-	if (band == 'A' && (sid & 1) == 0) {
+	if (band == 'A' && (sid & 1) == 0 && chan_type != CHAN_TYPE_VC) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system A, but your SID %d is even and belongs to system B. Please give odd SID.\n", channel, sid);
 		return -EINVAL;
 	}
-	if (band == 'B' && (sid & 1) == 1) {
+	if (band == 'B' && (sid & 1) == 1 && chan_type != CHAN_TYPE_VC) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system B, but your SID %d is odd and belongs to system A. Please give even SID.\n", channel, sid);
 		return -EINVAL;
 	}
@@ -479,13 +501,19 @@ static void amps_go_idle(amps_t *amps)
 		destroy_transaction(amps->trans_list);
 	}
 
-	PDEBUG(DAMPS, DEBUG_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
-	if (amps->sender.loopback)
-		frame_length = 441; /* bits after sync (FOCC) */
-	else
-		frame_length = 247; /* bits after sync (RECC) */
 	amps_new_state(amps, STATE_IDLE);
-	amps_set_dsp_mode(amps, DSP_MODE_FRAME_RX_FRAME_TX, frame_length);
+
+	if (amps->chan_type != CHAN_TYPE_VC) {
+		PDEBUG(DAMPS, DEBUG_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
+		if (amps->sender.loopback)
+			frame_length = 441; /* bits after sync (FOCC) */
+		else
+			frame_length = 247; /* bits after sync (RECC) */
+		amps_set_dsp_mode(amps, DSP_MODE_FRAME_RX_FRAME_TX, frame_length);
+	} else {
+		PDEBUG(DAMPS, DEBUG_INFO, "Entering IDLE state, sending test tone on %s.\n", chan_type_long_name(amps->chan_type));
+		amps_set_dsp_mode(amps, DSP_MODE_OFF, 0);
+	}
 }
 
 /* Abort connection towards mobile station by sending FOCC/FVC pattern. */
@@ -913,18 +941,18 @@ void transaction_timeout(struct timer *timer)
 }
 
 /* assigning voice channel and moving transaction+callref to that channel */
-static void assign_voice_channel(transaction_t *trans)
+static amps_t *assign_voice_channel(transaction_t *trans)
 {
 	amps_t *amps = trans->amps, *vc;
 	const char *callerid = amps_min2number(trans->min1, trans->min2);
 	int callref = ++new_callref;
 	int rc;
 
-	vc = search_free_vc();
+	vc = search_channel(trans->chan);
 	if (!vc) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "No free channel, rejecting call\n");
+		PDEBUG(DAMPS, DEBUG_NOTICE, "Channel %d is not free anymore, rejecting call\n", trans->chan);
 		amps_release(trans, CAUSE_NOCHANNEL);
-		return;
+		return NULL;
 	}
 
 	if (vc == amps)
@@ -938,7 +966,7 @@ static void assign_voice_channel(transaction_t *trans)
 		if (rc < 0) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", rc);
 			amps_release(trans, 0);
-			return;
+			return NULL;
 		}
 		trans->callref = callref;
 	}
@@ -950,11 +978,14 @@ static void assign_voice_channel(transaction_t *trans)
 	link_transaction(trans, vc);
 	/* flush all other transactions, if any (in case of combined VC + CC) */
 	amps_flush_other_transactions(vc, trans);
+
+	return vc;
 }
 
 transaction_t *amps_tx_frame_focc(amps_t *amps)
 {
 	transaction_t *trans;
+	amps_t *vc;
 	
 again:
 	trans = amps->trans_list;
@@ -981,22 +1012,28 @@ again:
 		trans_new_state(trans, TRANS_CALL_MO_ASSIGN_SEND);
 		return trans;
 	case TRANS_CALL_MO_ASSIGN_SEND:
-		trans_new_state(trans, TRANS_CALL);
-		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
-		assign_voice_channel(trans);
+		vc = assign_voice_channel(trans);
+		if (vc) {
+			PDEBUG(DAMPS, DEBUG_INFO, "Assignment complete, voice connected\n");
+			trans_new_state(trans, TRANS_CALL);
+			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
+		}
 		return NULL;
 	case TRANS_CALL_MT_ASSIGN:
 		PDEBUG(DAMPS, DEBUG_INFO, "Assigning channel to call to mobile station\n");
 		trans_new_state(trans, TRANS_CALL_MT_ASSIGN_SEND);
 		return trans;
 	case TRANS_CALL_MT_ASSIGN_SEND:
-		trans_new_state(trans, TRANS_CALL_MT_ALERT);
-		trans->chan = 0;
-		trans->msg_type = 0;
-		trans->ordq = 0;
-		trans->order = 1;
-		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
-		assign_voice_channel(trans);
+		vc = assign_voice_channel(trans);
+		if (vc) {
+			PDEBUG(DAMPS, DEBUG_INFO, "Assignment complete, next: sending altering on VC\n");
+			trans->chan = 0;
+			trans->msg_type = 0;
+			trans->ordq = 0;
+			trans->order = 1;
+			trans_new_state(trans, TRANS_CALL_MT_ALERT);
+			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
+		}
 		return NULL;
 	case TRANS_PAGE:
 		PDEBUG(DAMPS, DEBUG_INFO, "Paging the phone\n");
@@ -1022,14 +1059,16 @@ again:
 
 	switch (trans->state) {
 	case TRANS_CALL_RELEASE:
-		PDEBUG(DAMPS, DEBUG_INFO, "Releasing call to mobile station\n");
+		PDEBUG(DAMPS, DEBUG_INFO, "Releasing call towards mobile station\n");
 		trans_new_state(trans, TRANS_CALL_RELEASE_SEND);
 		return trans;
 	case TRANS_CALL_RELEASE_SEND:
+		PDEBUG(DAMPS, DEBUG_INFO, "Release call was sent, destroying call\n");
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		goto again;
 	case TRANS_CALL_MT_ALERT:
+		PDEBUG(DAMPS, DEBUG_INFO, "Sending altering\n");
 		return trans;
 	default:
 		return NULL;
