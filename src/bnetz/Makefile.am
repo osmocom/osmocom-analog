@@ -5,6 +5,7 @@ bin_PROGRAMS = \
 
 bnetz_SOURCES = \
 	bnetz.c \
+	telegramm.c \
 	dsp.c \
 	stations.c \
 	image.c \
