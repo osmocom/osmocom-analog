@@ -137,8 +137,7 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 	*sender_tailp = sender;
 	sender_tailp = &sender->next;
 
-	if (sender == sender_head)
-		display_wave_init(sender, samplerate);
+	display_wave_init(sender, samplerate);
 
 	return 0;
 error:
@@ -249,8 +248,7 @@ cant_recover:
 #ifndef WAVE_WRITE_TX
 			if (sender->wave_rec.fp)
 				wave_write(&sender->wave_rec, samples, count);
-			if (sender == sender_head)
-				display_wave(sender, samples, count);
+			display_wave(sender, samples, count);
 			sender_receive(sender, samples, count);
 #endif
 		}
@@ -273,6 +271,7 @@ cant_recover:
 				if (slave->wave_rec.fp)
 					wave_write(&slave->wave_rec, slave_samples, count);
 #endif
+				display_wave(slave, slave_samples, count);
 				sender_receive(slave, slave_samples, count);
 			}
 			/* do pre emphasis towards radio, not wave_write */
@@ -379,8 +378,7 @@ cant_recover:
 			if (sender->wave_rec.fp)
 				wave_write(&sender->wave_rec, samples, count);
 #endif
-			if (sender == sender_head)
-				display_wave(sender, samples, count);
+			display_wave(sender, samples, count);
 			sender_receive(sender, samples, count);
 		}
 		if (sender->loopback == 3)
@@ -398,6 +396,7 @@ cant_recover:
 				if (slave->wave_rec.fp)
 					wave_write(&slave->wave_rec, slave_samples, count);
 #endif
+				display_wave(slave, slave_samples, count);
 				sender_receive(slave, slave_samples, count);
 			}
 			if (slave->loopback == 3)

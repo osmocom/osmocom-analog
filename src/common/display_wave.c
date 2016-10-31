@@ -27,6 +27,7 @@
 #define WIDTH	80
 #define HEIGHT	10
 
+static int num_sender = 0;
 static char screen[HEIGHT][WIDTH+1];
 static int wave_on = 0;
 
@@ -35,12 +36,13 @@ void display_wave_init(sender_t *sender, int samplerate)
 	dispwav_t *disp = &sender->dispwav;
 
 	memset(disp, 0, sizeof(*disp));
+	disp->offset = (num_sender++) * HEIGHT;
 	disp->interval_max = (double)samplerate * DISPLAY_INTERVAL + 0.5;
 }
 
 void display_wave_on(int on)
 {
-	int j;
+	int i, j;
 
 	if (on < 0)
 		wave_on = 1 - wave_on;
@@ -49,9 +51,11 @@ void display_wave_on(int on)
 
 	memset(&screen, ' ', sizeof(screen));
 	printf("\0337\033[H");
-	for (j = 0; j < HEIGHT; j++) {
-		screen[j][WIDTH] = '\0';
-		puts(screen[j]);
+	for (i = 0; i < num_sender; i++) {
+		for (j = 0; j < HEIGHT; j++) {
+			screen[j][WIDTH] = '\0';
+			puts(screen[j]);
+		}
 	}
 	printf("\0338"); fflush(stdout);
 }
@@ -84,7 +88,11 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 				y = (32767 - (int)buffer[j]) * HEIGHT * 2 / 65536;
 				screen[y >> 1][j] = (y & 1) ? '_' : '-';
 			}
+			sprintf(screen[0], "(chan %d", sender->kanal);
+			*strchr(screen[0], '\0') = ')';
 			printf("\0337\033[H");
+			for (j = 0; j < disp->offset; j++)
+				puts("");
 			for (j = 0; j < HEIGHT; j++) {
 				screen[j][WIDTH] = '\0';
 				puts(screen[j]);
