@@ -38,6 +38,7 @@ typedef struct anetz {
 	double			paging_phase256[4];	/* current phase */
 	int			paging_tone;		/* current tone (0..3) in sequenced mode */
 	int			paging_count;		/* current sample count of tone in seq. mode */
+	int			paging_transition;	/* set to number of samples during transition */
 } anetz_t;
 
 

@@ -373,7 +373,7 @@ inval:
 
 	PDEBUG(DANETZ, DEBUG_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
 	if (anetz->page_sequence)
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Sending paging tones in sequence. 'click' sounds may appear, because the phase of each individual tone might be different.\n");
+		PDEBUG(DANETZ, DEBUG_NOTICE, "Sending paging tones in sequence.\n");
 
 	/* 4. trying to page mobile station */
 	anetz->callref = callref;
