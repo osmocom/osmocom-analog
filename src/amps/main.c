@@ -22,8 +22,6 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <sched.h>
 #include "../common/main.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
@@ -357,31 +355,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %d ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0), amps_channel2freq(kanal[i], 1));
 	}
 
-	signal(SIGINT,sighandler);
-	signal(SIGHUP,sighandler);
-	signal(SIGTERM,sighandler);
-	signal(SIGPIPE,sighandler);
-
-	if (rt_prio > 0) {
-		struct sched_param schedp;
-		int rc;
-
-		memset(&schedp, 0, sizeof(schedp));
-		schedp.sched_priority = rt_prio;
-		rc = sched_setscheduler(0, SCHED_RR, &schedp);
-		if (rc)
-			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
-	}
-
 	main_loop(&quit, latency, interval, NULL);
-
-	if (rt_prio > 0) {
-		struct sched_param schedp;
-
-		memset(&schedp, 0, sizeof(schedp));
-		schedp.sched_priority = 0;
-		sched_setscheduler(0, SCHED_OTHER, &schedp);
-	}
 
 fail:
 	/* cleanup functions */

@@ -22,8 +22,6 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <sched.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -358,31 +356,7 @@ int main(int argc, char *argv[])
 
 	nmt_check_channels();
 
-	signal(SIGINT,sighandler);
-	signal(SIGHUP,sighandler);
-	signal(SIGTERM,sighandler);
-	signal(SIGPIPE,sighandler);
-
-	if (rt_prio > 0) {
-		struct sched_param schedp;
-		int rc;
-
-		memset(&schedp, 0, sizeof(schedp));
-		schedp.sched_priority = rt_prio;
-		rc = sched_setscheduler(0, SCHED_RR, &schedp);
-		if (rc)
-			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
-	}
-
 	main_loop(&quit, latency, interval, myhandler);
-
-	if (rt_prio > 0) {
-		struct sched_param schedp;
-
-		memset(&schedp, 0, sizeof(schedp));
-		schedp.sched_priority = 0;
-		sched_setscheduler(0, SCHED_OTHER, &schedp);
-	}
 
 fail:
 	/* fifo */

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <sched.h>
 #include <unistd.h>
 #include <math.h>
 #include <termios.h>
@@ -256,7 +257,7 @@ void sighandler(int sigset)
 	if (sigset == SIGPIPE)
 		return;
 
-	fprintf(stderr, "Signal received: %d\n", sigset);
+	fprintf(stderr, "\nSignal received: %d\n", sigset);
 
 	quit = 1;
 }
@@ -286,6 +287,24 @@ void main_loop(int *quit, int latency, int interval, void (*myhandler)(void))
 	double last_time = 0, now;
 	struct termios term, term_orig;
 	int c;
+
+	/* catch signals */
+	signal(SIGINT, sighandler);
+	signal(SIGHUP, sighandler);
+	signal(SIGTERM, sighandler);
+	signal(SIGPIPE, sighandler);
+
+	/* real time priority */
+	if (rt_prio > 0) {
+		struct sched_param schedp;
+		int rc;
+
+		memset(&schedp, 0, sizeof(schedp));
+		schedp.sched_priority = rt_prio;
+		rc = sched_setscheduler(0, SCHED_RR, &schedp);
+		if (rc)
+			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
+	}
 
 	/* prepare terminal */
 	tcgetattr(0, &term_orig);
@@ -323,6 +342,7 @@ next_char:
 		switch (c) {
 		case 3:
 			/* quit */
+			fprintf(stderr, "\nCTRL+c received, quitting!\n");
 			*quit = 1;
 			goto next_char;
 		case 'w':
@@ -349,5 +369,20 @@ next_char:
 
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);
+	
+	/* reset real time prio */
+	if (rt_prio > 0) {
+		struct sched_param schedp;
+
+		memset(&schedp, 0, sizeof(schedp));
+		schedp.sched_priority = 0;
+		sched_setscheduler(0, SCHED_OTHER, &schedp);
+	}
+
+	/* reset signals */
+	signal(SIGINT, SIG_DFL);
+	signal(SIGHUP, SIG_DFL);
+	signal(SIGTERM, SIG_DFL);
+	signal(SIGPIPE, SIG_DFL);
 }
 
