@@ -137,7 +137,7 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume)
+int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume)
 {
 	anetz_t *anetz;
 	int rc;
@@ -163,7 +163,7 @@ int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_chan
 	}
 
 	/* init audio processing */
-	rc = dsp_init_sender(anetz);
+	rc = dsp_init_sender(anetz, page_sequence);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
 		goto error;
@@ -372,6 +372,8 @@ inval:
 	}
 
 	PDEBUG(DANETZ, DEBUG_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
+	if (anetz->page_sequence)
+		PDEBUG(DANETZ, DEBUG_NOTICE, "Sending paging tones in sequence. 'click' sounds may appear, because the phase of each individual tone might be different.\n");
 
 	/* 4. trying to page mobile station */
 	anetz->callref = callref;

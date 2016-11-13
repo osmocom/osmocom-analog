@@ -33,6 +33,7 @@ typedef struct anetz {
 	int			tone_count;		/* how long has that tone been detected */
 	double			tone_phaseshift256;	/* how much the phase of sine wave changes per sample */
 	double			tone_phase256;		/* current phase */
+	int			page_sequence;		/* if set, use paging tones in sequence rather than parallel */
 	double			paging_phaseshift256[4];/* how much the phase of sine wave changes per sample */
 	double			paging_phase256[4];	/* current phase */
 	int			paging_tone;		/* current tone (0..3) in sequenced mode */
@@ -42,7 +43,7 @@ typedef struct anetz {
 
 double anetz_kanal2freq(int kanal, int unterband);
 int anetz_init(void);
-int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume);
+int anetz_create(int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume);
 void anetz_destroy(sender_t *sender);
 void anetz_loss_indication(anetz_t *anetz);
 void anetz_receive_tone(anetz_t *anetz, int bit);

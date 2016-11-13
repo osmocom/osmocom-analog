@@ -48,8 +48,6 @@
 #define LOSS_INTERVAL	100	/* filter steps (chunk durations) for one second interval */
 #define LOSS_TIME	12	/* duration of signal loss before release */
 
-extern int page_sequence;
-
 /* two signaling tones */
 static double fsk_tones[2] = {
 	2280.0,
@@ -84,7 +82,7 @@ void dsp_init(void)
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(anetz_t *anetz)
+int dsp_init_sender(anetz_t *anetz, int page_sequence)
 {
 	int16_t *spl;
 	double coeff;
@@ -92,6 +90,8 @@ int dsp_init_sender(anetz_t *anetz)
 	double tone;
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+
+	anetz->page_sequence = page_sequence;
 
 	audio_init_loss(&anetz->sender.loss, LOSS_INTERVAL, anetz->sender.loss_volume, LOSS_TIME);
 
@@ -243,7 +243,7 @@ void dsp_set_paging(anetz_t *anetz, double *freq)
  * Use TX_PEAK_PAGE for all tones, which gives peak of (TX_PEAK_PAGE / 4) for each individual tone. */
 static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
 {
-	double phaseshift[5], phase[5];
+	double phaseshift[4], phase[4];
 	int i;
 	int32_t sample;
 
@@ -277,31 +277,38 @@ static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
  * Use TX_PEAK_PAGE / 2 for each tone, that is twice as much peak per tone.  */
 static void fsk_paging_tone_sequence(anetz_t *anetz, int16_t *samples, int length, int numspl)
 {
-	double phaseshift, phase;
+	double phaseshift[4], phase[4];
+	int i;
 	int tone, count;
 
-	phase = anetz->tone_phase256;
+	for (i = 0; i < 4; i++) {
+		phaseshift[i] = anetz->paging_phaseshift256[i];
+		phase[i] = anetz->paging_phase256[i];
+	}
 	tone = anetz->paging_tone;
 	count = anetz->paging_count;
 
-next_tone:
-	phaseshift = anetz->paging_phaseshift256[tone];
-
 	while (length) {
-		*samples++ = dsp_sine_page[((uint8_t)phase) & 0xff] >> 1;
-		phase += phaseshift;
-		if (phase >= 256)
-			phase -= 256;
+		*samples++ = dsp_sine_page[((uint8_t)phase[tone]) & 0xff] >> 1;
+		phase[0] += phaseshift[0];
+		phase[1] += phaseshift[1];
+		phase[2] += phaseshift[2];
+		phase[3] += phaseshift[3];
+		if (phase[0] >= 256) phase[0] -= 256;
+		if (phase[1] >= 256) phase[1] -= 256;
+		if (phase[2] >= 256) phase[2] -= 256;
+		if (phase[3] >= 256) phase[3] -= 256;
 		if (++count == numspl) {
 			count = 0;
 			if (++tone == 4)
 				tone = 0;
-			goto next_tone;
 		}
 		length--;
 	}
 
-	anetz->tone_phase256 = phase;
+	for (i = 0; i < 4; i++) {
+		anetz->paging_phase256[i] = phase[i];
+	}
 	anetz->paging_tone = tone;
 	anetz->paging_count = count;
 }
@@ -341,8 +348,8 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 		fsk_tone(anetz, samples, length);
 		break;
 	case DSP_MODE_PAGING:
-		if (page_sequence)
-			fsk_paging_tone_sequence(anetz, samples, length, page_sequence * anetz->sender.samplerate / 1000);
+		if (anetz->page_sequence)
+			fsk_paging_tone_sequence(anetz, samples, length, anetz->page_sequence * anetz->sender.samplerate / 1000);
 		else
 			fsk_paging_tone(anetz, samples, length);
 		break;
