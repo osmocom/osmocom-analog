@@ -274,7 +274,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				int rc;
 
 				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
-				rc = call_in_setup(callref, "", "0");
+				rc = call_in_setup(callref, NULL, "010");
 				if (rc < 0) {
 					PDEBUG(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
 					anetz_release(anetz);

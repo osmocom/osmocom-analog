@@ -686,10 +686,9 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 		abort();
 	}
 
-	if (!strcmp(dialing, "0"))
-		dialing = "operator";
-
-	PDEBUG(DCALL, DEBUG_INFO, "Incoming call from '%s' to '%s'\n", callerid, dialing);
+	PDEBUG(DCALL, DEBUG_INFO, "Incoming call from '%s' to '%s'\n", callerid ? : "unknown", dialing);
+	if (!strcmp(dialing, "010"))
+		PDEBUG(DCALL, DEBUG_INFO, " -> Call to Operator '%s'\n", dialing);
 
 	if (use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_mncc)];
@@ -700,8 +699,10 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 		mncc->msg_type = MNCC_SETUP_IND;
 		mncc->callref = callref;
 		mncc->fields |= MNCC_F_CALLING;
-		strncpy(mncc->calling.number, callerid, sizeof(mncc->calling.number) - 1);
-		mncc->calling.type = 4; /* caller ID is of type 'subscriber' */
+		if (callerid) {
+			strncpy(mncc->calling.number, callerid, sizeof(mncc->calling.number) - 1);
+			mncc->calling.type = 4; /* caller ID is of type 'subscriber' */
+		} // otherwise unknown and no number
 		mncc->fields |= MNCC_F_CALLED;
 		strncpy(mncc->called.number, dialing, sizeof(mncc->called.number) - 1);
 		mncc->called.type = 0; /* dialing is of type 'unknown' */
@@ -732,7 +733,7 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 	}
 	call.callref = callref;
 	call_new_state(CALL_CONNECT);
-	if (callerid[0]) {
+	if (callerid) {
 		strncpy(call.station_id, callerid, call.dial_digits);
 		call.station_id[call.dial_digits] = '\0';
 	}
