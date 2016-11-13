@@ -257,7 +257,7 @@ static int num_frames;
 
 const char *nmt_frame_name(enum nmt_mt mt)
 {
-	if (mt < 0 || (int)mt >= num_frames)
+	if ((int)mt < 0 || (int)mt >= num_frames)
 		return "invalid";
 	return nmt_frame[mt].nr;
 }
