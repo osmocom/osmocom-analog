@@ -19,6 +19,7 @@ compile
 *.la
 .deps
 .libs
+.dirstamp
 m4
 src/common/libcommon.a
 src/anetz/anetz
