@@ -35,7 +35,7 @@ enum dial_mode {
 enum dial_type {
 	DIAL_TYPE_NOMETER,
 	DIAL_TYPE_METER,
-	DIAL_TYPE_UNKNOWN,
+	DIAL_TYPE_METER_MUENZ,
 };
 
 /* current state of paging mobile station */
