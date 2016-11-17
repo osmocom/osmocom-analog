@@ -25,7 +25,7 @@
 #define DISPLAY_INTERVAL 0.04
 
 #define WIDTH	80
-#define HEIGHT	10
+#define HEIGHT	11
 
 static int num_sender = 0;
 static char screen[HEIGHT][WIDTH+1];
@@ -60,15 +60,37 @@ void display_wave_on(int on)
 	printf("\0338"); fflush(stdout);
 }
 
+/*
+ * draw wave form:
+ *
+ * theoretical example: HEIGHT = 3 allows 5 steps
+ *
+ * Line 0: -_
+ * Line 1:   -_
+ * Line 2:     -
+ *
+ * HEIGHT is odd, so the center line's char is '-' (otherwise '_')
+ * (HEIGHT - 1) / 2 = 1, so the center line is drawn in line 1
+ *
+ * y is in range of 0..5, so these are 5 steps, where 2 to 2.999 is the
+ * center line. this is calculated by (HEIGHT * 2 - 1)
+ */
 void display_wave(sender_t *sender, int16_t *samples, int length)
 {
 	dispwav_t *disp = &sender->dispwav;
 	int pos, max;
 	int16_t *buffer;
-	int i, j, y;
+	int i, j, k, y;
+	int color = 9; /* default color */
+	int center_line;
+	char center_char;
 
 	if (!wave_on)
 		return;
+
+	/* at what line we draw our zero-line and what character we use */
+	center_line = (HEIGHT - 1) >> 1;
+	center_char = (HEIGHT & 1) ? '-' : '_';
 
 	pos = disp->interval_pos;
 	max = disp->interval_max;
@@ -84,8 +106,10 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 		if (pos == WIDTH) {
 			memset(&screen, ' ', sizeof(screen));
 			for (j = 0; j < WIDTH; j++) {
-				/* must divide by 65536, because we may never reach HEIGHT*2! */
-				y = (32767 - (int)buffer[j]) * HEIGHT * 2 / 65536;
+				/* 32767 - buffer[j] never reaches 65536, so
+				 * the result is below HEIGHT * 2 - 1
+				 */
+				y = (32767 - (int)buffer[j]) * (HEIGHT * 2 - 1) / 65536;
 				screen[y >> 1][j] = (y & 1) ? '_' : '-';
 			}
 			sprintf(screen[0], "(chan %d", sender->kanal);
@@ -94,10 +118,35 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 			for (j = 0; j < disp->offset; j++)
 				puts("");
 			for (j = 0; j < HEIGHT; j++) {
-				screen[j][WIDTH] = '\0';
-				puts(screen[j]);
+				for (k = 0; k < WIDTH; k++) {
+					if (j == center_line && screen[j][k] == ' ') {
+						/* blue 0-line */
+						if (color != 4) {
+							color = 4;
+							printf("\033[0;34m");
+						}
+						putchar(center_char);
+					} else if (screen[j][k] == '-' || screen[j][k] == '_') {
+						/* green scope curve */
+						if (color != 2) {
+							color = 2;
+							printf("\033[1;32m");
+						}
+						putchar(screen[j][k]);
+					} else if (screen[j][k] != ' ') {
+						/* white other characters */
+						if (color != 7) {
+							color = 7;
+							printf("\033[1;37m");
+						}
+						putchar(screen[j][k]);
+					} else
+						putchar(screen[j][k]);
+				}
+				printf("\n");
 			}
-			printf("\0338"); fflush(stdout);
+			/* reset color and position */
+			printf("\033[0;39m\0338"); fflush(stdout);
 		}
 	}
 
