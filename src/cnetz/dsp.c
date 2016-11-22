@@ -239,7 +239,7 @@ static int fsk_testtone_encode(cnetz_t *cnetz)
 	phase = cnetz->fsk_tx_phase;
 	bitstep = cnetz->fsk_tx_bitstep * 256.0;
 
-	/* add 198 bits of noise */
+	/* add 198 bits of test tone */
 	for (i = 0; i < 99; i++) {
 		do {
 			*spl++ = ramp_up[(int)phase];
