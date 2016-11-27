@@ -384,7 +384,7 @@ To run the base station I the following command line options:
 
 <pre>
 
-# cnetz -k 131 -E -e -S 19.25,19.25
+# cnetz -k 131 -p -d -S 19.25,19.25
 ...
 cnetz.c:142 notice : You selected channel 131 ('Orga-Kanal') for combined callin
 g + traffic channel. Some phones will reject this.
@@ -409,7 +409,7 @@ After the call has been terminated, the control channel is restored and the othe
 You should tune the receiver to 465.090 first, to check if you can hear and decode the idle signal from the base station.
 Then tune to actually up-link frequency 455.090 MHz.
 The actual level is not yet relevant.
-(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
+(You may check the quality using '-l 2' or '--loopback 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
 <p>

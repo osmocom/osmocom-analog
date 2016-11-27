@@ -546,7 +546,7 @@ Check out what networks are available:
 
 <pre>
 
-# nmt -y list
+# nmt -Y list
 TA      Short   Country (Provider)
 ------------------------------------------------------------------------
 5       DK      Denmark (Tele Danmark Mobile)
@@ -563,7 +563,7 @@ TA      Short   Country (Provider)
 <p>
 In this example we select 'Sweden'.
 You must set you phone to network 'Sweden' or 'SE'.
-Then use the command line parameter '-y SE,1' or '--traffic-area SE,1' to select cell area 1 in Sweden.
+Then use the command line parameter '-Y SE,1' or '--traffic-area SE,1' to select cell area 1 in Sweden.
 In this example we set the two digits 'traffic area' to 61.
 If the phone was not in this area recently, it will send roaming update, as soon as it finds our network.
 </p>
@@ -583,7 +583,7 @@ Use a traffic are of 'SE,2', so the phone registers, if it was previously regist
 
 <pre>
 
-nmt -k 1 -y SE,2
+nmt -k 1 -Y SE,2
 nmt.c:278 info   : Selecting country code 6 of SE,Sweden (provider 'Telia Mobitel')
 ...
 nmt.c:402 info   : Entering IDLE state, sending idle frames on combined calling &amp; traffic channel.

@@ -121,6 +121,7 @@ All digit starts with sync pattern ("0 1 1 1 0").
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |0 1 1 1 0|0 1 0 0 0|1|0 0 0 1 0| Funkwahl ohne Geb&uuml;hren&uuml;bermittlung
 |0 1 1 1 0|0 0 1 0 0|1|0 0 1 0 0| Funkwahl mit Geb&uuml;hren&uuml;bermittlung
+|0 1 1 1 0|0 0 0 1 0|1|0 1 0 0 0| Funkwahl mit Geb&uuml;hren&uuml;bermittlung (Payphone)
 |0 1 1 1 0|1 0 0 0 0|1|0 0 0 0 1| Funkwahlende
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
@@ -514,7 +515,7 @@ But you get a busy signal, that means there is no channel.
 
 <p>
 Now run your base station on channel 1.
-You may add '-g x' or '--gfs x' command line option to change the station ID from default to any value you like. (see help)
+You may add '-G x' or '--gfs x' command line option to change the station ID from default to any value you like. (see help)
 If you have a phone that supports GFS 19, please use this GFS 19 to reduce the transmit power of the phone to 100 mW instead of 15 Watts.
 To see if your phone supports it, try to preselect GFS 19.
 Tune the transmitter to 153.010 MHz and the receiver to 148.410 MHz.
@@ -698,7 +699,7 @@ Detecting loss of carrier signal:
 We do not have any RSSI (Received Signal Strength Indicator) signal from our radio, so we cannot directly find out if the signal is lost.
 But we have a constant noise level when the signal is lost.
 Be sure to have squelch on your receiver all the way open, so that noise reaches the base station.
-In order to see this level, use command line option '-0 100 -D 0' or '--loss 100 --debug 0'.
+In order to see this level, use command line option '-L 100 -v 0' or '--loss 100 --verbose 0'.
 The noise level (relative to the sound card's input level) is shown:
 </p>
 
@@ -710,8 +711,8 @@ loss.c:74 debug  : Noise level = 22%
 
 <p>
 Since we have a noise level of about 20%, we can use a threshold of 10%.
-Use command line option '-0 10' in this case.
-To see the process, keep debugging on by using command line option '-D 0'.
+Use command line option '-L 10' in this case.
+To see the process, keep debugging on by using command line option '-v 0'.
 Whenever the noise level is above the given percentage, loss of carrier is assumed, if the noise level is constant.
 If the noise level changes (due to speech), the noise is ignored and the loss counter is reset.
 After a system specific duration of signal loss, the call is released.

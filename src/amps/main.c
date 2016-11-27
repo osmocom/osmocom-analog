@@ -47,9 +47,9 @@ int tolerant = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-E -e -F yes | no ");
+	print_help_common(arg0, "-p -d -F yes | no ");
 	/*      -                                                                             - */
-	printf(" -t --channel-type <channel type> | list\n");
+	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
 	printf(" -F --flip-polarity no | yes\n");
 	printf("        Flip polarity of transmitted FSK signal. If yes, the sound card\n");
@@ -85,7 +85,7 @@ void print_help(const char *arg0)
 	printf(" -S --sysinfo bis=0 | bis=1\n");
 	printf("        If 0, phone ignores BUSY/IDLE bit on FOCC (default = '%d')\n", bis);
 	printf("        If 1, be sure to have a round-trip delay (latency) not more than 5 ms\n");
-	printf(" -T --tolerant\n");
+	printf(" -O --tolerant\n");
 	printf("        Be more tolerant when hunting for sync sequence\n");
 	printf("\nstation-id: Give 10 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
@@ -98,15 +98,15 @@ static int handle_options(int argc, char **argv)
 	int rc;
 
 	static struct option long_options_special[] = {
-		{"channel-type", 1, 0, 't'},
+		{"channel-type", 1, 0, 'T'},
 		{"flip-polarity", 1, 0, 'F'},
 		{"ms-power", 1, 0, 'P'},
 		{"sysinfo", 1, 0, 'S'},
-		{"tolerant", 0, 0, 'T'},
+		{"tolerant", 0, 0, 'O'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:F:P:S:T", long_options_special);
+	set_options_common("T:F:P:S:O", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -117,7 +117,7 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
-		case 't':
+		case 'T':
 			if (!strcmp(optarg, "list")) {
 				amps_channel_list();
 				exit(0);
@@ -209,7 +209,7 @@ static int handle_options(int argc, char **argv)
 			}
 			skip_args += 2;
 			break;
-		case 'T':
+		case 'O':
 			tolerant = 1;
 			skip_args += 1;
 			break;
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
 
 	if (!do_pre_emphasis || !do_de_emphasis) {
 		fprintf(stderr, "*******************************************************************************\n");
-		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -E -e)!\n");
+		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -p -d)!\n");
 		fprintf(stderr, "Use a transmitter/receiver without emphasis and let me do that!\n");
 		fprintf(stderr, "Because carrier FSK signaling does not use emphasis, I like to control\n");
 		fprintf(stderr, "emphasis by myself for best results.\n");
@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
 		amps_si si;
 
 		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
-		rc = amps_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, &si, sid, scc, polarity, tolerant, loopback);
+		rc = amps_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, &si, sid, scc, polarity, tolerant, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

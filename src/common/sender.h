@@ -41,8 +41,9 @@ typedef struct sender {
 	int			loopback;		/* 0 = off, 1 = internal, 2 = external */
 
 	/* record and playback */
-	wave_rec_t		wave_rec;		/* wave recording */
-	wave_play_t		wave_play;		/* wave playback */
+	wave_rec_t		wave_rx_rec;		/* wave recording (from rx) */
+	wave_rec_t		wave_tx_rec;		/* wave recording (from tx) */
+	wave_play_t		wave_rx_play;		/* wave playback (as rx) */
 
 	/* audio buffer for audio to send to transmitter (also used as loopback buffer) */
 	jitter_t		audio;
@@ -69,7 +70,7 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
 void sender_destroy(sender_t *sender);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, int16_t *samples, int count);

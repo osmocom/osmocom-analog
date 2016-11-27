@@ -51,9 +51,9 @@ int voice_deviation = 1;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-S <rx ppm>,<tx ppm> -E -e ");
+	print_help_common(arg0, "-S <rx ppm>,<tx ppm> -p -d ");
 	/*      -                                                                             - */
-	printf(" -t --channel-type <channel type> | list\n");
+	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
 	printf(" -M --measure-speed\n");
 	printf("        Measures clock speed. THIS IS REQUIRED! See documentation!\n");
@@ -93,7 +93,7 @@ static int handle_options(int argc, char **argv)
 	const char *p;
 
 	static struct option long_options_special[] = {
-		{"channel-type", 1, 0, 't'},
+		{"channel-type", 1, 0, 'T'},
 		{"measure-speed", 0, 0, 'M'},
 		{"clock-speed", 1, 0, 'S'},
 		{"flip-polarity", 1, 0, 'F'},
@@ -104,7 +104,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:MS:F:N:P:AV", long_options_special);
+	set_options_common("T:MS:F:N:P:AV", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -115,7 +115,7 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
-		case 't':
+		case 'T':
 			if (!strcmp(optarg, "list")) {
 				cnetz_channel_list();
 				exit(0);
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
 
 	if (!do_pre_emphasis || !do_de_emphasis) {
 		fprintf(stderr, "*******************************************************************************\n");
-		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -E -e)!\n");
+		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -p -d)!\n");
 		fprintf(stderr, "Use a transmitter/receiver without emphasis and let me do that!\n");
 		fprintf(stderr, "Because carrier FSK signaling and scrambled voice (default) does not use\n");
 		fprintf(stderr, "emphasis, I like to control emphasis by myself for best results.\n");
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, noise, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, noise, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

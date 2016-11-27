@@ -55,12 +55,12 @@ To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
 
 <p>
 Alternatively select a different sound adapter.
-If you prefer card 2, device 0, add '-d hw:2,0' or '--device hw:2,0' to the command line:
+If you prefer card 2, device 0, add '-a hw:2,0' or '--audio-device hw:2,0' to the command line:
 </p>
 
 <pre>
 
-# src/bnetz/bnetz -k 1 -d hw:2,0
+# src/bnetz/bnetz -k 1 -a hw:2,0
 
 </pre>
 
@@ -83,13 +83,13 @@ Do not use input gain on the microphone.
 
 <p>
 Now we want to calibrate transmitter and receiver audio level.
-Run the B-Netz base station in loopback test mode (-L 2).
+Run the B-Netz base station in loopback test mode (-l 2).
 Even if you plan to setup A-Netz base station, use B-Netz base station for calibration.
 </p>
 
 <pre>
 
-# src/bnetz/bnetz -k 1 -L 2
+# src/bnetz/bnetz -k 1 -l 2
 bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
 Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
 To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
@@ -155,7 +155,7 @@ Use the command line option '-x' or '--cross':
 
 <pre>
 
-# src/bnetz/bnetz -k 1 -x -L 2
+# src/bnetz/bnetz -k 1 -x -l 2
 bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
 Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
 To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
@@ -186,7 +186,7 @@ A frequency of 2000 Hz is lowered down to half of it's amplitude (-6 db), so it 
 <p>
 Generally a transmitter is doing pre-emphasis for you.
 If you are connected directly to the PLL of your transmitter, you will also not have pre-emphasis.
-In this case you need to do it inside the base station software. Use the command line option '-E' or '--pre-emphasis':
+In this case you need to do it inside the base station software. Use the command line option '-p' or '--pre-emphasis':
 </p>
 
 <pre>
@@ -198,7 +198,7 @@ In this case you need to do it inside the base station software. Use the command
 <p>
 The receiver is doing the de-emphasis for you.
 If you are connected directly to the discriminator of your receiver, you will also not have de-emphasis.
-In this case you need to do it inside the base station software. Use the command line option '-e' or '--de-emphasis':
+In this case you need to do it inside the base station software. Use the command line option '-d' or '--de-emphasis':
 </p>
 
 <pre>
@@ -216,13 +216,13 @@ Especially if you use discriminator output, you might have low output voltage.
 In my experiments it helps to amplify the amplitude by factor two in order adjust a received signal to 100%.
 A gain of 6 dB will amplify the amplitude by factor two.
 Also the noise of the sound adapter will be amplified by factor two, but this is not relevant at 16 bit resolution.
-Use the command line option '-G 6' or '--rx-gain 6'.
+Use the command line option '-g 6' or '--rx-gain 6'.
 In this example I use both, transmitter and receiver without emphasis (so software must do it) and add extra 6 dB gain to the input from the receiver:
 </p>
 
 <pre>
 
-# src/bnetz/bnetz -k 1 -E -e -G 6
+# src/bnetz/bnetz -k 1 -p -d -g 6
 
 </pre>
 
@@ -235,7 +235,7 @@ As used before, the loop-back test can be used to verify the signal process, suc
 </p>
 
 <p>
-If command line option '-L 1' or '--loopback 1' is given, a loop-back inside the software is performed.
+If command line option '-l 1' or '--loopback 1' is given, a loop-back inside the software is performed.
 Also the audio signal is sent to the audio adapter, but not received from it.
 This test is used to debug the software.
 It can be used to see what the output of an external loop would look like.
@@ -243,7 +243,7 @@ It can be used to see what the output of an external loop would look like.
 
 <pre>
 
-./bnetz/bnetz -k 1 -L 1
+./bnetz/bnetz -k 1 -l 1
 bnetz.c:351 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
 Base station for channel 1 ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
 To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
@@ -266,13 +266,13 @@ bnetz.c:528 notice : Round trip delay is 0.001 seconds
 </pre>
 
 <p>
-If command line option '-L 2' or '--loopback 2' is given, an external loop-back is performed.
+If command line option '-l 2' or '--loopback 2' is given, an external loop-back is performed.
 The receiver needs to be tuned to transmitter, so the software receives its own signal.
 The received quality level is relevant. It should be not less than 90 for B-Netz.
 </p>
 
 <p>
-If command line option '-L 3' or '--loopback 3' is given, the audio from the input is sent back to the output.
+If command line option '-l 3' or '--loopback 3' is given, the audio from the input is sent back to the output.
 It can be used to check a headset.
 Everything that is spoken into the microphone should appear on the headphone.
 </p>

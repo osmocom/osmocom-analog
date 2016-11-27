@@ -42,14 +42,14 @@ void print_help(const char *arg0)
 {
 	print_help_common(arg0, "");
 	/*      -                                                                             - */
-	printf(" -g --geo <lat>,<lon>\n");
+	printf(" -G --geo <lat>,<lon>\n");
 	printf("        Give your coordinates of your location, to find closest base station.\n");
 	printf("	(e.g. '--geo 51.186959,7.080194') Or use '--geo list' to get a list of\n");
 	printf("        all base station locations.\n");
 	printf(" -P --page-sequence 0 | <ms>\n");
 	printf("        Cycle paging tones, rather than sending simultaniously.\n");
 	printf("        (default = '%d')\n", page_sequence);
-	printf(" -0 --loss <volume>\n");
+	printf(" -L --loss <volume>\n");
 	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
 	printf("        percent. (disabled by default)\n");
 	printf("\nstation-id: Give (last) 5 digits of station-id, you don't need to enter it\n");
@@ -62,13 +62,13 @@ static int handle_options(int argc, char **argv)
 	char *p;
 
 	static struct option long_options_special[] = {
-		{"geo", 1, 0, 'g'},
+		{"geo", 1, 0, 'G'},
 		{"page-sequence", 1, 0, 'P'},
-		{"loss", 1, 0, '0'},
+		{"loss", 1, 0, 'L'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("g:P:0:", long_options_special);
+	set_options_common("G:P:L:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -79,7 +79,7 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
-		case 'g':
+		case 'G':
 			if (!strcasecmp(optarg, "list")) {
 				station_list();
 				exit(0);
@@ -95,7 +95,7 @@ static int handle_options(int argc, char **argv)
 			page_sequence = atoi(optarg);
 			skip_args += 2;
 			break;
-		case '0':
+		case 'L':
 			lossdetect = atoi(optarg);
 			skip_args += 2;
 			break;
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = anetz_create(kanal[i], sounddev[i], samplerate, cross_channels, rx_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback, lossdetect / 100.0);
+		rc = anetz_create(kanal[i], sounddev[i], samplerate, cross_channels, rx_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, lossdetect / 100.0);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

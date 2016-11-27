@@ -51,8 +51,9 @@ int send_patterns = 1;
 int release_on_disconnect = 1;
 int loopback = 0;
 int rt_prio = 0;
-const char *read_wave = NULL;
-const char *write_wave = NULL;
+const char *write_rx_wave = NULL;
+const char *write_tx_wave = NULL;
+const char *read_rx_wave = NULL;
 
 void print_help_common(const char *arg0, const char *ext_usage)
 {
@@ -61,14 +62,15 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	/*      -                                                                             - */
 	printf(" -h --help\n");
 	printf("        This help\n");
-	printf(" -D --debug <level> | <level>,<category>[,<category>[,...]] | list\n");
+	printf(" -v --verbose <level> | <level>,<category>[,<category>[,...]] | list\n");
 	printf("        Use 'list' to get a list of all levels and categories\n");
-	printf("        Debug level: digit of debug level (default = '%d')\n", debuglevel);
-	printf("        Debug level+category: level digit followed by one or more categories\n");
+	printf("        Verbose level: digit of debug level (default = '%d')\n", debuglevel);
+	printf("        Verbose level+category: level digit followed by one or more categories\n");
 	printf("        -> If no category is specified, all categories are selected\n");
 	printf(" -k --kanal <channel>\n");
-	printf("        Channel number of \"Sender\"\n");
-	printf(" -d --device hw:<card>,<device>\n");
+	printf(" -k --channel <channel>\n");
+	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");
+	printf(" -a --audio-device hw:<card>,<device>\n");
 	printf("        Sound card and device number (default = '%s')\n", sounddev[0]);
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
@@ -76,18 +78,18 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Interval of processing loop in ms (default = '%d' ms)\n", interval);
 	printf("        Use 25 to drastically reduce CPU usage. In case of buffer underrun,\n");
 	printf("        increase latency accordingly.\n");
-	printf(" -l --latency <delay>\n");
-	printf("        How many milliseconds processed in advance (default = '%d')\n", latency);
+	printf(" -b --buffer <ms>\n");
+	printf("        How many milliseconds are processed in advance (default = '%d')\n", latency);
 	printf(" -x --cross\n");
 	printf("        Cross channels on sound card. 1st channel (right) is swapped with\n");
 	printf("        second channel (left)\n");
-	printf(" -E --pre-emphasis\n");
+	printf(" -p --pre-emphasis\n");
 	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
 	printf("        transmitter. (No pre-emphasis done by the transmitter.)\n");
-	printf(" -e --de-emphasis\n");
+	printf(" -d --de-emphasis\n");
 	printf("        Enable de-emphasis, if you directly connect to the discriminator of\n");
 	printf("        the receiver. (No de-emphasis done by the receiver.)\n");
-	printf(" -G --rx-gain <dB>\n");
+	printf(" -g --rx-gain <dB>\n");
 	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
 	printf("        level of the sound device is too low, even after setting maximum level\n");
 	printf("        with the mixer settings.\n");
@@ -95,55 +97,80 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
 	printf("        Sound card and device number for headset (default = '%s')\n", call_sounddev);
-	printf(" -p --send-patterns 0 | 1\n");
+	printf(" -t --tones 0 | 1\n");
 	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
 	printf("        network (default = '%d')\n", send_patterns);
-	printf(" -L --loopback <type>\n");
+	printf(" -l --loopback <type>\n");
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");
 	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
-	printf(" -W --write-wave <file>\n");
+	printf("    --write-rx-wave <file>\n");
 	printf("        Write received audio to given wav audio file.\n");
-	printf(" -R --read-wave <file>\n");
+	printf("    --write-tx-wave <file>\n");
+	printf("        Write transmitted audio to given wav audio file.\n");
+	printf("    --read-rx-wave <file>\n");
 	printf("        Replace received audio by given wav audio file.\n");
 }
 
+#define	OPT_CHANNEL		1000
+#define	OPT_WRITE_RX_WAVE	1001
+#define	OPT_WRITE_TX_WAVE	1002
+#define	OPT_READ_RX_WAVE	1003
+
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
-	{"debug", 1, 0, 'D'},
+	{"debug", 1, 0, 'v'},
 	{"kanal", 1, 0, 'k'},
-	{"device", 1, 0, 'd'},
-	{"call-device", 1, 0, 'c'},
+	{"channel", 1, 0, OPT_CHANNEL},
+	{"call-device", 1, 0, 'a'},
 	{"samplerate", 1, 0, 's'},
 	{"interval", 1, 0, 'i'},
-	{"latency", 1, 0, 'l'},
+	{"buffer", 1, 0, 'b'},
 	{"cross", 0, 0, 'x'},
-	{"pre-emphasis", 0, 0, 'E'},
-	{"de-emphasis", 0, 0, 'e'},
-	{"rx-gain", 0, 0, 'G'},
+	{"pre-emphasis", 0, 0, 'p'},
+	{"de-emphasis", 0, 0, 'd'},
+	{"rx-gain", 0, 0, 'g'},
 	{"mncc-sock", 0, 0, 'm'},
-	{"send-patterns", 0, 0, 'p'},
-	{"loopback", 1, 0, 'L'},
+	{"call-device", 1, 0, 'c'},
+	{"tones", 0, 0, 't'},
+	{"loopback", 1, 0, 'l'},
 	{"realtime", 1, 0, 'r'},
-	{"write-wave", 1, 0, 'W'},
-	{"read-wave", 1, 0, 'R'},
+	{"write-rx-wave", 1, 0, OPT_WRITE_RX_WAVE},
+	{"write-tx-wave", 1, 0, OPT_WRITE_TX_WAVE},
+	{"read-rx-wave", 1, 0, OPT_READ_RX_WAVE},
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hD:k:d:s:c:i:l:xEeG:mp:L:r:W:R:";
+const char *optstring_common = "hv:k:a:s:i:b:xpdg:mc:t:l:r:";
 
 struct option *long_options;
 char *optstring;
+
+static void check_duplicate_option(int num, struct option *option)
+{
+	int i;
+
+	for (i = 0; i < num; i++) {
+		if (long_options[i].val == option->val) {
+			fprintf(stderr, "Duplicate option %d. Please fix!\n", option->val);
+			abort();
+		}
+	}
+}
 
 void set_options_common(const char *optstring_special, struct option *long_options_special)
 {
 	int i;
 
 	long_options = calloc(sizeof(*long_options), 100);
-	for (i = 0; long_options_common[i].name; i++)
+	for (i = 0; long_options_common[i].name; i++) {
+		check_duplicate_option(i, &long_options_common[i]);
 		memcpy(&long_options[i], &long_options_common[i], sizeof(*long_options));
-	for (; long_options_special->name; i++)
+	}
+	for (; long_options_special->name; i++) {
+		check_duplicate_option(i, long_options_special);
 		memcpy(&long_options[i], long_options_special++, sizeof(*long_options));
+	}
 	
 	optstring = calloc(strlen(optstring_common) + strlen(optstring_special) + 1, 1);
 	strcpy(optstring, optstring_common);
@@ -158,7 +185,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'h':
 		print_help(arg0);
 		exit(0);
-	case 'D':
+	case 'v':
 		if (!strcasecmp(optarg, "list")) {
 	                debug_list_cat();
 			exit(0);
@@ -170,19 +197,16 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		*skip_args += 2;
 		break;
 	case 'k':
+	case OPT_CHANNEL:
 		OPT_ARRAY(num_kanal, kanal, atoi(optarg))
 		*skip_args += 2;
 		break;
-	case 'd':
+	case 'a':
 		OPT_ARRAY(num_sounddev, sounddev, strdup(optarg))
 		*skip_args += 2;
 		break;
 	case 's':
 		samplerate = atoi(optarg);
-		*skip_args += 2;
-		break;
-	case 'c':
-		call_sounddev = strdup(optarg);
 		*skip_args += 2;
 		break;
 	case 'i':
@@ -193,7 +217,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		if (interval > 25)
 			interval = 25;
 		break;
-	case 'l':
+	case 'b':
 		latency = atoi(optarg);
 		*skip_args += 2;
 		break;
@@ -201,15 +225,15 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		cross_channels = 1;
 		*skip_args += 1;
 		break;
-	case 'E':
+	case 'p':
 		do_pre_emphasis = 1;
 		*skip_args += 1;
 		break;
-	case 'e':
+	case 'd':
 		do_de_emphasis = 1;
 		*skip_args += 1;
 		break;
-	case 'G':
+	case 'g':
 		gain_db = atof(optarg);
 		if (gain_db < 0.0) {
 			fprintf(stderr, "Given gain is below 0. Tto reduce RX signal, use sound card's mixer (or resistor net)!\n");
@@ -222,11 +246,15 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		use_mncc_sock = 1;
 		*skip_args += 1;
 		break;
-	case 'p':
+	case 'c':
+		call_sounddev = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case 't':
 		send_patterns = atoi(optarg);
 		*skip_args += 2;
 		break;
-	case 'L':
+	case 'l':
 		loopback = atoi(optarg);
 		*skip_args += 2;
 		break;
@@ -234,12 +262,16 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		rt_prio = atoi(optarg);
 		*skip_args += 2;
 		break;
-	case 'W':
-		write_wave = strdup(optarg);
+	case OPT_WRITE_RX_WAVE:
+		write_rx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
-	case 'R':
-		read_wave = strdup(optarg);
+	case OPT_WRITE_TX_WAVE:
+		write_tx_wave = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_READ_RX_WAVE:
+		read_rx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
 	default:

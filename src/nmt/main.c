@@ -56,12 +56,12 @@ void print_help(const char *arg0)
 {
 	print_help_common(arg0, "-y <traffic area> | list  [-I]");
 	/*      -                                                                             - */
-	printf(" -t --channel-type <channel type> | list\n");
+	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station 1..3. (default = '%d')\n", ms_power);
 	printf("        3 = 15 W / 7 W (handheld), 2 = 1.5 W, 1 = 150 mW\n");
-	printf(" -y --traffic-area <traffic area> | list\n");
+	printf(" -Y --traffic-area <traffic area> | list\n");
 	printf("        NOTE: MUST MATCH WITH YOUR ROAMING SETTINGS IN THE PHONE!\n");
 	printf("              Your phone will not connect, if country code is different!\n");
 	printf("        Give two digits of traffic area, the first digit defines the country\n");
@@ -69,7 +69,7 @@ void print_help(const char *arg0)
 	printf("        Alternatively you can give the short code for country and the cell\n");
 	printf("        area seperated by comma. (Example: SE,1 = Sweden, cell 1)\n");
 	printf("        Use 'list' to get a list of available short country code names\n");
-	printf(" -a --area-number <area no> | 0\n");
+	printf(" -A --area-number <area no> | 0\n");
 	printf("        Give area number 1..4 or 0 for no area number. (default = '%d')\n", area_no);
 	printf(" -C --compandor 1 | 0\n");
 	printf("        Make use of the compandor to reduce noise during call. (default = '%d')\n", compandor);
@@ -91,10 +91,10 @@ static int handle_options(int argc, char **argv)
 	int skip_args = 0;
 
 	static struct option long_options_special[] = {
-		{"channel-type", 1, 0, 't'},
+		{"channel-type", 1, 0, 'T'},
 		{"ms-power", 1, 0, 'P'},
-		{"area-number", 1, 0, 'a'},
-		{"traffic-area", 1, 0, 'y'},
+		{"traffic-area", 1, 0, 'Y'},
+		{"area-number", 1, 0, 'A'},
 		{"compandor", 1, 0, 'C'},
 		{"supervisory", 1, 0, '0'},
 		{"smsc-number", 1, 0, 'S'},
@@ -102,7 +102,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("t:P:a:y:C:0:S:I:", long_options_special);
+	set_options_common("T:P:Y:A:C:0:S:I:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c, rc;
@@ -113,7 +113,7 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
-		case 't':
+		case 'T':
 			if (!strcmp(optarg, "list")) {
 				nmt_channel_list();
 				exit(0);
@@ -134,15 +134,7 @@ static int handle_options(int argc, char **argv)
 				ms_power = 1;
 			skip_args += 2;
 			break;
-		case 'a':
-			area_no = optarg[0] - '0';
-			if (area_no > 4) {
-				fprintf(stderr, "Area number '%s' out of range, please use 1..4 or 0 for no area\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'y':
+		case 'Y':
 
 			if (!strcmp(optarg, "list")) {
 				nmt_country_list();
@@ -175,6 +167,14 @@ error_ta:
 				traffic_area[0] = rc + '0';
 				traffic_area[1] = *p;
 				traffic_area[2] = '\0';
+			}
+			skip_args += 2;
+			break;
+		case 'A':
+			area_no = optarg[0] - '0';
+			if (area_no > 4) {
+				fprintf(stderr, "Area number '%s' out of range, please use 1..4 or 0 for no area\n", optarg);
+				exit(0);
 			}
 			skip_args += 2;
 			break;
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, cross_channels, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;

@@ -201,7 +201,7 @@ Tune the transmitter to 162.050 MHz and the receiver to 157.550 MHz.
 You should tune the receiver to 164.050 MHz first, to check if you hear the idle signal from the base station.
 Then tune to actually up-link frequency 157.550 MHz.
 The actual level is not yet relevant.
-(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
+(You may check the quality using '-l 2' or '--loopback' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
 <pre>
@@ -254,7 +254,7 @@ Be sure that the phone turns off the transmitter and indicates the (green) light
 <p>
 Level adjustment:
 We see a receive level of around 140%.
-Then start the base station using '-L 2' option for loop-back and tune receiver to the transmitter.
+Then start the base station using '-l 2' option for loop-back and tune receiver to the transmitter.
 The base station generates a 1750 Hz test signal, just like the mobile phone.
 Use the variable resistor (connecting your transmitter) to adjust the volume until the received level matches the same level of your previously received signal.
 In my case I adjust the transmitter to match around 140%. (+- 10% is good)

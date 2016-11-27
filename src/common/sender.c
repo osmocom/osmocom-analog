@@ -17,9 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Uncomment this for writing TX as wave (For debug purpose) */
-//#define WAVE_WRITE_TX
-
 #define CHAN sender->kanal
 
 #include <stdio.h>
@@ -35,7 +32,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_wave, const char *read_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
 {
 	sender_t *master;
 	int rc = 0;
@@ -115,15 +112,22 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 		goto error;
 	}
 
-	if (write_wave) {
-		rc = wave_create_record(&sender->wave_rec, write_wave, samplerate);
+	if (write_rx_wave) {
+		rc = wave_create_record(&sender->wave_rx_rec, write_rx_wave, samplerate);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto error;
 		}
 	}
-	if (read_wave) {
-		rc = wave_create_playback(&sender->wave_play, read_wave, samplerate);
+	if (write_tx_wave) {
+		rc = wave_create_record(&sender->wave_tx_rec, write_tx_wave, samplerate);
+		if (rc < 0) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			goto error;
+		}
+	}
+	if (read_rx_wave) {
+		rc = wave_create_playback(&sender->wave_rx_play, read_rx_wave, samplerate);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 			goto error;
@@ -169,8 +173,9 @@ void sender_destroy(sender_t *sender)
 		sender->sound = NULL;
 	}
 
-	wave_destroy_record(&sender->wave_rec);
-	wave_destroy_playback(&sender->wave_play);
+	wave_destroy_record(&sender->wave_rx_rec);
+	wave_destroy_record(&sender->wave_tx_rec);
+	wave_destroy_playback(&sender->wave_rx_play);
 
 	jitter_destroy(&sender->audio);
 }
@@ -239,18 +244,14 @@ cant_recover:
 			jitter_load(&sender->audio, samples, count);
 		else
 			sender_send(sender, samples, count);
-#ifdef WAVE_WRITE_TX
-		if (sender->wave_rec.fp)
-			wave_write(&sender->wave_rec, samples, count);
-#endif
+		if (sender->wave_tx_rec.fp)
+			wave_write(&sender->wave_tx_rec, samples, count);
 		/* internal loopback: loop back TX audio to RX */
 		if (sender->loopback == 1) {
-#ifndef WAVE_WRITE_TX
-			if (sender->wave_rec.fp)
-				wave_write(&sender->wave_rec, samples, count);
+			if (sender->wave_rx_rec.fp)
+				wave_write(&sender->wave_rx_rec, samples, count);
 			display_wave(sender, samples, count);
 			sender_receive(sender, samples, count);
-#endif
 		}
 		/* do pre emphasis towards radio, not wave_write */
 		if (sender->pre_emphasis)
@@ -261,16 +262,12 @@ cant_recover:
 				jitter_load(&slave->audio, slave_samples, count);
 			else
 				sender_send(slave, slave_samples, count);
-#ifdef WAVE_WRITE_TX
-			if (sender->wave_rec.fp)
-				wave_write(&slave->wave_rec, slave_samples, count);
-#endif
+			if (sender->wave_tx_rec.fp)
+				wave_write(&slave->wave_tx_rec, slave_samples, count);
 			/* internal loopback, if audio slave is set */
 			if (slave && slave->loopback == 1) {
-#ifndef WAVE_WRITE_TX
-				if (slave->wave_rec.fp)
-					wave_write(&slave->wave_rec, slave_samples, count);
-#endif
+				if (slave->wave_rx_rec.fp)
+					wave_write(&slave->wave_rx_rec, slave_samples, count);
 				display_wave(slave, slave_samples, count);
 				sender_receive(slave, slave_samples, count);
 			}
@@ -371,13 +368,11 @@ cant_recover:
 		/* do de emphasis from radio (then write_wave/wave_read), receive audio, process echo test */
 		if (sender->de_emphasis)
 			de_emphasis(&sender->estate, samples, count);
-		if (sender->wave_play.fp)
-			wave_read(&sender->wave_play, samples, count);
+		if (sender->wave_rx_play.fp)
+			wave_read(&sender->wave_rx_play, samples, count);
 		if (sender->loopback != 1) {
-#ifndef WAVE_WRITE_TX
-			if (sender->wave_rec.fp)
-				wave_write(&sender->wave_rec, samples, count);
-#endif
+			if (sender->wave_rx_rec.fp)
+				wave_write(&sender->wave_rx_rec, samples, count);
 			display_wave(sender, samples, count);
 			sender_receive(sender, samples, count);
 		}
@@ -389,13 +384,11 @@ cant_recover:
 				gain_samples(slave_samples, count, slave->rx_gain);
 			if (slave->de_emphasis)
 				de_emphasis(&slave->estate, slave_samples, count);
-			if (slave->wave_play.fp)
-				wave_read(&slave->wave_play, slave_samples, count);
+			if (slave->wave_rx_play.fp)
+				wave_read(&slave->wave_rx_play, slave_samples, count);
 			if (slave->loopback != 1) {
-#ifndef WAVE_WRITE_TX
-				if (slave->wave_rec.fp)
-					wave_write(&slave->wave_rec, slave_samples, count);
-#endif
+				if (slave->wave_rx_rec.fp)
+					wave_write(&slave->wave_rx_rec, slave_samples, count);
 				display_wave(slave, slave_samples, count);
 				sender_receive(slave, slave_samples, count);
 			}

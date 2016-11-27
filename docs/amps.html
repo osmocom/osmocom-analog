@@ -86,7 +86,7 @@ Setup of a base station
 
 <pre>
 
-# amps -k 334 -F yes -E -e
+# amps -k 334 -F yes -p -d
 ...
 Selected System ID (SID) 40 belongs to:
         Salinas, CA (GTE Mobile)
@@ -110,7 +110,7 @@ frame.c:3658 info   : RX Level: 52% Quality: 60% Polarity: NEGATIVE
 You should tune the receiver to 880.020 first, to check if you can hear and decode the idle signal from the base station.
 Then tune to actually uplink frequency 835.020 MHz.
 The actual level is not yet relevant.
-(You may check the quality using '-L 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
+(You may check the quality using '-l 2' or '--loopback 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
 <pre>

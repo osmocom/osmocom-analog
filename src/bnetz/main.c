@@ -44,12 +44,12 @@ void print_help(const char *arg0)
 {
 	print_help_common(arg0, "");
 	/*      -                                                                             - */
-	printf(" -g --gfs <gruppenfreisignal> | <lat>,<lon>\n");
+	printf(" -G --gfs <gruppenfreisignal> | <lat>,<lon>\n");
 	printf("        Gruppenfreisignal\" 1..9 | 19 | 10..18 (default = '%d')\n", gfs);
 	printf("        Alternative give your coordinates of your location, to find closest\n");
 	printf("        base station. (e.g. '--gfs 54.487291,9.069993') Or use '--gfs list' to\n");
 	printf("        get a list of all base station locations.\n");
-	printf(" -g --gfs 19\n");
+	printf(" -G --gfs 19\n");
 	printf("        Set to 19 in order to make the phone transmit at 100 mW instead of\n");
 	printf("        full 15 Watts. If supported, the phone uses the channel with low power\n");
 	printf("        (Kanal kleiner Leistung).\n");
@@ -64,7 +64,7 @@ void print_help(const char *arg0)
 	printf("        Example: /sys/class/gpio/gpio17/value=1:0 writes a '1' to\n");
 	printf("        /sys/class/gpio/gpio17/value to switching to channel 19 and a '0' to\n");
 	printf("        switch back. (default = %s)\n", pilot[0]);
-	printf(" -0 --loss <volume>\n");
+	printf(" -L --loss <volume>\n");
 	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
 	printf("        percent. (disabled by default)\n");
 	printf("\nstation-id: Give 5 digit station-id, you don't need to enter it for every\n");
@@ -77,13 +77,13 @@ static int handle_options(int argc, char **argv)
 	char *p;
 
 	static struct option long_options_special[] = {
-		{"gfs", 1, 0, 'g'},
+		{"gfs", 1, 0, 'G'},
 		{"pilot", 1, 0, 'P'},
-		{"loss", 1, 0, '0'},
+		{"loss", 1, 0, 'L'},
 		{0, 0, 0, 0},
 	};
 
-	set_options_common("g:P:0:", long_options_special);
+	set_options_common("G:P:L:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -94,7 +94,7 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
-		case 'g':
+		case 'G':
 			if (!strcasecmp(optarg, "list")) {
 				station_list();
 				exit(0);
@@ -111,7 +111,7 @@ static int handle_options(int argc, char **argv)
 			OPT_ARRAY(num_pilot, pilot, strdup(optarg))
 			skip_args += 2;
 			break;
-		case '0':
+		case 'L':
 			lossdetect = atoi(optarg);
 			skip_args += 2;
 			break;
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], sounddev[i], samplerate, cross_channels, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_wave, read_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
+		rc = bnetz_create(kanal[i], sounddev[i], samplerate, cross_channels, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
