@@ -39,18 +39,21 @@ static int new_callref = 0x40000000;
 
 /* mobile originating call */
 #define CARRIER_TO	0.08	/* 80 ms search for carrier */
-#define GRUPPE_TO	0.4	/* 400 ms search for "Gruppensignal" */
-#define DIALING_TO	1.00	/* FIXME: get real value */
+#define DIALING_TO	3.8	/* timeout after channel allocation "Kanalbelegung" */
+#define DIALING_TO2	0.5	/* timeout while receiving digits */
 
 /* radio loss condition */
-#define LOSS_OF_SIGNAL	9.6	/* duration of carrier loss until release: 9.6 s */
+#define LOSS_OF_SIGNAL	12.5	/* duration of carrier loss until release */
 
 /* mobile terminating call */
 #define ALERTING_TO	60	/* timeout after 60 seconds alerting the MS */
-#define PAGING_TO	4	/* timeout 4 seconds after "Selektivruf" */
+#define PAGING_TO	2.1	/* 700..2100 ms timeout after paging "Selektivruf" */
 #define PAGE_TRIES	2	/* two tries */
 #define SWITCH19_TIME	1.0	/* time to switch channel (radio should be tansmitting after that) */
 #define SWITCHBACK_TIME	0.1	/* time to wait until switching back (latency of sound device shall be lower) */
+
+#define TRENN_COUNT	4	/* min. 350 ms disconnect "Trennsignal" */
+#define TRENN_COUNT_NA	96	/* 12 s disconnect "Trennsignal" if no answer */
 
 /* Convert channel number to frequency number of base station.
    Set 'unterband' to 1 to get frequency of mobile station. */
@@ -222,15 +225,15 @@ static void bnetz_go_idle(bnetz_t *bnetz)
 }
 
 /* Release connection towards mobile station by sending release digits. */
-static void bnetz_release(bnetz_t *bnetz)
+static void bnetz_release(bnetz_t *bnetz, int trenn_count)
 {
 	timer_stop(&bnetz->timer);
 
-	PDEBUG(DBNETZ, DEBUG_INFO, "Entering release state, sending 'Trennsignal'.\n");
+	PDEBUG(DBNETZ, DEBUG_INFO, "Entering release state, sending 'Trennsignal' (%d times).\n", trenn_count);
 	bnetz->state = BNETZ_TRENNEN;
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 	switch_channel_19(bnetz, 0);
-	bnetz->trenn_count = 0;
+	bnetz->trenn_count = trenn_count;
 	bnetz->station_id[0] = '\0';
 }
 
@@ -298,7 +301,7 @@ const char *bnetz_get_telegramm(bnetz_t *bnetz)
 		it = bnetz_digit2telegramm(bnetz->station_id[bnetz->station_id_pos++]);
 		break;
 	case BNETZ_TRENNEN:
-		if (bnetz->trenn_count++ == 75) {
+		if (bnetz->trenn_count-- == 0) {
 			PDEBUG(DBNETZ, DEBUG_DEBUG, "Maximum number of release digits sent, going idle.\n");
 			bnetz_go_idle(bnetz);
 			return NULL;
@@ -322,7 +325,7 @@ void bnetz_loss_indication(bnetz_t *bnetz)
 	if (bnetz->state == BNETZ_GESPRAECH
 	 || bnetz->state == BNETZ_RUFHALTUNG) {
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Detected loss of signal, releasing.\n");
-		bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		call_in_release(bnetz->callref, CAUSE_TEMPFAIL);
 		bnetz->callref = 0;
 	}
@@ -404,7 +407,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 
 	switch (bnetz->state) {
 	case BNETZ_WAHLABRUF:
-		timer_start(&bnetz->timer, DIALING_TO);
+		timer_start(&bnetz->timer, DIALING_TO2);
 		switch (bnetz->dial_mode) {
 		case DIAL_MODE_START:
 			switch (digit) {
@@ -419,7 +422,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				break;
 			default:
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			bnetz->dial_mode = DIAL_MODE_STATIONID;
@@ -429,7 +432,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 		case DIAL_MODE_STATIONID:
 			if (digit < '0' || digit > '9') {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid station id digit, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			bnetz->station_id[bnetz->dial_pos++] = digit;
@@ -452,12 +455,12 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 			}
 			if (digit < '0' || digit > '9') {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid number digit, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_pos == sizeof(bnetz->dial_number) - 1) {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			bnetz->dial_number[bnetz->dial_pos++] = digit;
@@ -467,27 +470,27 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 			case 's':
 				if (bnetz->dial_type != DIAL_TYPE_NOMETER) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (no metering support), aborting.\n");
-					bnetz_go_idle(bnetz);
+					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			case 'S':
 				if (bnetz->dial_type != DIAL_TYPE_METER) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support), aborting.\n");
-					bnetz_go_idle(bnetz);
+					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			case 'U':
 				if (bnetz->dial_type != DIAL_TYPE_METER_MUENZ) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support, payphone), aborting.\n");
-					bnetz_go_idle(bnetz);
+					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			default:
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			bnetz->dial_mode = DIAL_MODE_STATIONID2;
@@ -496,12 +499,12 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 		case DIAL_MODE_STATIONID2:
 			if (digit < '0' || digit > '9') {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid station id digit, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->station_id[bnetz->dial_pos++] != digit) {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received station id does not match first one, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_pos == 5) {
@@ -519,7 +522,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 
 				if (bnetz->dial_pos != (int)strlen(bnetz->dial_number)) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too few number digits the second time, aborting.\n");
-					bnetz_go_idle(bnetz);
+					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				PDEBUG(DBNETZ, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", bnetz->station_id, dialing);
@@ -532,7 +535,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				rc = call_in_setup(callref, bnetz->station_id, dialing);
 				if (rc < 0) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
-					bnetz_release(bnetz);
+					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				bnetz->callref = callref;
@@ -540,17 +543,17 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 			}
 			if (digit < '0' || digit > '9') {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid number digit, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_pos == (int)strlen(bnetz->dial_number)) {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_number[bnetz->dial_pos++] != digit) {
 				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received number does not match first one, aborting.\n");
-				bnetz_go_idle(bnetz);
+				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 		}
@@ -561,7 +564,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 			return;
 		if (digit == 't') {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Received 'Schlusssignal' from mobile station\n");
-			bnetz_go_idle(bnetz);
+			bnetz_release(bnetz, TRENN_COUNT);
 			call_in_release(bnetz->callref, CAUSE_NORMAL);
 			bnetz->callref = 0;
 			break;
@@ -585,7 +588,7 @@ static void bnetz_timeout(struct timer *timer)
 #endif
 	case BNETZ_WAHLABRUF:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while receiving call setup from mobile station, aborting.\n");
-		bnetz_go_idle(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_SELEKTIVRUF_EIN:
 		PDEBUG(DBNETZ, DEBUG_DEBUG, "Transmitter switched to channel 19, starting paging telegramms.\n");
@@ -600,7 +603,7 @@ static void bnetz_timeout(struct timer *timer)
 	case BNETZ_RUFBESTAETIGUNG:
 		if (bnetz->page_try == PAGE_TRIES) {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for call acknowledge from mobile station, going idle.\n");
-			bnetz_go_idle(bnetz);
+			bnetz_release(bnetz, TRENN_COUNT);
 			call_in_release(bnetz->callref, CAUSE_OUTOFORDER);
 			bnetz->callref = 0;
 			break;
@@ -610,7 +613,7 @@ static void bnetz_timeout(struct timer *timer)
 		break;
 	case BNETZ_RUFHALTUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for answer of mobile station, releasing.\n");
-	 	bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT_NA);
 		call_in_release(bnetz->callref, CAUSE_NOANSWER);
 		bnetz->callref = 0;
 		break;
@@ -629,7 +632,7 @@ int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, e
 	/* 1. check if number is invalid, return INVALNUMBER */
 	if (strlen(dialing) == 7 && dialing[0] == '0' && dialing[1] == '5')
 		dialing += 2;
-	if (strlen(dialing) != 5) {
+	else if (strlen(dialing) != 5) {
 inval:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
@@ -700,11 +703,11 @@ void call_out_disconnect(int callref, int cause)
 	case BNETZ_SELEKTIVRUF_AUS:
 	case BNETZ_RUFBESTAETIGUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during paging, releasing!\n");
-	 	bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_RUFHALTUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during alerting, releasing!\n");
-	 	bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	default:
 		break;
@@ -739,17 +742,17 @@ void call_out_release(int callref, int __attribute__((unused)) cause)
 	switch (bnetz->state) {
 	case BNETZ_GESPRAECH:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during call, releasing!\n");
-	 	bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_SELEKTIVRUF_EIN:
 	case BNETZ_SELEKTIVRUF_AUS:
 	case BNETZ_RUFBESTAETIGUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during paging, releasing!\n");
-	 	bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_RUFHALTUNG:
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during alerting, releasing!\n");
-	 	bnetz_release(bnetz);
+		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	default:
 		break;

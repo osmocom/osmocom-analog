@@ -306,7 +306,8 @@ Call from mobile station:
 
 <p>
 The mobile station starts scanning all traffic channels one time.
-If there is a signal on the channel, the mobile station tries to decode it for 400 ms max.
+If there is no radio signal on the channel, the mobile stations continues with next channel.
+If there is a signal on the channel, the mobile station tries to decode it for 320 ms max.
 If there is no signal or if there is no idle pattern or if the idle pattern does not match the selected one, the mobile station continues with the next channel.
 If no channel is found, a busy signal is indicated to the mobile subscriber.
 </p>
@@ -320,7 +321,11 @@ When the base station receives the channel allocation signal, it stops idle patt
 </p>
 
 <p>
-If no dial request signal is received within *TBD* seconds, the mobile station will *TBD*.
+If no dial request signal is received within 640 milliseconds, the mobile station will continue searching channel.
+</p>
+
+<p>
+If no dialing is received from mobile station within 3.8 seconds, the base station will send the disconnect signal for at least 350 ms and return idle.
 </p>
 
 <p>
@@ -348,7 +353,7 @@ The mobile station can send two different start signals.
 One indicates to the base station to send metering pulses.
 If metering is selected, the bandwidth is reduced from 3000 Hz down to 2700 Hz.
 The metering pulse is then sent as a 2900 Hz tone.
-The duration is *TBD* ms and the frequency deviation *TBD* KHz.
+The duration is 140 ms and the frequency deviation *TBD* KHz.
 </p>
 
 <p>
@@ -359,7 +364,9 @@ Only the (bare) 5 digits of the mobile identity are repeated, not the other digi
 
 <p>
 The mobile station compares the repeated identity and turns transmitter off, if it mismatches.
+Also if the digits are not received by the mobile station while dialing and up to 960 ms after dialing, the transmitter is turned off.
 No clear signal is sent.
+The mobile station then continues searching for another channel.
 If another mobile station dials at the same time, this wrong identity indicates that the base station receives the other mobile station and not our mobile station.
 </p>
 
@@ -373,7 +380,7 @@ If the dial string is received correctly once again by the base station, it conn
 </p>
 
 <p>
-If the base station receives different repeated dialing or different mobile identity, it sends clear signal ("Trennsignal") for 12 seconds and returns to idle state.
+If the base station receives different repeated dialing or different mobile identity or misses a digit, it sends clear signal ("Trennsignal") for at least 350 ms and returns to idle state.
 </p>
 
 <p>
@@ -407,9 +414,9 @@ The transceiver of the base station switches to channel 19 and sends a paging se
 </p>
 
 <p>
-Then the base station returns to the ordered channel and waits 2 seconds for the mobile station to send the call acknowledge signal ("Rufbest&auml;tigung").
+Then the base station returns to the ordered channel and waits 700 ms to 2.1 seconds for the mobile station to send the call acknowledge signal ("Rufbest&auml;tigung").
 If it is not received, the base station repeats the paging sequence again.
-If there is still no call acknowledge signal, it returns to idle state and indicates announcement to the calling party that the mobile station is (currently) not available.
+If there is still no call acknowledge signal, it sends a clear signal ("Trennsignal") for at lease 350 ms and returns to idle state and indicates announcement to the calling party that the mobile station is (currently) not available.
 (German announcement sais: "Dieser Anschlu&szlig; ist vorr&uuml;bergehend nicht erreichbar!")
 </p>
 
@@ -458,11 +465,11 @@ Release by the mobile station:
 </p>
 
 <p>
-When the mobile subscriber hangs up, the mobile station sends 4 times the hangup signal ("Schlu&szlig;signal") and returns to idle state.
+When the mobile subscriber hangs up, the mobile station sends up to 4 times the hangup signal ("Schlu&szlig;signal") and returns to idle state. If it receives the clear signal ("Trennsignal") from base station, it stops sending hangup signal and returns to idle state.
 </p>
 
 <p>
-When the base station receives the hangup signal, it releases the call and returns to idle state.
+When the base station receives the hangup signal ("Schlu&szlig;signal"), it releases the call, sends clear signal ("Trennsignal") and returns to idle state.
 </p>
 
 <br>
@@ -472,12 +479,11 @@ Release by the base station:
 </p>
 
 <p>
-When the party on the fixed network hangs up, base station sends the clear signal ("Trennsignal") for 12 seconds and returns to idle state.
+When the party on the fixed network hangs up, base station sends the clear signal ("Trennsignal") for at least 350 ms and returns to idle state.
 </p>
 
 <p>
-When the mobile station receives the clear signal, it returns to idle
-state.
+At any time: When the mobile station receives the clear signal ("Trennsignal"), it returns to idle state.
 </p>
 
 <br>
@@ -488,7 +494,7 @@ Signal loss:
 
 <p>
 When the signal gets lost for more than 9,6 seconds, the mobile station will return to idle and indicates busy signal to the mobile subscriber.
-The base station will *TBD*, clears the call and returns to idle state.
+When the signal gets lost for more than 12.5 seconds, the base station will clears the call, send ("Trennsignal") for at least 350 ms and returns to idle state.
 </p>
 
 <p>
