@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	if (num_kanal == 1 && num_sounddev == 0)
 		num_sounddev = 1; /* use defualt */
 	if (num_kanal != num_sounddev) {
-		fprintf(stdout, "You need to specify as many sound devices as you have channels.\n");
+		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
 

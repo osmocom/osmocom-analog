@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include "debug.h"
+#include "display_wave.h"
 #include "call.h"
 
 const char *debug_level[] = {
@@ -89,7 +90,9 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 
 	clear_console_text();
 //	printf("%s%s:%d %s() %s: %s\033[0;39m", debug_cat[cat].color, file, line, function, debug_level[level], buffer);
+	display_limit_scroll(1);
 	printf("%s%s:%d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
+	display_limit_scroll(0);
 	fflush(stdout);
 }
 

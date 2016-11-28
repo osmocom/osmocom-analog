@@ -20,16 +20,34 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include "sender.h"
 
 #define DISPLAY_INTERVAL 0.04
 
-#define WIDTH	80
 #define HEIGHT	11
 
 static int num_sender = 0;
-static char screen[HEIGHT][WIDTH+1];
+static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
 static int wave_on = 0;
+
+static void get_win_size(int *w, int *h)
+{
+	struct winsize win;
+	int rc;
+
+	rc = ioctl(0, TIOCGWINSZ, &win);
+	if (rc) {
+		*w = 80;
+		*h = 25;
+		return;
+	}
+
+	*h = win.ws_row;
+	*w = win.ws_col;
+	if (*w > MAX_DISPLAY_WIDTH - 1)
+		*w = MAX_DISPLAY_WIDTH - 1;
+}
 
 void display_wave_init(sender_t *sender, int samplerate)
 {
@@ -43,6 +61,9 @@ void display_wave_init(sender_t *sender, int samplerate)
 void display_wave_on(int on)
 {
 	int i, j;
+	int w, h;
+
+	get_win_size(&w, &h);
 
 	if (on < 0)
 		wave_on = 1 - wave_on;
@@ -53,11 +74,25 @@ void display_wave_on(int on)
 	printf("\0337\033[H");
 	for (i = 0; i < num_sender; i++) {
 		for (j = 0; j < HEIGHT; j++) {
-			screen[j][WIDTH] = '\0';
+			screen[j][w] = '\0';
 			puts(screen[j]);
 		}
 	}
 	printf("\0338"); fflush(stdout);
+}
+
+void display_limit_scroll(int on)
+{
+	int w, h;
+
+	if (!wave_on)
+		return;
+
+	get_win_size(&w, &h);
+
+	printf("\0337");
+	printf("\033[%d;%dr", (on) ? num_sender * HEIGHT + 1 : 1, h);
+	printf("\0338");
 }
 
 /*
@@ -84,9 +119,12 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 	int color = 9; /* default color */
 	int center_line;
 	char center_char;
+	int width, h;
 
 	if (!wave_on)
 		return;
+
+	get_win_size(&width, &h);
 
 	/* at what line we draw our zero-line and what character we use */
 	center_line = (HEIGHT - 1) >> 1;
@@ -97,15 +135,15 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 	buffer = disp->buffer;
 
 	for (i = 0; i < length; i++) {
-		if (pos >= WIDTH) {
+		if (pos >= width) {
 			if (++pos == max)
 				pos = 0;
 			continue;
 		}
 		buffer[pos++] = samples[i];
-		if (pos == WIDTH) {
+		if (pos == width) {
 			memset(&screen, ' ', sizeof(screen));
-			for (j = 0; j < WIDTH; j++) {
+			for (j = 0; j < width; j++) {
 				/* 32767 - buffer[j] never reaches 65536, so
 				 * the result is below HEIGHT * 2 - 1
 				 */
@@ -118,7 +156,7 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 			for (j = 0; j < disp->offset; j++)
 				puts("");
 			for (j = 0; j < HEIGHT; j++) {
-				for (k = 0; k < WIDTH; k++) {
+				for (k = 0; k < width; k++) {
 					if (j == center_line && screen[j][k] == ' ') {
 						/* blue 0-line */
 						if (color != 4) {

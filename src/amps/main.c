@@ -261,18 +261,18 @@ int main(int argc, char *argv[])
 	if (num_kanal == 1 && num_sounddev == 0)
 		num_sounddev = 1; /* use defualt */
 	if (num_kanal != num_sounddev) {
-		fprintf(stdout, "You need to specify as many sound devices as you have channels.\n");
+		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
 	if (num_kanal == 1 && num_chan_type == 0)
 		num_chan_type = 1; /* use defualt */
 	if (num_kanal != num_chan_type) {
-		fprintf(stdout, "You need to specify as many channel types as you have channels.\n");
+		fprintf(stderr, "You need to specify as many channel types as you have channels.\n");
 		exit(0);
 	}
 
 	if (bis && latency > 5) {
-		fprintf(stdout, "If you use BUSY/IDLE bit, you need to lower the round-trip delay to 5 ms (--latenc 5).\n");
+		fprintf(stderr, "If you use BUSY/IDLE bit, you need to lower the round-trip delay to 5 ms (--latenc 5).\n");
 		exit(0);
 	}
 

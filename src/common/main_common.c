@@ -289,7 +289,8 @@ void sighandler(int sigset)
 	if (sigset == SIGPIPE)
 		return;
 
-	fprintf(stderr, "\nSignal received: %d\n", sigset);
+	clear_console_text();
+	printf("Signal received: %d\n", sigset);
 
 	quit = 1;
 }
@@ -374,7 +375,8 @@ next_char:
 		switch (c) {
 		case 3:
 			/* quit */
-			fprintf(stderr, "\nCTRL+c received, quitting!\n");
+			clear_console_text();
+			printf("CTRL+c received, quitting!\n");
 			*quit = 1;
 			goto next_char;
 		case 'w':
@@ -397,6 +399,7 @@ next_char:
 		usleep(interval * 1000);
 	}
 
+	/* get rid of last entry */
 	clear_console_text();
 
 	/* reset terminal */

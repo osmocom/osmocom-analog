@@ -582,10 +582,13 @@ dial_after_hangup:
 			sprintf(console_text, "call disconnected: %s (enter h=hangup)\r", cause_name(call.disc_cause));
 		break;
 	}
+	clear_console_text();
 	console_len = strlen(console_text);
 	memset(console_clear, ' ', console_len - 1);
 	console_clear[console_len - 1] = '\r';
+	printf("\033[1;37m");
 	fwrite(console_text, console_len, 1, stdout);
+	printf("\033[0;39m");
 	fflush(stdout);
 }
 
@@ -596,6 +599,7 @@ void clear_console_text(void)
 
 	fwrite(console_clear, console_len, 1, stdout);
 	// note: fflused by user of this function
+	console_len = 0;
 }
 
 
