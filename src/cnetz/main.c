@@ -51,7 +51,7 @@ int voice_deviation = 1;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-S <rx ppm>,<tx ppm> -p -d ");
+	print_help_common(arg0, "[-M] -S <rx ppm>,<tx ppm> -p -d ");
 	/*      -                                                                             - */
 	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));

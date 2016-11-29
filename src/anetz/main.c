@@ -47,7 +47,7 @@ void print_help(const char *arg0)
 	printf("	(e.g. '--geo 51.186959,7.080194') Or use '--geo list' to get a list of\n");
 	printf("        all base station locations.\n");
 	printf(" -P --page-sequence 0 | <ms>\n");
-	printf("        Cycle paging tones, rather than sending simultaniously.\n");
+	printf("        Cycle paging tones, rather than sending simultaniously. Try 100.\n");
 	printf("        (default = '%d')\n", page_sequence);
 	printf(" -L --loss <volume>\n");
 	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
