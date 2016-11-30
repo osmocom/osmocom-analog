@@ -84,6 +84,19 @@
  * work with that.
  */
 
+/*
+ * Notes on sync:
+ *
+ * The encoder generates a precise clocked signal using correction value given
+ * by command line. For multichannel, the second sound card's channel (slave) is
+ * synced to the first one (master), if calculation of signal phase might drift
+ * due to routing errors.
+ *
+ * The decoder is synced to the phone, whenever it receives a valid frame.
+ *
+ * See dsp.c and fsk_fm_demod.c for code about syncing.
+ */
+
 #define CHAN cnetz->sender.kanal
 
 #include <stdio.h>

@@ -96,12 +96,14 @@ typedef struct cnetz {
 	int			fsk_tx_buffer_pos;	/* current position sending buffer */
 	double			fsk_tx_bitstep;		/* fraction of a bit each sample */
 	double			fsk_tx_phase;		/* current bit position */
+	uint64_t		fsk_tx_scount;		/* sample counter (used to sync multiple channels) */
 	int			scrambler;		/* 0 = normal speech, 1 = scrambled speech */
 	int16_t			*dsp_speech_buffer;	/* samples in one chunk */
 	int			dsp_speech_length;	/* number of samples */
 	int			dsp_speech_pos;		/* current position in buffer */
 
-	int			frame_last_count;	/* master's count position of last frame sync */
+	/* sync multiple channels on one sound card */
+	uint64_t		frame_last_scount;	/* master's sample count of last frame sync */
 	double			frame_last_phase;	/* master's bit phase of last frame sync */
 
 	/* audio offset removal */
