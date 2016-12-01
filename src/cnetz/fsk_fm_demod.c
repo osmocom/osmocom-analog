@@ -456,6 +456,12 @@ void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset)
 	fsk->bit_time = fmod(fsk->bit_time - offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 }
 
+/* copy sync from one instance to another (used to sync RX of SpK to OgK */
+void fsk_copy_sync(fsk_fm_demod_t *fsk_to, fsk_fm_demod_t *fsk_from)
+{
+	fsk_to->bit_time = fsk_from->bit_time;
+}
+
 void fsk_demod_reset(fsk_fm_demod_t *fsk)
 {
 	fsk->sync = FSK_SYNC_NONE;

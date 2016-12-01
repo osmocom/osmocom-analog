@@ -53,5 +53,6 @@ typedef struct fsk_fm_demod {
 int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate);
 void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length);
 void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset);
+void fsk_copy_sync(fsk_fm_demod_t *fsk_to, fsk_fm_demod_t *fsk_from);
 void fsk_demod_reset(fsk_fm_demod_t *fsk);
 

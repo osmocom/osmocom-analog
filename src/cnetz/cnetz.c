@@ -76,6 +76,30 @@
  */
 
 /*
+ * Notes on switching from OgK to SpK
+ *
+ * Upon transmission of TRANS_VAG and TRANS_VAK, the SpK channel is allocated,
+ * set to busy, scheduled to switch to SpK mode after two frames. The trans-
+ * action is relinked from OgK to SpK.
+ *
+ * In case of a combined OgK+SpK, the channel stays the same, but will change.
+ *
+ * See below for detailled processing.
+ */
+
+/*
+ * Notes on database (subscriber)
+ *
+ * If a subscriber registers (transaction is created), an instance of the
+ * subscriber database is created. A timer is running for each instance, so
+ * the subscriber is paged to check availability of the phone. If the paging
+ * fails, a retry counter is decreased until the subscriber is removed from
+ * database.
+ *
+ * See database.c for more information.
+ */
+
+/*
  * Notes on the combined channel hack:
  *
  * For combined SpK+OgK hack, the channel is used as SpK as last choise. This
@@ -899,7 +923,7 @@ wbn:
 			} else {
 				PDEBUG(DCNETZ, DEBUG_INFO, "Assigning phone to traffic channel %d\n", spk->sender.kanal);
 				/* sync RX time to current OgK time */
-				spk->fsk_demod.bit_time = cnetz->fsk_demod.bit_time;
+				fsk_copy_sync(&spk->fsk_demod, &cnetz->fsk_demod);
 			}
 			/* set channel */
 			telegramm.frequenz_nr = spk->sender.kanal;
