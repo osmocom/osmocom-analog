@@ -17,6 +17,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Notes on frames and scheduling:
+ *
+ * If the amps->dsp_mode is set to transmit frames, fsk_frame() at dsp.c code
+ * requests frames, modulates them and forwards them to sound device.  Whenever
+ * the dsp.c code requests frame (if no frame exists or frame had been sent),
+ * it calls amps_encode_frame_focc() or amps_encode_frame_fvc() of frame.c.
+ * There it generates a sequence of frames (message train). If no sequence is
+ * transmitted or a new sequence starts, amps_tx_frame_focc() or
+ * amps_tx_frame_fvc() of amps.c is called.  There it sets message data and
+ * other states according to the current trans->state.
+ *
+ * If a frame is received by dsp.c code, amps_decode_frame() at frame.c is
+ * called. There the bits are decoded and messages are assembled from multiple
+ * frames.  Then amps_rx_recc() at amps.c is called, so the received messages
+ * are processed.
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
