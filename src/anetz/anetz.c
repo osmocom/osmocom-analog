@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CHAN anetz->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -38,6 +40,35 @@ static int new_callref = 0x40000000;
 /* Timers */
 #define PAGING_TO	30	/* Nach dieser Zeit ist der Operator genervt... */
 #define RELEASE_TO	3	/* Release time, so station keeps blocked for a while */
+
+const char *anetz_state_name(enum anetz_state state)
+{
+	static char invalid[16];
+
+	switch (state) {
+	case ANETZ_NULL:
+		return "(NULL)";
+	case ANETZ_FREI:
+		return "FREI";
+	case ANETZ_GESPRAECH:
+		return "GESPRAECH";
+	case ANETZ_ANRUF:
+		return "ANRUF";
+	case ANETZ_AUSLOESEN:
+		return "AUSLOESEN";
+	}
+
+	sprintf(invalid, "invalid(%d)", state);
+	return invalid;
+}
+
+static void anetz_new_state(anetz_t *anetz, enum anetz_state new_state)
+{
+	if (anetz->state == new_state)
+		return;
+	PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "State change: %s -> %s\n", anetz_state_name(anetz->state), anetz_state_name(new_state));
+	anetz->state = new_state;
+}
 
 /* Convert channel number to frequency number of base station.
    Set 'unterband' to 1 to get frequency of mobile station. */
@@ -200,8 +231,8 @@ static void anetz_go_idle(anetz_t *anetz)
 {
 	timer_stop(&anetz->timer);
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state, sending 2280 Hz tone.\n");
-	anetz->state = ANETZ_FREI;
+	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state on channel %d, sending 2280 Hz tone.\n", anetz->sender.kanal);
+	anetz_new_state(anetz, ANETZ_FREI);
 	anetz_set_dsp_mode(anetz, DSP_MODE_TONE);
 	anetz->station_id[0] = '\0';
 }
@@ -211,8 +242,8 @@ static void anetz_release(anetz_t *anetz)
 {
 	timer_stop(&anetz->timer);
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Sending 2280 Hz release tone.\n");
-	anetz->state = ANETZ_AUSLOESEN;
+	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Sending 2280 Hz release tone.\n");
+	anetz_new_state(anetz, ANETZ_AUSLOESEN);
 	anetz_set_dsp_mode(anetz, DSP_MODE_TONE);
 	anetz->station_id[0] = '\0';
 	timer_start(&anetz->timer, RELEASE_TO);
@@ -221,8 +252,8 @@ static void anetz_release(anetz_t *anetz)
 /* Enter paging state and transmit 4 paging tones. */
 static void anetz_page(anetz_t *anetz, const char *dial_string, double *freq)
 {
-	PDEBUG(DANETZ, DEBUG_INFO, "Entering paging state, sending 'Selektivruf' to '%s'.\n", dial_string);
-	anetz->state = ANETZ_ANRUF;
+	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Entering paging state, sending 'Selektivruf' to '%s'.\n", dial_string);
+	anetz_new_state(anetz, ANETZ_ANRUF);
 	anetz_set_dsp_mode(anetz, DSP_MODE_PAGING);
 	dsp_set_paging(anetz, freq);
 	strcpy(anetz->station_id, dial_string);
@@ -233,7 +264,7 @@ static void anetz_page(anetz_t *anetz, const char *dial_string, double *freq)
 void anetz_loss_indication(anetz_t *anetz)
 {
 	if (anetz->state == ANETZ_GESPRAECH) {
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Detected loss of signal, releasing.\n");
+		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Detected loss of signal, releasing.\n");
 		anetz_release(anetz);
 		call_in_release(anetz->callref, CAUSE_TEMPFAIL);
 		anetz->callref = 0;
@@ -244,9 +275,9 @@ void anetz_loss_indication(anetz_t *anetz)
 void anetz_receive_tone(anetz_t *anetz, int tone)
 {
 	if (tone >= 0)
-		PDEBUG(DANETZ, DEBUG_DEBUG, "Received contiuous %d Hz tone.\n", (tone) ? 1750 : 2280);
+		PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "Received contiuous %d Hz tone.\n", (tone) ? 1750 : 2280);
 	else
-		PDEBUG(DANETZ, DEBUG_DEBUG, "Continuous tone is gone.\n");
+		PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "Continuous tone is gone.\n");
 
 	/* skip any handling in loopback mode */
 	if (anetz->sender.loopback)
@@ -260,8 +291,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 	case ANETZ_FREI:
 		/* initiate call on calling tone */
 		if (tone == 1) {
-			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz calling signal from mobile station, removing idle signal.\n");
-			anetz->state = ANETZ_GESPRAECH;
+			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz calling signal from mobile station, removing idle signal.\n");
+			anetz_new_state(anetz, ANETZ_GESPRAECH);
 			anetz_set_dsp_mode(anetz, DSP_MODE_SILENCE);
 			break;
 		}
@@ -273,23 +304,23 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				int callref = ++new_callref;
 				int rc;
 
-				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
+				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
 				rc = call_in_setup(callref, NULL, "010");
 				if (rc < 0) {
-					PDEBUG(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
+					PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
 					anetz_release(anetz);
 					break;
 				}
 				anetz->callref = callref;
 			} else {
-				PDEBUG(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
+				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
 				call_in_answer(anetz->callref, anetz->station_id);
 			}
 			anetz_set_dsp_mode(anetz, DSP_MODE_AUDIO);
 		}
 		/* release call */
 		if (tone == 1) {
-			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
+			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
 			anetz_release(anetz);
 			call_in_release(anetz->callref, CAUSE_NORMAL);
 			anetz->callref = 0;
@@ -299,9 +330,9 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 	case ANETZ_ANRUF:
 		/* answer call on answer tone */
 		if (tone == 1) {
-			PDEBUG(DANETZ, DEBUG_INFO, "Received 1750 Hz answer signal from mobile station, removing paging tones.\n");
+			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz answer signal from mobile station, removing paging tones.\n");
 			timer_stop(&anetz->timer);
-			anetz->state = ANETZ_GESPRAECH;
+			anetz_new_state(anetz, ANETZ_GESPRAECH);
 			anetz_set_dsp_mode(anetz, DSP_MODE_SILENCE);
 			break;
 		}
@@ -317,7 +348,7 @@ static void anetz_timeout(struct timer *timer)
 
 	switch (anetz->state) {
 	case ANETZ_ANRUF:
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Timeout while waiting for answer, releasing.\n");
+		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Timeout while waiting for answer, releasing.\n");
 	 	anetz_go_idle(anetz);
 		call_in_release(anetz->callref, CAUSE_NOANSWER);
 		anetz->callref = 0;

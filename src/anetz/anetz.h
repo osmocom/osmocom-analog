@@ -8,6 +8,7 @@ enum dsp_mode {
 };
 
 enum anetz_state {
+	ANETZ_NULL = 0,
 	ANETZ_FREI,		/* sending 2280 Hz tone */
 	ANETZ_GESPRAECH,	/* during conversation */
 	ANETZ_ANRUF,		/* phone is paged */

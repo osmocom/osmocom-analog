@@ -22,7 +22,7 @@ enum nmt_chan_type {
 };
 
 enum nmt_state {
-	STATE_NULL,		/* power off state */
+	STATE_NULL = 0,		/* power off state */
 	STATE_IDLE,		/* channel is not in use */
 	STATE_ROAMING_IDENT,	/* seizure received, waiting for identity */
 	STATE_ROAMING_CONFIRM,	/* identity received, sending confirm */

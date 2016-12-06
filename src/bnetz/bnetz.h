@@ -11,6 +11,7 @@ enum dsp_mode {
 
 /* current state of b-netz sender */
 enum bnetz_state {
+	BNETZ_NULL = 0,
 	BNETZ_FREI,		/* sending 'Gruppenfreisignal' */
 	BNETZ_WAHLABRUF,	/* sending 'Wahlabruf', receiving call setup */
 	BNETZ_SELEKTIVRUF_EIN,	/* paging phone (switch to calling channel) */
