@@ -21,6 +21,7 @@ extern const char *read_rx_wave;
 
 void print_help(const char *arg0);
 void print_help_common(const char *arg0, const char *ext_usage);
+void print_hotkeys_common(void);
 extern struct option *long_options;
 extern char *optstring;
 void set_options_common(const char *optstring_special, struct option *long_options_special);

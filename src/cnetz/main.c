@@ -83,7 +83,8 @@ void print_help(const char *arg0)
 	printf("	This option raises audio level on TX and lowers on RX.\n");
 	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
-	printf("\nPress 'i' key for dumping currently attached subscribers.\n");
+	print_hotkeys_common();
+	printf("Press 'i' key to dump list of currently attached subscribers.\n");
 }
 
 static int handle_options(int argc, char **argv)

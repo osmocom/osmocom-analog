@@ -112,6 +112,14 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Replace received audio by given wav audio file.\n");
 }
 
+void print_hotkeys_common(void)
+{
+	printf("\n");
+	printf("Press digits '0'..'9' and then 'd' key to dial towards mobile station\n");
+	printf("Press 'h' key to hangup.\n");
+	printf("Press 'w' key to toggle display of wave form of RX signal.\n");
+}
+
 #define	OPT_CHANNEL		1000
 #define	OPT_WRITE_RX_WAVE	1001
 #define	OPT_WRITE_TX_WAVE	1002

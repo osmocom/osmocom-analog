@@ -69,6 +69,7 @@ void print_help(const char *arg0)
 	printf("        percent. (disabled by default)\n");
 	printf("\nstation-id: Give 5 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
+	print_hotkeys_common();
 }
 
 static int handle_options(int argc, char **argv)

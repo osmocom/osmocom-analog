@@ -89,6 +89,7 @@ void print_help(const char *arg0)
 	printf("        Be more tolerant when hunting for sync sequence\n");
 	printf("\nstation-id: Give 10 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
+	print_hotkeys_common();
 }
 
 static int handle_options(int argc, char **argv)

@@ -83,6 +83,7 @@ void print_help(const char *arg0)
 	printf("        If set, the caller ID is sent while ringing the phone. (default = '%d')\n", send_callerid);
 	printf("\nstation-id: Give 7 digits of station-id, you don't need to enter it\n");
 	printf("        for every start of this program.\n");
+	print_hotkeys_common();
 }
 
 static int handle_options(int argc, char **argv)
