@@ -557,7 +557,7 @@ inval:
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
+	PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
 	trans = create_transaction(cnetz, TRANS_VAK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2), -1);
@@ -821,13 +821,13 @@ void cnetz_sync_frame(cnetz_t *cnetz, double sync, int block)
 	}
 	/* if more than +- one bit out of sync */
 	if (offset < -0.5 || offset > 0.5) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Frame sync offset = %.2f, correcting!\n", offset);
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Frame sync offset = %.2f, correcting!\n", offset);
 		fsk_correct_sync(&cnetz->fsk_demod, offset);
 		return;
 	}
 
 	/* resync by some fraction of received sync error */
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Frame sync offset = %.2f, correcting.\n", offset);
+	PDEBUG_CHAN(DCNETZ, DEBUG_DEBUG, "Frame sync offset = %.2f, correcting.\n", offset);
 	fsk_correct_sync(&cnetz->fsk_demod, offset / 2.0);
 }
 

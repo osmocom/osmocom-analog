@@ -703,7 +703,7 @@ inval:
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DBNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
+	PDEBUG_CHAN(DBNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 4. trying to page mobile station */
 	bnetz->callref = callref;
@@ -741,11 +741,11 @@ void call_out_disconnect(int callref, int cause)
 	case BNETZ_SELEKTIVRUF_EIN:
 	case BNETZ_SELEKTIVRUF_AUS:
 	case BNETZ_RUFBESTAETIGUNG:
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during paging, releasing!\n");
+		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during paging, releasing!\n");
 		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_RUFHALTUNG:
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during alerting, releasing!\n");
+		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, during alerting, releasing!\n");
 		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	default:
@@ -780,17 +780,17 @@ void call_out_release(int callref, int __attribute__((unused)) cause)
 
 	switch (bnetz->state) {
 	case BNETZ_GESPRAECH:
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during call, releasing!\n");
+		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Outgoing release, during call, releasing!\n");
 		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_SELEKTIVRUF_EIN:
 	case BNETZ_SELEKTIVRUF_AUS:
 	case BNETZ_RUFBESTAETIGUNG:
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during paging, releasing!\n");
+		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Outgoing release, during paging, releasing!\n");
 		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_RUFHALTUNG:
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, during alerting, releasing!\n");
+		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Outgoing release, during alerting, releasing!\n");
 		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	default:

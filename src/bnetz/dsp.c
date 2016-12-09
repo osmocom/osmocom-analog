@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CHAN bnetz->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -81,7 +83,7 @@ int dsp_init_sender(bnetz_t *bnetz)
 		return -EINVAL;
 	}
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
 	audio_init_loss(&bnetz->sender.loss, LOSS_INTERVAL, bnetz->sender.loss_volume, LOSS_TIME);
 
@@ -121,7 +123,7 @@ int dsp_init_sender(bnetz_t *bnetz)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(bnetz_t *bnetz)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (bnetz->telegramm_spl) {
 		free(bnetz->telegramm_spl);
@@ -139,7 +141,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || bit != bnetz->tone_detected) {
 		if (bnetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG(DDSP, DEBUG_DEBUG, "Lost %.0f Hz tone after %d ms.\n", fsk_bits[bnetz->tone_detected], bnetz->tone_count);
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Lost %.0f Hz tone after %d ms.\n", fsk_bits[bnetz->tone_detected], bnetz->tone_count);
 			bnetz_receive_tone(bnetz, -1);
 		}
 		if (goodtone)
@@ -156,7 +158,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 	if (bnetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&bnetz->sender.loss);
 	if (bnetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DDSP, DEBUG_INFO, "Detecting continuous tone: %.0f:Level=%3.0f%% Quality=%3.0f%%\n", fsk_bits[bnetz->tone_detected], level * 100.0, quality * 100.0);
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous tone: %.0f:Level=%3.0f%% Quality=%3.0f%%\n", fsk_bits[bnetz->tone_detected], level * 100.0, quality * 100.0);
 		bnetz_receive_tone(bnetz, bnetz->tone_detected);
 	}
 }
@@ -330,10 +332,10 @@ static int fsk_telegramm(bnetz_t *bnetz, int16_t *samples, int length)
 next_telegramm:
 	if (!bnetz->telegramm) {
 		/* request telegramm */
-//		PDEBUG(DDSP, DEBUG_DEBUG, "Request new 'Telegramm'.\n");
+//		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Request new 'Telegramm'.\n");
 		telegramm = bnetz_get_telegramm(bnetz);
 		if (!telegramm) {
-			PDEBUG(DDSP, DEBUG_DEBUG, "Stop sending 'Telegramm'.\n");
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending 'Telegramm'.\n");
 			return length;
 		}
 		bnetz->telegramm = 1;
@@ -382,11 +384,11 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 
 again:
 	switch (bnetz->dsp_mode) {
-	case DSP_MODE_AUDIO:
-		jitter_load(&bnetz->sender.audio, samples, length);
-		break;
 	case DSP_MODE_SILENCE:
 		memset(samples, 0, length * sizeof(*samples));
+		break;
+	case DSP_MODE_AUDIO:
+		jitter_load(&bnetz->sender.audio, samples, length);
 		break;
 	case DSP_MODE_0:
 		fsk_tone(bnetz, samples, length, 0);
@@ -407,13 +409,34 @@ again:
 	}
 }
 
+const char *bnetz_dsp_mode_name(enum dsp_mode mode)
+{
+        static char invalid[16];
+
+	switch (mode) {
+	case DSP_MODE_SILENCE:
+		return "SILENCE";
+	case DSP_MODE_AUDIO:
+		return "AUDIO";
+	case DSP_MODE_0:
+		return "TONE 0";
+	case DSP_MODE_1:
+		return "TONE 1";
+	case DSP_MODE_TELEGRAMM:
+		return "TELEGRAMM";
+	}
+
+	sprintf(invalid, "invalid(%d)", mode);
+	return invalid;
+}
+
 void bnetz_set_dsp_mode(bnetz_t *bnetz, enum dsp_mode mode)
 {
 	/* reset telegramm */
 	if (mode == DSP_MODE_TELEGRAMM && bnetz->dsp_mode != mode)
 		bnetz->telegramm = 0;
 	
-	PDEBUG(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", bnetz->dsp_mode, mode);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", bnetz_dsp_mode_name(bnetz->dsp_mode), bnetz_dsp_mode_name(mode));
 	bnetz->dsp_mode = mode;
 }
 

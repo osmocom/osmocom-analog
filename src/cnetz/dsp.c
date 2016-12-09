@@ -86,7 +86,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	double size;
 	double RC, dt;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
 
 	if (measure_speed) {
 		cnetz->measure_speed = measure_speed;
@@ -171,7 +171,7 @@ error:
 
 void dsp_cleanup_sender(cnetz_t *cnetz)
 {
-        PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup FSK for 'Sender'.\n");
+        PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup FSK for 'Sender'.\n");
 
 	if (cnetz->fsk_tx_buffer)
 		free(cnetz->fsk_tx_buffer);
@@ -226,7 +226,7 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 	speed_ppm_tx[0] = ((double)cs->spl_count[1] / (double)cnetz->sender.samplerate) / (cs->last_ti[1] - cs->start_ti[1]) * 1000000.0 - 1000000.0;
 	speed_ppm_rx[1] = ((double)cs->spl_count[2] / (double)cnetz->sender.samplerate) / (cs->last_ti[2] - cs->start_ti[2]) * 1000000.0 - 1000000.0;
 	speed_ppm_tx[1] = ((double)cs->spl_count[3] / (double)cnetz->sender.samplerate) / (cs->last_ti[3] - cs->start_ti[3]) * 1000000.0 - 1000000.0;
-	PDEBUG(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx[0], speed_ppm_tx[0], speed_ppm_rx[1], speed_ppm_tx[1]);
+	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx[0], speed_ppm_tx[0], speed_ppm_rx[1], speed_ppm_tx[1]);
 }
 
 static int fsk_testtone_encode(cnetz_t *cnetz)
@@ -649,10 +649,10 @@ again:
 				if (cnetz->sched_r_m == 0) {
 					/* set last time slot, so we can match received message from mobile station */
 					cnetz->sched_last_ts[cnetz->cell_nr] = cnetz->sched_ts;
-					PDEBUG(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
+					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
 					bits = cnetz_encode_telegramm(cnetz);
 				} else {
-					PDEBUG(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
+					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
 					bits = cnetz_encode_telegramm(cnetz);
 				}
 				fsk_block_encode(cnetz, bits);
@@ -661,12 +661,12 @@ again:
 			}
 			break;
 		case DSP_MODE_SPK_K:
-			PDEBUG(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung'\n");
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung'\n");
 			bits = cnetz_encode_telegramm(cnetz);
 			fsk_block_encode(cnetz, bits);
 			break;
 		case DSP_MODE_SPK_V:
-			PDEBUG(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung'\n");
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung'\n");
 			bits = cnetz_encode_telegramm(cnetz);
 			fsk_distributed_encode(cnetz, bits);
 			break;
@@ -829,9 +829,30 @@ void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
 	cnetz->sender.rxbuf_pos = pos;
 }
 
+const char *cnetz_dsp_mode_name(enum dsp_mode mode)
+{
+        static char invalid[16];
+
+	switch (mode) {
+        case DSP_SCHED_NONE:
+		return "SCHED_NONE";
+	case DSP_MODE_OFF:
+		return "OFF";
+	case DSP_MODE_OGK:
+		return "OGK";
+	case DSP_MODE_SPK_K:
+		return "SPK_K";
+	case DSP_MODE_SPK_V:
+		return "SPK_V";
+	}
+
+	sprintf(invalid, "invalid(%d)", mode);
+	return invalid;
+}
+
 void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", cnetz->dsp_mode, mode);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode));
 	cnetz->dsp_mode = mode;
 	/* we must get rid of partly received frame */
 	fsk_demod_reset(&cnetz->fsk_demod);
@@ -839,7 +860,7 @@ void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
 
 void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int frames_ahead)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " Schedule DSP mode %d -> %d in %d frames\n", cnetz->dsp_mode, mode, frames_ahead);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " Schedule DSP mode %s -> %s in %d frames\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode), frames_ahead);
 	cnetz->sched_dsp_mode = mode;
 	cnetz->sched_switch_mode = frames_ahead;
 }

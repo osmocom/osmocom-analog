@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CHAN anetz->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -90,7 +92,7 @@ int dsp_init_sender(anetz_t *anetz, int page_sequence)
 	int i;
 	double tone;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
 	anetz->page_sequence = page_sequence;
 
@@ -122,7 +124,7 @@ int dsp_init_sender(anetz_t *anetz, int page_sequence)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(anetz_t *anetz)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (anetz->fsk_filter_spl) {
 		free(anetz->fsk_filter_spl);
@@ -136,7 +138,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || tone != anetz->tone_detected) {
 		if (anetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG(DDSP, DEBUG_INFO, "Lost %.0f Hz tone after %.0f ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
+			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Lost %.0f Hz tone after %.0f ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
 			anetz_receive_tone(anetz, -1);
 		}
 		if (goodtone)
@@ -153,7 +155,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	if (anetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&anetz->sender.loss);
 	if (anetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100.0 + 0.5));
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100.0 + 0.5));
 		anetz_receive_tone(anetz, anetz->tone_detected);
 	}
 }
@@ -173,10 +175,10 @@ static void fsk_decode_chunk(anetz_t *anetz, int16_t *spl, int max)
 	/* show quality of tone */
 	if (anetz->sender.loopback) {
 		/* adjust level, so we get peak of sine curve */
-		PDEBUG(DDSP, DEBUG_NOTICE, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[1], level / 0.63662 * 100.0 * 32768.0 / TX_PEAK_TONE, result[1] / level * 100.0);
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[1], level / 0.63662 * 100.0 * 32768.0 / TX_PEAK_TONE, result[1] / level * 100.0);
 	}
 	if (level / 0.63 > 0.05 && result[0] / level > 0.5)
-		PDEBUG(DDSP, DEBUG_INFO, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[0], level / 0.63662 * 100.0 * 32768.0 / TX_PEAK_TONE, result[0] / level * 100.0);
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[0], level / 0.63662 * 100.0 * 32768.0 / TX_PEAK_TONE, result[0] / level * 100.0);
 
 	/* adjust level, so we get peak of sine curve */
 	/* indicate detected tone */
@@ -383,9 +385,28 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 	}
 }
 
+const char *anetz_dsp_mode_name(enum dsp_mode mode)
+{
+        static char invalid[16];
+
+	switch (mode) {
+	case DSP_MODE_SILENCE:
+		return "SILENCE";
+	case DSP_MODE_AUDIO:
+		return "AUDIO";
+	case DSP_MODE_TONE:
+		return "TONE";
+	case DSP_MODE_PAGING:
+		return "PAGING";
+	}
+
+	sprintf(invalid, "invalid(%d)", mode);
+	return invalid;
+}
+
 void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", anetz->dsp_mode, mode);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", anetz_dsp_mode_name(anetz->dsp_mode), anetz_dsp_mode_name(mode));
 	anetz->dsp_mode = mode;
 	/* reset sequence paging */
 	anetz->paging_tone = 0;

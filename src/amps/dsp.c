@@ -189,7 +189,7 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
 	init_compandor(&amps->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
 
 	if (amps->sender.samplerate < 96000) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 96000 Hz to process FSK and SAT signals.\n");
@@ -275,7 +275,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(amps_t *amps)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup DSP for treansceiver.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for treansceiver.\n");
 
 	if (amps->fsk_tx_buffer)
 		free(amps->fsk_tx_buffer);

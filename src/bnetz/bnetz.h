@@ -2,8 +2,8 @@
 
 /* fsk modes of transmission */
 enum dsp_mode {
-	DSP_MODE_AUDIO,		/* stream audio */
 	DSP_MODE_SILENCE,	/* sending silence */
+	DSP_MODE_AUDIO,		/* stream audio */
 	DSP_MODE_0,		/* send tone 0 */
 	DSP_MODE_1,		/* send tone 1 */
 	DSP_MODE_TELEGRAMM,	/* send "Telegramm" */

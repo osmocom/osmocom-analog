@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CHAN amps->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -3025,7 +3027,7 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 
 	/* control message */
 	if (t1t2 != 3) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Received Mobile Station Control Message (T1T2 = %d)\n", t1t2);
+		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Received Mobile Station Control Message (T1T2 = %d)\n", t1t2);
 		if (t1t2 == 1)
 			amps->rx_focc_word_count = 1;
 		if (t1t2 == 0 || t1t2 == 1) {
@@ -3042,7 +3044,7 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 					w = &word2_extended_address_word_b;
 				goto decode;
 			}
-			PDEBUG(DFRAME, DEBUG_INFO, "Decoding of more than 2 Control messages not supported\n");
+			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Decoding of more than 2 Control messages not supported\n");
 		}
 		return;
 	}
@@ -3107,14 +3109,14 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 
 decode:
 	if (!w) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Received Illegal Overhead Message\n");
+		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Received Illegal Overhead Message\n");
 		return;
 	}
 
 	frame = amps_decode_word(word, w);
 	/* show control filler delay */
 	if (amps->sender.loopback && ohd == 1)
-		PDEBUG(DDSP, DEBUG_NOTICE, "Round trip delay is %.3f seconds\n", amps->when_received - amps->when_transmitted[frame->ie[AMPS_IE_1111]]);
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Round trip delay is %.3f seconds\n", amps->when_received - amps->when_transmitted[frame->ie[AMPS_IE_1111]]);
 }
 
 /* get word from data bits and call decoder function
@@ -3132,12 +3134,12 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		memset(amps->rx_recc_dialing, 0, sizeof(amps->rx_recc_dialing));
 		amps->rx_recc_word_count = 0;
 		if (f == 0) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received first word, but F bit is not set.\n");
+			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received first word, but F bit is not set.\n");
 			return 0;
 		}
 	} else {
 		if (f == 1) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received additional word, but F bit is set.\n");
+			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word, but F bit is set.\n");
 			return 0;
 		}
 	}
@@ -3145,7 +3147,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 	msg_count = amps->rx_recc_word_count;
 
 	if (msg_count == 8) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received too many words.\n");
+		PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received too many words.\n");
 		return 0;
 	}
 
@@ -3184,7 +3186,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 
 
 	if (!w) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Received Illegal RECC Message\n");
+		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Received Illegal RECC Message\n");
 		goto done;
 	}
 
@@ -3529,19 +3531,19 @@ static void amps_decode_bits_focc(amps_t *amps, const char *bits)
 	else
 		idle = 0;
 
-	PDEBUG(DFRAME, DEBUG_INFO, "RX FOCC: B/I = %s\n", (idle) ? "idle" : "busy");
+	PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX FOCC: B/I = %s\n", (idle) ? "idle" : "busy");
 	if (debuglevel == DEBUG_DEBUG) {
 		char text[64];
 
 		for (i = 0; i < 5; i++) {
 			strncpy(text, bits + i * 44, 44);
 			text[44] = '\0';
-			PDEBUG(DFRAME, DEBUG_DEBUG, "  word a - %s%s\n", text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
+			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word a - %s%s\n", text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
 		}
 		for (i = 5; i < 10; i++) {
 			strncpy(text, bits + i * 44, 44);
 			text[44] = '\0';
-			PDEBUG(DFRAME, DEBUG_DEBUG, "  word b - %s%s\n", text, (crc_b_ok[i % 5]) ? " ok" : " BAD CRC!");
+			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word b - %s%s\n", text, (crc_b_ok[i % 5]) ? " ok" : " BAD CRC!");
 		}
 	}
 
@@ -3617,7 +3619,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 				crc_ok++;
 		}
 		if (crc_ok) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Seems we RX FOCC frame due to loopback, ignoring!\n");
+			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Seems we RX FOCC frame due to loopback, ignoring!\n");
 			return 0;
 		}
 		bits_ -= 221;
@@ -3630,7 +3632,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 
 	if (first) {
 		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0) {
-			PDEBUG(DFRAME, DEBUG_INFO, "RX RECC: DCC=%d (%d of 5 CRCs are ok)\n", dcc, crc_ok_count);
+			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX RECC: DCC=%d (%d of 5 CRCs are ok)\n", dcc, crc_ok_count);
 			if (dcc != amps->si.dcc) {
 				PDEBUG(DFRAME, DEBUG_INFO, "received DCC=%d missmatches the base station's DCC=%d\n", dcc, amps->si.dcc);
 				return 0;
@@ -3638,7 +3640,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 		}
 	} else {
 		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0)
-			PDEBUG(DFRAME, DEBUG_INFO, "RX RECC: (%d of 5 CRCs are ok)\n", crc_ok_count);
+			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX RECC: (%d of 5 CRCs are ok)\n", crc_ok_count);
 	}
 	if (debuglevel == DEBUG_DEBUG) {
 		char text[64];
@@ -3646,7 +3648,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 		for (i = 0; i < 5; i++) {
 			strncpy(text, bits + i * 48, 48);
 			text[48] = '\0';
-			PDEBUG(DFRAME, DEBUG_DEBUG, "  word - %s%s\n", text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
+			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word - %s%s\n", text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
 		}
 	}
 
@@ -3661,7 +3663,7 @@ int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, d
 
 	/* not if additional words are received without sync */
 	if (count != 240) {
-		PDEBUG(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality: %.0f%% Polarity: %s\n", level * 100.0, quality * 100.0, (negative) ? "NEGATIVE" : "POSITIVE");
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality: %.0f%% Polarity: %s\n", level * 100.0, quality * 100.0, (negative) ? "NEGATIVE" : "POSITIVE");
 	}
 	if (count == 441) {
 		amps_decode_bits_focc(amps, bits);
@@ -3670,7 +3672,7 @@ int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, d
 	} else if (count == 240) {
 		more = amps_decode_bits_recc(amps, bits, 0);
 	} else {
-		PDEBUG(DFRAME, DEBUG_ERROR, "Frame with unknown lenght = %d, please fix!\n", count);
+		PDEBUG_CHAN(DFRAME, DEBUG_ERROR, "Frame with unknown lenght = %d, please fix!\n", count);
 	}
 
 	return more;

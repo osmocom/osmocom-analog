@@ -201,7 +201,7 @@ int dsp_init_sender(nmt_t *nmt)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(nmt_t *nmt)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
 
 	if (nmt->frame_spl) {
 		free(nmt->frame_spl);
@@ -641,13 +641,34 @@ again:
 	}
 }
 
+const char *nmt_dsp_mode_name(enum dsp_mode mode)
+{
+        static char invalid[16];
+
+	switch (mode) {
+	case DSP_MODE_SILENCE:
+		return "SILENCE";
+	case DSP_MODE_DIALTONE:
+		return "DIALTONE";
+	case DSP_MODE_AUDIO:
+		return "AUDIO";
+	case DSP_MODE_FRAME:
+		return "FRAME";
+	case DSP_MODE_DTMF:
+		return "DTMF";
+	}
+
+	sprintf(invalid, "invalid(%d)", mode);
+	return invalid;
+}
+
 void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 {
 	/* reset telegramm */
 	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode)
 		nmt->frame = 0;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %d -> %d\n", nmt->dsp_mode, mode);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", nmt_dsp_mode_name(nmt->dsp_mode), nmt_dsp_mode_name(mode));
 	nmt->dsp_mode = mode;
 }
 

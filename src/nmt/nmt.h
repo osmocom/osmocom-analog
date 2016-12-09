@@ -7,9 +7,9 @@
 
 
 enum dsp_mode {
+	DSP_MODE_SILENCE,	/* stream nothing */
 	DSP_MODE_DIALTONE,	/* stream dial tone to mobile phone */
 	DSP_MODE_AUDIO,		/* stream audio */
-	DSP_MODE_SILENCE,	/* stream nothing */
 	DSP_MODE_FRAME,		/* send frames */
 	DSP_MODE_DTMF,		/* send DTMF tones */
 };

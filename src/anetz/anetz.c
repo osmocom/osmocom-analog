@@ -402,7 +402,7 @@ inval:
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
+	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
 	if (anetz->page_sequence)
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Sending paging tones in sequence.\n");
 
@@ -442,7 +442,7 @@ void call_out_disconnect(int callref, int cause)
 		return;
 	switch (anetz->state) {
 	case ANETZ_ANRUF:
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing disconnect, during alerting, going idle!\n");
+		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Outgoing disconnect, during alerting, going idle!\n");
 	 	anetz_go_idle(anetz);
 		break;
 	default:
@@ -478,11 +478,11 @@ void call_out_release(int callref, __attribute__((unused)) int cause)
 
 	switch (anetz->state) {
 	case ANETZ_GESPRAECH:
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing release, during call, sending release tone!\n");
+		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Outgoing release, during call, sending release tone!\n");
 	 	anetz_release(anetz);
 		break;
 	case ANETZ_ANRUF:
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing release, during alerting, going idle!\n");
+		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Outgoing release, during alerting, going idle!\n");
 	 	anetz_go_idle(anetz);
 		break;
 	default:

@@ -35,6 +35,8 @@
  * are processed.
  */
 
+#define CHAN amps->sender.kanal
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -250,7 +252,7 @@ static void amps_new_state(amps_t *amps, enum amps_state new_state)
 {
 	if (amps->state == new_state)
 		return;
-	PDEBUG(DAMPS, DEBUG_DEBUG, "State change: %s -> %s\n", amps_state_name(amps->state), amps_state_name(new_state));
+	PDEBUG_CHAN(DAMPS, DEBUG_DEBUG, "State change: %s -> %s\n", amps_state_name(amps->state), amps_state_name(new_state));
 	amps->state = new_state;
 }
 
@@ -522,14 +524,14 @@ static void amps_go_idle(amps_t *amps)
 	amps_new_state(amps, STATE_IDLE);
 
 	if (amps->chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
 		if (amps->sender.loopback)
 			frame_length = 441; /* bits after sync (FOCC) */
 		else
 			frame_length = 247; /* bits after sync (RECC) */
 		amps_set_dsp_mode(amps, DSP_MODE_FRAME_RX_FRAME_TX, frame_length);
 	} else {
-		PDEBUG(DAMPS, DEBUG_INFO, "Entering IDLE state, sending test tone on %s.\n", chan_type_long_name(amps->chan_type));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Entering IDLE state, sending test tone on %s.\n", chan_type_long_name(amps->chan_type));
 		amps_set_dsp_mode(amps, DSP_MODE_OFF, 0);
 	}
 }
@@ -564,14 +566,14 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 {
 	transaction_t *trans = amps->trans_list;
 	if (trans == NULL) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Signaling Tone without transaction, please fix!\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "Signaling Tone without transaction, please fix!\n");
 		return;
 	}
 	
 	if (tone)
-		PDEBUG(DAMPS, DEBUG_INFO, "Detected Signaling Tone with quality=%.0f.\n", quality * 100.0);
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Detected Signaling Tone with quality=%.0f.\n", quality * 100.0);
 	else
-		PDEBUG(DAMPS, DEBUG_INFO, "Lost Signaling Tone signal\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Lost Signaling Tone signal\n");
 
 	switch (trans->state) {
 	case TRANS_CALL:
@@ -606,7 +608,7 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 		}
 		break;
 	default:
-		PDEBUG(DAMPS, DEBUG_ERROR, "Signaling Tone without active call, please fix!\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "Signaling Tone without active call, please fix!\n");
 	}
 }
 
@@ -614,7 +616,7 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 {
 	transaction_t *trans = amps->trans_list;
 	if (trans == NULL) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "SAT signal without transaction, please fix!\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT signal without transaction, please fix!\n");
 		return;
 	}
 	/* irgnoring SAT loss on release */
@@ -624,7 +626,7 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 	if (trans->state != TRANS_CALL
 	 && trans->state != TRANS_CALL_MT_ALERT
 	 && trans->state != TRANS_CALL_MT_ALERT_SEND) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "SAT signal without active call, please fix!\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT signal without active call, please fix!\n");
 		return;
 	}
 
@@ -654,14 +656,14 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 static void timeout_sat(amps_t *amps, double duration)
 {
 	if (!amps->trans_list) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "SAT timeout, but no transaction, please fix!\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT timeout, but no transaction, please fix!\n");
 		return;
 	}
 	if (duration == SAT_TO1)
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving SAT signal.\n", duration);
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving SAT signal.\n", duration);
 	else
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", duration);
-	PDEBUG(DAMPS, DEBUG_INFO, "Release call towards network.\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", duration);
+	PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
 	amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 }
 
@@ -674,12 +676,12 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 
 	/* check if we are busy, so we ignore all signaling */
 	if (amps->state == STATE_BUSY) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Ignoring RECC messages from phone while using this channel for voice.\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Ignoring RECC messages from phone while using this channel for voice.\n");
 		return;
 	}
 
 	if (order == 13 && (ordq == 0 || ordq == 1 || ordq == 2 || ordq == 3) && msg_type == 0) {
-		PDEBUG(DAMPS, DEBUG_INFO, "Registration %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
 		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
 		if (!trans) {
 			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -687,7 +689,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 		}
 	} else
 	if (order == 13 && ordq == 3 && msg_type == 1) {
-		PDEBUG(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
 		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
 		if (!trans) {
 			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -696,9 +698,9 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 	} else
 	if (order == 0 && ordq == 0 && msg_type == 0) {
 		if (!dialing)
-			PDEBUG(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
 		else
-			PDEBUG(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s)\n", callerid, dialing, esn, amps_scm(scm));
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s)\n", callerid, dialing, esn, amps_scm(scm));
 		trans = search_transaction_number(amps, min1, min2);
 		if (!trans && !dialing) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging reply, but call is already gone, rejecting call\n");
@@ -737,7 +739,7 @@ reject:
 			trans->chan = vc->sender.kanal;
 		}
 	} else
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Unsupported RECC messages: ORDER: %d ORDQ: %d MSG TYPE: %d (See Table 4 of specs.)\n", order, ordq, msg_type);
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Unsupported RECC messages: ORDER: %d ORDQ: %d MSG TYPE: %d (See Table 4 of specs.)\n", order, ordq, msg_type);
 }
 
 /*
@@ -803,7 +805,7 @@ inval:
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DAMPS, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
+	PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
 	trans = create_transaction(amps, TRANS_PAGE, min1, min2, 0, 0, 0, 0);
@@ -849,12 +851,12 @@ void call_out_disconnect(int callref, int cause)
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
 		if (trans->state == TRANS_CALL_MT_ALERT
 		 || trans->state == TRANS_CALL_MT_ALERT_SEND) {
-			PDEBUG(DAMPS, DEBUG_INFO, "Call control disconnect on voice channel while alerting, releasing towards mobile station.\n");
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control disconnect on voice channel while alerting, releasing towards mobile station.\n");
 			amps_release(trans, cause);
 		}
 		return;
 	default:
-		PDEBUG(DAMPS, DEBUG_INFO, "Call control disconnects on control channel, removing transaction.\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control disconnects on control channel, removing transaction.\n");
 		call_in_release(callref, cause);
 		trans->callref = 0;
 		destroy_transaction(trans);
@@ -889,11 +891,11 @@ void call_out_release(int callref, int cause)
 	switch (amps->dsp_mode) {
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
-		PDEBUG(DAMPS, DEBUG_INFO, "Call control releases on voice channel, releasing towards mobile station.\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control releases on voice channel, releasing towards mobile station.\n");
 		amps_release(trans, cause);
 		break;
 	default:
-		PDEBUG(DAMPS, DEBUG_INFO, "Call control releases on control channel, removing transaction.\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control releases on control channel, removing transaction.\n");
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 	}
@@ -933,7 +935,7 @@ void transaction_timeout(struct timer *timer)
 		break;
 	case TRANS_CALL_RELEASE:
 	case TRANS_CALL_RELEASE_SEND:
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Release timeout, destroying transaction\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Release timeout, destroying transaction\n");
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		break;
@@ -941,20 +943,20 @@ void transaction_timeout(struct timer *timer)
 		amps_release(trans, CAUSE_TEMPFAIL);
 		break;
 	case TRANS_CALL_MT_ALERT_SEND:
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Alerting timeout, destroying transaction\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Alerting timeout, destroying transaction\n");
 		amps_release(trans, CAUSE_NOANSWER);
 		break;
 	case TRANS_PAGE_REPLY:
 		if (trans->page_retry++ == PAGE_TRIES) {
-			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging timeout, destroying transaction\n");
+			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Paging timeout, destroying transaction\n");
 			amps_release(trans, CAUSE_OUTOFORDER);
 		} else {
-			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging timeout, retrying\n");
+			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Paging timeout, retrying\n");
 			trans_new_state(trans, TRANS_PAGE);
 		}
 		break;
 	default:
-		PDEBUG(DAMPS, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
+		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
 	}
 }
 
@@ -1012,39 +1014,39 @@ again:
 
 	switch (trans->state) {
 	case TRANS_REGISTER_ACK:
-		PDEBUG(DAMPS, DEBUG_INFO, "Sending Register acknowledge\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending Register acknowledge\n");
 		trans_new_state(trans, TRANS_REGISTER_ACK_SEND);
 		return trans;
 	case TRANS_REGISTER_ACK_SEND:
 		destroy_transaction(trans);
 		goto again;
 	case TRANS_CALL_REJECT:
-		PDEBUG(DAMPS, DEBUG_INFO, "Rejecting call from mobile station\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Rejecting call from mobile station\n");
 		trans_new_state(trans, TRANS_CALL_REJECT_SEND);
 		return trans;
 	case TRANS_CALL_REJECT_SEND:
 		destroy_transaction(trans);
 		goto again;
 	case TRANS_CALL_MO_ASSIGN:
-		PDEBUG(DAMPS, DEBUG_INFO, "Assigning channel to call from mobile station\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assigning channel to call from mobile station\n");
 		trans_new_state(trans, TRANS_CALL_MO_ASSIGN_SEND);
 		return trans;
 	case TRANS_CALL_MO_ASSIGN_SEND:
 		vc = assign_voice_channel(trans);
 		if (vc) {
-			PDEBUG(DAMPS, DEBUG_INFO, "Assignment complete, voice connected\n");
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, voice connected\n");
 			trans_new_state(trans, TRANS_CALL);
 			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
 		}
 		return NULL;
 	case TRANS_CALL_MT_ASSIGN:
-		PDEBUG(DAMPS, DEBUG_INFO, "Assigning channel to call to mobile station\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assigning channel to call to mobile station\n");
 		trans_new_state(trans, TRANS_CALL_MT_ASSIGN_SEND);
 		return trans;
 	case TRANS_CALL_MT_ASSIGN_SEND:
 		vc = assign_voice_channel(trans);
 		if (vc) {
-			PDEBUG(DAMPS, DEBUG_INFO, "Assignment complete, next: sending altering on VC\n");
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, next: sending altering on VC\n");
 			trans->chan = 0;
 			trans->msg_type = 0;
 			trans->ordq = 0;
@@ -1054,7 +1056,7 @@ again:
 		}
 		return NULL;
 	case TRANS_PAGE:
-		PDEBUG(DAMPS, DEBUG_INFO, "Paging the phone\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging the phone\n");
 		trans_new_state(trans, TRANS_PAGE_SEND);
 		return trans;
 	case TRANS_PAGE_SEND:
@@ -1077,16 +1079,16 @@ again:
 
 	switch (trans->state) {
 	case TRANS_CALL_RELEASE:
-		PDEBUG(DAMPS, DEBUG_INFO, "Releasing call towards mobile station\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Releasing call towards mobile station\n");
 		trans_new_state(trans, TRANS_CALL_RELEASE_SEND);
 		return trans;
 	case TRANS_CALL_RELEASE_SEND:
-		PDEBUG(DAMPS, DEBUG_INFO, "Release call was sent, destroying call\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call was sent, destroying call\n");
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		goto again;
 	case TRANS_CALL_MT_ALERT:
-		PDEBUG(DAMPS, DEBUG_INFO, "Sending altering\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending altering\n");
 		return trans;
 	default:
 		return NULL;
