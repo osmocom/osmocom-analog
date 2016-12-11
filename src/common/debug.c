@@ -93,6 +93,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	display_limit_scroll(1);
 	printf("%s%s:%d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
 	display_limit_scroll(0);
+	print_console_text();
 	fflush(stdout);
 }
 

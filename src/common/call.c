@@ -522,6 +522,9 @@ static int console_len = 0;
 
 static void process_ui(int c)
 {
+	char text[256];
+	int len;
+
 	switch (call.state) {
 	case CALL_IDLE:
 		if (c > 0) {
@@ -549,7 +552,10 @@ dial_after_hangup:
 				}
 			}
 		}
-		sprintf(console_text, "on-hook: %s%s (enter 0..9 or d=dial)\r", call.station_id, "..............." + 15 - call.dial_digits + strlen(call.station_id));
+		if (call.dial_digits != (int)strlen(call.station_id))
+			sprintf(text, "on-hook: %s%s (enter digits 0..9)\r", call.station_id, "..............." + 15 - call.dial_digits + strlen(call.station_id));
+		else
+			sprintf(text, "on-hook: %s (press d=dial)\r", call.station_id);
 		break;
 	case CALL_SETUP_MO:
 	case CALL_SETUP_MT:
@@ -569,26 +575,29 @@ dial_after_hangup:
 			}
 		}
 		if (call.state == CALL_SETUP_MT)
-			sprintf(console_text, "call setup: %s (enter h=hangup)\r", call.station_id);
+			sprintf(text, "call setup: %s (press h=hangup)\r", call.station_id);
 		if (call.state == CALL_ALERTING)
-			sprintf(console_text, "call ringing: %s (enter h=hangup)\r", call.station_id);
+			sprintf(text, "call ringing: %s (press h=hangup)\r", call.station_id);
 		if (call.state == CALL_CONNECT) {
 			if (call.dialing[0])
-				sprintf(console_text, "call active: %s->%s (enter h=hangup)\r", call.station_id, call.dialing);
+				sprintf(text, "call active: %s->%s (press h=hangup)\r", call.station_id, call.dialing);
 			else
-				sprintf(console_text, "call active: %s (enter h=hangup)\r", call.station_id);
+				sprintf(text, "call active: %s (press h=hangup)\r", call.station_id);
 		}
 		if (call.state == CALL_DISCONNECTED)
-			sprintf(console_text, "call disconnected: %s (enter h=hangup)\r", cause_name(call.disc_cause));
+			sprintf(text, "call disconnected: %s (press h=hangup)\r", cause_name(call.disc_cause));
 		break;
 	}
+	/* skip if nothing has changed */
+	len = strlen(text);
+	if (console_len == len && !memcmp(console_text, text, len))
+		return;
 	clear_console_text();
-	console_len = strlen(console_text);
-	memset(console_clear, ' ', console_len - 1);
-	console_clear[console_len - 1] = '\r';
-	printf("\033[1;37m");
-	fwrite(console_text, console_len, 1, stdout);
-	printf("\033[0;39m");
+	console_len = len;
+	memcpy(console_text, text, len);
+	memset(console_clear, ' ', len - 1);
+	console_clear[len - 1] = '\r';
+	print_console_text();
 	fflush(stdout);
 }
 
@@ -602,6 +611,15 @@ void clear_console_text(void)
 	console_len = 0;
 }
 
+void print_console_text(void)
+{
+	if (!console_len)
+		return;
+
+	printf("\033[1;37m");
+	fwrite(console_text, console_len, 1, stdout);
+	printf("\033[0;39m");
+}
 
 /* get keys from keyboad to control call via console
  * returns 1 on exit (ctrl+c) */

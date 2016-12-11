@@ -13,6 +13,7 @@ int call_init(const char *station_id, const char *sounddev, int samplerate, int 
 void call_cleanup(void);
 void process_call(int c);
 void clear_console_text(void);
+void print_console_text(void);
 
 /* received messages */
 int call_in_setup(int callref, const char *callerid, const char *dialing);
