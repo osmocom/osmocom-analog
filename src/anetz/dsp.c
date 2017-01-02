@@ -404,7 +404,7 @@ const char *anetz_dsp_mode_name(enum dsp_mode mode)
 	return invalid;
 }
 
-void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode)
+void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode, int detect_reset)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", anetz_dsp_mode_name(anetz->dsp_mode), anetz_dsp_mode_name(mode));
 	anetz->dsp_mode = mode;
@@ -412,5 +412,8 @@ void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode)
 	anetz->paging_tone = 0;
 	anetz->paging_count = 0;
 	anetz->paging_transition = 0;
+	/* reset tone detector */
+	if (detect_reset)
+		anetz->tone_detected = -1;
 }
 
