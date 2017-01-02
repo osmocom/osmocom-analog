@@ -564,6 +564,14 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
+				if (!strncmp(dialing, "0110", 4)) {
+					PDEBUG(DBNETZ, DEBUG_INFO, "Translating emergency number to '110'.\n");
+					strcpy(dialing, "110");
+				}
+				if (!strncmp(dialing, "0112", 4)) {
+					PDEBUG(DBNETZ, DEBUG_INFO, "Translating emergency number to '112'.\n");
+					strcpy(dialing, "112");
+				}
 				PDEBUG(DBNETZ, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", bnetz->station_id, dialing);
 				timer_stop(&bnetz->timer);
 				bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
