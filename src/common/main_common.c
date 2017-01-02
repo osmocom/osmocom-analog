@@ -43,6 +43,7 @@ int samplerate = 48000;
 int interval = 1;
 int latency = 50;
 int cross_channels = 0;
+int uses_emphasis = 1;
 int do_pre_emphasis = 0;
 int do_de_emphasis = 0;
 double rx_gain = 1.0;
@@ -83,12 +84,14 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -x --cross\n");
 	printf("        Cross channels on sound card. 1st channel (right) is swapped with\n");
 	printf("        second channel (left)\n");
+    if (uses_emphasis) {
 	printf(" -p --pre-emphasis\n");
 	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
 	printf("        transmitter. (No pre-emphasis done by the transmitter.)\n");
 	printf(" -d --de-emphasis\n");
 	printf("        Enable de-emphasis, if you directly connect to the discriminator of\n");
 	printf("        the receiver. (No de-emphasis done by the receiver.)\n");
+    }
 	printf(" -g --rx-gain <dB>\n");
 	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
 	printf("        level of the sound device is too low, even after setting maximum level\n");
@@ -234,10 +237,17 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		*skip_args += 1;
 		break;
 	case 'p':
+		if (!uses_emphasis) {
+			no_emph:
+			fprintf(stderr, "A-Netz does not use emphasis, please do not enable pre- or de-emphasis! Disable emphasis on transceiver, if possible.\n");
+			exit(0);
+		}
 		do_pre_emphasis = 1;
 		*skip_args += 1;
 		break;
 	case 'd':
+		if (!uses_emphasis)
+			goto no_emph;
 		do_de_emphasis = 1;
 		*skip_args += 1;
 		break;
