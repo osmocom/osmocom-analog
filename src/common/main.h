@@ -7,7 +7,6 @@ extern const char *call_sounddev;
 extern int samplerate;
 extern int interval;
 extern int latency;
-extern int cross_channels;
 extern int uses_emphasis;
 extern int do_pre_emphasis;
 extern int do_de_emphasis;

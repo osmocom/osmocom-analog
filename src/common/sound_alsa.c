@@ -187,24 +187,29 @@ void sound_close(void *inst)
 	free(sound);
 }
 
-int sound_write(void *inst, int16_t *samples_left, int16_t *samples_right, int num)
+int sound_write(void *inst, int16_t **samples, int num, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
-	int16_t buff[num << 1], *samples;
+	int16_t buff[num << 1];
 	int rc;
 	int i, ii;
 
 	if (sound->pchannels == 2) {
-
-		for (i = 0, ii = 0; i < num; i++) {
-			buff[ii++] = *samples_right++;
-			buff[ii++] = *samples_left++;
+		if (channels < 2) {
+			for (i = 0, ii = 0; i < num; i++) {
+				buff[ii++] = samples[0][i];
+				buff[ii++] = samples[0][i];
+			}
+		} else {
+			for (i = 0, ii = 0; i < num; i++) {
+				buff[ii++] = samples[0][i];
+				buff[ii++] = samples[1][i];
+			}
 		}
-		samples = buff;
+		rc = snd_pcm_writei(sound->phandle, buff, num);
 	} else
-		samples = samples_left;
+		rc = snd_pcm_writei(sound->phandle, samples[0], num);
 
-	rc = snd_pcm_writei(sound->phandle, samples, num);
 	if (rc < 0) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE)
@@ -220,10 +225,11 @@ int sound_write(void *inst, int16_t *samples_left, int16_t *samples_right, int n
 
 #define KEEP_FRAMES	8	/* minimum frames not to read, due to bug in ALSA */
 
-int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int num)
+int sound_read(void *inst, int16_t **samples, int num, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
 	int16_t buff[num << 1];
+	int32_t spl;
 	int in, rc;
 	int i, ii;
 
@@ -241,7 +247,7 @@ int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int nu
 	if (sound->cchannels == 2)
 		rc = snd_pcm_readi(sound->chandle, buff, in);
 	else
-		rc = snd_pcm_readi(sound->chandle, samples_left, in);
+		rc = snd_pcm_readi(sound->chandle, samples[0], in);
 
 	if (rc < 0) {
 		if (errno == EAGAIN)
@@ -254,12 +260,23 @@ int sound_read(void *inst, int16_t *samples_left, int16_t *samples_right, int nu
 	}
 
 	if (sound->cchannels == 2) {
-		for (i = 0, ii = 0; i < rc; i++) {
-			*samples_right++ = buff[ii++];
-			*samples_left++ = buff[ii++];
+		if (channels < 2) {
+			for (i = 0, ii = 0; i < rc; i++) {
+				spl = buff[ii++];
+				spl += buff[ii++];
+				if (spl > 32767)
+					spl = 32767;
+				else if (spl < -32768)
+					spl = -32768;
+				samples[0][i] = spl;
+			}
+		} else {
+			for (i = 0, ii = 0; i < rc; i++) {
+				samples[0][i] = buff[ii++];
+				samples[1][i] = buff[ii++];
+			}
 		}
-	} else
-		memcpy(samples_right, samples_left, num << 1);
+	}
 
 	return rc;
 }

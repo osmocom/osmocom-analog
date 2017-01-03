@@ -42,7 +42,6 @@ const char *call_sounddev = "";
 int samplerate = 48000;
 int interval = 1;
 int latency = 50;
-int cross_channels = 0;
 int uses_emphasis = 1;
 int do_pre_emphasis = 0;
 int do_de_emphasis = 0;
@@ -81,9 +80,6 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        increase latency accordingly.\n");
 	printf(" -b --buffer <ms>\n");
 	printf("        How many milliseconds are processed in advance (default = '%d')\n", latency);
-	printf(" -x --cross\n");
-	printf("        Cross channels on sound card. 1st channel (right) is swapped with\n");
-	printf("        second channel (left)\n");
     if (uses_emphasis) {
 	printf(" -p --pre-emphasis\n");
 	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
@@ -137,7 +133,6 @@ static struct option long_options_common[] = {
 	{"samplerate", 1, 0, 's'},
 	{"interval", 1, 0, 'i'},
 	{"buffer", 1, 0, 'b'},
-	{"cross", 0, 0, 'x'},
 	{"pre-emphasis", 0, 0, 'p'},
 	{"de-emphasis", 0, 0, 'd'},
 	{"rx-gain", 0, 0, 'g'},
@@ -152,7 +147,7 @@ static struct option long_options_common[] = {
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hv:k:a:s:i:b:xpdg:mc:t:l:r:";
+const char *optstring_common = "hv:k:a:s:i:b:pdg:mc:t:l:r:";
 
 struct option *long_options;
 char *optstring;
@@ -231,10 +226,6 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'b':
 		latency = atoi(optarg);
 		*skip_args += 2;
-		break;
-	case 'x':
-		cross_channels = 1;
-		*skip_args += 1;
 		break;
 	case 'p':
 		if (!uses_emphasis) {

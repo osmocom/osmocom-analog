@@ -638,7 +638,7 @@ void process_call(int c)
 
 	/* handle audio, if sound device is used */
 
-	int16_t samples[call.latspl];
+	int16_t samples[call.latspl], *spl_list[1];
 	int count;
 	int rc;
 
@@ -670,7 +670,8 @@ void process_call(int c)
 		default:
 			jitter_load(&call.audio, up, count);
 		}
-		rc = sound_write(call.sound, up, up, count);
+		spl_list[0] = up;
+		rc = sound_write(call.sound, spl_list, count, 1);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE)
@@ -678,7 +679,8 @@ void process_call(int c)
 			return;
 		}
 	}
-	count = sound_read(call.sound, samples, samples, call.latspl);
+	spl_list[0] = samples;
+	count = sound_read(call.sound, spl_list, call.latspl, 1);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)

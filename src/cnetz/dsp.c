@@ -610,12 +610,11 @@ again:
 			/* measure actual signal speed */
 			calc_clock_speed(cnetz, cnetz->sender.samplerate * 24 / 10, 1, 1);
 			/* sync TX (might not be required, if there is no error in math calculation) */
-			if (cnetz->sender.slave) {
+			if (!cnetz->sender.master) { /* if no link to a master, we are master */
 				/* we are master, so we store sample count and phase */
 				cnetz->frame_last_scount = cnetz->fsk_tx_scount;
 				cnetz->frame_last_phase = cnetz->fsk_tx_phase;
-			}
-			if (cnetz->sender.master) {
+			} else {
 				/* we are slave, so we sync to phase */
 				cnetz_t *master = (cnetz_t *)cnetz->sender.master;
 				/* it may happen that the sample count does not match with the master,

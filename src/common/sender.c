@@ -32,7 +32,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
 {
 	sender_t *master;
 	int rc = 0;
@@ -40,7 +40,6 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 	sender->kanal = kanal;
 	strncpy(sender->sounddev, sounddev, sizeof(sender->sounddev) - 1);
 	sender->samplerate = samplerate;
-	sender->cross_channels = cross_channels;
 	sender->rx_gain = rx_gain;
 	sender->pre_emphasis = pre_emphasis;
 	sender->de_emphasis = de_emphasis;
@@ -66,6 +65,7 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 			break;
 	}
 	if (master) {
+		// FIXME: link more than two channels
 		if (master->slave) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Sound device '%s' cannot be used for channel %d. It is already shared by channel %d and %d!\n", sounddev, kanal, master->kanal, master->slave->kanal);
 			rc = -EBUSY;
@@ -86,8 +86,9 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 			rc = -EBUSY;
 			goto error;
 		}
-		/* link us to a master */
+		/* link us to a master/slave */
 		master->slave = sender;
+		// FIXME: link more than two channels, so link to last slave
 		sender->master = master;
 	} else {
 		/* open own device */
@@ -163,11 +164,6 @@ void sender_destroy(sender_t *sender)
 			sender_tailp = &((*sender_tailp)->next);
 	}
 
-	if (sender->slave)
-		sender->slave->master = NULL;
-	if (sender->master)
-		sender->master->slave = NULL;
-
 	if (sender->sound) {
 		sound_close(sender->sound);
 		sender->sound = NULL;
@@ -219,9 +215,22 @@ static void gain_samples(int16_t *samples, int length, double gain)
 /* Handle audio streaming of one transceiver. */
 void process_sender_audio(sender_t *sender, int *quit, int latspl)
 {
-	sender_t *slave = sender->slave;
-	int16_t samples[latspl], pilot[latspl], slave_samples[latspl];
+	sender_t *inst;
 	int rc, count;
+	int num_chan, i;
+
+	/* count instances for audio channel */
+	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
+	if (sender->pilot_signal) {
+		if (num_chan != 1) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Software error, please fix!\n");
+			abort();
+		}
+		num_chan++;
+	}
+	int16_t buff[num_chan][latspl], *samples[num_chan];
+	for (i = 0; i < num_chan; i++)
+		samples[i] = buff[i];
 
 	count = sound_get_inbuffer(sender->sound);
 	if (count < 0) {
@@ -239,103 +248,60 @@ cant_recover:
 	}
 	if (count < latspl) {
 		count = latspl - count;
-		/* load TX data from audio loop or from sender instance */
-		if (sender->loopback == 3)
-			jitter_load(&sender->audio, samples, count);
-		else
-			sender_send(sender, samples, count);
-		if (sender->wave_tx_rec.fp)
-			wave_write(&sender->wave_tx_rec, samples, count);
-		/* internal loopback: loop back TX audio to RX */
-		if (sender->loopback == 1) {
-			if (sender->wave_rx_rec.fp)
-				wave_write(&sender->wave_rx_rec, samples, count);
-			display_wave(sender, samples, count);
-			sender_receive(sender, samples, count);
-		}
-		/* do pre emphasis towards radio, not wave_write */
-		if (sender->pre_emphasis)
-			pre_emphasis(&sender->estate, samples, count);
-		/* do above for audio slave, if set */
-		if (slave) {
-			if (slave->loopback == 3)
-				jitter_load(&slave->audio, slave_samples, count);
+		/* loop through all channels */
+		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
+			/* load TX data from audio loop or from sender instance */
+			if (inst->loopback == 3)
+				jitter_load(&inst->audio, samples[i], count);
 			else
-				sender_send(slave, slave_samples, count);
-			if (sender->wave_tx_rec.fp)
-				wave_write(&slave->wave_tx_rec, slave_samples, count);
-			/* internal loopback, if audio slave is set */
-			if (slave && slave->loopback == 1) {
-				if (slave->wave_rx_rec.fp)
-					wave_write(&slave->wave_rx_rec, slave_samples, count);
-				display_wave(slave, slave_samples, count);
-				sender_receive(slave, slave_samples, count);
+				sender_send(inst, samples[i], count);
+			if (inst->wave_tx_rec.fp)
+				wave_write(&inst->wave_tx_rec, samples[i], count);
+			/* internal loopback: loop back TX audio to RX */
+			if (inst->loopback == 1) {
+				if (inst->wave_rx_rec.fp)
+					wave_write(&inst->wave_rx_rec, samples[i], count);
+				display_wave(inst, samples[i], count);
+				sender_receive(inst, samples[i], count);
 			}
 			/* do pre emphasis towards radio, not wave_write */
-			if (slave->pre_emphasis)
-				pre_emphasis(&slave->estate, slave_samples, count);
+			if (inst->pre_emphasis)
+				pre_emphasis(&inst->estate, samples[i], count);
 		}
 		switch (sender->pilot_signal) {
 		case PILOT_SIGNAL_TONE:
 			/* tone if pilot signal is on */
 			if (sender->pilot_on)
-				gen_pilotton(sender, pilot, count);
+				gen_pilotton(sender, samples[1], count);
 			else
-				memset(pilot, 0, count << 1);
-			if (!sender->cross_channels)
-				rc = sound_write(sender->sound, samples, pilot, count);
-			else
-				rc = sound_write(sender->sound, pilot, samples, count);
+				memset(samples[1], 0, count << 1);
 			break;
 		case PILOT_SIGNAL_NOTONE:
 			/* tone if pilot signal is off */
 			if (!sender->pilot_on)
-				gen_pilotton(sender, pilot, count);
+				gen_pilotton(sender, samples[1], count);
 			else
-				memset(pilot, 0, count << 1);
-			if (!sender->cross_channels)
-				rc = sound_write(sender->sound, samples, pilot, count);
-			else
-				rc = sound_write(sender->sound, pilot, samples, count);
+				memset(samples[1], 0, count << 1);
 			break;
 		case PILOT_SIGNAL_POSITIVE:
 			/* positive signal if pilot signal is on */
 			if (sender->pilot_on)
-				memset(pilot, 127, count << 1);
+				memset(samples[1], 127, count << 1);
 			else
-				memset(pilot, 128, count << 1);
-			if (!sender->cross_channels)
-				rc = sound_write(sender->sound, samples, pilot, count);
-			else
-				rc = sound_write(sender->sound, pilot, samples, count);
+				memset(samples[1], 128, count << 1);
 			break;
 		case PILOT_SIGNAL_NEGATIVE:
 			/* negative signal if pilot signal is on */
 			if (sender->pilot_on)
-				memset(pilot, 128, count << 1);
+				memset(samples[1], 128, count << 1);
 			else
-				memset(pilot, 127, count << 1);
-			if (!sender->cross_channels)
-				rc = sound_write(sender->sound, samples, pilot, count);
-			else
-				rc = sound_write(sender->sound, pilot, samples, count);
+				memset(samples[1], 127, count << 1);
 			break;
-		default:
-			/* if audio slave is set, write audio of both sender instances */
-			if (slave) {
-				if (!sender->cross_channels)
-					rc = sound_write(sender->sound, samples, slave_samples, count);
-				else
-					rc = sound_write(sender->sound, slave_samples, samples, count);
-			}else {
-				/* use pilot tone buffer for silence */
-				memset(pilot, 0, count << 1);
-				if (!sender->cross_channels)
-					rc = sound_write(sender->sound, samples, pilot, count);
-				else
-					rc = sound_write(sender->sound, pilot, samples, count);
-			}
+		case PILOT_SIGNAL_NONE:
+			break;
 		}
+
+		rc = sound_write(sender->sound, samples, count, num_chan);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE) {
@@ -347,11 +313,7 @@ cant_recover:
 		}
 	}
 
-	if (!sender->cross_channels)
-		count = sound_read(sender->sound, samples, slave_samples, latspl);
-	else
-		count = sound_read(sender->sound, slave_samples, samples, latspl);
-//printf("count=%d time= %.4f\n", count, (double)count * 1000 / sender->samplerate);
+	count = sound_read(sender->sound, samples, latspl, num_chan);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE) {
@@ -362,38 +324,24 @@ cant_recover:
 		return;
 	}
 	if (count) {
-		/* rx gain */
-		if (sender->rx_gain != 1.0)
-			gain_samples(samples, count, sender->rx_gain);
-		/* do de emphasis from radio (then write_wave/wave_read), receive audio, process echo test */
-		if (sender->de_emphasis)
-			de_emphasis(&sender->estate, samples, count);
-		if (sender->wave_rx_play.fp)
-			wave_read(&sender->wave_rx_play, samples, count);
-		if (sender->loopback != 1) {
-			if (sender->wave_rx_rec.fp)
-				wave_write(&sender->wave_rx_rec, samples, count);
-			display_wave(sender, samples, count);
-			sender_receive(sender, samples, count);
-		}
-		if (sender->loopback == 3)
-			jitter_save(&sender->audio, samples, count);
-		/* do above for audio slave, if set */
-		if (slave) {
-			if (sender->rx_gain != 1.0)
-				gain_samples(slave_samples, count, slave->rx_gain);
-			if (slave->de_emphasis)
-				de_emphasis(&slave->estate, slave_samples, count);
-			if (slave->wave_rx_play.fp)
-				wave_read(&slave->wave_rx_play, slave_samples, count);
-			if (slave->loopback != 1) {
-				if (slave->wave_rx_rec.fp)
-					wave_write(&slave->wave_rx_rec, slave_samples, count);
-				display_wave(slave, slave_samples, count);
-				sender_receive(slave, slave_samples, count);
+		/* loop through all channels */
+		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
+			/* rx gain */
+			if (inst->rx_gain != 1.0)
+				gain_samples(samples[i], count, inst->rx_gain);
+			/* do de emphasis from radio (then write_wave/wave_read), receive audio, process echo test */
+			if (inst->de_emphasis)
+				de_emphasis(&inst->estate, samples[i], count);
+			if (inst->wave_rx_play.fp)
+				wave_read(&inst->wave_rx_play, samples[i], count);
+			if (inst->loopback != 1) {
+				if (inst->wave_rx_rec.fp)
+					wave_write(&inst->wave_rx_rec, samples[i], count);
+				display_wave(inst, samples[i], count);
+				sender_receive(inst, samples[i], count);
 			}
-			if (slave->loopback == 3)
-				jitter_save(&slave->audio, slave_samples, count);
+			if (inst->loopback == 3)
+				jitter_save(&inst->audio, samples[i], count);
 		}
 	}
 }

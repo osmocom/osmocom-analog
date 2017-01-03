@@ -20,8 +20,8 @@ enum pilot_signal {
 /* common structure of each transmitter */
 typedef struct sender {
 	struct sender		*next;
-	struct sender		*slave;			/* points to audio device slave member */
-	struct sender		*master;		/* points to audio device master source */
+	struct sender		*slave;			/* points to 'slave' that uses next channel of audio device */
+	struct sender		*master;		/* if set, the audio device is owned by 'master' */
 
 	/* system info */
 	int			kanal;			/* channel number */
@@ -30,7 +30,6 @@ typedef struct sender {
 	void			*sound;
 	char			sounddev[64];		/* sound device name */
 	int			samplerate;
-	int			cross_channels;		/* swap right and left on IO */
 	samplerate_t		srstate;		/* sample rate conversion state */
 	double			rx_gain;		/* factor of level to apply on rx samples */
 	int			pre_emphasis;		/* use pre_emhasis, done by sender */
@@ -70,7 +69,7 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, int cross_channels, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
+int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
 void sender_destroy(sender_t *sender);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, int16_t *samples, int count);
