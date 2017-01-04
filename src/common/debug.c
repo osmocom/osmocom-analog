@@ -54,6 +54,7 @@ struct debug_cat {
 	{ "transaction", "\033[0;32m" },
 	{ "dms", "\033[0;33m" },
 	{ "sms", "\033[1;37m" },
+	{ "sdr", "\033[1;31m" },
 	{ NULL, NULL }
 };
 

@@ -49,6 +49,10 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->de_emphasis = de_emphasis;
 	sender->loopback = loopback;
 	sender->loss_volume = loss_volume;
+#ifdef HAVE_SDR
+	if (!strcmp(audiodev, "sdr"))
+		pilot_signal = PILOT_SIGNAL_NONE;
+#endif
 	sender->pilot_signal = pilot_signal;
 	sender->pilotton_phaseshift = 1.0 / ((double)samplerate / 1000.0);
 
@@ -89,6 +93,19 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 		slave->slave = sender;
 	} else {
 		/* link audio device */
+#ifdef HAVE_SDR
+		if (!strcmp(audiodev, "sdr")) {
+			if (pilot_signal != PILOT_SIGNAL_NONE) {
+				PDEBUG(DSENDER, DEBUG_ERROR, "No pilot signal allowed with SDR, please fix!\n");
+				abort();
+			}
+			sender->audio_open = sdr_open;
+			sender->audio_close = sdr_close;
+			sender->audio_read = sdr_read;
+			sender->audio_write = sdr_write;
+			sender->audio_get_inbuffer = sdr_get_inbuffer;
+		} else
+#endif
 		{
 			sender->audio_open = sound_open;
 			sender->audio_close = sound_close;

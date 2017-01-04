@@ -26,3 +26,10 @@ libcommon_a_SOURCES = \
 	../common/display_wave.c \
 	../common/main_common.c
 
+if HAVE_SDR
+AM_CPPFLAGS += -DHAVE_SDR
+
+libcommon_a_SOURCES += \
+	../common/sdr.c
+endif
+

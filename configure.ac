@@ -26,6 +26,9 @@ AC_CANONICAL_HOST
 
 PKG_CHECK_MODULES(ALSA, alsa >= 1.0)
 
+have_sdr=no
+AM_CONDITIONAL(HAVE_SDR, test "x$have_sdr" == "xyes" )
+
 AC_OUTPUT(
     src/common/Makefile
     src/anetz/Makefile

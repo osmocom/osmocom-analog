@@ -1,4 +1,7 @@
 #include "sound.h"
+#ifdef HAVE_SDR
+#include "sdr.h"
+#endif
 #include "wave.h"
 #include "samplerate.h"
 #include "jitter.h"

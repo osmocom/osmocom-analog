@@ -32,6 +32,9 @@
 #include "sender.h"
 #include "timer.h"
 #include "call.h"
+#ifdef HAVE_SDR
+#include "sdr.h"
+#endif
 
 /* common settings */
 int num_kanal = 0;
@@ -54,6 +57,8 @@ int rt_prio = 0;
 const char *write_rx_wave = NULL;
 const char *write_tx_wave = NULL;
 const char *read_rx_wave = NULL;
+static const char *sdr_args = "";
+double sdr_rx_gain = 0, sdr_tx_gain = 0;
 
 void print_help_common(const char *arg0, const char *ext_usage)
 {
@@ -70,8 +75,9 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -k --kanal <channel>\n");
 	printf(" -k --channel <channel>\n");
 	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");
-	printf(" -a --audio-device hw:<card>,<device>\n");
-	printf("        Sound card and device number (default = '%s')\n", sounddev[0]);
+	printf(" -a --audio-device hw:<card>,<device> | sdr\n");
+	printf("        Sound card and device number (default = '%s')\n", audiodev[0]);
+	printf("        SDR device, if supported\n");
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
 	printf(" -i --interval 1..25\n");
@@ -109,6 +115,14 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Write transmitted audio to given wav audio file.\n");
 	printf("    --read-rx-wave <file>\n");
 	printf("        Replace received audio by given wav audio file.\n");
+#ifdef HAVE_SDR
+	printf("    --sdr-args <args>\n");
+	printf("        Optional SDR device arguments\n");
+	printf("    --sdr-rx-gain <gain>\n");
+	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_rx_gain);
+	printf("    --sdr-tx-gain <gain>\n");
+	printf("        SDR device's TX gain in dB (default = %.1f)\n", sdr_tx_gain);
+#endif
 }
 
 void print_hotkeys_common(void)
@@ -123,6 +137,9 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_RX_WAVE	1001
 #define	OPT_WRITE_TX_WAVE	1002
 #define	OPT_READ_RX_WAVE	1003
+#define	OPT_SDR_ARGS		1004
+#define	OPT_SDR_RX_GAIN		1005
+#define	OPT_SDR_TX_GAIN		1006
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -144,6 +161,9 @@ static struct option long_options_common[] = {
 	{"write-rx-wave", 1, 0, OPT_WRITE_RX_WAVE},
 	{"write-tx-wave", 1, 0, OPT_WRITE_TX_WAVE},
 	{"read-rx-wave", 1, 0, OPT_READ_RX_WAVE},
+	{"sdr-args", 1, 0, OPT_SDR_ARGS},
+	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
+	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
 	{0, 0, 0, 0}
 };
 
@@ -283,6 +303,18 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		read_rx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_SDR_ARGS:
+		sdr_args = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_RX_GAIN:
+		sdr_rx_gain = atof(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_TX_GAIN:
+		sdr_tx_gain = atof(optarg);
+		*skip_args += 2;
+		break;
 	default:
 		exit (0);
 	}
@@ -330,6 +362,10 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 	struct termios term, term_orig;
 	int c;
 
+#ifdef HAVE_SDR
+	if (sdr_init(sdr_args, sdr_rx_gain, sdr_tx_gain))
+		return;
+#endif
 
 	/* open audio */
 	if (sender_open_audio())
