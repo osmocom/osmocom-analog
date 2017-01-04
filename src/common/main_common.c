@@ -36,9 +36,9 @@
 /* common settings */
 int num_kanal = 0;
 int kanal[MAX_SENDER];
-int num_sounddev = 0;
-const char *sounddev[MAX_SENDER] = { "hw:0,0" };
-const char *call_sounddev = "";
+int num_audiodev = 0;
+const char *audiodev[MAX_SENDER] = { "hw:0,0" };
+const char *call_audiodev = "";
 int samplerate = 48000;
 int interval = 1;
 int latency = 50;
@@ -95,7 +95,7 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
-	printf("        Sound card and device number for headset (default = '%s')\n", call_sounddev);
+	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
 	printf(" -t --tones 0 | 1\n");
 	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
 	printf("        network (default = '%d')\n", send_patterns);
@@ -208,7 +208,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		*skip_args += 2;
 		break;
 	case 'a':
-		OPT_ARRAY(num_sounddev, sounddev, strdup(optarg))
+		OPT_ARRAY(num_audiodev, audiodev, strdup(optarg))
 		*skip_args += 2;
 		break;
 	case 's':
@@ -256,7 +256,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		*skip_args += 1;
 		break;
 	case 'c':
-		call_sounddev = strdup(optarg);
+		call_audiodev = strdup(optarg);
 		*skip_args += 2;
 		break;
 	case 't':
@@ -322,7 +322,7 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_loop(int *quit, int latency, int interval, void (*myhandler)(void))
+void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 {
 	int latspl;
 	sender_t *sender;
@@ -330,11 +330,10 @@ void main_loop(int *quit, int latency, int interval, void (*myhandler)(void))
 	struct termios term, term_orig;
 	int c;
 
-	/* catch signals */
-	signal(SIGINT, sighandler);
-	signal(SIGHUP, sighandler);
-	signal(SIGTERM, sighandler);
-	signal(SIGPIPE, sighandler);
+
+	/* open audio */
+	if (sender_open_audio())
+		return;
 
 	/* real time priority */
 	if (rt_prio > 0) {
@@ -355,6 +354,12 @@ void main_loop(int *quit, int latency, int interval, void (*myhandler)(void))
 	term.c_cc[VMIN]=1;
 	term.c_cc[VTIME]=2;
 	tcsetattr(0, TCSANOW, &term);
+
+	/* catch signals */
+	signal(SIGINT, sighandler);
+	signal(SIGHUP, sighandler);
+	signal(SIGTERM, sighandler);
+	signal(SIGPIPE, sighandler);
 
 	while(!(*quit)) {
 		/* process sound of all transceivers */
@@ -408,6 +413,12 @@ next_char:
 		usleep(interval * 1000);
 	}
 
+	/* reset signals */
+	signal(SIGINT, SIG_DFL);
+	signal(SIGHUP, SIG_DFL);
+	signal(SIGTERM, SIG_DFL);
+	signal(SIGPIPE, SIG_DFL);
+
 	/* get rid of last entry */
 	clear_console_text();
 
@@ -422,11 +433,5 @@ next_char:
 		schedp.sched_priority = 0;
 		sched_setscheduler(0, SCHED_OTHER, &schedp);
 	}
-
-	/* reset signals */
-	signal(SIGINT, SIG_DFL);
-	signal(SIGHUP, SIG_DFL);
-	signal(SIGTERM, SIG_DFL);
-	signal(SIGPIPE, SIG_DFL);
 }
 

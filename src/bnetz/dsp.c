@@ -388,7 +388,7 @@ again:
 		memset(samples, 0, length * sizeof(*samples));
 		break;
 	case DSP_MODE_AUDIO:
-		jitter_load(&bnetz->sender.audio, samples, length);
+		jitter_load(&bnetz->sender.dejitter, samples, length);
 		break;
 	case DSP_MODE_0:
 		fsk_tone(bnetz, samples, length, 0);

@@ -170,7 +170,7 @@ typedef struct call {
 	void *sound;		/* headphone interface */
 	int latspl;		/* sample latency at sound interface */
 	samplerate_t srstate;	/* patterns/announcement upsampling */
-	jitter_t audio;		/* headphone audio dejittering */
+	jitter_t dejitter;	/* headphone audio dejittering */
 	int audio_pos;		/* position when playing patterns */
 	int test_audio_pos;	/* position for test tone toward mobile */
 	int dial_digits;	/* number of digits to be dialed */
@@ -454,7 +454,7 @@ static void process_timeout(struct timer *timer)
 	}
 }
 
-int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int dial_digits, int loopback)
+int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback)
 {
 	int rc = 0;
 
@@ -469,11 +469,11 @@ int call_init(const char *station_id, const char *sounddev, int samplerate, int 
 	call.dial_digits = dial_digits;
 	call.loopback = loopback;
 
-	if (!sounddev[0])
+	if (!audiodev[0])
 		return 0;
 
 	/* open sound device for call control */
-	call.sound = sound_open(sounddev, samplerate);
+	call.sound = sound_open(audiodev, NULL, NULL, 1, samplerate);
 	if (!call.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 
@@ -487,9 +487,9 @@ int call_init(const char *station_id, const char *sounddev, int samplerate, int 
 		goto error;
 	}
 
-	rc = jitter_create(&call.audio, samplerate / 5);
+	rc = jitter_create(&call.dejitter, samplerate / 5);
 	if (rc < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init audio buffer!\n");
+		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init dejitter buffer!\n");
 		goto error;
 	}
 
@@ -509,7 +509,7 @@ void call_cleanup(void)
 	if (call.sound)
 		sound_close(call.sound);
 
-	jitter_destroy(&call.audio);
+	jitter_destroy(&call.dejitter);
 
 	if (process_head) {
 		PDEBUG(DMNCC, DEBUG_ERROR, "Not all MNCC instances have been released!\n");
@@ -658,17 +658,17 @@ void process_call(int c)
 			get_call_patterns(samples, count, PATTERN_RINGBACK);
 			count = samplerate_upsample(&call.srstate, samples, count, up);
 			/* prevent click after hangup */
-			jitter_clear(&call.audio);
+			jitter_clear(&call.dejitter);
 			break;
 		case CALL_DISCONNECTED:
 			count = (int)((double)count / call.srstate.factor + 0.5);
 			get_call_patterns(samples, count, cause2pattern(call.disc_cause));
 			count = samplerate_upsample(&call.srstate, samples, count, up);
 			/* prevent click after hangup */
-			jitter_clear(&call.audio);
+			jitter_clear(&call.dejitter);
 			break;
 		default:
-			jitter_load(&call.audio, up, count);
+			jitter_load(&call.dejitter, up, count);
 		}
 		spl_list[0] = up;
 		rc = sound_write(call.sound, spl_list, count, 1);
@@ -691,7 +691,7 @@ void process_call(int c)
 		int16_t down[count]; /* more than enough */
 
 		if (call.loopback == 3)
-			jitter_save(&call.audio, samples, count);
+			jitter_save(&call.dejitter, samples, count);
 		count = samplerate_downsample(&call.srstate, samples, count, down);
 		call_rx_audio(call.callref, down, count);
 	}
@@ -922,7 +922,7 @@ void call_tx_audio(int callref, int16_t *samples, int count)
 	if (call.sound) {
 		int16_t up[(int)((double)count * call.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&call.srstate, samples, count, up);
-		jitter_save(&call.audio, up, count);
+		jitter_save(&call.dejitter, up, count);
 	} else
 	/* else, if no sound is used, send test tone to mobile */
 	if (call.state == CALL_CONNECT) {

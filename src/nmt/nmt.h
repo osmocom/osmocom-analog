@@ -143,7 +143,7 @@ const char *chan_type_long_name(enum nmt_chan_type chan_type);
 double nmt_channel2freq(int channel, int uplink);
 void nmt_country_list(void);
 uint8_t nmt_country_by_short_name(const char *short_name);
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *sounddev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
+int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
 void nmt_check_channels(void);
 void nmt_destroy(sender_t *sender);
 void nmt_go_idle(nmt_t *nmt);

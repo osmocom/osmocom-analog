@@ -371,7 +371,7 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 		memset(samples, 0, length * sizeof(*samples));
 		break;
 	case DSP_MODE_AUDIO:
-		jitter_load(&anetz->sender.audio, samples, length);
+		jitter_load(&anetz->sender.dejitter, samples, length);
 		break;
 	case DSP_MODE_TONE:
 		fsk_tone(anetz, samples, length);

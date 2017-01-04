@@ -83,7 +83,7 @@ double amps_channel2freq(int channel, int uplink)
 	if (uplink)
 		freq -= 45.000;
 
-	return freq;
+	return freq * 1e6;
 }
 
 enum amps_chan_type amps_channel2type(int channel)
@@ -376,7 +376,7 @@ static amps_t *search_pc(void)
 static void amps_go_idle(amps_t *amps);
 
 /* Create transceiver instance and link to a list. */
-int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
+int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -442,7 +442,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *sounddev
 	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&amps->sender, channel, sounddev, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PILOT_SIGNAL_NONE);
+	rc = sender_create(&amps->sender, channel, amps_channel2freq(channel, 0), amps_channel2freq(channel, 1), audiodev, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PILOT_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -919,7 +919,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		int16_t up[(int)((double)count * amps->sender.srstate.factor + 0.5) + 10];
 		compress_audio(&amps->cstate, samples, count);
 		count = samplerate_upsample(&amps->sender.srstate, samples, count, up);
-		jitter_save(&amps->sender.audio, up, count);
+		jitter_save(&amps->sender.dejitter, up, count);
 	}
 }
 

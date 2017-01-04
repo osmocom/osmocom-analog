@@ -281,9 +281,9 @@ int main(int argc, char *argv[])
 		printf("No channel (\"Kanal\") is specified, I suggest channel 1 (-k 1).\n\n");
 		mandatory = 1;
 	}
-	if (num_kanal == 1 && num_sounddev == 0)
-		num_sounddev = 1; /* use defualt */
-	if (num_kanal != num_sounddev) {
+	if (num_kanal == 1 && num_audiodev == 0)
+		num_audiodev = 1; /* use defualt */
+	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	dsp_init();
-	rc = call_init(station_id, call_sounddev, samplerate, latency, 7, loopback);
+	rc = call_init(station_id, call_audiodev, samplerate, latency, 7, loopback);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		goto fail;
@@ -343,21 +343,21 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], sounddev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
 		}
 		if (kanal[i] > 200) {
-			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0), nmt_channel2freq(kanal[i], 1));
+			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0) / 1e6, nmt_channel2freq(kanal[i], 1) / 1e6);
 		} else {
-			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0), nmt_channel2freq(kanal[i], 1));
+			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0) / 1e6, nmt_channel2freq(kanal[i], 1) / 1e6);
 		}
 	}
 
 	nmt_check_channels();
 
-	main_loop(&quit, latency, interval, myhandler);
+	main_common(&quit, latency, interval, myhandler);
 
 fail:
 	/* fifo */

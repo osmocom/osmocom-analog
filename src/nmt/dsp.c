@@ -624,7 +624,7 @@ again:
 	switch (nmt->dsp_mode) {
 	case DSP_MODE_AUDIO:
 	case DSP_MODE_DTMF:
-		jitter_load(&nmt->sender.audio, samples, length);
+		jitter_load(&nmt->sender.dejitter, samples, length);
 		/* send after dejitter, so audio is flushed */
 		if (nmt->dms.frame_valid) {
 			fsk_dms_frame(nmt, samples, length);

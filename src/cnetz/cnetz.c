@@ -161,7 +161,7 @@ double cnetz_kanal2freq(int kanal, int unterband)
 	if (unterband)
 		freq -= 10.0;
 
-	return freq;
+	return freq * 1e6;
 }
 
 const char *cnetz_state_name(enum cnetz_state state)
@@ -215,7 +215,7 @@ int cnetz_init(void)
 static void cnetz_go_idle(cnetz_t *cnetz);
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, double noise, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback)
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, double noise, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -258,7 +258,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *)sender;
-		if (!!strcmp(sender->sounddev, sounddev)) {
+		if (!!strcmp(sender->audiodev, audiodev)) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "To be able to sync multiple channels, all channels must be on the same sound device!\n");
 			return -EINVAL;
 		}
@@ -274,7 +274,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *sounddev
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by cnetz code, not by common sender code */
-	rc = sender_create(&cnetz->sender, kanal, sounddev, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PILOT_SIGNAL_NONE);
+	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(kanal, 0), cnetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PILOT_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -443,7 +443,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 
 	if (cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* store as is, since we convert rate when processing FSK frames */
-		jitter_save(&cnetz->sender.audio, samples, count);
+		jitter_save(&cnetz->sender.dejitter, samples, count);
 	}
 }
 

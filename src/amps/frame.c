@@ -1701,7 +1701,7 @@ static const char *ie_chan(uint64_t value)
 	
 	if (value == 0)
 		return "No channel";
-	sprintf(string, "%" PRIu64 " = %.3f MHz", value, amps_channel2freq(value, 0));
+	sprintf(string, "%" PRIu64 " = %.3f MHz", value, amps_channel2freq(value, 0) / 1e6);
 	return string;
 }
 

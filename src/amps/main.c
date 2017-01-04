@@ -259,9 +259,9 @@ int main(int argc, char *argv[])
 		print_help(argv[-skip_args]);
 		return 0;
 	}
-	if (num_kanal == 1 && num_sounddev == 0)
-		num_sounddev = 1; /* use defualt */
-	if (num_kanal != num_sounddev) {
+	if (num_kanal == 1 && num_audiodev == 0)
+		num_audiodev = 1; /* use defualt */
+	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
 	}
 	dsp_init();
 	init_frame();
-	rc = call_init(station_id, call_sounddev, samplerate, latency, 10, loopback);
+	rc = call_init(station_id, call_audiodev, samplerate, latency, 10, loopback);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		goto fail;
@@ -348,15 +348,15 @@ int main(int argc, char *argv[])
 		amps_si si;
 
 		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
-		rc = amps_create(kanal[i], chan_type[i], sounddev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, &si, sid, scc, polarity, tolerant, loopback);
+		rc = amps_create(kanal[i], chan_type[i], audiodev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, &si, sid, scc, polarity, tolerant, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
-		printf("Base station on channel %d ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0), amps_channel2freq(kanal[i], 1));
+		printf("Base station on channel %d ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0) / 1e6, amps_channel2freq(kanal[i], 1) / 1e6);
 	}
 
-	main_loop(&quit, latency, interval, NULL);
+	main_common(&quit, latency, interval, NULL);
 
 fail:
 	/* cleanup functions */

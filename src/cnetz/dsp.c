@@ -137,8 +137,8 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	scrambler_setup(&cnetz->scrambler_rx, (double)cnetz->sender.samplerate / 1.1);
 
 	/* reinit jitter buffer for 8000 kHz */
-	jitter_destroy(&cnetz->sender.audio);
-	rc = jitter_create(&cnetz->sender.audio, 8000 / 5);
+	jitter_destroy(&cnetz->sender.dejitter);
+	rc = jitter_create(&cnetz->sender.dejitter, 8000 / 5);
 	if (rc < 0)
 		goto error;
 
@@ -702,7 +702,7 @@ again:
 	for (i = 0; i < copy; i++) {
 		if (*spl == -32768) {
 			/* marker found to insert new chunk of audio */
-			jitter_load(&cnetz->sender.audio, speech_buffer, 100);
+			jitter_load(&cnetz->sender.dejitter, speech_buffer, 100);
 			/* 1. compress dynamics */
 			compress_audio(&cnetz->cstate, speech_buffer, 100);
 			/* 2. upsample */

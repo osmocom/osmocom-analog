@@ -153,9 +153,9 @@ int main(int argc, char *argv[])
 		print_help(argv[-skip_args]);
 		return 0;
 	}
-	if (num_kanal == 1 && num_sounddev == 0)
-		num_sounddev = 1; /* use defualt */
-	if (num_kanal != num_sounddev) {
+	if (num_kanal == 1 && num_audiodev == 0)
+		num_audiodev = 1; /* use defualt */
+	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -174,12 +174,12 @@ int main(int argc, char *argv[])
 		rc = mncc_init("/tmp/bsc_mncc");
 		if (rc < 0) {
 			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			return -1;
+			goto fail;
 		}
 	}
 	dsp_init();
 	bnetz_init();
-	rc = call_init(station_id, call_sounddev, samplerate, latency, 5, loopback);
+	rc = call_init(station_id, call_audiodev, samplerate, latency, 5, loopback);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		goto fail;
@@ -187,16 +187,16 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], sounddev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
+		rc = bnetz_create(kanal[i], audiodev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
-		printf("Base station for channel %d ready, please tune transmitter to %.3f MHz and receiver " "to %.3f MHz.\n", kanal[i], bnetz_kanal2freq(kanal[i], 0), bnetz_kanal2freq(kanal[i], 1));
-		printf("To call phone, switch transmitter (using pilot signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0));
+		printf("Base station for channel %d ready, please tune transmitter to %.3f MHz and receiver " "to %.3f MHz.\n", kanal[i], bnetz_kanal2freq(kanal[i], 0) / 1e6, bnetz_kanal2freq(kanal[i], 1) / 1e6);
+		printf("To call phone, switch transmitter (using pilot signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0) / 1e6);
 	}
 
-	main_loop(&quit, latency, interval, NULL);
+	main_common(&quit, latency, interval, NULL);
 
 fail:
 	/* cleanup functions */

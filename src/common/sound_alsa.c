@@ -128,10 +128,15 @@ static int sound_prepare(sound_t *sound)
 	return 0;
 }
 
-void *sound_open(const char *device, int samplerate)
+void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, int samplerate)
 {
 	sound_t *sound;
 	int rc;
+
+	if (channels < 1 || channels > 2) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Cannot use more than two channels with the same sound card!\n");
+		return NULL;
+	}
 
 	sound = calloc(1, sizeof(sound_t));
 	if (!sound) {
@@ -139,15 +144,15 @@ void *sound_open(const char *device, int samplerate)
 		return NULL;
 	}
 
-	rc = snd_pcm_open(&sound->phandle, device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	rc = snd_pcm_open(&sound->phandle, audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s)\n", device, snd_strerror(rc));
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s)\n", audiodev, snd_strerror(rc));
 		goto error;
 	}
 
-	rc = snd_pcm_open(&sound->chandle, device, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	rc = snd_pcm_open(&sound->chandle, audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s)\n", device, snd_strerror(rc));
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s)\n", audiodev, snd_strerror(rc));
 		goto error;
 	}
 
@@ -156,11 +161,19 @@ void *sound_open(const char *device, int samplerate)
 		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set playback hw params\n");
 		goto error;
 	}
+	if (sound->pchannels < channels) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
+		goto error;
+	}
 	PDEBUG(DSOUND, DEBUG_DEBUG, "Playback with %d channels.\n", sound->pchannels);
 
 	rc = set_hw_params(sound->chandle, samplerate, &sound->cchannels);
 	if (rc < 0) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set capture hw params\n");
+		goto error;
+	}
+	if (sound->cchannels < channels) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
 		goto error;
 	}
 	PDEBUG(DSOUND, DEBUG_DEBUG, "Capture with %d channels.\n", sound->cchannels);

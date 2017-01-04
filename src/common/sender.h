@@ -25,10 +25,17 @@ typedef struct sender {
 
 	/* system info */
 	int			kanal;			/* channel number */
+	double			sendefrequenz;		/* transmitter frequency */
+	double			empfangsfrequenz;	/* receiver frequency */
 
-	/* sound */
-	void			*sound;
-	char			sounddev[64];		/* sound device name */
+	/* audio */
+	void			*audio;
+	char			audiodev[64];		/* audio device name (alsa or sdr) */
+	void			*(*audio_open)(const char *, double *, double *, int, int);
+	void 			(*audio_close)(void *);
+	int			(*audio_write)(void *, int16_t **, int, int);
+	int			(*audio_read)(void *, int16_t **, int, int);
+	int			(*audio_get_inbuffer)(void *);
 	int			samplerate;
 	samplerate_t		srstate;		/* sample rate conversion state */
 	double			rx_gain;		/* factor of level to apply on rx samples */
@@ -45,7 +52,7 @@ typedef struct sender {
 	wave_play_t		wave_rx_play;		/* wave playback (as rx) */
 
 	/* audio buffer for audio to send to transmitter (also used as loopback buffer) */
-	jitter_t		audio;
+	jitter_t		dejitter;
 
 	/* audio buffer for audio to send to caller (20ms = 160 samples @ 8000Hz) */
 	int16_t			rxbuf[160];
@@ -69,8 +76,9 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal);
 void sender_destroy(sender_t *sender);
+int sender_open_audio(void);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, int16_t *samples, int count);
 void sender_receive(sender_t *sender, int16_t *samples, int count);

@@ -32,13 +32,15 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, const char *sounddev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
 {
-	sender_t *master;
+	sender_t *master, *slave;
 	int rc = 0;
 
 	sender->kanal = kanal;
-	strncpy(sender->sounddev, sounddev, sizeof(sender->sounddev) - 1);
+	sender->sendefrequenz = sendefrequenz;
+	sender->empfangsfrequenz = empfangsfrequenz;
+	strncpy(sender->audiodev, audiodev, sizeof(sender->audiodev) - 1);
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
 	sender->pre_emphasis = pre_emphasis;
@@ -61,43 +63,36 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 			rc = -EIO;
 			goto error;
 		}
-		if (!strcmp(master->sounddev, sounddev))
+		if (!strcmp(master->audiodev, audiodev))
 			break;
 	}
 	if (master) {
-		// FIXME: link more than two channels
-		if (master->slave) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Sound device '%s' cannot be used for channel %d. It is already shared by channel %d and %d!\n", sounddev, kanal, master->kanal, master->slave->kanal);
-			rc = -EBUSY;
-			goto error;
-		}
-		if (!sound_is_stereo_capture(master->sound) || !sound_is_stereo_playback(master->sound)) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Sound device '%s' cannot be used for more than one channel, because one direction is mono!\n", sounddev);
-			rc = -EBUSY;
-			goto error;
-		}
 		if (master->pilot_signal != PILOT_SIGNAL_NONE) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share sound device with channel %d, because second channel is used for pilot signal!\n", master->kanal);
+			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because second channel is used for pilot signal!\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
 		if (pilot_signal != PILOT_SIGNAL_NONE) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share sound device with channel %d, because we need a stereo channel for pilot signal!\n", master->kanal);
+			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because we need a stereo channel for pilot signal!\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
-		/* link us to a master/slave */
-		master->slave = sender;
-		// FIXME: link more than two channels, so link to last slave
+		/* link us to a master */
 		sender->master = master;
+		/* link master (or last slave) to us */
+		for (slave = master; ; slave = slave->slave) {
+			if (!slave->slave)
+				break;
+		}
+		slave->slave = sender;
 	} else {
-		/* open own device */
-		sender->sound = sound_open(sounddev, samplerate);
-		if (!sender->sound) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
-
-			rc = -EIO;
-			goto error;
+		/* link audio device */
+		{
+			sender->audio_open = sound_open;
+			sender->audio_close = sound_close;
+			sender->audio_read = sound_read;
+			sender->audio_write = sound_write;
+			sender->audio_get_inbuffer = sound_get_inbuffer;
 		}
 	}
 
@@ -107,7 +102,7 @@ int sender_create(sender_t *sender, int kanal, const char *sounddev, int sampler
 		goto error;
 	}
 
-	rc = jitter_create(&sender->audio, samplerate / 5);
+	rc = jitter_create(&sender->dejitter, samplerate / 5);
 	if (rc < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init audio buffer!\n");
 		goto error;
@@ -151,6 +146,42 @@ error:
 	return rc;
 }
 
+int sender_open_audio(void)
+{
+	sender_t *master, *inst;
+	int channels;
+	int i;
+
+	for (master = sender_head; master; master = master->next) {
+		/* skip audio slaves */
+		if (master->master)
+			continue;
+
+		/* get list of frequencies */
+		channels = 0;
+		for (inst = master; inst; inst = inst->slave) {
+			channels++;
+		}
+		double tx_f[channels], rx_f[channels];
+		for (i = 0, inst = master; inst; i++, inst = inst->slave) {
+			tx_f[i] = inst->sendefrequenz;
+			if (inst->loopback)
+				rx_f[i] = inst->sendefrequenz;
+			else
+				rx_f[i] = inst->empfangsfrequenz;
+		}
+
+		/* open device */
+		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, master->samplerate);
+		if (!master->audio) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "No audio device!\n");
+			return -EIO;
+		}
+	}
+
+	return 0;
+}
+
 /* Destroy transceiver instance and unlink from list. */
 void sender_destroy(sender_t *sender)
 {
@@ -164,16 +195,16 @@ void sender_destroy(sender_t *sender)
 			sender_tailp = &((*sender_tailp)->next);
 	}
 
-	if (sender->sound) {
-		sound_close(sender->sound);
-		sender->sound = NULL;
+	if (sender->audio) {
+		sender->audio_close(sender->audio);
+		sender->audio = NULL;
 	}
 
 	wave_destroy_record(&sender->wave_rx_rec);
 	wave_destroy_record(&sender->wave_tx_rec);
 	wave_destroy_playback(&sender->wave_rx_play);
 
-	jitter_destroy(&sender->audio);
+	jitter_destroy(&sender->dejitter);
 }
 
 static void gen_pilotton(sender_t *sender, int16_t *samples, int length)
@@ -221,19 +252,23 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
-	if (sender->pilot_signal) {
+	if (sender->pilot_signal != PILOT_SIGNAL_NONE) {
 		if (num_chan != 1) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Software error, please fix!\n");
 			abort();
 		}
-		num_chan++;
+		num_chan = 2;
 	}
 	int16_t buff[num_chan][latspl], *samples[num_chan];
 	for (i = 0; i < num_chan; i++)
 		samples[i] = buff[i];
 
-	count = sound_get_inbuffer(sender->sound);
+	count = sender->audio_get_inbuffer(sender->audio);
 	if (count < 0) {
+		/* special case when the device is not yet ready to transmit packets */
+		if (count == -EAGAIN) {
+			goto transmit_later;
+		}
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE) {
 			if (cant_recover) {
@@ -252,7 +287,7 @@ cant_recover:
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
 			/* load TX data from audio loop or from sender instance */
 			if (inst->loopback == 3)
-				jitter_load(&inst->audio, samples[i], count);
+				jitter_load(&inst->dejitter, samples[i], count);
 			else
 				sender_send(inst, samples[i], count);
 			if (inst->wave_tx_rec.fp)
@@ -301,9 +336,9 @@ cant_recover:
 			break;
 		}
 
-		rc = sound_write(sender->sound, samples, count, num_chan);
+		rc = sender->audio_write(sender->audio, samples, count, num_chan);
 		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			if (rc == -EPIPE) {
 				if (cant_recover)
 					goto cant_recover;
@@ -312,10 +347,16 @@ cant_recover:
 			return;
 		}
 	}
+transmit_later:
 
-	count = sound_read(sender->sound, samples, latspl, num_chan);
+	count = sender->audio_read(sender->audio, samples, latspl, num_chan);
 	if (count < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
+		/* special case when audio_read wants us to quit */
+		if (count == -EPERM) {
+			*quit = 1;
+			return;
+		}
+		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
 		if (count == -EPIPE) {
 			if (cant_recover)
 				goto cant_recover;
@@ -341,7 +382,7 @@ cant_recover:
 				sender_receive(inst, samples[i], count);
 			}
 			if (inst->loopback == 3)
-				jitter_save(&inst->audio, samples[i], count);
+				jitter_save(&inst->dejitter, samples[i], count);
 		}
 	}
 }

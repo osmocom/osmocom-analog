@@ -9,7 +9,7 @@ enum number_type {
 	TYPE_INTERNATIONAL,
 };
 
-int call_init(const char *station_id, const char *sounddev, int samplerate, int latency, int dial_digits, int loopback);
+int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback);
 void call_cleanup(void);
 void process_call(int c);
 void clear_console_text(void);

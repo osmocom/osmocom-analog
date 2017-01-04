@@ -106,7 +106,7 @@ double bnetz_kanal2freq(int kanal, int unterband)
 	if (unterband)
 		freq -= 4.600;
 
-	return freq;
+	return freq * 1e6;
 }
 
 /* switch pilot signal (tone or file) */
@@ -141,7 +141,7 @@ static void bnetz_timeout(struct timer *timer);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
-int bnetz_create(int kanal, const char *sounddev, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_factor, const char *pilot)
+int bnetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_factor, const char *pilot)
 {
 	bnetz_t *bnetz;
 	enum pilot_signal pilot_signal = PILOT_SIGNAL_NONE;
@@ -202,7 +202,7 @@ error_pilot:
 	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %d 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&bnetz->sender, kanal, sounddev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_factor, pilot_signal);
+	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(kanal, 0), bnetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_factor, pilot_signal);
 	if (rc < 0) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -823,7 +823,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 	if (bnetz->dsp_mode == DSP_MODE_AUDIO) {
 		int16_t up[(int)((double)count * bnetz->sender.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&bnetz->sender.srstate, samples, count, up);
-		jitter_save(&bnetz->sender.audio, up, count);
+		jitter_save(&bnetz->sender.dejitter, up, count);
 	}
 }
 

@@ -1,9 +1,9 @@
 
 extern int num_kanal;
 extern int kanal[];
-extern int num_sounddev;
-extern const char *sounddev[];
-extern const char *call_sounddev;
+extern int num_audiodev;
+extern const char *audiodev[];
+extern const char *call_audiodev;
 extern int samplerate;
 extern int interval;
 extern int latency;
@@ -39,7 +39,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args);
 extern int quit;
 void sighandler(int sigset);
 
-void main_loop(int *quit, int latency, int interval, void (*myhandler)(void));
+void main_common(int *quit, int latency, int interval, void (*myhandler)(void));
 
 void dump_info(void);
 

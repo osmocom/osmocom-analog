@@ -481,7 +481,7 @@ again:
 		test_tone_encode(amps, samples, length);
 		break;
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
-		jitter_load(&amps->sender.audio, samples, length);
+		jitter_load(&amps->sender.dejitter, samples, length);
 		/* pre-emphasis */
 		if (amps->pre_emphasis)
 			pre_emphasis(&amps->estate, samples, length);

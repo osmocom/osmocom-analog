@@ -82,7 +82,7 @@ double anetz_kanal2freq(int kanal, int unterband)
 	if (unterband)
 		freq -= 4.500;
 
-	return freq;
+	return freq * 1e6;
 }
 
 /* Convert paging frequency number to to frequency. */
@@ -168,7 +168,7 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(int kanal, const char *sounddev, int samplerate, double rx_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume)
+int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume)
 {
 	anetz_t *anetz;
 	int rc;
@@ -187,7 +187,7 @@ int anetz_create(int kanal, const char *sounddev, int samplerate, double rx_gain
 	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&anetz->sender, kanal, sounddev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_volume, PILOT_SIGNAL_NONE);
+	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(kanal, 0), anetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_volume, PILOT_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;
@@ -508,7 +508,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 	if (anetz->dsp_mode == DSP_MODE_AUDIO) {
 		int16_t up[(int)((double)count * anetz->sender.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&anetz->sender.srstate, samples, count, up);
-		jitter_save(&anetz->sender.audio, up, count);
+		jitter_save(&anetz->sender.dejitter, up, count);
 	}
 }
 
