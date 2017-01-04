@@ -27,6 +27,8 @@ AC_CANONICAL_HOST
 PKG_CHECK_MODULES(ALSA, alsa >= 1.0)
 
 have_sdr=no
+PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, have_sdr=yes have_uhd=yes, have_uhd=no)
+AM_CONDITIONAL(HAVE_UHD, test "x$have_uhd" == "xyes" )
 AM_CONDITIONAL(HAVE_SDR, test "x$have_sdr" == "xyes" )
 
 AC_OUTPUT(

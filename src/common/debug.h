@@ -20,6 +20,7 @@
 #define DDMS		13
 #define DSMS		14
 #define DSDR		15
+#define DUHD		16
 
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, -1, fmt, ## arg)
 #define PDEBUG_CHAN(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, CHAN, fmt, ## arg)

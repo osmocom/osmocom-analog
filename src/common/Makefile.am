@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(UHD_CFLAGS)
 
 noinst_LIBRARIES = libcommon.a
 
@@ -31,5 +31,12 @@ AM_CPPFLAGS += -DHAVE_SDR
 
 libcommon_a_SOURCES += \
 	../common/sdr.c
+endif
+
+if HAVE_UHD
+AM_CPPFLAGS += -DHAVE_UHD
+
+libcommon_a_SOURCES += \
+	../common/uhd.c
 endif
 

@@ -15,5 +15,6 @@ bnetz_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
 	-lm
 

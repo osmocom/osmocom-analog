@@ -20,6 +20,7 @@ test_emphasis_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
 	-lm
 
 test_dms_SOURCES = \
@@ -31,6 +32,7 @@ test_dms_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
 	-lm
 
 test_sms_SOURCES = \
@@ -42,5 +44,6 @@ test_sms_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
 	-lm
 
