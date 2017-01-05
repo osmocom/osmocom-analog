@@ -28,7 +28,7 @@
 
 //#define CASCADE
 
-void biquad_init(biquad_low_pass_t *bq, double frequency, int samplerate)
+void filter_lowpass_init(filter_lowpass_t *bq, double frequency, int samplerate)
 {
 	double Fc, Q, K, norm;
 
@@ -44,7 +44,7 @@ void biquad_init(biquad_low_pass_t *bq, double frequency, int samplerate)
 	bq->b2 = (1 - K / Q + K * K) * norm;
 }
 
-void biquad_process(biquad_low_pass_t *bq, double *samples, int length, int iterations)
+void filter_lowpass_process(filter_lowpass_t *bq, double *samples, int length, int iterations)
 {
 	double a0, a1, a2, b1, b2;
 	double *z1, *z2;

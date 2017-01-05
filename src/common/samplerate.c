@@ -37,8 +37,8 @@ int init_samplerate(samplerate_t *state, double samplerate)
 	memset(state, 0, sizeof(*state));
 	state->factor = samplerate / 8000.0;
 
-	biquad_init(&state->up.bq, 4000.0, samplerate);
-	biquad_init(&state->down.bq, 4000.0, samplerate);
+	filter_lowpass_init(&state->up.lp, 4000.0, samplerate);
+	filter_lowpass_init(&state->down.lp, 4000.0, samplerate);
 
 	return 0;
 }
@@ -56,7 +56,7 @@ int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, in
 		spl[i] = *input++ / 32768.0;
 
 	/* filter down */
-	biquad_process(&state->down.bq, spl, input_num, 1);
+	filter_lowpass_process(&state->down.lp, spl, input_num, 1);
 
 	/* resample filtered result */
 	in_index = state->down.in_index;
@@ -125,7 +125,7 @@ int samplerate_upsample(samplerate_t *state, int16_t *input, int input_num, int1
 	state->up.in_index = in_index;
 
 	/* filter up */
-	biquad_process(&state->up.bq, spl, output_num, 1);
+	filter_lowpass_process(&state->up.lp, spl, output_num, 1);
 
 	/* convert double to samples */
 	for (i = 0; i < output_num; i++) {

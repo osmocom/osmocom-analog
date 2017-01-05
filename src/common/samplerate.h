@@ -3,11 +3,11 @@
 typedef struct samplerate {
 	double factor;
 	struct {
-		biquad_low_pass_t bq;
+		filter_lowpass_t lp;
 		double in_index;
 	} down;
 	struct {
-		biquad_low_pass_t bq;
+		filter_lowpass_t lp;
 		double in_index;
 	} up;
 } samplerate_t;
