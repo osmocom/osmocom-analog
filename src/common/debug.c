@@ -64,6 +64,7 @@ extern int num_kanal;
 void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, int chan, const char *fmt, ...)
 {
 	char buffer[4096], *b = buffer;
+	int s = sizeof(buffer) - 1;
 	const char *p;
 	va_list args;
 
@@ -76,13 +77,14 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	if (num_kanal > 1 && chan >= 0) {
 		sprintf(buffer, "(chan %d) ", chan);
 		b = strchr(buffer, '\0');
+		s -= strlen(buffer);
 	}
 
 	if (!(debug_mask & (1 << cat)))
 		return;
 
 	va_start(args, fmt);
-	vsnprintf(b, sizeof(buffer) - strlen(buffer) - 1, fmt, args);
+	vsnprintf(b, s, fmt, args);
 	va_end(args);
 
 	while ((p = strchr(file, '/')))
