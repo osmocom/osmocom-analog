@@ -102,6 +102,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "../common/timer.h"
@@ -129,20 +130,42 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 	len = (int)((double)samplerate / bitrate + 0.5);
 	half = (int)((double)samplerate / bitrate / 2.0 + 0.5);
-	if (len > (int)(sizeof(fsk->bit_buffer_spl) / sizeof(fsk->bit_buffer_spl[0]))) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate too high for buffer, please use lower rate, like 192000 Hz!\n");
-		return -1;
+	fsk->bit_buffer_spl = calloc(sizeof(fsk->bit_buffer_spl[0]), len);
+	if (!fsk->bit_buffer_spl) {
+		PDEBUG(DDSP, DEBUG_ERROR, "No mem!\n");
+		goto error;
 	}
 
 	fsk->bit_buffer_len = len;
 	fsk->bit_buffer_half = half;
 	fsk->bits_per_sample = bitrate / (double)samplerate;
 
-	fsk->speech_size = sizeof(fsk->speech_buffer) / sizeof(fsk->speech_buffer[0]);
+	fsk->speech_size = samplerate * 60 / bitrate + 10; /* 60 bits duration, add 10 to be safe */
+	fsk->speech_buffer = calloc(sizeof(fsk->speech_buffer[0]), fsk->speech_size);
+	if (!fsk->speech_buffer) {
+		PDEBUG(DDSP, DEBUG_ERROR, "No mem!\n");
+		goto error;
+	}
 
 	fsk->level_threshold = 655;
 
 	return 0;
+
+error:
+	fsk_fm_exit(fsk);
+	return -1;
+}
+
+void fsk_fm_exit(fsk_fm_demod_t *fsk)
+{
+	if (fsk->bit_buffer_spl) {
+		free(fsk->bit_buffer_spl);
+		fsk->bit_buffer_spl = NULL;
+	}
+	if (fsk->speech_buffer) {
+		free(fsk->speech_buffer);
+		fsk->speech_buffer = NULL;
+	}
 }
 
 /* get levels, sync time and jitter from sync sequence or frame data */

@@ -181,6 +181,8 @@ void dsp_cleanup_sender(cnetz_t *cnetz)
 		free(cnetz->dsp_speech_buffer);
 		cnetz->dsp_speech_buffer = NULL;
 	}
+
+	fsk_fm_exit(&cnetz->fsk_demod);
 }
 
 /* receive sample time and calculate speed against system clock
