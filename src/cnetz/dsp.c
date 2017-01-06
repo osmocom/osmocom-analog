@@ -173,10 +173,14 @@ void dsp_cleanup_sender(cnetz_t *cnetz)
 {
         PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup FSK for 'Sender'.\n");
 
-	if (cnetz->fsk_tx_buffer)
+	if (cnetz->fsk_tx_buffer) {
 		free(cnetz->fsk_tx_buffer);
-	if (cnetz->dsp_speech_buffer)
+		cnetz->fsk_tx_buffer = NULL;
+	}
+	if (cnetz->dsp_speech_buffer) {
 		free(cnetz->dsp_speech_buffer);
+		cnetz->dsp_speech_buffer = NULL;
+	}
 }
 
 /* receive sample time and calculate speed against system clock
