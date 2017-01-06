@@ -35,6 +35,7 @@
 #define PI		3.1415927
 
 /* signaling */
+#define BANDWIDTH	5000.0	/* maximum bandwidth */ 
 #define TX_PEAK_TONE	5000.0	/* peak amplitude for all tones */
 #define BIT_DURATION	0.010	/* bit length: 10 ms */
 #define FILTER_STEP	0.001	/* step every 1 ms */
@@ -84,6 +85,10 @@ int dsp_init_sender(bnetz_t *bnetz)
 	}
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+
+	/* set deviation and modulation parameters */
+	bnetz->sender.bandwidth = BANDWIDTH;
+	bnetz->sender.sample_deviation = 1250.0 / (double)TX_PEAK_TONE; // FIXME: calc real value
 
 	audio_init_loss(&bnetz->sender.loss, LOSS_INTERVAL, bnetz->sender.loss_volume, LOSS_TIME);
 

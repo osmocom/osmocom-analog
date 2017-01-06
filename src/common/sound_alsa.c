@@ -128,7 +128,7 @@ static int sound_prepare(sound_t *sound)
 	return 0;
 }
 
-void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, int samplerate)
+void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, int samplerate, double __attribute__((unused)) bandwidth, double __attribute__((unused)) sample_deviation)
 {
 	sound_t *sound;
 	int rc;

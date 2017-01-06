@@ -99,6 +99,7 @@
 
 #define PI			M_PI
 
+#define BANDWIDTH		20000.0	/* maximum bandwidth */
 #define FSK_DEVIATION		32767.0	/* +-8 KHz */
 #define SAT_DEVIATION		8192.0	/* +-2 KHz */
 #define COMPANDOR_0DB		45000	/* works quite well */
@@ -190,6 +191,10 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 	init_compandor(&amps->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
+
+	/* set deviation and modulation parameters */
+	amps->sender.bandwidth = BANDWIDTH;
+	amps->sender.sample_deviation = 8000.0 / (double)FSK_DEVIATION;
 
 	if (amps->sender.samplerate < 96000) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 96000 Hz to process FSK and SAT signals.\n");

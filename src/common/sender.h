@@ -27,11 +27,13 @@ typedef struct sender {
 	int			kanal;			/* channel number */
 	double			sendefrequenz;		/* transmitter frequency */
 	double			empfangsfrequenz;	/* receiver frequency */
+	double			bandwidth;		/* max NF frequency to be transmitted unaffected by filtering */
+	double			sample_deviation;	/* frequency deviation of one sample step (after pre-emphasis) */
 
 	/* audio */
 	void			*audio;
 	char			audiodev[64];		/* audio device name (alsa or sdr) */
-	void			*(*audio_open)(const char *, double *, double *, int, int);
+	void			*(*audio_open)(const char *, double *, double *, int, int, double, double);
 	void 			(*audio_close)(void *);
 	int			(*audio_write)(void *, int16_t **, int, int);
 	int			(*audio_read)(void *, int16_t **, int, int);

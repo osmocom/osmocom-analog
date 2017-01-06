@@ -40,6 +40,8 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->kanal = kanal;
 	sender->sendefrequenz = sendefrequenz;
 	sender->empfangsfrequenz = empfangsfrequenz;
+	sender->bandwidth = 4000; /* default is overwritten by dsp.c */
+	sender->sample_deviation = 0.2; /* default is overwritten by dsp.c */
 	strncpy(sender->audiodev, audiodev, sizeof(sender->audiodev) - 1);
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
@@ -172,7 +174,7 @@ int sender_open_audio(void)
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, master->samplerate);
+		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, master->samplerate, master->bandwidth, master->sample_deviation);
 		if (!master->audio) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "No audio device!\n");
 			return -EIO;

@@ -35,12 +35,10 @@
 #define PI		3.1415927
 
 /* signaling */
-/* NOTE: The peak deviation is similar for paging tone and signaling tone,
- * so both tones should be equal after pre-emphasis. This is why the paging
- * tones is so much louder.*/
+#define BANDWIDTH	15000.0	/* maximum bandwidth */
 #define TX_PEAK_TONE	8192.0	/* peak amplitude for all tones */
+#warning FIXME: only with emphasis, use seperate option for volume, override by sdr
 #define TX_PEAK_PAGE	32766.0	/* peak amplitude paging tone */
-// FIXME: what is the allowed deviation of tone?
 #define CHUNK_DURATION	0.010	/* 10 ms */
 
 // FIXME: how long until we detect a tone?
@@ -93,6 +91,10 @@ int dsp_init_sender(anetz_t *anetz, int page_sequence)
 	double tone;
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+
+	/* set deviation and modulation parameters */
+	anetz->sender.bandwidth = BANDWIDTH;
+	anetz->sender.sample_deviation = 11000.0 / (double)TX_PEAK_TONE;
 
 	anetz->page_sequence = page_sequence;
 

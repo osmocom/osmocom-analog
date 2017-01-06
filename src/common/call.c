@@ -473,7 +473,7 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 		return 0;
 
 	/* open sound device for call control */
-	call.sound = sound_open(audiodev, NULL, NULL, 1, samplerate);
+	call.sound = sound_open(audiodev, NULL, NULL, 1, samplerate, 3700.0, 0.0);
 	if (!call.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 

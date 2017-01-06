@@ -43,6 +43,7 @@
  */
 
 /* signaling */
+#define BANDWIDTH		6000.0	/* maximum bandwidth FIXME */
 #define COMPANDOR_0DB		32767	/* works quite well */
 #define TX_PEAK_FSK		10000.0	/* peak amplitude of signaling FSK +-3.5 KHz @ 1500 Hz */
 #define TX_PEAK_SUPER		(TX_PEAK_FSK / 3.5 * 0.3 / 2.68) /* peak amplitude of supervisory signal +-0.3 KHz @ 4015 Hz */
@@ -114,6 +115,10 @@ int dsp_init_sender(nmt_t *nmt)
 	}
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+
+	/* set deviation and modulation parameters */
+	nmt->sender.bandwidth = BANDWIDTH;
+	nmt->sender.sample_deviation = 2500.0 / (double)TX_PEAK_FSK; // FIXME: calc real value
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.0f (3.5 KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK);
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.0f (0.3 KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER);

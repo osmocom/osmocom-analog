@@ -42,6 +42,7 @@ extern int voice_deviation;
 
 #define PI		M_PI
 
+#define BANDWIDTH	5500.0	/* maximum bandwidth */
 #define FSK_DEVIATION	10000
 #define COMPANDOR_0DB	30000
 #define BITRATE		5280.0	/* bits per second */
@@ -87,6 +88,10 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	double RC, dt;
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
+
+	/* set deviation and modulation parameters */
+	cnetz->sender.bandwidth = BANDWIDTH;
+	cnetz->sender.sample_deviation = 2500.0 / (double)FSK_DEVIATION;
 
 	if (measure_speed) {
 		cnetz->measure_speed = measure_speed;
