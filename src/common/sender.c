@@ -32,7 +32,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum pilot_signal pilot_signal)
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum paging_signal paging_signal)
 {
 	sender_t *master, *slave;
 	int rc = 0;
@@ -49,12 +49,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->de_emphasis = de_emphasis;
 	sender->loopback = loopback;
 	sender->loss_volume = loss_volume;
-#ifdef HAVE_SDR
-	if (!strcmp(audiodev, "sdr"))
-		pilot_signal = PILOT_SIGNAL_NONE;
-#endif
-	sender->pilot_signal = pilot_signal;
-	sender->pilotton_phaseshift = 1.0 / ((double)samplerate / 1000.0);
+	sender->paging_signal = paging_signal;
 
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
 
@@ -73,13 +68,13 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 			break;
 	}
 	if (master) {
-		if (master->pilot_signal != PILOT_SIGNAL_NONE) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because second channel is used for pilot signal!\n", master->kanal);
+		if (master->paging_signal != PAGING_SIGNAL_NONE && !!strcmp(master->audiodev, "sdr")) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because its second audio channel is used for paging signal! Use different audio device.\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
-		if (pilot_signal != PILOT_SIGNAL_NONE) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because we need a stereo channel for pilot signal!\n", master->kanal);
+		if (paging_signal != PAGING_SIGNAL_NONE && !!strcmp(audiodev, "sdr")) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because we need a second audio channel for paging signal! Use different audio device.\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
@@ -95,10 +90,6 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 		/* link audio device */
 #ifdef HAVE_SDR
 		if (!strcmp(audiodev, "sdr")) {
-			if (pilot_signal != PILOT_SIGNAL_NONE) {
-				PDEBUG(DSENDER, DEBUG_ERROR, "No pilot signal allowed with SDR, please fix!\n");
-				abort();
-			}
 			sender->audio_open = sdr_open;
 			sender->audio_close = sdr_close;
 			sender->audio_read = sdr_read;
@@ -169,6 +160,7 @@ int sender_open_audio(void)
 {
 	sender_t *master, *inst;
 	int channels;
+	double paging_frequency = 0.0;
 	int i;
 
 	for (master = sender_head; master; master = master->next) {
@@ -188,10 +180,12 @@ int sender_open_audio(void)
 				rx_f[i] = inst->sendefrequenz;
 			else
 				rx_f[i] = inst->empfangsfrequenz;
+			if (inst->ruffrequenz)
+				paging_frequency = inst->ruffrequenz;
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, master->samplerate, master->bandwidth, master->sample_deviation);
+		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, master->bandwidth, master->sample_deviation);
 		if (!master->audio) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "No audio device!\n");
 			return -EIO;
@@ -226,27 +220,6 @@ void sender_destroy(sender_t *sender)
 	jitter_destroy(&sender->dejitter);
 }
 
-static void gen_pilotton(sender_t *sender, int16_t *samples, int length)
-{
-	double phaseshift, phase;
-	int i;
-
-	phaseshift = sender->pilotton_phaseshift;
-	phase = sender->pilotton_phase;
-
-	for (i = 0; i < length; i++) {
-		if (phase < 0.5)
-			*samples++ = 30000;
-		else
-			*samples++ = -30000;
-		phase += phaseshift;
-		if (phase >= 1.0)
-			phase -= 1.0;
-	}
-
-	sender->pilotton_phase = phase;
-}
-
 static void gain_samples(int16_t *samples, int length, double gain)
 {
 	int i;
@@ -271,16 +244,12 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
-	if (sender->pilot_signal != PILOT_SIGNAL_NONE) {
-		if (num_chan != 1) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Software error, please fix!\n");
-			abort();
-		}
-		num_chan = 2;
-	}
 	int16_t buff[num_chan][latspl], *samples[num_chan];
-	for (i = 0; i < num_chan; i++)
+	enum paging_signal paging_signal[num_chan];
+	int on[num_chan];
+	for (i = 0; i < num_chan; i++) {
 		samples[i] = buff[i];
+	}
 
 	count = sender->audio_get_inbuffer(sender->audio);
 	if (count < 0) {
@@ -321,41 +290,12 @@ cant_recover:
 			/* do pre emphasis towards radio, not wave_write */
 			if (inst->pre_emphasis)
 				pre_emphasis(&inst->estate, samples[i], count);
-		}
-		switch (sender->pilot_signal) {
-		case PILOT_SIGNAL_TONE:
-			/* tone if pilot signal is on */
-			if (sender->pilot_on)
-				gen_pilotton(sender, samples[1], count);
-			else
-				memset(samples[1], 0, count << 1);
-			break;
-		case PILOT_SIGNAL_NOTONE:
-			/* tone if pilot signal is off */
-			if (!sender->pilot_on)
-				gen_pilotton(sender, samples[1], count);
-			else
-				memset(samples[1], 0, count << 1);
-			break;
-		case PILOT_SIGNAL_POSITIVE:
-			/* positive signal if pilot signal is on */
-			if (sender->pilot_on)
-				memset(samples[1], 127, count << 1);
-			else
-				memset(samples[1], 128, count << 1);
-			break;
-		case PILOT_SIGNAL_NEGATIVE:
-			/* negative signal if pilot signal is on */
-			if (sender->pilot_on)
-				memset(samples[1], 128, count << 1);
-			else
-				memset(samples[1], 127, count << 1);
-			break;
-		case PILOT_SIGNAL_NONE:
-			break;
+			/* set paging signal */
+			paging_signal[i] = sender->paging_signal;
+			on[i] = sender->paging_on;
 		}
 
-		rc = sender->audio_write(sender->audio, samples, count, num_chan);
+		rc = sender->audio_write(sender->audio, samples, count, paging_signal, on, num_chan);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			if (rc == -EPIPE) {
@@ -406,8 +346,8 @@ transmit_later:
 	}
 }
 
-void sender_pilot(sender_t *sender, int on)
+void sender_paging(sender_t *sender, int on)
 {
-	sender->pilot_on = on;
+	sender->paging_on = on;
 }
 

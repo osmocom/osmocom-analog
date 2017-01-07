@@ -17,12 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include "filter.h"
-#include "sdr.h"
+#include "sender.h"
 #ifdef HAVE_UHD
 #include "uhd.h"
 #endif
@@ -42,7 +43,9 @@ typedef struct sdr_chan {
 } sdr_chan_t;
 
 typedef struct sdr {
-	sdr_chan_t *chan;
+	sdr_chan_t *chan;	/* settings for all channels */
+	int paging_channel;	/* if set, points to paging channel */
+	sdr_chan_t paging_chan;	/* settings for extra paging channel */
 	double spl_deviation;	/* how to convert a sample step into deviation (Hz) */
 	int channels;		/* number of frequencies */
 	double samplerate;	/* IQ rate */
@@ -73,10 +76,10 @@ int sdr_init(const char *device_args, double rx_gain, double tx_gain)
 	return 0;
 }
 
-void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int channels, int samplerate, double bandwidth, double sample_deviation)
+void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int channels, double paging_frequency, int samplerate, double bandwidth, double sample_deviation)
 {
 	sdr_t *sdr;
-	double center_frequency;
+	double tx_center_frequency, rx_center_frequency;
 	int rc;
 	int c;
 
@@ -95,8 +98,14 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	sdr->spl_deviation = sample_deviation;
 	sdr->amplitude = 0.4 / (double)channels; // FIXME: actual amplitude 0.1?
 
+	/* special case where we use a paging frequency */
+	if (paging_frequency) {
+		/* add extra paging channel */
+		sdr->paging_channel = channels;
+	}
+
 	/* create list of channel states */
-	sdr->chan = calloc(sizeof(*sdr->chan), channels);
+	sdr->chan = calloc(sizeof(*sdr->chan), channels + (sdr->paging_channel != 0));
 	if (!sdr->chan) {
 		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
 		goto error;
@@ -105,43 +114,74 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz, RX = %.6f MHz\n", c, tx_frequency[c] / 1e6, rx_frequency[c] / 1e6);
 		sdr->chan[c].tx_frequency = tx_frequency[c];
 		sdr->chan[c].rx_frequency = rx_frequency[c];
-#warning check rx frequency is in range
 		filter_lowpass_init(&sdr->chan[c].rx_lp[0], bandwidth, samplerate);
 		filter_lowpass_init(&sdr->chan[c].rx_lp[1], bandwidth, samplerate);
 	}
+	if (sdr->paging_channel) {
+		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
+		sdr->chan[sdr->paging_channel].tx_frequency = paging_frequency;
+	}
 
 	/* calculate required bandwidth (IQ rate) */
-	if (channels == 1) {
-		PDEBUG(DSDR, DEBUG_INFO, "Single frequency, so we use sample rate as IQ bandwidth: %.6f MHz\n", sdr->samplerate / 1e6);
-		center_frequency = sdr->chan[0].tx_frequency;
-	} else {
-		double low_frequency = sdr->chan[0].tx_frequency, high_frequency = sdr->chan[0].tx_frequency, range;
-		for (c = 1; c < channels; c++) {
-			if (sdr->chan[c].tx_frequency < low_frequency)
-				low_frequency = sdr->chan[c].tx_frequency;
-			if (sdr->chan[c].tx_frequency > high_frequency)
-				high_frequency = sdr->chan[c].tx_frequency;
-		}
-		range = high_frequency - low_frequency;
-		PDEBUG(DSDR, DEBUG_INFO, "Range between frequencies: %.6f MHz\n", range / 1e6);
-		if (range * 2 > sdr->samplerate) {
-			// why that? actually i don't know. i just want to be safe....
-			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
-			goto error;
-		}
-		center_frequency = (high_frequency + low_frequency) / 2.0;
+	double tx_low_frequency = sdr->chan[0].tx_frequency, tx_high_frequency = sdr->chan[0].tx_frequency;
+	double rx_low_frequency = sdr->chan[0].rx_frequency, rx_high_frequency = sdr->chan[0].rx_frequency;
+	double range;
+	for (c = 1; c < channels; c++) {
+		if (sdr->chan[c].tx_frequency < tx_low_frequency)
+			tx_low_frequency = sdr->chan[c].tx_frequency;
+		if (sdr->chan[c].tx_frequency > tx_high_frequency)
+			tx_high_frequency = sdr->chan[c].tx_frequency;
+		if (sdr->chan[c].rx_frequency < rx_low_frequency)
+			rx_low_frequency = sdr->chan[c].rx_frequency;
+		if (sdr->chan[c].rx_frequency > rx_high_frequency)
+			rx_high_frequency = sdr->chan[c].rx_frequency;
 	}
-	PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: %.6f MHz\n", center_frequency / 1e6);
+	if (sdr->paging_channel) {
+		if (sdr->chan[sdr->paging_channel].tx_frequency < tx_low_frequency)
+			tx_low_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
+		if (sdr->chan[sdr->paging_channel].tx_frequency > tx_high_frequency)
+			tx_high_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
+	}
+	/* range of TX */
+	range = tx_high_frequency - tx_low_frequency;
+	if (range)
+		PDEBUG(DSDR, DEBUG_INFO, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
+	if (range * 2 > sdr->samplerate) {
+		// why that? actually i don't know. i just want to be safe....
+		PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies.\n");
+		PDEBUG(DSDR, DEBUG_NOTICE, "The given rate is %.6f MHz, but required rate must be >= %.6f MHz\n", sdr->samplerate / 1e6, range * 2.0 / 1e6);
+		PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
+		goto error;
+	}
+	tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
+	PDEBUG(DSDR, DEBUG_INFO, "Using TX center frequency: %.6f MHz\n", tx_center_frequency / 1e6);
+	/* range of RX */
+	range = rx_high_frequency - rx_low_frequency;
+	if (range)
+		PDEBUG(DSDR, DEBUG_INFO, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
+	if (range * 2.0 > sdr->samplerate) {
+		// why that? actually i don't know. i just want to be safe....
+		PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
+		goto error;
+	}
+	rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
+	PDEBUG(DSDR, DEBUG_INFO, "Using RX center frequency: %.6f MHz\n", rx_center_frequency / 1e6);
+	/* set offsets to center frequency */
 	for (c = 0; c < channels; c++) {
-		sdr->chan[c].offset = sdr->chan[c].tx_frequency - center_frequency;
-		sdr->chan[c].rx_rot = 2 * M_PI * -sdr->chan[c].offset / sdr->samplerate;
-		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d offset: %.6f MHz\n", c, sdr->chan[c].offset / 1e6);
+		double rx_offset;
+		sdr->chan[c].offset = sdr->chan[c].tx_frequency - tx_center_frequency;
+		rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
+		sdr->chan[c].rx_rot = 2 * M_PI * -rx_offset / sdr->samplerate;
+		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX offset: %.6f MHz, RX offset: %.6f MHz\n", c, sdr->chan[c].offset / 1e6, rx_offset / 1e6);
+	}
+	if (sdr->paging_channel) {
+		sdr->chan[sdr->paging_channel].offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
+		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX offset: %.6f MHz\n", sdr->chan[sdr->paging_channel].offset / 1e6);
 	}
 	PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB, RX %.1f dB\n", sdr_tx_gain, sdr_rx_gain);
 
 #ifdef HAVE_UHD
-#warning hack
-	rc = uhd_open(sdr_device_args, center_frequency, center_frequency - sdr->chan[0].tx_frequency + sdr->chan[0].rx_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
+	rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
 	if (rc)
 		goto error;
 #endif
@@ -168,12 +208,12 @@ void sdr_close(void *inst)
 	}
 }
 
-int sdr_write(void *inst, int16_t **samples, int num, int channels)
+int sdr_write(void *inst, int16_t **samples, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
 	int c, s, ss;
-	double rate, phase, amplitude, dev;
+	double rate, offset, phase, amplitude, dev;
 	int sent;
 
 	if (channels != sdr->channels) {
@@ -186,11 +226,16 @@ int sdr_write(void *inst, int16_t **samples, int num, int channels)
 	amplitude = sdr->amplitude;
 	memset(buff, 0, sizeof(buff));
 	for (c = 0; c < channels; c++) {
-		/* modulate */
 		phase = sdr->chan[c].tx_phase;
+		/* switch offset to paging channel, if requested */
+		if (on[c] && sdr->paging_channel)
+			offset = sdr->chan[sdr->paging_channel].offset;
+		else
+			offset = sdr->chan[c].offset;
+		/* modulate */
 		for (s = 0, ss = 0; s < num; s++) {
 			/* deviation is defined by the sample value and the offset */
-			dev = sdr->chan[c].offset + (double)samples[c][s] * sdr->spl_deviation;
+			dev = offset + (double)samples[c][s] * sdr->spl_deviation;
 #ifdef FAST_SINE
 			phase += 256.0 * dev / rate;
 			if (phase < 0.0)
@@ -249,7 +294,6 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 			Q[s] = i * sin(phase) + q * cos(phase);
 		}
 		sdr->chan[c].rx_phase = phase;
-#warning eine interation von 2 führt zu müll (2. kanal gespiegeltes audio), muss man genauer mal analysieren
 		filter_lowpass_process(&sdr->chan[c].rx_lp[0], I, count, 1);
 		filter_lowpass_process(&sdr->chan[c].rx_lp[1], Q, count, 1);
 		last_phase = sdr->chan[c].rx_last_phase;

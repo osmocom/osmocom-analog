@@ -21,11 +21,13 @@
 #include <stdint.h>
 #include <alsa/asoundlib.h>
 #include "debug.h"
-#include "sound.h"
+#include "sender.h"
 
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;
 	int pchannels, cchannels;
+	double paging_phaseshift;	/* phase to shift every sample */
+	double paging_phase;	 	/* current phase */
 } sound_t;
 
 static int set_hw_params(snd_pcm_t *handle, int samplerate, int *channels)
@@ -128,7 +130,7 @@ static int sound_prepare(sound_t *sound)
 	return 0;
 }
 
-void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, int samplerate, double __attribute__((unused)) bandwidth, double __attribute__((unused)) sample_deviation)
+void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, double __attribute__((unused)) paging_frequency, int samplerate, double __attribute__((unused)) bandwidth, double __attribute__((unused)) sample_deviation)
 {
 	sound_t *sound;
 	int rc;
@@ -143,6 +145,8 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to alloc memory!\n");
 		return NULL;
 	}
+
+	sound->paging_phaseshift = 1.0 / ((double)samplerate / 1000.0);
 
 	rc = snd_pcm_open(&sound->phandle, audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	if (rc < 0) {
@@ -200,7 +204,51 @@ void sound_close(void *inst)
 	free(sound);
 }
 
-int sound_write(void *inst, int16_t **samples, int num, int channels)
+static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum paging_signal paging_signal, int on)
+{
+	double phaseshift, phase;
+	int i;
+
+	switch (paging_signal) {
+	case PAGING_SIGNAL_NOTONE:
+		/* no tone if paging signal is on */
+		on = !on;
+		// fall through
+	case PAGING_SIGNAL_TONE:
+		/* tone if paging signal is on */
+		if (on) {
+			phaseshift = sound->paging_phaseshift;
+			phase = sound->paging_phase;
+			for (i = 0; i < length; i++) {
+				if (phase < 0.5)
+					*samples++ = 30000;
+				else
+					*samples++ = -30000;
+				phase += phaseshift;
+				if (phase >= 1.0)
+					phase -= 1.0;
+			}
+			sound->paging_phase = phase;
+		} else
+			memset(samples, 0, length << 1);
+		break;
+	case PAGING_SIGNAL_NEGATIVE:
+		/* negative signal if paging signal is on */
+		on = !on;
+		// fall through
+	case PAGING_SIGNAL_POSITIVE:
+		/* positive signal if paging signal is on */
+		if (on)
+			memset(samples, 127, length << 1);
+		else
+			memset(samples, 128, length << 1);
+		break;
+	case PAGING_SIGNAL_NONE:
+		break;
+	}
+}
+
+int sound_write(void *inst, int16_t **samples, int num, enum paging_signal *paging_signal, int *on, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
 	int16_t buff[num << 1];
@@ -208,15 +256,22 @@ int sound_write(void *inst, int16_t **samples, int num, int channels)
 	int i, ii;
 
 	if (sound->pchannels == 2) {
-		if (channels < 2) {
+		if (paging_signal && on && paging_signal[0] != PAGING_SIGNAL_NONE) {
+			int16_t paging[num << 1];
+			gen_paging_tone(sound, paging, num, paging_signal[0], on[0]);
 			for (i = 0, ii = 0; i < num; i++) {
 				buff[ii++] = samples[0][i];
+				buff[ii++] = paging[i];
+			}
+		} else if (channels == 2) {
+			for (i = 0, ii = 0; i < num; i++) {
 				buff[ii++] = samples[0][i];
+				buff[ii++] = samples[1][i];
 			}
 		} else {
 			for (i = 0, ii = 0; i < num; i++) {
 				buff[ii++] = samples[0][i];
-				buff[ii++] = samples[1][i];
+				buff[ii++] = samples[0][i];
 			}
 		}
 		rc = snd_pcm_writei(sound->phandle, buff, num);

@@ -187,7 +187,7 @@ int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain
 	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(kanal, 0), anetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_volume, PILOT_SIGNAL_NONE);
+	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(kanal, 0), anetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_volume, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

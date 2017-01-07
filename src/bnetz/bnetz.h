@@ -53,10 +53,10 @@ typedef struct bnetz {
 	int			gfs;			/* 'Gruppenfreisignal' */
 
 	/* switch sender to channel 19 */
-	char			pilot_file[256];	/* if set, write to given file to switch to channel 19 or back */
-	char			pilot_on[256];		/* what to write to switch to channel 19 */
-	char			pilot_off[256];		/* what to write to switch back */
-	int			pilot_is_on;		/* set, if we are on channel 19. also used to switch back on exit */
+	char			paging_file[256];	/* if set, write to given file to switch to channel 19 or back */
+	char			paging_on[256];		/* what to write to switch to channel 19 */
+	char			paging_off[256];	/* what to write to switch back */
+	int			paging_is_on;		/* set, if we are on channel 19. also used to switch back on exit */
 
 	/* all bnetz states */
 	enum bnetz_state	state;			/* main state of sender */
@@ -100,7 +100,7 @@ typedef struct bnetz {
 
 double bnetz_kanal2freq(int kanal, int unterband);
 int bnetz_init(void);
-int bnetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_factor, const char *pilot);
+int bnetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_factor, const char *paging);
 void bnetz_destroy(sender_t *sender);
 void bnetz_loss_indication(bnetz_t *bnetz);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);

@@ -109,23 +109,23 @@ double bnetz_kanal2freq(int kanal, int unterband)
 	return freq * 1e6;
 }
 
-/* switch pilot signal (tone or file) */
+/* switch paging signal (tone or file) */
 static void switch_channel_19(bnetz_t *bnetz, int on)
 {
-	/* affects only if pilot signal is used */
-	sender_pilot(&bnetz->sender, on);
+	/* affects only if paging signal is used */
+	sender_paging(&bnetz->sender, on);
 
-	if (bnetz->pilot_file[0] && bnetz->pilot_is_on != on) {
+	if (bnetz->paging_file[0] && bnetz->paging_is_on != on) {
 		FILE *fp;
 
-		fp = fopen(bnetz->pilot_file, "w");
+		fp = fopen(bnetz->paging_file, "w");
 		if (!fp) {
-			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to open file '%s' to switch channel 19!\n", bnetz->pilot_file);
+			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to open file '%s' to switch channel 19!\n", bnetz->paging_file);
 			return;
 		}
-		fprintf(fp, "%s\n", (on) ? bnetz->pilot_on : bnetz->pilot_off);
+		fprintf(fp, "%s\n", (on) ? bnetz->paging_on : bnetz->paging_off);
 		fclose(fp);
-		bnetz->pilot_is_on = on;
+		bnetz->paging_is_on = on;
 	}
 }
 
@@ -141,11 +141,11 @@ static void bnetz_timeout(struct timer *timer);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
-int bnetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_factor, const char *pilot)
+int bnetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_factor, const char *paging)
 {
 	bnetz_t *bnetz;
-	enum pilot_signal pilot_signal = PILOT_SIGNAL_NONE;
-	char pilot_file[256] = "", pilot_on[256] = "", pilot_off[256] = "";
+	enum paging_signal paging_signal = PAGING_SIGNAL_NONE;
+	char paging_file[256] = "", paging_on[256] = "", paging_off[256] = "";
 	int rc;
 
 	if (!(kanal >= 1 && kanal <= 39) && !(kanal >= 50 && kanal <= 86)) {
@@ -163,34 +163,34 @@ int bnetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain
 		return -EINVAL;
 	}
 	
-	if (!strcmp(pilot, "notone"))
-		pilot_signal = PILOT_SIGNAL_NOTONE;
+	if (!strcmp(paging, "notone"))
+		paging_signal = PAGING_SIGNAL_NOTONE;
 	else
-	if (!strcmp(pilot, "tone"))
-		pilot_signal = PILOT_SIGNAL_TONE;
+	if (!strcmp(paging, "tone"))
+		paging_signal = PAGING_SIGNAL_TONE;
 	else
-	if (!strcmp(pilot, "positive"))
-		pilot_signal = PILOT_SIGNAL_POSITIVE;
+	if (!strcmp(paging, "positive"))
+		paging_signal = PAGING_SIGNAL_POSITIVE;
 	else
-	if (!strcmp(pilot, "negative"))
-		pilot_signal = PILOT_SIGNAL_NEGATIVE;
+	if (!strcmp(paging, "negative"))
+		paging_signal = PAGING_SIGNAL_NEGATIVE;
 	else {
 		char *p;
 
-		strncpy(pilot_file, pilot, sizeof(pilot_file) - 1);
-		p = strchr(pilot_file, '=');
+		strncpy(paging_file, paging, sizeof(paging_file) - 1);
+		p = strchr(paging_file, '=');
 		if (!p) {
-error_pilot:
-			PDEBUG(DBNETZ, DEBUG_ERROR, "Given pilot file (to switch to channel 19) is missing parameters. Use <file>=<on>:<off> format!\n");
+error_paging:
+			PDEBUG(DBNETZ, DEBUG_ERROR, "Given paging file (to switch to channel 19) is missing parameters. Use <file>=<on>:<off> format!\n");
 			return -EINVAL;
 		}
 		*p++ = '\0';
-		strncpy(pilot_on, p, sizeof(pilot_on) - 1);
-		p = strchr(pilot_file, ':');
+		strncpy(paging_on, p, sizeof(paging_on) - 1);
+		p = strchr(paging_on, ':');
 		if (!p)
-			goto error_pilot;
+			goto error_paging;
 		*p++ = '\0';
-		strncpy(pilot_off, p, sizeof(pilot_off) - 1);
+		strncpy(paging_off, p, sizeof(paging_off) - 1);
 	}
 
 	bnetz = calloc(1, sizeof(bnetz_t));
@@ -202,11 +202,12 @@ error_pilot:
 	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %d 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(kanal, 0), bnetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_factor, pilot_signal);
+	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(kanal, 0), bnetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_factor, paging_signal);
 	if (rc < 0) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
+	bnetz->sender.ruffrequenz = bnetz_kanal2freq(19, 0);
 
 	/* init audio processing */
 	rc = dsp_init_sender(bnetz);
@@ -216,9 +217,9 @@ error_pilot:
 	}
 
 	bnetz->gfs = gfs;
-	strncpy(bnetz->pilot_file, pilot_file, sizeof(bnetz->pilot_file) - 1);
-	strncpy(bnetz->pilot_on, pilot_on, sizeof(bnetz->pilot_on) - 1);
-	strncpy(bnetz->pilot_off, pilot_off, sizeof(bnetz->pilot_off) - 1);
+	strncpy(bnetz->paging_file, paging_file, sizeof(bnetz->paging_file) - 1);
+	strncpy(bnetz->paging_on, paging_on, sizeof(bnetz->paging_on) - 1);
+	strncpy(bnetz->paging_off, paging_off, sizeof(bnetz->paging_off) - 1);
 	timer_init(&bnetz->timer, bnetz_timeout, bnetz);
 
 	/* go into idle state */

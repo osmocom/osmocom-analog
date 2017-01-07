@@ -473,7 +473,7 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 		return 0;
 
 	/* open sound device for call control */
-	call.sound = sound_open(audiodev, NULL, NULL, 1, samplerate, 3700.0, 0.0);
+	call.sound = sound_open(audiodev, NULL, NULL, 1, 0.0, samplerate, 3700.0, 0.0);
 	if (!call.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 
@@ -671,7 +671,7 @@ void process_call(int c)
 			jitter_load(&call.dejitter, up, count);
 		}
 		spl_list[0] = up;
-		rc = sound_write(call.sound, spl_list, count, 1);
+		rc = sound_write(call.sound, spl_list, count, NULL, NULL, 1);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE)

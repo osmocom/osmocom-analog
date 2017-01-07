@@ -36,8 +36,8 @@
 #include "ansage.h"
 
 int gfs = 2;
-int num_pilot = 0;
-const char *pilot[MAX_SENDER] = { "tone" };
+int num_paging = 0;
+const char *paging[MAX_SENDER] = { "tone" };
 double lossdetect = 0;
 
 void print_help(const char *arg0)
@@ -53,7 +53,7 @@ void print_help(const char *arg0)
 	printf("        Set to 19 in order to make the phone transmit at 100 mW instead of\n");
 	printf("        full 15 Watts. If supported, the phone uses the channel with low power\n");
 	printf("        (Kanal kleiner Leistung).\n");
-	printf(" -P --pilot tone | notone | positive | negative | <file>=<on>:<off>\n");
+	printf(" -P --paging tone | notone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");
 	printf("        'tone', 'positive', 'negative' is sent on second audio channel.\n");
@@ -63,7 +63,7 @@ void print_help(const char *arg0)
 	printf("        'negative' sends a negative signal for channel 19, else positive.\n");
 	printf("        Example: /sys/class/gpio/gpio17/value=1:0 writes a '1' to\n");
 	printf("        /sys/class/gpio/gpio17/value to switching to channel 19 and a '0' to\n");
-	printf("        switch back. (default = %s)\n", pilot[0]);
+	printf("        switch back. (default = %s)\n", paging[0]);
 	printf(" -L --loss <volume>\n");
 	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
 	printf("        percent. (disabled by default)\n");
@@ -79,7 +79,7 @@ static int handle_options(int argc, char **argv)
 
 	static struct option long_options_special[] = {
 		{"gfs", 1, 0, 'G'},
-		{"pilot", 1, 0, 'P'},
+		{"paging", 1, 0, 'P'},
 		{"loss", 1, 0, 'L'},
 		{0, 0, 0, 0},
 	};
@@ -109,7 +109,7 @@ static int handle_options(int argc, char **argv)
 			skip_args += 2;
 			break;
 		case 'P':
-			OPT_ARRAY(num_pilot, pilot, strdup(optarg))
+			OPT_ARRAY(num_paging, paging, strdup(optarg))
 			skip_args += 2;
 			break;
 		case 'L':
@@ -159,10 +159,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
-	if (num_kanal == 1 && num_pilot == 0)
-		num_pilot = 1; /* use defualt */
-	if (num_kanal != num_pilot) {
-		fprintf(stderr, "You need to specify as many pilot tone settings as you have channels.\n");
+	if (num_kanal == 1 && num_paging == 0)
+		num_paging = 1; /* use defualt */
+	if (num_kanal != num_paging) {
+		fprintf(stderr, "You need to specify as many paging tone settings as you have channels.\n");
 		exit(0);
 	}
 
@@ -187,13 +187,13 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], audiodev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, pilot[i]);
+		rc = bnetz_create(kanal[i], audiodev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, paging[i]);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
 		printf("Base station for channel %d ready, please tune transmitter to %.3f MHz and receiver " "to %.3f MHz.\n", kanal[i], bnetz_kanal2freq(kanal[i], 0) / 1e6, bnetz_kanal2freq(kanal[i], 1) / 1e6);
-		printf("To call phone, switch transmitter (using pilot signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0) / 1e6);
+		printf("To call phone, switch transmitter (using paging signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0) / 1e6);
 	}
 
 	main_common(&quit, latency, interval, NULL);
