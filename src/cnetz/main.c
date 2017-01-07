@@ -285,6 +285,12 @@ int main(int argc, char *argv[])
 	if (i == num_kanal)
 		fprintf(stderr, "You did not define any SpK (speech) channel. You will not be able to make any call.\n");
 
+	/* SDR always requires emphasis */
+	if (!strcmp(audiodev[0], "sdr")) {
+		do_pre_emphasis = 1;
+		do_de_emphasis = 1;
+	}
+
 	if (!do_pre_emphasis || !do_de_emphasis) {
 		fprintf(stderr, "*******************************************************************************\n");
 		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -p -d)!\n");
@@ -299,6 +305,8 @@ int main(int argc, char *argv[])
 		polarity = 1; /* positive */
 	if (!strcmp(flip_polarity, "yes"))
 		polarity = -1; /* negative */
+	if (!strcmp(audiodev[0], "sdr") && polarity == 0)
+		polarity = 1; /* SDR is always positive */
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {

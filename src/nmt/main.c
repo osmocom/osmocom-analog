@@ -341,6 +341,12 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
+	/* SDR always requires emphasis */
+	if (!strcmp(audiodev[0], "sdr")) {
+		do_pre_emphasis = 1;
+		do_de_emphasis = 1;
+	}
+
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
 		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);

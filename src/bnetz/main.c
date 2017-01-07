@@ -185,6 +185,12 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
+	/* SDR always requires emphasis */
+	if (!strcmp(audiodev[0], "sdr")) {
+		do_pre_emphasis = 1;
+		do_de_emphasis = 1;
+	}
+
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
 		rc = bnetz_create(kanal[i], audiodev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, paging[i]);
