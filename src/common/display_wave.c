@@ -31,7 +31,7 @@ static int num_sender = 0;
 static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
 static int wave_on = 0;
 
-static void get_win_size(int *w, int *h)
+void get_win_size(int *w, int *h)
 {
 	struct winsize win;
 	int rc;
@@ -65,23 +65,25 @@ void display_wave_on(int on)
 
 	get_win_size(&w, &h);
 
+	if (wave_on) {
+		memset(&screen, ' ', sizeof(screen));
+		printf("\0337\033[H");
+		for (i = 0; i < num_sender; i++) {
+			for (j = 0; j < HEIGHT; j++) {
+				screen[j][w] = '\0';
+				puts(screen[j]);
+			}
+		}
+		printf("\0338"); fflush(stdout);
+	}
+
 	if (on < 0)
 		wave_on = 1 - wave_on;
 	else
 		wave_on = on;
-
-	memset(&screen, ' ', sizeof(screen));
-	printf("\0337\033[H");
-	for (i = 0; i < num_sender; i++) {
-		for (j = 0; j < HEIGHT; j++) {
-			screen[j][w] = '\0';
-			puts(screen[j]);
-		}
-	}
-	printf("\0338"); fflush(stdout);
 }
 
-void display_limit_scroll(int on)
+void display_wave_limit_scroll(int on)
 {
 	int w, h;
 

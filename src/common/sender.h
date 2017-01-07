@@ -7,7 +7,7 @@
 #include "jitter.h"
 #include "loss.h"
 #include "emphasis.h"
-#include "display_wave.h"
+#include "display.h"
 
 #define MAX_SENDER	16
 

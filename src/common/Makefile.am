@@ -24,6 +24,7 @@ libcommon_a_SOURCES = \
 	../common/compandor.c \
 	../common/sender.c \
 	../common/display_wave.c \
+	../common/display_iq.c \
 	../common/main_common.c
 
 if HAVE_SDR

@@ -83,6 +83,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	int rc;
 	int c;
 
+	display_iq_init(samplerate);
+
 	if (channels < 1) {
 		PDEBUG(DSDR, DEBUG_ERROR, "No channel given, please fix!\n");
 		abort();
@@ -282,6 +284,8 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 #endif
 	if (count <= 0)
 		return count;
+
+	display_iq(buff, count);
 
 	for (c = 0; c < channels; c++) {
 		rot = sdr->chan[c].rx_rot;

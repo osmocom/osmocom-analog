@@ -431,7 +431,13 @@ next_char:
 			goto next_char;
 		case 'w':
 			/* toggle display */
+			display_iq_on(0);
 			display_wave_on(-1);
+			goto next_char;
+		case 'q':
+			/* toggle display */
+			display_wave_on(0);
+			display_iq_on(-1);
 			goto next_char;
 		case 'i':
 			/* dump info */
