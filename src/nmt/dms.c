@@ -287,10 +287,13 @@ static void dms_encode_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *
 #endif
 
 	/* render wave form */
-	fsk_render_frame(nmt, frame, 127, dms->frame_spl);
+	dms->frame_length = fsk_render_frame(nmt, frame, 127, dms->frame_spl);
 	dms->frame_valid = 1;
 	dms->frame_pos = 0;
-	dms->frame_length = nmt->samples_per_bit * 127;
+	if (dms->frame_length > dms->frame_size) {
+		PDEBUG(DDMS, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
+		abort();
+	}
 }
 
 /* encode RR frame and schedule for next transmission */
@@ -331,10 +334,13 @@ static void dms_encode_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 #endif
 
 	/* render wave form */
-	fsk_render_frame(nmt, frame, 77, dms->frame_spl);
+	dms->frame_length = fsk_render_frame(nmt, frame, 77, dms->frame_spl);
 	dms->frame_valid = 1;
 	dms->frame_pos = 0;
-	dms->frame_length = nmt->samples_per_bit * 77;
+	if (dms->frame_length > dms->frame_size) {
+		PDEBUG(DDMS, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
+		abort();
+	}
 }
 
 /* check if we have to transmit a frame and render it

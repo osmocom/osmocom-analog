@@ -26,8 +26,9 @@ typedef struct dms {
 	/* DMS transmission */
 	int			frame_valid;		/* set, if there is a valid frame in sample buffer */
 	int16_t			*frame_spl;		/* 127 * fsk_bit_length */
+	int			frame_size;		/* total size of buffer */
 	int			frame_pos;		/* current sample position in frame_spl */
-	int			frame_length;		/* number of samples in frame_spl */
+	int			frame_length;		/* number of samples currently in frame_spl */
 	uint16_t		rx_sync;		/* shift register to detect sync */
 	double			rx_sync_level[256];	/* level infos */
 	double			rx_sync_quality[256];	/* quality infos */
