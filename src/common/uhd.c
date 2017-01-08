@@ -43,6 +43,7 @@ static time_t			rx_time_secs = 0;
 static double			rx_time_fract_sec = 0.0;
 static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
+static int			rx_gap = 0; /* if we missed samples, we fill our rx data with zeroes */
 
 int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain)
 {
@@ -316,6 +317,16 @@ int uhd_receive(float *buff, int max)
 	time_t last_secs = rx_time_secs;
 	double last_fract_sec = rx_time_fract_sec;
 
+	/* fill gap this time */
+	if (rx_gap) {
+		count = rx_gap;
+		if ((int)count > max)
+			count = max;
+		rx_gap -= count;
+		memset(buff, 0, count * sizeof(*buff) * 2);
+		return count;
+	}
+
 	if (max < (int)rx_samps_per_buff) {
 		PDEBUG(DUHD, DEBUG_ERROR, "SDR rx buffer too small, please fix!\n");
 		return 0;
@@ -343,9 +354,8 @@ int uhd_receive(float *buff, int max)
 					PDEBUG(DUHD, DEBUG_ERROR, "Received rate (%.0f) does not match defined rate (%.0f), use diffrent sample rate that UHD device can handle!\n", (double)count / got, samplerate);
 					return -EPERM;
 				}
-				int gap = diff * (double)samplerate;
-				PDEBUG(DUHD, DEBUG_ERROR, "Detected a gap of %.6f secods (%d samples), \n", diff, gap);
-#warning fill gap
+				rx_gap = diff * (double)samplerate + 0.5;
+				PDEBUG(DUHD, DEBUG_ERROR, "Lost rx frame(s): A gap of %.6f secods (%d samples), \n", diff, rx_gap);
 			}
 			check_rate = 0;
 		}

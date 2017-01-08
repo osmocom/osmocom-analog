@@ -147,7 +147,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	/* range of TX */
 	range = tx_high_frequency - tx_low_frequency;
 	if (range)
-		PDEBUG(DSDR, DEBUG_INFO, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
+		PDEBUG(DSDR, DEBUG_DEBUG, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
 	if (range * 2 > sdr->samplerate) {
 		// why that? actually i don't know. i just want to be safe....
 		PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies.\n");
@@ -156,29 +156,28 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		goto error;
 	}
 	tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
-	PDEBUG(DSDR, DEBUG_INFO, "Using TX center frequency: %.6f MHz\n", tx_center_frequency / 1e6);
 	/* range of RX */
 	range = rx_high_frequency - rx_low_frequency;
 	if (range)
-		PDEBUG(DSDR, DEBUG_INFO, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
+		PDEBUG(DSDR, DEBUG_DEBUG, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
 	if (range * 2.0 > sdr->samplerate) {
 		// why that? actually i don't know. i just want to be safe....
 		PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
 		goto error;
 	}
 	rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
-	PDEBUG(DSDR, DEBUG_INFO, "Using RX center frequency: %.6f MHz\n", rx_center_frequency / 1e6);
+	PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: TX %.6f MHz, RX %.6f\n", tx_center_frequency / 1e6, rx_center_frequency / 1e6);
 	/* set offsets to center frequency */
 	for (c = 0; c < channels; c++) {
 		double rx_offset;
 		sdr->chan[c].offset = sdr->chan[c].tx_frequency - tx_center_frequency;
 		rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
 		sdr->chan[c].rx_rot = 2 * M_PI * -rx_offset / sdr->samplerate;
-		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX offset: %.6f MHz, RX offset: %.6f MHz\n", c, sdr->chan[c].offset / 1e6, rx_offset / 1e6);
+		PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz, RX offset: %.6f MHz\n", c, sdr->chan[c].offset / 1e6, rx_offset / 1e6);
 	}
 	if (sdr->paging_channel) {
 		sdr->chan[sdr->paging_channel].offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
-		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX offset: %.6f MHz\n", sdr->chan[sdr->paging_channel].offset / 1e6);
+		PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", sdr->chan[sdr->paging_channel].offset / 1e6);
 	}
 	PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB, RX %.1f dB\n", sdr_tx_gain, sdr_rx_gain);
 
@@ -302,7 +301,7 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 		filter_lowpass_process(&sdr->chan[c].rx_lp[1], Q, count, 1);
 		last_phase = sdr->chan[c].rx_last_phase;
 		for (s = 0; s < count; s++) {
-			phase = atan2(I[s], Q[s]);
+			phase = atan2(Q[s], I[s]);
 			dev = (phase - last_phase) / 2 / M_PI;
 			last_phase = phase;
 			if (dev < -0.49)
