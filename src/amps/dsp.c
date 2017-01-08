@@ -350,7 +350,7 @@ static int fsk_encode(amps_t *amps, char bit)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		/* ramp up */
+		/* ramp down */
 		do {
 			*spl++ = ramp_down[(int)phase];
 			phase += bitstep;

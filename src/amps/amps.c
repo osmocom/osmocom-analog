@@ -410,7 +410,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	/* check if channel type matches channel number */
 	ct = amps_channel2type(channel);
 	if (ct == CHAN_TYPE_CC && chan_type != CHAN_TYPE_PC && chan_type != CHAN_TYPE_CC_PC && chan_type != CHAN_TYPE_CC_PC_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this.\n", channel, chan_type_long_name(chan_type));
+		PDEBUG(DAMPS, DEBUG_NOTICE, "Channel number %d belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this, but all my phones don't.\n", channel, chan_type_long_name(chan_type));
 	}
 	if (ct == CHAN_TYPE_VC && chan_type != CHAN_TYPE_VC) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", channel, chan_type_long_name(chan_type));
@@ -430,7 +430,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 
 	/* check if we use combined voice channel hack */
 	if (chan_type == CHAN_TYPE_CC_PC_VC) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s'. This is a hack, but the only way to use control channel and voice channel on one transceiver. Some phones may reject this.\n", chan_type_long_name(chan_type));
+		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s'. This is a hack, but the only way to use control channel and voice channel on one transceiver. Some phones may reject this, but all my phones don't.\n", chan_type_long_name(chan_type));
 	}
 
 	amps = calloc(1, sizeof(amps_t));
@@ -1046,7 +1046,7 @@ again:
 	case TRANS_CALL_MT_ASSIGN_SEND:
 		vc = assign_voice_channel(trans);
 		if (vc) {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, next: sending altering on VC\n");
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, next: sending alerting on VC\n");
 			trans->chan = 0;
 			trans->msg_type = 0;
 			trans->ordq = 0;
@@ -1088,7 +1088,7 @@ again:
 		amps_go_idle(amps);
 		goto again;
 	case TRANS_CALL_MT_ALERT:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending altering\n");
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting\n");
 		return trans;
 	default:
 		return NULL;

@@ -47,7 +47,7 @@ int tolerant = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-p -d -F yes | no [-S sid=<sid>]");
+	print_help_common(arg0, "-p -d -F yes | no [-S sid=<sid>] ");
 	/*      -                                                                             - */
 	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));

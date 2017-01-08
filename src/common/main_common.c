@@ -250,7 +250,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'p':
 		if (!uses_emphasis) {
 			no_emph:
-			fprintf(stderr, "A-Netz does not use emphasis, please do not enable pre- or de-emphasis! Disable emphasis on transceiver, if possible.\n");
+			fprintf(stderr, "This network does not use emphasis, please do not enable pre- or de-emphasis! Disable emphasis on transceiver, if possible.\n");
 			exit(0);
 		}
 		do_pre_emphasis = 1;
@@ -265,7 +265,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'g':
 		gain_db = atof(optarg);
 		if (gain_db < 0.0) {
-			fprintf(stderr, "Given gain is below 0. Tto reduce RX signal, use sound card's mixer (or resistor net)!\n");
+			fprintf(stderr, "Given gain is below 0. To reduce RX signal, use sound card's mixer (or resistor net)!\n");
 			exit(0);
 		}
 		rx_gain = pow(10, gain_db / 20.0);

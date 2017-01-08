@@ -54,7 +54,7 @@ int send_callerid = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-Y <traffic area> | list  [-I 1] [-0 1]");
+	print_help_common(arg0, "-Y <traffic area> | list  [-I 1] [-0 1] ");
 	/*      -                                                                             - */
 	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));

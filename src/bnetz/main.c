@@ -42,7 +42,7 @@ double lossdetect = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "[-G <gfs>]");
+	print_help_common(arg0, "[-G <gfs>] ");
 	/*      -                                                                             - */
 	printf(" -G --gfs <gruppenfreisignal> | <lat>,<lon>\n");
 	printf("        Gruppenfreisignal\" 1..9 | 19 | 10..18 (default = '%d')\n", gfs);
