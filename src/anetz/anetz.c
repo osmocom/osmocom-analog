@@ -168,7 +168,7 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume)
+int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume)
 {
 	anetz_t *anetz;
 	int rc;
@@ -194,7 +194,7 @@ int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain
 	}
 
 	/* init audio processing */
-	rc = dsp_init_sender(anetz, page_sequence);
+	rc = dsp_init_sender(anetz, page_gain, page_sequence);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
 		goto error;

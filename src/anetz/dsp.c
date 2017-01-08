@@ -37,8 +37,6 @@
 /* signaling */
 #define BANDWIDTH	15000.0	/* maximum bandwidth */
 #define TX_PEAK_TONE	8192.0	/* peak amplitude for all tones */
-#warning FIXME: only with emphasis, use seperate option for volume, override by sdr
-#define TX_PEAK_PAGE	32766.0	/* peak amplitude paging tone */
 #define CHUNK_DURATION	0.010	/* 10 ms */
 
 // FIXME: how long until we detect a tone?
@@ -56,7 +54,6 @@ static double fsk_tones[2] = {
 
 /* table for fast sine generation */
 int dsp_sine_tone[256];
-int dsp_sine_page[256];
 
 /* global init for audio processing */
 void dsp_init(void)
@@ -68,22 +65,16 @@ void dsp_init(void)
 	for (i = 0; i < 256; i++) {
 		s = sin((double)i / 256.0 * 2.0 * PI);
 		dsp_sine_tone[i] = (int)(s * TX_PEAK_TONE);
-		s = cos((double)i / 256.0 * 2.0 * PI);
-		dsp_sine_page[i] = (int)(s * TX_PEAK_PAGE);
 	}
 
 	if (TX_PEAK_TONE > 32767.0) {
 		fprintf(stderr, "TX_PEAK_TONE definition too high, please fix!\n");
 		abort();
 	}
-	if (TX_PEAK_PAGE > 32767.0) {
-		fprintf(stderr, "TX_PEAK_PAGE definition too high, please fix!\n");
-		abort();
-	}
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(anetz_t *anetz, int page_sequence)
+int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
 {
 	int16_t *spl;
 	double coeff;
@@ -96,6 +87,11 @@ int dsp_init_sender(anetz_t *anetz, int page_sequence)
 	anetz->sender.bandwidth = BANDWIDTH;
 	anetz->sender.sample_deviation = 11000.0 / (double)TX_PEAK_TONE;
 
+	anetz->page_gain = page_gain;
+	if (page_gain * TX_PEAK_TONE > 32767.0) {
+		page_gain = 32767.0 / TX_PEAK_TONE;
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Highest possible gain of paging tones is %.1f dB.\n", log10(page_gain) * 20);
+	}
 	anetz->page_sequence = page_sequence;
 
 	audio_init_loss(&anetz->sender.loss, LOSS_INTERVAL, anetz->sender.loss_volume, LOSS_TIME);
@@ -245,12 +241,12 @@ void dsp_set_paging(anetz_t *anetz, double *freq)
 }
 
 /* Generate audio stream of 4 simultanious paging tones. Keep phase for next call of function.
- * Use TX_PEAK_PAGE for all tones, which gives peak of (TX_PEAK_PAGE / 4) for each individual tone. */
+ * Use TX_PEAK_TONE*page_gain for all tones, which gives peak of 1/4th for each individual tone. */
 static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
 {
 	double phaseshift[4], phase[4];
 	int i;
-	int32_t sample;
+	double sample;
 
 	for (i = 0; i < 4; i++) {
 		phaseshift[i] = anetz->paging_phaseshift256[i];
@@ -258,11 +254,11 @@ static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
 	}
 
 	for (i = 0; i < length; i++) {
-		sample	= (int32_t)dsp_sine_page[((uint8_t)phase[0]) & 0xff]
-			+ (int32_t)dsp_sine_page[((uint8_t)phase[1]) & 0xff]
-			+ (int32_t)dsp_sine_page[((uint8_t)phase[2]) & 0xff]
-			+ (int32_t)dsp_sine_page[((uint8_t)phase[3]) & 0xff];
-		*samples++ = sample >> 2;
+		sample	= (int32_t)dsp_sine_tone[((uint8_t)phase[0]) & 0xff]
+			+ (int32_t)dsp_sine_tone[((uint8_t)phase[1]) & 0xff]
+			+ (int32_t)dsp_sine_tone[((uint8_t)phase[2]) & 0xff]
+			+ (int32_t)dsp_sine_tone[((uint8_t)phase[3]) & 0xff];
+		*samples++ = sample / 4.0 * anetz->page_gain;
 		phase[0] += phaseshift[0];
 		phase[1] += phaseshift[1];
 		phase[2] += phaseshift[2];
@@ -281,7 +277,7 @@ static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
 /* Generate audio stream of 4 sequenced paging tones. Keep phase for next call
  * of function.
  *
- * Use TX_PEAK_PAGE / 2 for each tone, that is twice as much peak per tone.
+ * Use TX_PEAK_PAGE for each tone, that is four times higher per tone.
  *
  * Click removal when changing tones that have individual phase:
  * When tone changes to next tone, a transition of 2ms is performed. The last
@@ -304,12 +300,12 @@ static void fsk_paging_tone_sequence(anetz_t *anetz, int16_t *samples, int lengt
 	while (length) {
 		/* use tone, but during transition of tones, keep phase 0 degrees (high level) until next tone reaches 0 degrees (high level) */
 		if (!transition)
-			*samples++ = dsp_sine_page[((uint8_t)phase[tone]) & 0xff] >> 1;
+			*samples++ = dsp_sine_tone[((uint8_t)phase[tone]) & 0xff] * anetz->page_gain;
 		else {
 			/* fade between old an new tone */
 			*samples++
-				= (double)dsp_sine_page[((uint8_t)phase[(tone - 1) & 3]) & 0xff] * (double)(transition - count) / (double)transition / 2.0
-				+ (double)dsp_sine_page[((uint8_t)phase[tone]) & 0xff] * (double)count / (double)transition / 2.0;
+				= (double)dsp_sine_tone[((uint8_t)phase[(tone - 1) & 3]) & 0xff] * (double)(transition - count) / (double)transition / 2.0 * anetz->page_gain
+				+ (double)dsp_sine_tone[((uint8_t)phase[tone]) & 0xff] * (double)count / (double)transition / 2.0 * anetz->page_gain;
 		}
 		phase[0] += phaseshift[0];
 		phase[1] += phaseshift[1];

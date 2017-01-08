@@ -288,11 +288,19 @@ Also be sure that you are actually dialing the right number, so the base station
 </p>
 
 <p>
+As there is no emphasis, a transmitter with pre-emphasis will drastically lower the paging tones.
+If you cannot disable pre-emphasis on the transmitter, try to raise the gain of the paging tones.
+Add command "-V 12" to increase gain.
+The frequency deviation of all 4 tones should be around 11 kHz.
+</p>
+
+<p>
 Instead of transmitting all 4 tones at once, they can be transmitted after each other.
 Each tone is plays for a short time.
 After the last tone has been played, base station starts again with the first tone.
 My phone also responds to a call, even if the tones cycle rather than sent simultaneously.
-In this case the deviation level of each tone is two times higher (+6 dB). (The level transmitted is two times lower (-6 dB) than the peak level of 4 simultaneous tones. This may help transmitters with deviation limiters to make the phone ring.)
+In this case the deviation level of each tone is four times higher (+12 dB).
+This may help transmitters with deviation limiters to make the phone ring.)
 Add command line option "-P 100" to send each tone for 100 milliseconds.
 Try something between 50-200 milliseconds, if the phone still doesn't ring.
 Be sure to check: Does your transmitter has enough frequency deviation (15 KHz is suggested)? Do you really send the correct number of your phone, check the frequencies of your phone and use "-D 0" option to see what 4 frequencies the base station actually transmits.
