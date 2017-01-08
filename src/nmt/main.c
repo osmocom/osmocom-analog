@@ -48,7 +48,8 @@ int ms_power = 1; /* 1..3 */
 char traffic_area[3] = "";
 char area_no = 0;
 int compandor = 1;
-int supervisory = 0;
+int num_supervisory = 0;
+int supervisory[MAX_SENDER] = { 1 };
 const char *smsc_number = "767";
 int send_callerid = 0;
 
@@ -75,7 +76,7 @@ void print_help(const char *arg0)
 	printf("        Make use of the compandor to reduce noise during call. (default = '%d')\n", compandor);
 	printf(" -0 --supervisory 1..4 | 0\n");
 	printf("        Use supervisory signal 1..4 to detect loss of signal from mobile\n");
-	printf("        station, use 0 to disable. (default = '%d')\n", supervisory);
+	printf("        station, use 0 to disable. (default = '%d')\n", supervisory[0]);
 	printf(" -S --smsc-number <digits>\n");
 	printf("        If this number is dialed, the mobile is connected to the SMSC (Short\n");
 	printf("        Message Service Center). (default = '%s')\n", smsc_number);
@@ -89,6 +90,7 @@ void print_help(const char *arg0)
 static int handle_options(int argc, char **argv)
 {
 	char country[32], *p;
+	int super;
 	int skip_args = 0;
 
 	static struct option long_options_special[] = {
@@ -184,11 +186,12 @@ error_ta:
 			skip_args += 2;
 			break;
 		case '0':
-			supervisory = atoi(optarg);
-			if (supervisory < 0 || supervisory > 4) {
+			super = atoi(optarg);
+			if (super < 0 || super > 4) {
 				fprintf(stderr, "Given supervisory signal is wrong, use '-h' for help!\n");
 				exit(0);
 			}
+			OPT_ARRAY(num_supervisory, supervisory, super)
 			skip_args += 2;
 			break;
 		case 'S':
@@ -293,6 +296,28 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You need to specify as many channel types as you have channels.\n");
 		exit(0);
 	}
+	if (num_kanal == 1 && num_supervisory == 0)
+		num_supervisory = 1; /* use default */
+	if (num_kanal != num_supervisory) {
+		fprintf(stderr, "You need to specify as many supervisory signals as you have channels.\n");
+		fprintf(stderr, "They shall be different at channels that are close to each other.\n");
+		exit(0);
+	}
+	if (num_kanal) {
+		uint8_t super[5] = { 0, 0, 0, 0, 0 };
+
+		for (i = 0; i < num_kanal; i++) {
+			if (supervisory[i] == 0) {
+				fprintf(stderr, "No supervisory signal given for channel %d. This is ok, but signal loss dannot be detected. \n", kanal[i]);
+				continue;
+			}
+			if (super[supervisory[i]]) {
+				fprintf(stderr, "Supervisory signal %d is selected for both cannels #%d and #%d. I advice to use different signal, to avoid co-channel interferences.\n", supervisory[i], kanal[i], super[supervisory[i]]);
+				continue;
+			}
+			super[supervisory[i]] = kanal[i];
+		}
+	}
 
 	if (!traffic_area[0]) {
 		printf("No traffic area is specified, I suggest to use Sweden (-y SE,1) and set the phone's roaming to 'SE' also.\n\n");
@@ -349,7 +374,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory, smsc_number, send_callerid, loopback);
+		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
