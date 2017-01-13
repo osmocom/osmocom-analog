@@ -44,6 +44,7 @@ int num_audiodev = 0;
 const char *audiodev[MAX_SENDER] = { "hw:0,0" };
 const char *call_audiodev = "";
 int samplerate = 48000;
+int call_samplerate = 48000;
 int interval = 1;
 int latency = 50;
 int uses_emphasis = 1;
@@ -105,6 +106,8 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
 	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
+	printf("    --call-samplerate <rate>\n");
+	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
 	printf(" -t --tones 0 | 1\n");
 	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
 	printf("        network (default = '%d')\n", send_patterns);
@@ -147,6 +150,7 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_RX_WAVE	1001
 #define	OPT_WRITE_TX_WAVE	1002
 #define	OPT_READ_RX_WAVE	1003
+#define	OPT_CALL_SAMPLERATE	1004
 
 #define	OPT_SDR_ARGS		1100
 #define	OPT_SDR_RX_GAIN		1101
@@ -169,6 +173,7 @@ static struct option long_options_common[] = {
 	{"rx-gain", 0, 0, 'g'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"call-device", 1, 0, 'c'},
+	{"call-samplerate", 1, 0, OPT_CALL_SAMPLERATE},
 	{"tones", 0, 0, 't'},
 	{"loopback", 1, 0, 'l'},
 	{"realtime", 1, 0, 'r'},
@@ -296,6 +301,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		call_audiodev = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_CALL_SAMPLERATE:
+		call_samplerate = atoi(optarg);
+		*skip_args += 2;
+		break;
 	case 't':
 		send_patterns = atoi(optarg);
 		*skip_args += 2;
@@ -396,7 +405,7 @@ int init_common(const char *station_id, int station_id_digits)
 	}
 
 	/* init call device */
-	rc = call_init(station_id, call_audiodev, samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect);
+	rc = call_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		return rc;
