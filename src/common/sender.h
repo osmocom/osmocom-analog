@@ -53,6 +53,9 @@ typedef struct sender {
 	int			loopback;		/* 0 = off, 1 = internal, 2 = external */
 
 	/* record and playback */
+	const char		*write_rx_wave;		/* file name pointers */
+	const char		*write_tx_wave;
+	const char		*read_rx_wave;
 	wave_rec_t		wave_rx_rec;		/* wave recording (from rx) */
 	wave_rec_t		wave_tx_rec;		/* wave recording (from tx) */
 	wave_play_t		wave_rx_play;		/* wave playback (as rx) */

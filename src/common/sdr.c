@@ -50,16 +50,20 @@ typedef struct sdr {
 	int channels;		/* number of frequencies */
 	double samplerate;	/* IQ rate */
 	double amplitude;	/* amplitude of each carrier */
+	wave_rec_t wave_rx_rec;
+	wave_rec_t wave_tx_rec;
+	wave_play_t wave_rx_play;
 } sdr_t;
 
 static const char *sdr_device_args;
 static double sdr_rx_gain, sdr_tx_gain;
+const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave;
 
 #ifdef FAST_SINE
 static float sdr_sine[256];
 #endif
 
-int sdr_init(const char *device_args, double rx_gain, double tx_gain)
+int sdr_init(const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave)
 {
 #ifdef FAST_SINE
 	int i;
@@ -72,6 +76,9 @@ int sdr_init(const char *device_args, double rx_gain, double tx_gain)
 	sdr_device_args = strdup(device_args);
 	sdr_rx_gain = rx_gain;
 	sdr_tx_gain = tx_gain;
+	sdr_write_iq_rx_wave = write_iq_rx_wave;
+	sdr_write_iq_tx_wave = write_iq_tx_wave;
+	sdr_read_iq_rx_wave = read_iq_rx_wave;
 
 	return 0;
 }
@@ -181,6 +188,28 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 	PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB, RX %.1f dB\n", sdr_tx_gain, sdr_rx_gain);
 
+	if (sdr_write_iq_rx_wave) {
+		rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2);
+		if (rc < 0) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			goto error;
+		}
+	}
+	if (sdr_write_iq_tx_wave) {
+		rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2);
+		if (rc < 0) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			goto error;
+		}
+	}
+	if (sdr_read_iq_rx_wave) {
+		rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2);
+		if (rc < 0) {
+			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			goto error;
+		}
+	}
+
 #ifdef HAVE_UHD
 	rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
 	if (rc)
@@ -203,6 +232,9 @@ void sdr_close(void *inst)
 #endif
 
 	if (sdr) {
+		wave_destroy_record(&sdr->wave_rx_rec);
+		wave_destroy_record(&sdr->wave_tx_rec);
+		wave_destroy_playback(&sdr->wave_rx_play);
 		free(sdr->chan);
 		free(sdr);
 		sdr = NULL;
@@ -258,6 +290,27 @@ int sdr_write(void *inst, int16_t **samples, int num, enum paging_signal __attri
 		sdr->chan[c].tx_phase = phase;
 	}
 
+	if (sdr->wave_tx_rec.fp) {
+		int16_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
+		for (s = 0, ss = 0; s < num; s++) {
+			if (buff[ss] >= 1.0)
+				spl[0][s] = 32767;
+			else if (buff[ss] <= -1.0)
+				spl[0][s] = -32767;
+			else
+				spl[0][s] = 32767.0 * buff[ss];
+			ss++;
+			if (buff[ss] >= 1.0)
+				spl[1][s] = 32767;
+			else if (buff[ss] <= -1.0)
+				spl[1][s] = -32767;
+			else
+				spl[1][s] = 32767.0 * buff[ss];
+			ss++;
+		}
+		wave_write(&sdr->wave_tx_rec, spl_list, num);
+	}
+
 #ifdef HAVE_UHD
 	sent = uhd_send(buff, num);
 #endif
@@ -284,6 +337,34 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 	if (count <= 0)
 		return count;
 
+	if (sdr->wave_rx_rec.fp) {
+		int16_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
+		for (s = 0, ss = 0; s < count; s++) {
+			if (buff[ss] >= 1.0)
+				spl[0][s] = 32767;
+			else if (buff[ss] <= -1.0)
+				spl[0][s] = -32767;
+			else
+				spl[0][s] = 32767.0 * buff[ss];
+			ss++;
+			if (buff[ss] >= 1.0)
+				spl[1][s] = 32767;
+			else if (buff[ss] <= -1.0)
+				spl[1][s] = -32767;
+			else
+				spl[1][s] = 32767.0 * buff[ss];
+			ss++;
+		}
+		wave_write(&sdr->wave_rx_rec, spl_list, count);
+	}
+	if (sdr->wave_rx_play.fp) {
+		int16_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
+		wave_read(&sdr->wave_rx_play, spl_list, count);
+		for (s = 0, ss = 0; s < count; s++) {
+			buff[ss++] = (double)spl[0][s] / 32767.0;
+			buff[ss++] = (double)spl[1][s] / 32767.0;
+		}
+	}
 	display_iq(buff, count);
 
 	for (c = 0; c < channels; c++) {

@@ -50,6 +50,9 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->loopback = loopback;
 	sender->loss_volume = loss_volume;
 	sender->paging_signal = paging_signal;
+	sender->write_rx_wave = write_rx_wave;
+	sender->write_tx_wave = write_tx_wave;
+	sender->read_rx_wave = read_rx_wave;
 
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
 
@@ -118,28 +121,6 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 		goto error;
 	}
 
-	if (write_rx_wave) {
-		rc = wave_create_record(&sender->wave_rx_rec, write_rx_wave, samplerate);
-		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
-			goto error;
-		}
-	}
-	if (write_tx_wave) {
-		rc = wave_create_record(&sender->wave_tx_rec, write_tx_wave, samplerate);
-		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
-			goto error;
-		}
-	}
-	if (read_rx_wave) {
-		rc = wave_create_playback(&sender->wave_rx_play, read_rx_wave, samplerate);
-		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
-			goto error;
-		}
-	}
-
 	rc = init_emphasis(&sender->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT);
 	if (rc < 0)
 		goto error;
@@ -162,6 +143,7 @@ int sender_open_audio(void)
 	int channels;
 	double paging_frequency = 0.0;
 	int i;
+	int rc;
 
 	for (master = sender_head; master; master = master->next) {
 		/* skip audio slaves */
@@ -182,6 +164,28 @@ int sender_open_audio(void)
 				rx_f[i] = inst->empfangsfrequenz;
 			if (inst->ruffrequenz)
 				paging_frequency = inst->ruffrequenz;
+		}
+
+		if (master->write_rx_wave) {
+			rc = wave_create_record(&master->wave_rx_rec, master->write_rx_wave, master->samplerate, channels);
+			if (rc < 0) {
+				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				return rc;
+			}
+		}
+		if (master->write_tx_wave) {
+			rc = wave_create_record(&master->wave_tx_rec, master->write_tx_wave, master->samplerate, channels);
+			if (rc < 0) {
+				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				return rc;
+			}
+		}
+		if (master->read_rx_wave) {
+			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, master->samplerate, channels);
+			if (rc < 0) {
+				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				return rc;
+			}
 		}
 
 		/* open device */
@@ -278,12 +282,8 @@ cant_recover:
 				jitter_load(&inst->dejitter, samples[i], count);
 			else
 				sender_send(inst, samples[i], count);
-			if (inst->wave_tx_rec.fp)
-				wave_write(&inst->wave_tx_rec, samples[i], count);
 			/* internal loopback: loop back TX audio to RX */
 			if (inst->loopback == 1) {
-				if (inst->wave_rx_rec.fp)
-					wave_write(&inst->wave_rx_rec, samples[i], count);
 				display_wave(inst, samples[i], count);
 				sender_receive(inst, samples[i], count);
 			}
@@ -294,6 +294,9 @@ cant_recover:
 			paging_signal[i] = sender->paging_signal;
 			on[i] = sender->paging_on;
 		}
+
+		if (sender->wave_tx_rec.fp)
+			wave_write(&sender->wave_tx_rec, samples, count);
 
 		rc = sender->audio_write(sender->audio, samples, count, paging_signal, on, num_chan);
 		if (rc < 0) {
@@ -324,6 +327,11 @@ transmit_later:
 		return;
 	}
 	if (count) {
+		if (sender->wave_rx_rec.fp)
+			wave_write(&sender->wave_rx_rec, samples, count);
+		if (sender->wave_rx_play.fp)
+			wave_read(&sender->wave_rx_play, samples, count);
+
 		/* loop through all channels */
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
 			/* rx gain */
@@ -332,11 +340,7 @@ transmit_later:
 			/* do de emphasis from radio (then write_wave/wave_read), receive audio, process echo test */
 			if (inst->de_emphasis)
 				de_emphasis(&inst->estate, samples[i], count);
-			if (inst->wave_rx_play.fp)
-				wave_read(&inst->wave_rx_play, samples[i], count);
 			if (inst->loopback != 1) {
-				if (inst->wave_rx_rec.fp)
-					wave_write(&inst->wave_rx_rec, samples[i], count);
 				display_wave(inst, samples[i], count);
 				sender_receive(inst, samples[i], count);
 			}

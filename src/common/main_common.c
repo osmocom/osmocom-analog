@@ -60,7 +60,9 @@ const char *write_tx_wave = NULL;
 const char *read_rx_wave = NULL;
 static const char *sdr_args = "";
 double sdr_rx_gain = 0, sdr_tx_gain = 0;
-
+const char *write_iq_rx_wave = NULL;
+const char *write_iq_tx_wave = NULL;
+const char *read_iq_rx_wave = NULL;
 void print_help_common(const char *arg0, const char *ext_usage)
 {
 	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
@@ -111,18 +113,25 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -r --realtime <prio>\n");
 	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
 	printf("    --write-rx-wave <file>\n");
-	printf("        Write received audio to given wav audio file.\n");
+	printf("        Write received audio to given wave file.\n");
 	printf("    --write-tx-wave <file>\n");
-	printf("        Write transmitted audio to given wav audio file.\n");
+	printf("        Write transmitted audio to given wave file.\n");
 	printf("    --read-rx-wave <file>\n");
-	printf("        Replace received audio by given wav audio file.\n");
+	printf("        Replace received audio by given wave file.\n");
 #ifdef HAVE_SDR
+	printf("\nSDR options:\n");
 	printf("    --sdr-args <args>\n");
 	printf("        Optional SDR device arguments\n");
 	printf("    --sdr-rx-gain <gain>\n");
 	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_rx_gain);
 	printf("    --sdr-tx-gain <gain>\n");
 	printf("        SDR device's TX gain in dB (default = %.1f)\n", sdr_tx_gain);
+	printf("    --write-iq-rx-wave <file>\n");
+	printf("        Write received IQ data to given wave file.\n");
+	printf("    --write-iq-tx-wave <file>\n");
+	printf("        Write transmitted IQ data to given wave file.\n");
+	printf("    --read-iq-rx-wave <file>\n");
+	printf("        Replace received IQ data by given wave file.\n");
 #endif
 }
 
@@ -138,9 +147,13 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_RX_WAVE	1001
 #define	OPT_WRITE_TX_WAVE	1002
 #define	OPT_READ_RX_WAVE	1003
-#define	OPT_SDR_ARGS		1004
-#define	OPT_SDR_RX_GAIN		1005
-#define	OPT_SDR_TX_GAIN		1006
+
+#define	OPT_SDR_ARGS		1100
+#define	OPT_SDR_RX_GAIN		1101
+#define	OPT_SDR_TX_GAIN		1102
+#define	OPT_WRITE_IQ_RX_WAVE	1103
+#define	OPT_WRITE_IQ_TX_WAVE	1104
+#define	OPT_READ_IQ_RX_WAVE	1105
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -165,6 +178,9 @@ static struct option long_options_common[] = {
 	{"sdr-args", 1, 0, OPT_SDR_ARGS},
 	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
 	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
+	{"write-iq-rx-wave", 1, 0, OPT_WRITE_IQ_RX_WAVE},
+	{"write-iq-tx-wave", 1, 0, OPT_WRITE_IQ_TX_WAVE},
+	{"read-iq-rx-wave", 1, 0, OPT_READ_IQ_RX_WAVE},
 	{0, 0, 0, 0}
 };
 
@@ -314,6 +330,18 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		break;
 	case OPT_SDR_TX_GAIN:
 		sdr_tx_gain = atof(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_WRITE_IQ_RX_WAVE:
+		write_iq_rx_wave = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_WRITE_IQ_TX_WAVE:
+		write_iq_tx_wave = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_READ_IQ_RX_WAVE:
+		read_iq_rx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
 	default:

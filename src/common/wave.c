@@ -33,7 +33,7 @@ struct fmt {
 	uint16_t	bits_sample; /* bits per sample (one channel) */
 };
 
-int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate)
+int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, int channels)
 {
 	/* RIFFxxxxWAVEfmt xxxx(fmt size)dataxxxx... */
 	char dummyheader[4 + 4 + 4 + 4 + 4 + sizeof(struct fmt) + 4 + 4];
@@ -41,6 +41,7 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate)
 
 	memset(rec, 0, sizeof(*rec));
 	rec->samplerate = samplerate;
+	rec->channels = channels;
 
 	rec->fp = fopen(filename, "w");
 	if (!rec->fp) {
@@ -56,7 +57,7 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate)
 	return 0;
 }
 
-int wave_create_playback(wave_play_t *play, const char *filename, int samplerate)
+int wave_create_playback(wave_play_t *play, const char *filename, int samplerate, int channels)
 {
 	uint8_t buffer[256];
 	struct fmt fmt;
@@ -65,6 +66,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 	int rc = -EINVAL;
 
 	memset(play, 0, sizeof(*play));
+	play->channels = channels;
 
 	play->fp = fopen(filename, "r");
 	if (!play->fp) {
@@ -153,13 +155,23 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 		rc = -EINVAL;
 		goto error;
 	}
-	if (fmt.channels != 1) {
-		fprintf(stderr, "WAVE error: We support only mono files!\n");
+	if (fmt.channels !=channels) {
+		fprintf(stderr, "WAVE error: We expect %d cannel(s), but wave file only has %d channel(s)\n", channels, fmt.channels);
 		rc = -EINVAL;
 		goto error;
 	}
 	if ((int)fmt.sample_rate != samplerate) {
 		fprintf(stderr, "WAVE error: The WAVE file's sample rate (%d) does not match our sample rate (%d)!\n", fmt.sample_rate, samplerate);
+		rc = -EINVAL;
+		goto error;
+	}
+	if ((int)fmt.data_rate != 2 * channels * samplerate) {
+		fprintf(stderr, "WAVE error: The WAVE file's data rate is only %d bytes per second, but we expect %d bytes per second (2 bytes per sample * channels * samplerate)!\n", fmt.data_rate, 2 * channels * samplerate);
+		rc = -EINVAL;
+		goto error;
+	}
+	if (fmt.bytes_sample != 2 * channels) {
+		fprintf(stderr, "WAVE error: The WAVE file's bytes per sample is only %d, but we expect %d bytes sample (2 bytes per sample * channels)!\n", fmt.bytes_sample, 2 * channels);
 		rc = -EINVAL;
 		goto error;
 	}
@@ -169,7 +181,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 		goto error;
 	}
 
-	play->left = chunk >> 1;
+	play->left = chunk / 2 / channels;
 
 	printf("*** Replacing received audio by %s.\n", filename);
 
@@ -181,14 +193,15 @@ error:
 	return rc;
 }
 
-int wave_read(wave_play_t *play, int16_t *samples, int length)
+int wave_read(wave_play_t *play, int16_t **samples, int length)
 {
-	uint8_t *buffer = (uint8_t *)samples;
+	uint8_t buff[2 * length * play->channels];
 	int __attribute__((__unused__)) len;
-	int i;
+	int i, j, c;
 
 	if (length > (int)play->left) {
-		memset(samples, 0, length << 1);
+		for (c = 0; c < play->channels; c++)
+			memset(samples[c], 0, 2 * length);
 		length = play->left;
 	}
 	if (!length)
@@ -199,28 +212,31 @@ int wave_read(wave_play_t *play, int16_t *samples, int length)
 		printf("*** Finished reading WAVE file.\n");
 
 	/* read and correct endiness */
-	len = fread(samples, 1, length << 1, play->fp);
-	for (i = 0; i < length; i++) {
-		*samples++ = buffer[0] + (buffer[1] << 8);
-		buffer += 2;
+	len = fread(buff, 1, 2 * length * play->channels, play->fp);
+	for (i = 0, j = 0; i < length; i++) {
+		for (c = 0; c < play->channels; c++) {
+			samples[c][i] = buff[j] + (buff[j + 1] << 8);
+			j += 2;
+		}
 	}
 
 	return length;
 }
 
-int wave_write(wave_rec_t *rec, int16_t *samples, int length)
+int wave_write(wave_rec_t *rec, int16_t **samples, int length)
 {
-	uint8_t buffer[length << 1];
+	uint8_t buff[2 * length * rec->channels];
 	int __attribute__((__unused__)) len;
-	int i, j;
+	int i, j, c;
 
 	/* write and correct endiness */
 	for (i = 0, j = 0; i < length; i++) {
-		buffer[j++] = *samples;
-		buffer[j++] = (*samples) >> 8;
-		samples++;
+		for (c = 0; c < rec->channels; c++) {
+			buff[j++] = samples[c][i];
+			buff[j++] = samples[c][i] >> 8;
+		}
 	}
-	len = fwrite(buffer, 1, length << 1, rec->fp);
+	len = fwrite(buff, 1, 2 * length * rec->channels, rec->fp);
 	rec->written += length;
 
 	return length;
@@ -245,7 +261,7 @@ void wave_destroy_record(wave_rec_t *rec)
 	/* go to header */
 	fseek(rec->fp, 0, SEEK_SET);
 
-	size = rec->written << 1;
+	size = 2 * rec->written * rec->channels;
 	wsize = 4 + 8 + sizeof(fmt) + 8 + size + 8 + 4 + 8 + 4;
 
 	/* RIFF */
@@ -257,10 +273,10 @@ void wave_destroy_record(wave_rec_t *rec)
 	/* fmt */
 	fprintf(rec->fp, "fmt %c%c%c%c", (uint8_t)sizeof(fmt), 0, 0, 0);
 	fmt.format = 1;
-	fmt.channels = 1;
+	fmt.channels = rec->channels;
 	fmt.sample_rate = rec->samplerate; /* samples/sec */
-	fmt.data_rate = rec->samplerate * 2; /* full data rate */
-	fmt.bytes_sample = 2; /* all channels */
+	fmt.data_rate = rec->samplerate * 2 * rec->channels; /* full data rate */
+	fmt.bytes_sample = 2 * rec->channels; /* all channels */
 	fmt.bits_sample = 16; /* one channel */
 	buffer[0] = fmt.format;
 	buffer[1] = fmt.format >> 8;
