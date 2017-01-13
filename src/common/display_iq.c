@@ -29,6 +29,7 @@
 #define SIZE	23
 
 static char screen[SIZE][MAX_DISPLAY_WIDTH];
+static char overdrive[SIZE][MAX_DISPLAY_WIDTH];
 static int iq_on = 0;
 static double db = 80;
 
@@ -107,7 +108,7 @@ void display_iq(float *samples, int length)
 	int i, j, k;
 	int color = 9; /* default color */
 	int x_center, y_center;
-	double I, Q, l, s;
+	double I, Q, L, l, s;
 	int x, y;
 	int width, h;
 
@@ -134,12 +135,14 @@ void display_iq(float *samples, int length)
 		buffer[pos++] = *samples++;
 		if (pos == MAX_DISPLAY_IQ) {
 			memset(&screen, ' ', sizeof(screen));
+			memset(&overdrive, 0, sizeof(overdrive));
 			for (j = 0; j < MAX_DISPLAY_IQ; j++) {
 				I = buffer[j * 2];
 				Q = buffer[j * 2 + 1];
+				L = I*I + Q*Q;
 				if (iq_on > 1) {
 					/* logarithmic scale */
-					l = sqrt(I*I + Q*Q);
+					l = sqrt(L);
 					s = log10(l) * 20 + db;
 					if (s < 0)
 						s = 0;
@@ -175,6 +178,8 @@ void display_iq(float *samples, int length)
 					screen[y/2][x] = '\'';
 				else
 					screen[y/2][x] = '.';
+				if (L > 1.0)
+					overdrive[y/2][x] = 1;
 			}
 			if (iq_on == 1)
 				sprintf(screen[0], "(IQ linear");
@@ -202,10 +207,17 @@ void display_iq(float *samples, int length)
 						} else
 							putchar('|');
 					} else if (screen[j][k] == ':' || screen[j][k] == '.' || screen[j][k] == '\'') {
-						/* green plot */
-						if (color != 2) {
-							color = 2;
-							printf("\033[1;32m");
+						/* red / green plot */
+						if (overdrive[j][k]) {
+							if (color != 1) {
+								color = 1;
+								printf("\033[1;31m");
+							}
+						} else {
+							if (color != 2) {
+								color = 2;
+								printf("\033[1;32m");
+							}
 						}
 						putchar(screen[j][k]);
 					} else if (screen[j][k] != ' ') {
