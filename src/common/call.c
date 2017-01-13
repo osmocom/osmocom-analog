@@ -34,10 +34,6 @@
 
 #define DISC_TIMEOUT	30
 
-extern int use_mncc_sock;
-extern int send_patterns;
-extern int release_on_disconnect;
-
 /* stream patterns/announcements */
 int16_t *test_spl = NULL;
 int16_t *ringback_spl = NULL;
@@ -175,6 +171,10 @@ typedef struct call {
 	int test_audio_pos;	/* position for test tone toward mobile */
 	int dial_digits;	/* number of digits to be dialed */
 	int loopback;		/* loopback test for echo */
+	int use_mncc_sock;
+	int send_patterns;
+	int release_on_disconnect;
+
 } call_t;
 
 static call_t call;
@@ -454,20 +454,23 @@ static void process_timeout(struct timer *timer)
 	}
 }
 
-int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback)
+int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int use_mncc_sock, int send_patterns, int release_on_disconnect)
 {
 	int rc = 0;
 
 	init_testton();
-
-	if (use_mncc_sock)
-		return 0;
 
 	memset(&call, 0, sizeof(call));
 	strncpy(call.station_id, station_id, sizeof(call.station_id) - 1);
 	call.latspl = latency * samplerate / 1000;
 	call.dial_digits = dial_digits;
 	call.loopback = loopback;
+	call.use_mncc_sock = use_mncc_sock;
+	call.send_patterns = send_patterns;
+	call.release_on_disconnect = release_on_disconnect;
+
+	if (call.use_mncc_sock)
+		return 0;
 
 	if (!audiodev[0])
 		return 0;
@@ -502,7 +505,7 @@ error:
 
 void call_cleanup(void)
 {
-	if (use_mncc_sock)
+	if (call.use_mncc_sock)
 		return;
 
 	/* close sound devoice */
@@ -625,7 +628,7 @@ void print_console_text(void)
  * returns 1 on exit (ctrl+c) */
 void process_call(int c)
 {
-	if (use_mncc_sock) {
+	if (call.use_mncc_sock) {
 		mncc_handle();
 		return;
 	}
@@ -714,7 +717,7 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 	if (!strcmp(dialing, "010"))
 		PDEBUG(DCALL, DEBUG_INFO, " -> Call to Operator '%s'\n", dialing);
 
-	if (use_mncc_sock) {
+	if (call.use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_mncc)];
 		struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
 		int rc;
@@ -777,11 +780,11 @@ void call_in_alerting(int callref)
 
 	PDEBUG(DCALL, DEBUG_INFO, "Call is alerting\n");
 
-	if (use_mncc_sock) {
+	if (call.use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_mncc)];
 		struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
 
-		if (!send_patterns) {
+		if (!call.send_patterns) {
 			memset(buf, 0, sizeof(buf));
 			mncc->msg_type = MNCC_ALERT_IND;
 			mncc->callref = callref;
@@ -830,7 +833,7 @@ void call_in_answer(int callref, const char *connect_id)
 
 	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connect_id);
 
-	if (use_mncc_sock) {
+	if (call.use_mncc_sock) {
 		_indicate_answer(callref, connect_id);
 		set_pattern_process(callref, PATTERN_NONE);
 		set_state_process(callref, CALL_CONNECT);
@@ -857,7 +860,7 @@ void call_in_release(int callref, int cause)
 
 	PDEBUG(DCALL, DEBUG_INFO, "Call has been released with cause=%d\n", cause);
 
-	if (use_mncc_sock) {
+	if (call.use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_mncc)];
 		struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
 
@@ -869,7 +872,7 @@ void call_in_release(int callref, int cause)
 		mncc->cause.value = cause;
 
 		if (is_process(callref)) {
-			if (!send_patterns
+			if (!call.send_patterns
 			 || is_process_state(callref) == CALL_DISCONNECTED
 			 || is_process_state(callref) == CALL_SETUP_MO) {
 				PDEBUG(DMNCC, DEBUG_INFO, "Releasing MNCC call towards Network\n");
@@ -901,7 +904,7 @@ void call_tx_audio(int callref, int16_t *samples, int count)
 	if (!callref)
 		return;
 
-	if (use_mncc_sock) {
+	if (call.use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_data_frame) + count * sizeof(int16_t)];
 		struct gsm_data_frame *data = (struct gsm_data_frame *)buf;
 
@@ -1046,7 +1049,7 @@ void call_mncc_recv(uint8_t *buf, int length)
 		rc = call_out_setup(callref, caller_id, caller_type, number);
 		if (rc < 0) {
 			PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
-			if (send_patterns) {
+			if (call.send_patterns) {
 				PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
 				_indicate_answer(callref, number);
 				disconnect_process(callref, -rc);
@@ -1064,7 +1067,7 @@ void call_mncc_recv(uint8_t *buf, int length)
 			break;
 		}
 
-		if (send_patterns) {
+		if (call.send_patterns) {
 			PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
 			_indicate_answer(callref, number);
 			break;
@@ -1077,7 +1080,7 @@ void call_mncc_recv(uint8_t *buf, int length)
 	case MNCC_DISC_REQ:
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC disconnect from Network with cause %d\n", mncc->cause.value);
 
-		if (is_process_state(callref) == CALL_CONNECT && release_on_disconnect) {
+		if (is_process_state(callref) == CALL_CONNECT && call.release_on_disconnect) {
 			PDEBUG(DCALL, DEBUG_INFO, "Releaseing, because we don't send disconnect tones to mobile phone\n");
 
 			PDEBUG(DMNCC, DEBUG_INFO, "Releasing MNCC call towards Network\n");

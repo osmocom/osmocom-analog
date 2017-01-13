@@ -32,6 +32,7 @@
 #include "sender.h"
 #include "timer.h"
 #include "call.h"
+#include "mncc_sock.h"
 #ifdef HAVE_SDR
 #include "sdr.h"
 #endif
@@ -353,6 +354,35 @@ static int get_char()
 		return -1;
 }
 
+int init_common(const char *station_id, int station_id_digits)
+{
+	int rc;
+
+	/* init mncc */
+	if (use_mncc_sock) {
+		rc = mncc_init("/tmp/bsc_mncc");
+		if (rc < 0) {
+			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
+			return rc;
+		}
+	}
+
+	/* init call device */
+	rc = call_init(station_id, call_audiodev, samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
+		return rc;
+	}
+
+#ifdef HAVE_SDR
+	rc = sdr_init(sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave);
+	if (rc < 0)
+		return rc;
+#endif
+
+	return 0;
+}
+
 /* Loop through all transceiver instances of one network. */
 void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 {
@@ -361,11 +391,6 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 	double last_time = 0, now;
 	struct termios term, term_orig;
 	int c;
-
-#ifdef HAVE_SDR
-	if (sdr_init(sdr_args, sdr_rx_gain, sdr_tx_gain))
-		return;
-#endif
 
 	/* open audio */
 	if (sender_open_audio())
@@ -475,5 +500,12 @@ next_char:
 		schedp.sched_priority = 0;
 		sched_setscheduler(0, SCHED_OTHER, &schedp);
 	}
+}
+
+void cleanup_common(void)
+{
+	call_cleanup();
+	if (use_mncc_sock)
+		mncc_exit();
 }
 

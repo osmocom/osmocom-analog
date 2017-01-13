@@ -244,13 +244,9 @@ int main(int argc, char *argv[])
 		print_image();
 
 	/* init functions */
-	if (use_mncc_sock) {
-		rc = mncc_init("/tmp/bsc_mncc");
-		if (rc < 0) {
-			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			goto fail;
-		}
-	}
+	rc = init_common(station_id, 7);
+	if (rc < 0)
+		goto fail;
 	scrambler_init();
 	init_sysinfo();
 	dsp_init();
@@ -261,11 +257,6 @@ int main(int argc, char *argv[])
 	}
 	init_coding();
 	cnetz_init();
-	rc = call_init(station_id, call_audiodev, samplerate, latency, 7, loopback);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
-		goto fail;
-	}
 
 	/* check for mandatory OgK */
 	for (i = 0; i < num_kanal; i++) {
@@ -326,9 +317,7 @@ int main(int argc, char *argv[])
 
 fail:
 	/* cleanup functions */
-	call_cleanup();
-	if (use_mncc_sock)
-		mncc_exit();
+	cleanup_common();
 
 	flush_db();
 

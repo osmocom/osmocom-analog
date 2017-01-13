@@ -282,20 +282,11 @@ int main(int argc, char *argv[])
 	sid_stations(sid);
 
 	/* init functions */
-	if (use_mncc_sock) {
-		rc = mncc_init("/tmp/bsc_mncc");
-		if (rc < 0) {
-			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			return -1;
-		}
-	}
+	rc = init_common(station_id, 10);
+	if (rc < 0)
+		goto fail;
 	dsp_init();
 	init_frame();
-	rc = call_init(station_id, call_audiodev, samplerate, latency, 10, loopback);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
-		goto fail;
-	}
 
 	/* check for mandatory CC */
 	for (i = 0; i < num_kanal; i++) {
@@ -368,9 +359,7 @@ int main(int argc, char *argv[])
 
 fail:
 	/* cleanup functions */
-	call_cleanup();
-	if (use_mncc_sock)
-		mncc_exit();
+	cleanup_common();
 
 	/* destroy transceiver instance */
 	while (sender_head)

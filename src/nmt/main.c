@@ -347,24 +347,15 @@ int main(int argc, char *argv[])
 		print_image();
 
 	/* init functions */
-	if (use_mncc_sock) {
-		rc = mncc_init("/tmp/bsc_mncc");
-		if (rc < 0) {
-			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			return -1;
-		}
-	}
+	rc = init_common(station_id, 7);
+	if (rc < 0)
+		goto fail;
 	rc = init_frame();
 	if (rc < 0) {
 		fprintf(stderr, "Failed to setup frames. Quitting!\n");
 		return -1;
 	}
 	dsp_init();
-	rc = call_init(station_id, call_audiodev, samplerate, latency, 7, loopback);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
-		goto fail;
-	}
 
 	/* SDR always requires emphasis */
 	if (!strcmp(audiodev[0], "sdr")) {
@@ -397,9 +388,7 @@ fail:
 	unlink(SMS_DELIVER);
 
 	/* cleanup functions */
-	call_cleanup();
-	if (use_mncc_sock)
-		mncc_exit();
+	cleanup_common();
 
 	/* destroy transceiver instance */
 	while (sender_head)

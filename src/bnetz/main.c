@@ -170,20 +170,11 @@ int main(int argc, char *argv[])
 		print_image();
 
 	/* init functions */
-	if (use_mncc_sock) {
-		rc = mncc_init("/tmp/bsc_mncc");
-		if (rc < 0) {
-			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			goto fail;
-		}
-	}
+	rc = init_common(station_id, 5);
+	if (rc < 0)
+		goto fail;
 	dsp_init();
 	bnetz_init();
-	rc = call_init(station_id, call_audiodev, samplerate, latency, 5, loopback);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
-		goto fail;
-	}
 
 	/* SDR always requires emphasis */
 	if (!strcmp(audiodev[0], "sdr")) {
@@ -206,9 +197,7 @@ int main(int argc, char *argv[])
 
 fail:
 	/* cleanup functions */
-	call_cleanup();
-	if (use_mncc_sock)
-		mncc_exit();
+	cleanup_common();
 
 	/* destroy transceiver instance */
 	while(sender_head)

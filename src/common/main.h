@@ -39,7 +39,9 @@ void opt_switch_common(int c, char *arg0, int *skip_args);
 extern int quit;
 void sighandler(int sigset);
 
+int init_common(const char *station_id, int station_id_digits);
 void main_common(int *quit, int latency, int interval, void (*myhandler)(void));
+void cleanup_common(void);
 
 void dump_info(void);
 
