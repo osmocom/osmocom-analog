@@ -425,7 +425,7 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 {
 	int latspl;
 	sender_t *sender;
-	double last_time = 0, now;
+	double last_time_call = 0, begin_time, now, sleep;
 	struct termios term, term_orig;
 	int c;
 
@@ -460,6 +460,8 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 	signal(SIGPIPE, sighandler);
 
 	while(!(*quit)) {
+		begin_time = get_time();
+
 		/* process sound of all transceivers */
 		for (sender = sender_head; sender; sender = sender->next) {
 			/* do not process audio for an audio slave, since it is done by audio master */
@@ -474,10 +476,10 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 
 		/* process audio for mncc call instances */
 		now = get_time();
-		if (now - last_time >= 0.1)
-			last_time = now;
-		if (now - last_time >= 0.020) {
-			last_time += 0.020;
+		if (now - last_time_call >= 0.1)
+			last_time_call = now;
+		if (now - last_time_call >= 0.020) {
+			last_time_call += 0.020;
 			/* call clock every 20ms */
 			call_mncc_clock();
 		}
@@ -513,8 +515,15 @@ next_char:
 		if (myhandler)
 			myhandler();
 
-		/* sleep a while */
-		usleep(interval * 1000);
+		now = get_time();
+
+		/* sleep interval */
+		sleep = ((double)interval / 1000.0) - (now - begin_time);
+		if (sleep > 0)
+			usleep(sleep * 1000000.0);
+
+//		now = get_time();
+//		printf("duration =%.6f\n", now - begin_time);
 	}
 
 	/* reset signals */
