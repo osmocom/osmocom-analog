@@ -36,8 +36,7 @@
 #include "ansage.h"
 
 int gfs = 2;
-int num_paging = 0;
-const char *paging[MAX_SENDER] = { "tone" };
+const char *paging = "tone";
 double lossdetect = 0;
 
 void print_help(const char *arg0)
@@ -63,7 +62,7 @@ void print_help(const char *arg0)
 	printf("        'negative' sends a negative signal for channel 19, else positive.\n");
 	printf("        Example: /sys/class/gpio/gpio17/value=1:0 writes a '1' to\n");
 	printf("        /sys/class/gpio/gpio17/value to switching to channel 19 and a '0' to\n");
-	printf("        switch back. (default = %s)\n", paging[0]);
+	printf("        switch back. (default = %s)\n", paging);
 	printf(" -L --loss <volume>\n");
 	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
 	printf("        percent. (disabled by default)\n");
@@ -109,7 +108,7 @@ static int handle_options(int argc, char **argv)
 			skip_args += 2;
 			break;
 		case 'P':
-			OPT_ARRAY(num_paging, paging, strdup(optarg))
+			paging = strdup(optarg);
 			skip_args += 2;
 			break;
 		case 'L':
@@ -159,12 +158,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
-	if (num_kanal == 1 && num_paging == 0)
-		num_paging = 1; /* use defualt */
-	if (num_kanal != num_paging) {
-		fprintf(stderr, "You need to specify as many paging tone settings as you have channels.\n");
-		exit(0);
-	}
 
 	if (!loopback)
 		print_image();
@@ -184,7 +177,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], audiodev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, paging[i]);
+		rc = bnetz_create(kanal[i], audiodev[i], samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, (double)lossdetect / 100.0, paging);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

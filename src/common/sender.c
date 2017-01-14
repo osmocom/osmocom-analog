@@ -291,8 +291,8 @@ cant_recover:
 			if (inst->pre_emphasis)
 				pre_emphasis(&inst->estate, samples[i], count);
 			/* set paging signal */
-			paging_signal[i] = sender->paging_signal;
-			on[i] = sender->paging_on;
+			paging_signal[i] = inst->paging_signal;
+			on[i] = inst->paging_on;
 		}
 
 		if (sender->wave_tx_rec.fp)
