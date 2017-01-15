@@ -2,10 +2,20 @@ AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -g $(all_includes)
 
 noinst_PROGRAMS = \
+	test_filter \
 	test_compandor \
 	test_emphasis \
 	test_dms \
 	test_sms
+
+test_filter_SOURCES = test_filter.c dummy.c
+
+test_filter_LDADD = \
+	$(COMMON_LA) \
+	$(top_builddir)/src/common/libcommon.a \
+	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
+	-lm
 
 test_compandor_SOURCES = test_compandor.c
 

@@ -48,7 +48,7 @@ void scrambler_init(void)
 
 void scrambler_setup(scrambler_t *scrambler, int samplerate)
 {
-	filter_lowpass_init(&scrambler->lp, CARRIER_HZ - FILTER_BELOW, samplerate);
+	filter_lowpass_init(&scrambler->lp, CARRIER_HZ - FILTER_BELOW, samplerate, FILTER_TURNS);
 	scrambler->carrier_phaseshift256 = 256.0 / ((double)samplerate / CARRIER_HZ);
 }
 
@@ -77,7 +77,7 @@ void scrambler(scrambler_t *scrambler, int16_t *samples, int length)
 	scrambler->carrier_phase256 = phase;
 
 	/* cut off carrier frequency and modulation above carrier frequency */
-	filter_lowpass_process(&scrambler->lp, spl, length, FILTER_TURNS);
+	filter_process(&scrambler->lp, spl, length);
 
 	for (i = 0; i < length; i++) {
 		/* store result */

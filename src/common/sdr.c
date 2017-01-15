@@ -39,7 +39,7 @@ typedef struct sdr_chan {
 	double rx_rot;		/* rotation step per sample to shift rx frequency (used to shift) */
 	double rx_phase;	/* current rotation phase (used to shift) */
 	double rx_last_phase;	/* last phase of FM (used to demodulate) */
-	filter_lowpass_t rx_lp[2]; /* filters received IQ signal */
+	filter_t rx_lp[2];	/* filters received IQ signal */
 } sdr_chan_t;
 
 typedef struct sdr {
@@ -123,8 +123,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz, RX = %.6f MHz\n", c, tx_frequency[c] / 1e6, rx_frequency[c] / 1e6);
 		sdr->chan[c].tx_frequency = tx_frequency[c];
 		sdr->chan[c].rx_frequency = rx_frequency[c];
-		filter_lowpass_init(&sdr->chan[c].rx_lp[0], bandwidth, samplerate);
-		filter_lowpass_init(&sdr->chan[c].rx_lp[1], bandwidth, samplerate);
+		filter_lowpass_init(&sdr->chan[c].rx_lp[0], bandwidth, samplerate, 1);
+		filter_lowpass_init(&sdr->chan[c].rx_lp[1], bandwidth, samplerate, 1);
 	}
 	if (sdr->paging_channel) {
 		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
@@ -378,8 +378,8 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 			Q[s] = i * sin(phase) + q * cos(phase);
 		}
 		sdr->chan[c].rx_phase = phase;
-		filter_lowpass_process(&sdr->chan[c].rx_lp[0], I, count, 1);
-		filter_lowpass_process(&sdr->chan[c].rx_lp[1], Q, count, 1);
+		filter_process(&sdr->chan[c].rx_lp[0], I, count);
+		filter_process(&sdr->chan[c].rx_lp[1], Q, count);
 		last_phase = sdr->chan[c].rx_last_phase;
 		for (s = 0; s < count; s++) {
 			phase = atan2(Q[s], I[s]);

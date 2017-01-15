@@ -26,14 +26,18 @@
 
 #define PI M_PI
 
-//#define CASCADE
-
-void filter_lowpass_init(filter_lowpass_t *bq, double frequency, int samplerate)
+void filter_lowpass_init(filter_t *bq, double frequency, int samplerate, int iterations)
 {
 	double Fc, Q, K, norm;
 
+	if (iterations > 64) {
+		fprintf(stderr, "%s failed: too many iterations, please fix!\n", __func__);
+		abort();
+	}
+
 	memset(bq, 0, sizeof(*bq));
-	Q = sqrt(0.5); /* 0.7071... */
+	bq->iter = iterations;
+	Q = pow(sqrt(0.5), 1.0 / (double)iterations); /* 0.7071 @ 1 iteration */
 	Fc = frequency / (double)samplerate;
 	K = tan(PI * Fc);
 	norm = 1 / (1 + K / Q + K * K);
@@ -44,17 +48,30 @@ void filter_lowpass_init(filter_lowpass_t *bq, double frequency, int samplerate)
 	bq->b2 = (1 - K / Q + K * K) * norm;
 }
 
-void filter_lowpass_process(filter_lowpass_t *bq, double *samples, int length, int iterations)
+void filter_highpass_init(filter_t *bq, double frequency, int samplerate, int iterations)
+{
+	double Fc, Q, K, norm;
+
+	memset(bq, 0, sizeof(*bq));
+	bq->iter = iterations;
+	Q = pow(sqrt(0.5), 1.0 / (double)iterations); /* 0.7071 @ 1 iteration */
+	Fc = frequency / (double)samplerate;
+	K = tan(PI * Fc);
+	norm = 1 / (1 + K / Q + K * K);
+	bq->a0 = 1 * norm;
+	bq->a1 = -2 * bq->a0;
+	bq->a2 = bq->a0;
+	bq->b1 = 2 * (K * K - 1) * norm;
+	bq->b2 = (1 - K / Q + K * K) * norm;
+}
+
+void filter_process(filter_t *bq, double *samples, int length)
 {
 	double a0, a1, a2, b1, b2;
 	double *z1, *z2;
 	double in, out;
+	int iterations = bq->iter;
 	int i, j;
-
-	if (iterations > 10) {
-		fprintf(stderr, "%s failed: too many iterations, please fix!\n", __func__);
-		abort();
-	}
 
 	/* get states */
 	a0 = bq->a0;

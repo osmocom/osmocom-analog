@@ -1,12 +1,14 @@
 #ifndef _FILTER_H
 #define _FILTER_H
 
-typedef struct filter_lowpass {
+typedef struct filter {
+	int iter;
 	double a0, a1, a2, b1, b2;
-	double z1[10], z2[10];
-} filter_lowpass_t;
+	double z1[64], z2[64];
+} filter_t;
 
-void filter_lowpass_init(filter_lowpass_t *bq, double frequency, int samplerate);
-void filter_lowpass_process(filter_lowpass_t *bq, double *samples, int length, int iterations);
+void filter_lowpass_init(filter_t *bq, double frequency, int samplerate, int iterations);
+void filter_highpass_init(filter_t *bq, double frequency, int samplerate, int iterations);
+void filter_process(filter_t *bq, double *samples, int length);
 
 #endif /* _FILTER_H */

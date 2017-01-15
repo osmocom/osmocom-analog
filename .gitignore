@@ -9,7 +9,6 @@ config.sub
 configure
 depcomp
 install-sh
-libcolorize.pc
 libtool
 ltmain.sh
 missing
@@ -28,6 +27,7 @@ src/cnetz/cnetz
 src/nmt/nmt
 src/amps/amps
 sim/cnetz_sim
+src/test/test_filter
 src/test/test_compandor
 src/test/test_emphasis
 src/test/test_dms
