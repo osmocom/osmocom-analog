@@ -254,10 +254,10 @@ static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
 	}
 
 	for (i = 0; i < length; i++) {
-		sample	= (int32_t)dsp_sine_tone[((uint8_t)phase[0]) & 0xff]
-			+ (int32_t)dsp_sine_tone[((uint8_t)phase[1]) & 0xff]
-			+ (int32_t)dsp_sine_tone[((uint8_t)phase[2]) & 0xff]
-			+ (int32_t)dsp_sine_tone[((uint8_t)phase[3]) & 0xff];
+		sample	= (int32_t)dsp_sine_tone[(uint8_t)phase[0]]
+			+ (int32_t)dsp_sine_tone[(uint8_t)phase[1]]
+			+ (int32_t)dsp_sine_tone[(uint8_t)phase[2]]
+			+ (int32_t)dsp_sine_tone[(uint8_t)phase[3]];
 		*samples++ = sample / 4.0 * anetz->page_gain;
 		phase[0] += phaseshift[0];
 		phase[1] += phaseshift[1];
@@ -300,12 +300,12 @@ static void fsk_paging_tone_sequence(anetz_t *anetz, int16_t *samples, int lengt
 	while (length) {
 		/* use tone, but during transition of tones, keep phase 0 degrees (high level) until next tone reaches 0 degrees (high level) */
 		if (!transition)
-			*samples++ = dsp_sine_tone[((uint8_t)phase[tone]) & 0xff] * anetz->page_gain;
+			*samples++ = dsp_sine_tone[(uint8_t)phase[tone]] * anetz->page_gain;
 		else {
 			/* fade between old an new tone */
 			*samples++
-				= (double)dsp_sine_tone[((uint8_t)phase[(tone - 1) & 3]) & 0xff] * (double)(transition - count) / (double)transition / 2.0 * anetz->page_gain
-				+ (double)dsp_sine_tone[((uint8_t)phase[tone]) & 0xff] * (double)count / (double)transition / 2.0 * anetz->page_gain;
+				= (double)dsp_sine_tone[(uint8_t)phase[(tone - 1) & 3]] * (double)(transition - count) / (double)transition / 2.0 * anetz->page_gain
+				+ (double)dsp_sine_tone[(uint8_t)phase[tone]] * (double)count / (double)transition / 2.0 * anetz->page_gain;
 		}
 		phase[0] += phaseshift[0];
 		phase[1] += phaseshift[1];
@@ -350,7 +350,7 @@ static void fsk_tone(anetz_t *anetz, int16_t *samples, int length)
 	phase = anetz->tone_phase256;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_tone[((uint8_t)phase) & 0xff];
+		*samples++ = dsp_sine_tone[(uint8_t)phase];
 		phase += phaseshift;
 		if (phase >= 256)
 			phase -= 256;

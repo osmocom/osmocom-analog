@@ -512,7 +512,7 @@ int fsk_render_frame(nmt_t *nmt, const char *frame, int length, int16_t *sample)
 	for (i = 0; i < length; i++) {
 		bit = (frame[i] == '1');
 		do {
-			*sample++ = dsp_tone_bit[polarity][bit][((uint8_t)phase) & 0xff];
+			*sample++ = dsp_tone_bit[polarity][bit][(uint8_t)phase];
 			count++;
 			phase += phaseshift;
 		} while (phase < 256.0);
@@ -586,7 +586,7 @@ static void super_encode(nmt_t *nmt, int16_t *samples, int length)
 
 	for (i = 0; i < length; i++) {
 		sample = *samples;
-		sample += dsp_sine_super[((uint8_t)phase) & 0xff];
+		sample += dsp_sine_super[(uint8_t)phase];
 		if (sample > 32767)
 			sample = 32767;
 		else if (sample < -32767)
@@ -610,7 +610,7 @@ static void dial_tone(nmt_t *nmt, int16_t *samples, int length)
 	phase = nmt->dial_phase256;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_dialtone[((uint8_t)phase) & 0xff];
+		*samples++ = dsp_sine_dialtone[(uint8_t)phase];
 		phase += phaseshift;
 		if (phase >= 256)
 			phase -= 256;

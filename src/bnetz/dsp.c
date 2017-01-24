@@ -317,7 +317,7 @@ static void fsk_tone(bnetz_t *bnetz, int16_t *samples, int length, int tone)
 	phaseshift = bnetz->phaseshift256[tone];
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine[((uint8_t)phase) & 0xff];
+		*samples++ = dsp_sine[(uint8_t)phase];
 		phase += phaseshift;
 		if (phase >= 256)
 			phase -= 256;
@@ -351,7 +351,7 @@ next_telegramm:
 		for (i = 0; i < 16; i++) {
 			phaseshift = bnetz->phaseshift256[telegramm[i] == '1'];
 			for (j = 0; j < bnetz->samples_per_bit; j++) {
-				*spl++ = dsp_sine[((uint8_t)phase) & 0xff];
+				*spl++ = dsp_sine[(uint8_t)phase];
 				phase += phaseshift;
 				if (phase >= 256)
 					phase -= 256;

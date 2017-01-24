@@ -316,7 +316,7 @@ static int fsk_encode(amps_t *amps, char bit)
 		if ((last & 1)) {
 			/* last bit was 1, this bit is 1, so we ramp down first */
 			do {
-				*spl++ = ramp_down[(int)phase];
+				*spl++ = ramp_down[(uint8_t)phase];
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
@@ -330,7 +330,7 @@ static int fsk_encode(amps_t *amps, char bit)
 		}
 		/* ramp up */
 		do {
-			*spl++ = ramp_up[(int)phase];
+			*spl++ = ramp_up[(uint8_t)phase];
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -345,14 +345,14 @@ static int fsk_encode(amps_t *amps, char bit)
 		} else {
 			/* last bit was 0, this bit is 0, so we ramp up first */
 			do {
-				*spl++ = ramp_up[(int)phase];
+				*spl++ = ramp_up[(uint8_t)phase];
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
 		/* ramp down */
 		do {
-			*spl++ = ramp_down[(int)phase];
+			*spl++ = ramp_down[(uint8_t)phase];
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -441,7 +441,7 @@ static void sat_encode(amps_t *amps, int16_t *samples, int length)
 
 	for (i = 0; i < length; i++) {
 		sample = *samples;
-		sample += dsp_sine_sat[((uint8_t)phase) & 0xff];
+		sample += dsp_sine_sat[(uint8_t)phase];
 		if (sample > 32767)
 			sample = 32767;
 		else if (sample < -32767)
@@ -464,7 +464,7 @@ static void test_tone_encode(amps_t *amps, int16_t *samples, int length)
 	phase = amps->test_phase256;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_test[((uint8_t)phase) & 0xff];
+		*samples++ = dsp_sine_test[(uint8_t)phase];
 		phase += phaseshift;
 		if (phase >= 256)
 			phase -= 256;

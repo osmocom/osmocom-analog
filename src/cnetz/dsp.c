@@ -253,12 +253,12 @@ static int fsk_testtone_encode(cnetz_t *cnetz)
 	/* add 198 bits of test tone */
 	for (i = 0; i < 99; i++) {
 		do {
-			*spl++ = ramp_up[(int)phase];
+			*spl++ = ramp_up[(uint8_t)phase];
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
 		do {
-			*spl++ = ramp_down[(int)phase];
+			*spl++ = ramp_down[(uint8_t)phase];
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -346,14 +346,14 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 			if (bits[i] == '1') {
 				/* ramp up from 0 */
 				do {
-					*spl++ = ramp_up[(int)phase] / 2 + deviation / 2;
+					*spl++ = ramp_up[(uint8_t)phase] / 2 + deviation / 2;
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
 			} else {
 				/* ramp down from 0 */
 				do {
-					*spl++ = ramp_down[(int)phase] / 2 - deviation / 2;
+					*spl++ = ramp_down[(uint8_t)phase] / 2 - deviation / 2;
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
@@ -370,7 +370,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 			} else {
 				/* ramp down */
 				do {
-					*spl++ = ramp_down[(int)phase];
+					*spl++ = ramp_down[(uint8_t)phase];
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
@@ -380,7 +380,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 			if (bits[i] == '1') {
 				/* ramp up */
 				do {
-					*spl++ = ramp_up[(int)phase];
+					*spl++ = ramp_up[(uint8_t)phase];
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
@@ -400,14 +400,14 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 	if (last == '0') {
 		/* ramp up to 0 */
 		do {
-			*spl++ = ramp_up[(int)phase] / 2 - deviation / 2;
+			*spl++ = ramp_up[(uint8_t)phase] / 2 - deviation / 2;
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
 	} else {
 		/* ramp down to 0 */
 		do {
-			*spl++ = ramp_down[(int)phase] / 2 + deviation / 2;
+			*spl++ = ramp_down[(uint8_t)phase] / 2 + deviation / 2;
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -481,14 +481,14 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 				if (bits[i * 4 + j] == '1') {
 					/* ramp up from 0 */
 					do {
-						*spl++ = ramp_up[(int)phase] / 2 + deviation / 2;
+						*spl++ = ramp_up[(uint8_t)phase] / 2 + deviation / 2;
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
 				} else {
 					/* ramp down from 0 */
 					do {
-						*spl++ = ramp_down[(int)phase] / 2 - deviation / 2;
+						*spl++ = ramp_down[(uint8_t)phase] / 2 - deviation / 2;
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
@@ -505,7 +505,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 				} else {
 					/* ramp down */
 					do {
-						*spl++ = ramp_down[(int)phase];
+						*spl++ = ramp_down[(uint8_t)phase];
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
@@ -515,7 +515,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 				if (bits[i * 4 + j] == '1') {
 					/* ramp up */
 					do {
-						*spl++ = ramp_up[(int)phase];
+						*spl++ = ramp_up[(uint8_t)phase];
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
@@ -535,14 +535,14 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 		if (last == '0') {
 			/* ramp up to 0 */
 			do {
-				*spl++ = ramp_up[(int)phase] / 2 - deviation / 2;
+				*spl++ = ramp_up[(uint8_t)phase] / 2 - deviation / 2;
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
 		} else {
 			/* ramp down to 0 */
 			do {
-				*spl++ = ramp_down[(int)phase] / 2 + deviation / 2;
+				*spl++ = ramp_down[(uint8_t)phase] / 2 + deviation / 2;
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
