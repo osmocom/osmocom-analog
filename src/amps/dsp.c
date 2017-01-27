@@ -81,10 +81,10 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
-#include "../common/goertzel.h"
 #include "amps.h"
 #include "frame.h"
 #include "dsp.h"
@@ -180,8 +180,7 @@ static void sat_reset(amps_t *amps, const char *reason);
 /* Init FSK of transceiver */
 int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 {
-	double coeff;
-	int16_t *spl;
+	sample_t *spl;
 	int i;
 	int rc;
 	double RC, dt;
@@ -206,12 +205,13 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Use %.4f samples for full bit duration @ %d.\n", amps->fsk_bitduration, amps->sender.samplerate);
 
 	amps->fsk_tx_buffer_size = amps->fsk_bitduration + 10; /* 10 extra to avoid overflow due to rounding */
-	amps->fsk_tx_buffer = calloc(sizeof(int16_t), amps->fsk_tx_buffer_size);
-	if (!amps->fsk_tx_buffer) {
+	spl = calloc(sizeof(*spl), amps->fsk_tx_buffer_size);
+	if (!spl) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
+	amps->fsk_tx_buffer = spl;
 
 	amps->fsk_rx_window_length = ceil(amps->fsk_bitduration); /* buffer holds one bit (rounded up) */
 	half = amps->fsk_rx_window_length >> 1;
@@ -221,12 +221,13 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Bit window length: %d\n", amps->fsk_rx_window_length);
 	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level left of edge: %d..%d\n", amps->fsk_rx_window_begin, amps->fsk_rx_window_half - 1);
 	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level right of edge: %d..%d\n", amps->fsk_rx_window_half, amps->fsk_rx_window_end - 1);
-	amps->fsk_rx_window = calloc(sizeof(int16_t), amps->fsk_rx_window_length);
-	if (!amps->fsk_rx_window) {
+	spl = calloc(sizeof(*amps->fsk_rx_window), amps->fsk_rx_window_length);
+	if (!spl) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
+	amps->fsk_rx_window = spl;
 
 	/* create devation and ramp */
 	amps->fsk_deviation = FSK_DEVIATION; /* be sure not to overflow 32767 */
@@ -234,7 +235,7 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 
 	/* allocate ring buffer for SAT signal detection */
 	amps->sat_samples = (int)((double)amps->sender.samplerate * SAT_DURATION + 0.5);
-	spl = calloc(1, amps->sat_samples * sizeof(*spl));
+	spl = calloc(sizeof(*spl), amps->sat_samples);
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
@@ -243,10 +244,7 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 
 	/* count SAT tones */
 	for (i = 0; i < 5; i++) {
-		coeff = 2.0 * cos(2.0 * PI * sat_freq[i] / (double)amps->sender.samplerate);
-		amps->sat_coeff[i] = coeff * 32768.0;
-		PDEBUG(DDSP, DEBUG_DEBUG, "sat_coeff[%d] = %d\n", i, (int)amps->sat_coeff[i]);
-
+		audio_goertzel_init(&amps->sat_goertzel[i], sat_freq[i], amps->sender.samplerate);
 		if (i < 3) {
 			amps->sat_phaseshift256[i] = 256.0 / ((double)amps->sender.samplerate / sat_freq[i]);
 			PDEBUG(DDSP, DEBUG_DEBUG, "sat_phaseshift256[%d] = %.4f\n", i, amps->sat_phaseshift256[i]);
@@ -300,7 +298,7 @@ void dsp_cleanup_sender(amps_t *amps)
 
 static int fsk_encode(amps_t *amps, char bit)
 {
-	int16_t *spl;
+	sample_t *spl;
 	double phase, bitstep, deviation;
 	int count;
 	char last;
@@ -368,10 +366,10 @@ static int fsk_encode(amps_t *amps, char bit)
 	return count;
 }
 
-static int fsk_frame(amps_t *amps, int16_t *samples, int length)
+static int fsk_frame(amps_t *amps, sample_t *samples, int length)
 {
 	int count = 0, len, pos, copy, i;
-	int16_t *spl;
+	sample_t *spl;
 	int rc;
 	char c;
 
@@ -430,7 +428,7 @@ done:
 }
 
 /* Generate audio stream with SAT signal. Keep phase for next call of function. */
-static void sat_encode(amps_t *amps, int16_t *samples, int length)
+static void sat_encode(amps_t *amps, sample_t *samples, int length)
 {
         double phaseshift, phase;
 	int32_t sample;
@@ -455,7 +453,7 @@ static void sat_encode(amps_t *amps, int16_t *samples, int length)
 	amps->sat_phase256 = phase;
 }
 
-static void test_tone_encode(amps_t *amps, int16_t *samples, int length)
+static void test_tone_encode(amps_t *amps, sample_t *samples, int length)
 {
         double phaseshift, phase;
 	int i;
@@ -474,7 +472,7 @@ static void test_tone_encode(amps_t *amps, int16_t *samples, int length)
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, int16_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	amps_t *amps = (amps_t *) sender;
 	int count;
@@ -505,12 +503,12 @@ again:
 	}
 }
 
-static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos, int begin, int half, int end)
+static void fsk_rx_bit(amps_t *amps, sample_t *spl, int len, int pos, int begin, int half, int end)
 {
 	int i;
-	int32_t first, second;
+	double first, second;
 	int bit;
-	int32_t max = -32768, min = 32767;
+	double max = 0, min = 0;
 
 	/* decode one bit. substact the first half from the second half.
 	 * the result shows the direction of the bit change: 1 == positive.
@@ -522,9 +520,9 @@ static void fsk_rx_bit(amps_t *amps, int16_t *spl, int len, int pos, int begin, 
 			pos += len;
 //printf("second %d: %d\n", pos, spl[pos]);
 		second += spl[pos];
-		if (spl[pos] > max)
+		if (i == 0 || spl[pos] > max)
 			max = spl[pos];
-		if (spl[pos] < min)
+		if (i == 0 || spl[pos] < min)
 			min = spl[pos];
 	}
 	second /= (half - begin);
@@ -683,13 +681,13 @@ static void fsk_rx_dotting(amps_t *amps, double _elapsed)
 }
 
 /* decode frame */
-static void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
+static void sender_receive_frame(amps_t *amps, sample_t *samples, int length)
 {
 	int i;
 
 	for (i = 0; i < length; i++) {
 #ifdef DEBUG_DECODER
-		puts(debug_amplitude((double)samples[i] / (double)FSK_DEVIATION));
+		puts(debug_amplitude(samples[i] / (double)FSK_DEVIATION));
 #endif
 		/* push sample to detection window and shift */
 		amps->fsk_rx_window[amps->fsk_rx_window_pos++] = samples[i];
@@ -731,15 +729,13 @@ static void sender_receive_frame(amps_t *amps, int16_t *samples, int length)
 
 /* decode signaling tone */
 /* compare supervisory signal against noise floor on 5800 Hz */
-static void sat_decode(amps_t *amps, int16_t *samples, int length)
+static void sat_decode(amps_t *amps, sample_t *samples, int length)
 {
-	int coeff[3];
 	double result[3], quality[2];
 
-	coeff[0] = amps->sat_coeff[amps->sat];
-	coeff[1] = amps->sat_coeff[3]; /* noise floor detection */
-	coeff[2] = amps->sat_coeff[4]; /* signaling tone */
-	audio_goertzel(samples, length, 0, coeff, result, 3);
+	audio_goertzel(&amps->sat_goertzel[amps->sat], samples, length, 0, &result[0], 1);
+	audio_goertzel(&amps->sat_goertzel[3], samples, length, 0, &result[1], 1);
+	audio_goertzel(&amps->sat_goertzel[4], samples, length, 0, &result[2], 1);
 
 	quality[0] = (result[0] - result[1]) / result[0];
 	if (quality[0] < 0)
@@ -805,10 +801,10 @@ static void sat_decode(amps_t *amps, int16_t *samples, int length)
  * time is between SIG_TONE_MINBITS and SIG_TONE_MAXBITS. If it is, the
  * frequency is close to the singalling tone, so it is detected
  */
-static void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
+static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 {
 	transaction_t *trans = amps->trans_list;
-	int16_t *spl;
+	sample_t *spl;
 	int max, pos;
 	int i;
 
@@ -830,21 +826,19 @@ static void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
 
 	if ((amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX || amps->dsp_mode == DSP_MODE_AUDIO_RX_FRAME_TX)
 	 && trans && trans->callref && trans->sat_detected) {
-		int16_t down[length]; /* more than enough */
 		int pos, count;
-		int16_t *spl;
 		int i;
 
 		/* de-emphasis */
 		if (amps->de_emphasis)
 			de_emphasis(&amps->estate, samples, length);
 		/* downsample */
-		count = samplerate_downsample(&amps->sender.srstate, samples, length, down);
-		expand_audio(&amps->cstate, down, count);
+		count = samplerate_downsample(&amps->sender.srstate, samples, length);
+		expand_audio(&amps->cstate, samples, count);
 		spl = amps->sender.rxbuf;
 		pos = amps->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {
-			spl[pos++] = down[i];
+			spl[pos++] = samples[i];
 			if (pos == 160) {
 				call_tx_audio(trans->callref, spl, 160);
 				pos = 0;
@@ -856,11 +850,10 @@ static void sender_receive_audio(amps_t *amps, int16_t *samples, int length)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, int16_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
 	amps_t *amps = (amps_t *) sender;
 	double x, y, x_last, y_last, factor;
-	int32_t value;
 	int i;
 
 	/* high pass filter to remove 0-level
@@ -874,12 +867,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 			y = factor * (y_last + x - x_last);
 			x_last = x;
 			y_last = y;
-			value = (int32_t)(y + 0.5);
-			if (value < -32768.0)
-				value = -32768.0;
-			else if (value > 32767)
-				value = 32767;
-			samples[i] = value;
+			samples[i] = y;
 		}
 		amps->highpass_x_last = x_last;
 		amps->highpass_y_last = y_last;

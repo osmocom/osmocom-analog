@@ -129,6 +129,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -428,7 +429,7 @@ static void cnetz_release(transaction_t *trans, uint8_t cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, int16_t *samples, int count)
+void call_rx_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;

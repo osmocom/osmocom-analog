@@ -1,5 +1,10 @@
 
-double audio_level(int16_t *samples, int length);
+double audio_level(sample_t *samples, int length);
 
-void audio_goertzel(int16_t *samples, int length, int offset, int *coeff, double *result, int k);
+typedef struct goertzel {
+	double coeff;
+} goertzel_t;
+
+void audio_goertzel_init(goertzel_t *goertzel, double freq, int samplerate);
+void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int offset, double *result, int k);
 

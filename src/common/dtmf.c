@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include "sample.h"
 #include "dtmf.h"
 
 #define PI		M_PI
@@ -27,7 +28,7 @@
 #define TX_PEAK_DTMF	7000   /* single dtmf tone peak (note this is half to total peak) */ 
 #define DTMF_DURATION	0.100   /* duration in seconds */
 
-int dsp_sine_dtmf[256];
+static double dsp_sine_dtmf[256];
 
 void dtmf_init(dtmf_t *dtmf, int samplerate)
 {
@@ -75,7 +76,7 @@ void dtmf_set_tone(dtmf_t *dtmf, char tone)
 }
 
 /* Generate audio stream from DTMF tone. Keep phase for next call of function. */
-void dtmf_tone(dtmf_t *dtmf, int16_t *samples, int length)
+void dtmf_tone(dtmf_t *dtmf, sample_t *samples, int length)
 {
         double *phaseshift, *phase;
 	int i, pos, max;

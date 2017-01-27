@@ -22,14 +22,15 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "../common/debug.h"
+#include "sample.h"
+#include "debug.h"
 #include "jitter.h"
 
 /* create jitter buffer */
 int jitter_create(jitter_t *jitter, int length)
 {
 	memset(jitter, 0, sizeof(*jitter));
-	jitter->spl = calloc(length * sizeof(int16_t), 1);
+	jitter->spl = calloc(length * sizeof(sample_t), 1);
 	if (!jitter->spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory for jitter buffer.\n");
 		return -ENOMEM;
@@ -51,9 +52,9 @@ void jitter_destroy(jitter_t *jitter)
  *
  * stop if buffer is completely filled
  */
-void jitter_save(jitter_t *jb, int16_t *samples, int length)
+void jitter_save(jitter_t *jb, sample_t *samples, int length)
 {
-	int16_t *spl;
+	sample_t *spl;
 	int inptr, outptr, len, space;
 	int i;
 
@@ -76,9 +77,9 @@ void jitter_save(jitter_t *jb, int16_t *samples, int length)
 
 /* get audio from jitterbuffer
  */
-void jitter_load(jitter_t *jb, int16_t *samples, int length)
+void jitter_load(jitter_t *jb, sample_t *samples, int length)
 {
-	int16_t *spl;
+	sample_t *spl;
 	int inptr, outptr, len, fill;
 	int i, ii;
 

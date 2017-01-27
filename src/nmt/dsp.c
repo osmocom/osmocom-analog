@@ -25,9 +25,9 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
-#include "../common/goertzel.h"
 #include "nmt.h"
 #include "transaction.h"
 #include "dsp.h"
@@ -50,7 +50,7 @@
 #define BIT_RATE		1200	/* baud rate */
 #define STEPS_PER_BIT		10	/* step every 1/12000 sec */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
-#define TX_PEAK_DIALTONE	16000	/* dial tone peak */
+#define TX_PEAK_DIALTONE	16000.0	/* dial tone peak */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
 #define SUPER_DETECT_COUNT	4	/* number of measures to detect supervisory signal */
 #define MUTE_DURATION		0.280	/* a tiny bit more than two frames */
@@ -71,9 +71,9 @@ static double super_freq[5] = {
 };
 
 /* table for fast sine generation */
-uint16_t dsp_tone_bit[2][2][256]; /* polarity, bit, phase */
-uint16_t dsp_sine_super[256];
-uint16_t dsp_sine_dialtone[256];
+static double dsp_tone_bit[2][2][256]; /* polarity, bit, phase */
+static double dsp_sine_super[256];
+static double dsp_sine_dialtone[256];
 
 /* global init for FSK */
 void dsp_init(void)
@@ -85,24 +85,23 @@ void dsp_init(void)
 	for (i = 0; i < 256; i++) {
 		s = sin((double)i / 256.0 * 2.0 * PI);
 		/* supervisor sine */
-		dsp_sine_super[i] = (int)(s * TX_PEAK_SUPER);
+		dsp_sine_super[i] = s * TX_PEAK_SUPER;
 		/* dialtone sine */
-		dsp_sine_dialtone[i] = (int)(s * TX_PEAK_DIALTONE);
+		dsp_sine_dialtone[i] = s * TX_PEAK_DIALTONE;
 		/* bit(1) 1 cycle */
-		dsp_tone_bit[0][1][i] = (int)(s * TX_PEAK_FSK);
-		dsp_tone_bit[1][1][i] = (int)(-s * TX_PEAK_FSK);
+		dsp_tone_bit[0][1][i] = s * TX_PEAK_FSK;
+		dsp_tone_bit[1][1][i] = -s * TX_PEAK_FSK;
 		/* bit(0) 1.5 cycles */
 		s = sin((double)i / 256.0 * 3.0 * PI);
-		dsp_tone_bit[0][0][i] = (int)(s * TX_PEAK_FSK);
-		dsp_tone_bit[1][0][i] = (int)(-s * TX_PEAK_FSK);
+		dsp_tone_bit[0][0][i] = s * TX_PEAK_FSK;
+		dsp_tone_bit[1][0][i] = -s * TX_PEAK_FSK;
 	}
 }
 
 /* Init FSK of transceiver */
 int dsp_init_sender(nmt_t *nmt)
 {
-	double coeff;
-	int16_t *spl;
+	sample_t *spl;
 	int i;
 
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
@@ -165,20 +164,14 @@ int dsp_init_sender(nmt_t *nmt)
 	nmt->super_filter_spl = spl;
 
 	/* count symbols */
-	for (i = 0; i < 2; i++) {
-		coeff = 2.0 * cos(2.0 * PI * fsk_freq[i] / (double)nmt->sender.samplerate);
-		nmt->fsk_coeff[i] = coeff * 32768.0;
-		PDEBUG(DDSP, DEBUG_DEBUG, "fsk_coeff[%d] = %d\n", i, (int)nmt->fsk_coeff[i]);
-	}
+	for (i = 0; i < 2; i++)
+		audio_goertzel_init(&nmt->fsk_goertzel[i], fsk_freq[i], nmt->sender.samplerate);
 	nmt->fsk_phaseshift256 = 256.0 / nmt->fsk_samples_per_bit;
 	PDEBUG(DDSP, DEBUG_DEBUG, "fsk_phaseshift = %.4f\n", nmt->fsk_phaseshift256);
 
 	/* count supervidory tones */
 	for (i = 0; i < 5; i++) {
-		coeff = 2.0 * cos(2.0 * PI * super_freq[i] / (double)nmt->sender.samplerate);
-		nmt->super_coeff[i] = coeff * 32768.0;
-		PDEBUG(DDSP, DEBUG_DEBUG, "supervisory coeff[%d] = %d\n", i, (int)nmt->super_coeff[i]);
-
+		audio_goertzel_init(&nmt->super_goertzel[i], super_freq[i], nmt->sender.samplerate);
 		if (i < 4) {
 			nmt->super_phaseshift256[i] = 256.0 / ((double)nmt->sender.samplerate / super_freq[i]);
 			PDEBUG(DDSP, DEBUG_DEBUG, "super_phaseshift[%d] = %.4f\n", i, nmt->super_phaseshift256[i]);
@@ -301,7 +294,7 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 {
 	double level, result[2], softbit, quality;
 	int max;
-	int16_t *spl;
+	sample_t *spl;
 	int bit;
 	
 	max = nmt->fsk_filter_size;
@@ -316,7 +309,7 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 		level = 0.01;
 //	level = 0.63662 / 2.0;
 
-	audio_goertzel(spl, max, pos, nmt->fsk_coeff, result, 2);
+	audio_goertzel(nmt->fsk_goertzel, spl, max, pos, result, 2);
 
 	/* calculate soft bit from both frequencies */
 	softbit = (result[1] / level - result[0] / level + 1.0) / 2.0;
@@ -368,14 +361,12 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 }
 
 /* compare supervisory signal against noise floor on 3900 Hz */
-static void super_decode(nmt_t *nmt, int16_t *samples, int length)
+static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 {
-	int coeff[2];
 	double result[2], quality;
 
-	coeff[0] = nmt->super_coeff[nmt->supervisory - 1];
-	coeff[1] = nmt->super_coeff[4]; /* noise floor detection */
-	audio_goertzel(samples, length, 0, coeff, result, 2);
+	audio_goertzel(&nmt->super_goertzel[nmt->supervisory - 1], samples, length, 0, &result[0], 1);
+	audio_goertzel(&nmt->super_goertzel[4], samples, length, 0, &result[1], 1); /* noise floor detection */
 
 #if 0
 	/* normalize levels */
@@ -424,10 +415,10 @@ void super_reset(nmt_t *nmt)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, int16_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
 	nmt_t *nmt = (nmt_t *) sender;
-	int16_t *spl;
+	sample_t *spl;
 	int max, pos;
 	double step, bps;
 	int i;
@@ -477,18 +468,17 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 
 	if ((nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF)
 	 && nmt->trans && nmt->trans->callref) {
-		int16_t down[length]; /* more than enough */
 		int count;
 
-		count = samplerate_downsample(&nmt->sender.srstate, samples, length, down);
+		count = samplerate_downsample(&nmt->sender.srstate, samples, length);
 		if (nmt->compandor)
-			expand_audio(&nmt->cstate, down, count);
+			expand_audio(&nmt->cstate, samples, count);
 		if (nmt->dsp_mode == DSP_MODE_DTMF)
-			dtmf_tone(&nmt->dtmf, down, count);
+			dtmf_tone(&nmt->dtmf, samples, count);
 		spl = nmt->sender.rxbuf;
 		pos = nmt->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {
-			spl[pos++] = down[i];
+			spl[pos++] = samples[i];
 			if (pos == 160) {
 				call_tx_audio(nmt->trans->callref, spl, 160);
 				pos = 0;
@@ -500,7 +490,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 }
 
 /* render frame */
-int fsk_render_frame(nmt_t *nmt, const char *frame, int length, int16_t *sample)
+int fsk_render_frame(nmt_t *nmt, const char *frame, int length, sample_t *sample)
 {
 	int bit, polarity;
         double phaseshift, phase;
@@ -528,10 +518,10 @@ int fsk_render_frame(nmt_t *nmt, const char *frame, int length, int16_t *sample)
 	return count;
 }
 
-static int fsk_frame(nmt_t *nmt, int16_t *samples, int length)
+static int fsk_frame(nmt_t *nmt, sample_t *samples, int length)
 {
 	const char *frame;
-	int16_t *spl;
+	sample_t *spl;
 	int i;
 	int count, max;
 
@@ -575,23 +565,16 @@ next_frame:
 }
 
 /* Generate audio stream with supervisory signal. Keep phase for next call of function. */
-static void super_encode(nmt_t *nmt, int16_t *samples, int length)
+static void super_encode(nmt_t *nmt, sample_t *samples, int length)
 {
         double phaseshift, phase;
-	int32_t sample;
 	int i;
 
 	phaseshift = nmt->super_phaseshift256[nmt->supervisory - 1];
 	phase = nmt->super_phase256;
 
 	for (i = 0; i < length; i++) {
-		sample = *samples;
-		sample += dsp_sine_super[(uint8_t)phase];
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32767)
-			sample = -32767;
-		*samples++ = sample;
+		*samples++ += dsp_sine_super[(uint8_t)phase];
 		phase += phaseshift;
 		if (phase >= 256)
 			phase -= 256;
@@ -601,7 +584,7 @@ static void super_encode(nmt_t *nmt, int16_t *samples, int length)
 }
 
 /* Generate audio stream from dial tone. Keep phase for next call of function. */
-static void dial_tone(nmt_t *nmt, int16_t *samples, int length)
+static void dial_tone(nmt_t *nmt, sample_t *samples, int length)
 {
         double phaseshift, phase;
 	int i;
@@ -620,7 +603,7 @@ static void dial_tone(nmt_t *nmt, int16_t *samples, int length)
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, int16_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	nmt_t *nmt = (nmt_t *) sender;
 	int len;

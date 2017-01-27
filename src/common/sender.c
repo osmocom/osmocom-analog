@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include "sample.h"
 #include "debug.h"
 #include "sender.h"
 
@@ -224,19 +225,12 @@ void sender_destroy(sender_t *sender)
 	jitter_destroy(&sender->dejitter);
 }
 
-static void gain_samples(int16_t *samples, int length, double gain)
+static void gain_samples(sample_t *samples, int length, double gain)
 {
 	int i;
-	int32_t sample;
 
-	for (i = 0; i < length; i++) {
-		sample = (int32_t)((double)(*samples) * gain);
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32768)
-			sample = -32768;
-		*samples++ = sample;
-	}
+	for (i = 0; i < length; i++)
+		*samples++ *= gain;
 }
 
 /* Handle audio streaming of one transceiver. */
@@ -248,7 +242,7 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
-	int16_t buff[num_chan][latspl], *samples[num_chan];
+	sample_t buff[num_chan][latspl], *samples[num_chan];
 	enum paging_signal paging_signal[num_chan];
 	int on[num_chan];
 	for (i = 0; i < num_chan; i++) {

@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -492,7 +493,7 @@ void call_out_release(int callref, __attribute__((unused)) int cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, int16_t *samples, int count)
+void call_rx_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	anetz_t *anetz;
@@ -506,7 +507,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		return;
 
 	if (anetz->dsp_mode == DSP_MODE_AUDIO) {
-		int16_t up[(int)((double)count * anetz->sender.srstate.factor + 0.5) + 10];
+		sample_t up[(int)((double)count * anetz->sender.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&anetz->sender.srstate, samples, count, up);
 		jitter_save(&anetz->sender.dejitter, up, count);
 	}

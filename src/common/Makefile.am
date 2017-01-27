@@ -4,6 +4,7 @@ AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(UHD_CFLAGS)
 noinst_LIBRARIES = libcommon.a
 
 libcommon_a_SOURCES = \
+	../common/sample.c \
 	../common/debug.c \
 	../common/timer.c \
 	../common/sound_alsa.c \

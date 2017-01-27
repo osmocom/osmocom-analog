@@ -25,7 +25,7 @@ struct dms_state {
 typedef struct dms {
 	/* DMS transmission */
 	int			frame_valid;		/* set, if there is a valid frame in sample buffer */
-	int16_t			*frame_spl;		/* 127 * fsk_bit_length */
+	sample_t		*frame_spl;		/* 127 * fsk_bit_length */
 	int			frame_size;		/* total size of buffer */
 	int			frame_pos;		/* current sample position in frame_spl */
 	int			frame_length;		/* number of samples currently in frame_spl */
@@ -52,7 +52,7 @@ typedef struct dms {
 
 int dms_init_sender(nmt_t *nmt);
 void dms_cleanup_sender(nmt_t *nmt);
-int fsk_dms_frame(nmt_t *nmt, int16_t *samples, int length);
+int fsk_dms_frame(nmt_t *nmt, sample_t *samples, int length);
 void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level);
 void dms_reset(nmt_t *nmt);
 

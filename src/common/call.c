@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
+#include "sample.h"
 #include "debug.h"
 #include "sender.h"
 #include "cause.h"
@@ -640,8 +641,7 @@ void process_call(int c)
 		return;
 
 	/* handle audio, if sound device is used */
-
-	int16_t samples[call.latspl], *spl_list[1];
+	sample_t samples[call.latspl + 10], *samples_list[1];
 	int count;
 	int rc;
 
@@ -653,28 +653,33 @@ void process_call(int c)
 		return;
 	}
 	if (count < call.latspl) {
-		int16_t up[count + 10];
 		count = call.latspl - count;
+		int16_t spl[count + 10]; /* more than enough, count will be reduced by scaling with factor */
 		switch(call.state) {
 		case CALL_ALERTING:
+			/* the count will be an approximation that will be upsampled */
 			count = (int)((double)count / call.srstate.factor + 0.5);
-			get_call_patterns(samples, count, PATTERN_RINGBACK);
-			count = samplerate_upsample(&call.srstate, samples, count, up);
+			get_call_patterns(spl, count, PATTERN_RINGBACK);
+			int16_to_samples(samples, spl, count);
+			count = samplerate_upsample(&call.srstate, samples, count, samples);
 			/* prevent click after hangup */
 			jitter_clear(&call.dejitter);
 			break;
 		case CALL_DISCONNECTED:
+			/* the count will be an approximation that will be upsampled */
 			count = (int)((double)count / call.srstate.factor + 0.5);
-			get_call_patterns(samples, count, cause2pattern(call.disc_cause));
-			count = samplerate_upsample(&call.srstate, samples, count, up);
+			get_call_patterns(spl, count, cause2pattern(call.disc_cause));
+			int16_to_samples(samples, spl, count);
+			count = samplerate_upsample(&call.srstate, samples, count, samples);
 			/* prevent click after hangup */
 			jitter_clear(&call.dejitter);
 			break;
 		default:
-			jitter_load(&call.dejitter, up, count);
+			jitter_load(&call.dejitter, samples, count);
 		}
-		spl_list[0] = up;
-		rc = sound_write(call.sound, spl_list, count, NULL, NULL, 1);
+		samples_to_int16(spl, samples, count);
+		samples_list[0] = samples;
+		rc = sound_write(call.sound, samples_list, count, NULL, NULL, 1);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE)
@@ -682,8 +687,8 @@ void process_call(int c)
 			return;
 		}
 	}
-	spl_list[0] = samples;
-	count = sound_read(call.sound, spl_list, call.latspl, 1);
+	samples_list[0] = samples;
+	count = sound_read(call.sound, samples_list, call.latspl, 1);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)
@@ -691,12 +696,10 @@ void process_call(int c)
 		return;
 	}
 	if (count) {
-		int16_t down[count]; /* more than enough */
-
 		if (call.loopback == 3)
 			jitter_save(&call.dejitter, samples, count);
-		count = samplerate_downsample(&call.srstate, samples, count, down);
-		call_rx_audio(call.callref, down, count);
+		count = samplerate_downsample(&call.srstate, samples, count);
+		call_rx_audio(call.callref, samples, count);
 	}
 }
 
@@ -899,8 +902,10 @@ void call_in_release(int callref, int cause)
 }
 
 /* forward audio to MNCC or call instance */
-void call_tx_audio(int callref, int16_t *samples, int count)
+void call_tx_audio(int callref, sample_t *samples, int count)
 {
+	int16_t spl[count];
+
 	if (!callref)
 		return;
 
@@ -915,7 +920,7 @@ void call_tx_audio(int callref, int16_t *samples, int count)
 		/* forward audio */
 		data->msg_type = ANALOG_8000HZ;
 		data->callref = callref;
-		memcpy(data->data, samples, count * sizeof(int16_t));
+		samples_to_int16((int16_t *)data->data, samples, count);
 
 		mncc_write(buf, sizeof(buf));
 		return;
@@ -923,13 +928,14 @@ void call_tx_audio(int callref, int16_t *samples, int count)
 
 	/* save audio from transceiver to jitter buffer */
 	if (call.sound) {
-		int16_t up[(int)((double)count * call.srstate.factor + 0.5) + 10];
+		sample_t up[(int)((double)count * call.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&call.srstate, samples, count, up);
 		jitter_save(&call.dejitter, up, count);
 	} else
 	/* else, if no sound is used, send test tone to mobile */
 	if (call.state == CALL_CONNECT) {
-		get_test_patterns(samples, count);
+		get_test_patterns(spl, count);
+		int16_to_samples(samples, spl, count);
 		call_rx_audio(callref, samples, count);
 	}
 }
@@ -966,10 +972,13 @@ void call_mncc_recv(uint8_t *buf, int length)
 	if (mncc->msg_type == ANALOG_8000HZ) {
 		struct gsm_data_frame *data = (struct gsm_data_frame *)buf;
 		int count = (length - sizeof(struct gsm_data_frame)) / 2;
+		sample_t samples[count];
+
 		/* if we are disconnected, ignore audio */
 		if (is_process_pattern(data->callref))
 			return;
-		call_rx_audio(data->callref, (int16_t *)data->data, count);
+		int16_to_samples(samples, (int16_t *)data->data, count);
+		call_rx_audio(data->callref, samples, count);
 		return;
 	}
 

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
+#include "sample.h"
 #include "debug.h"
 #include "display.h"
 #include "call.h"

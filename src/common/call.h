@@ -27,8 +27,8 @@ void call_out_disconnect(int callref, int cause);
 void call_out_release(int callref, int cause);
 
 /* send and receive audio */
-void call_rx_audio(int callref, int16_t *samples, int count);
-void call_tx_audio(int callref, int16_t *samples, int count);
+void call_rx_audio(int callref, sample_t *samples, int count);
+void call_tx_audio(int callref, sample_t *samples, int count);
 
 /* receive from mncc */
 void call_mncc_recv(uint8_t *buf, int length);

@@ -105,6 +105,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/timer.h"
 #include "../common/debug.h"
 #include "cnetz.h"
@@ -330,15 +331,13 @@ got_sync:
 /* DOC TBD: find change for bit change */
 static inline void find_change(fsk_fm_demod_t *fsk)
 {
-	int32_t level_min, level_max, change_max;
-	int change_at, change_positive;
-	int16_t s, last_s = 0;
-	int threshold;
+	sample_t level_min = 0, level_max = 0, change_max = -1;
+	int change_at = -1, change_positive = -1;
+	sample_t s, last_s = 0;
+	sample_t threshold;
 	int i;
 	
 	/* levels at total reverse */
-	level_min = 32767;
-	level_max = -32768;
 	change_max = -1;
 	change_at = -1;
 	change_positive = -1;
@@ -359,14 +358,14 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 				change_positive = 0;
 			}
 		}
-		if (s > level_max)
+		if (i == 0 || s > level_max)
 			level_max = s;
-		if (s < level_min)
+		if (i == 0 || s < level_min)
 			level_min = s;
 	}
 	/* for first bit, we have only half of the modulation deviation, so we divide the threshold by two */
 	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V && fsk->bit_count == 0)
-		threshold = fsk->level_threshold / 2;
+		threshold = fsk->level_threshold / 2.0;
 	else
 		threshold = fsk->level_threshold;
 	/* if we are not in sync, for every detected change we set
@@ -380,7 +379,7 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 	if (level_max - level_min > threshold && change_at == fsk->bit_buffer_half) {
 #ifdef DEBUG_DECODER
 		DEBUG_DECODER
-			printf("receive bit change to %d (level=%d, threshold=%d)\n", change_positive, level_max - level_min, threshold);
+			printf("receive bit change to %d (level=%.3f, threshold=%.3f)\n", change_positive, level_max - level_min, threshold);
 #endif
 		fsk->last_change_positive = change_positive;
 		if (!fsk->sync) {
@@ -404,7 +403,7 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 }
 
 /* receive FM signal from receiver */
-void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
+void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 {
 	int i;
 	double t;
@@ -418,7 +417,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 		if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 #ifdef DEBUG_DECODER
 			DEBUG_DECODER
-				puts(debug_amplitude((double)samples[i] / 32768.0));
+				puts(debug_amplitude(samples[i] / 32768.0));
 #endif
 			find_change(fsk);
 		} else {
@@ -442,7 +441,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length)
 			if (t >= 0.5 && t < 5.5) {
 #ifdef DEBUG_DECODER
 				DEBUG_DECODER
-					puts(debug_amplitude((double)samples[i] / 32768.0));
+					puts(debug_amplitude(samples[i] / 32768.0));
 #endif
 				find_change(fsk);
 			} else

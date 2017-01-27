@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../nmt/nmt.h"
@@ -55,7 +56,7 @@ void dms_all_sent(nmt_t *nmt)
 }
 
 /* receive bits from DMS */
-int fsk_render_frame(nmt_t *nmt, const char *frame, int length, int16_t *sample)
+int fsk_render_frame(nmt_t *nmt, const char *frame, int length, sample_t *sample)
 {
 	printf("(getting %d bits from DMS layer)\n", length);
 
@@ -92,7 +93,7 @@ int main(void)
 	nmt_t *nmt;
 	dms_t *dms;
 	int i, j;
-	int16_t sample = 0;
+	sample_t sample = 0;
 
 	debuglevel = DEBUG_DEBUG;
 	dms_allow_loopback = 1;

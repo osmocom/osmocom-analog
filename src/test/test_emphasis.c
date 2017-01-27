@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
+#include "../common/sample.h"
 #include "../common/emphasis.h"
 #include "../common/debug.h"
 
@@ -13,7 +14,7 @@
 
 static double test_freq[] = { 25, 50, 100, 200, 250, 300, 400, 500, 1000, 2000, 4000, 0 };
 
-static void check_level(int16_t *samples, double freq, const char *desc)
+static void check_level(sample_t *samples, double freq, const char *desc)
 {
 	int i;
 	int last = 0, envelope = 0;
@@ -34,7 +35,7 @@ static void check_level(int16_t *samples, double freq, const char *desc)
 	printf("%s: f = %.0f envelop = %.4f\n", desc, freq, level2db((double)envelope / DEVIATION));
 }
 
-static void gen_samples(int16_t *samples, double freq)
+static void gen_samples(double *samples, double freq)
 {
 	int i;
 	double value;
@@ -48,7 +49,7 @@ static void gen_samples(int16_t *samples, double freq)
 int main(void)
 {
 	emphasis_t estate;
-	int16_t samples[SAMPLERATE];
+	double samples[SAMPLERATE];
 	int i;
 
 	debuglevel = DEBUG_DEBUG;

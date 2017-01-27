@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "sample.h"
 #include "wave.h"
 
 struct fmt {
@@ -193,7 +194,7 @@ error:
 	return rc;
 }
 
-int wave_read(wave_play_t *play, int16_t **samples, int length)
+int wave_read(wave_play_t *play, sample_t **samples, int length)
 {
 	uint8_t buff[2 * length * play->channels];
 	int __attribute__((__unused__)) len;
@@ -201,7 +202,7 @@ int wave_read(wave_play_t *play, int16_t **samples, int length)
 
 	if (length > (int)play->left) {
 		for (c = 0; c < play->channels; c++)
-			memset(samples[c], 0, 2 * length);
+			memset(samples[c], 0, sizeof(samples[c][0] * length));
 		length = play->left;
 	}
 	if (!length)
@@ -215,7 +216,7 @@ int wave_read(wave_play_t *play, int16_t **samples, int length)
 	len = fread(buff, 1, 2 * length * play->channels, play->fp);
 	for (i = 0, j = 0; i < length; i++) {
 		for (c = 0; c < play->channels; c++) {
-			samples[c][i] = buff[j] + (buff[j + 1] << 8);
+			samples[c][i] = (double)(buff[j] + (buff[j + 1] << 8));
 			j += 2;
 		}
 	}
@@ -223,8 +224,9 @@ int wave_read(wave_play_t *play, int16_t **samples, int length)
 	return length;
 }
 
-int wave_write(wave_rec_t *rec, int16_t **samples, int length)
+int wave_write(wave_rec_t *rec, sample_t **samples, int length)
 {
+	int32_t value;
 	uint8_t buff[2 * length * rec->channels];
 	int __attribute__((__unused__)) len;
 	int i, j, c;
@@ -232,8 +234,13 @@ int wave_write(wave_rec_t *rec, int16_t **samples, int length)
 	/* write and correct endiness */
 	for (i = 0, j = 0; i < length; i++) {
 		for (c = 0; c < rec->channels; c++) {
-			buff[j++] = samples[c][i];
-			buff[j++] = samples[c][i] >> 8;
+			value = samples[c][i];
+			if (value > 32767)
+				value = 32767;
+			else if (value < -32767)
+				value = -32767;
+			buff[j++] = value;
+			buff[j++] = value >> 8;
 		}
 	}
 	len = fwrite(buff, 1, 2 * length * rec->channels, rec->fp);

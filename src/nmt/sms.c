@@ -23,6 +23,7 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "nmt.h"

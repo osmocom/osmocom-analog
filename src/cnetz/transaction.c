@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "cnetz.h"

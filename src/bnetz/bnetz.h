@@ -1,3 +1,4 @@
+#include "../common/goertzel.h"
 #include "../common/sender.h"
 
 /* fsk modes of transmission */
@@ -74,9 +75,9 @@ typedef struct bnetz {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, "Telegramm" */
-	int			fsk_coeff[2];		/* coefficient k = 2*cos(2*PI*f/samplerate), k << 15 */
+	goertzel_t		fsk_goertzel[2];	/* filter for fsk decoding */
 	int			samples_per_bit;	/* how many samples lasts one bit */
-	int16_t			*fsk_filter_spl;	/* array with samples_per_bit */
+	sample_t		*fsk_filter_spl;	/* array with samples_per_bit */
 	int			fsk_filter_pos;		/* current sample position in filter_spl */
 	int			fsk_filter_step;	/* number of samples for each analyzation */
 	int			fsk_filter_bit;		/* last bit, so we detect a bit change */
@@ -90,7 +91,7 @@ typedef struct bnetz {
 	double			phaseshift256[2];	/* how much the phase of sine wave changes per sample */
 	double			phase256;		/* current phase */
 	int			telegramm;		/* set, if there is a valid telegram */
-	int16_t			*telegramm_spl;		/* 16 * samples_per_bit */
+	sample_t		*telegramm_spl;		/* 16 * samples_per_bit */
 	int			telegramm_pos;		/* current sample position in telegramm_spl */
 
 	/* loopback test for latency */

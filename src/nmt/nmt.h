@@ -1,3 +1,4 @@
+#include "../common/goertzel.h"
 #include "../common/sender.h"
 #include "../common/compandor.h"
 #include "../common/dtmf.h"
@@ -94,10 +95,10 @@ typedef struct nmt {
 	double			fsk_samples_per_bit;	/* number of samples for one bit (1200 Baud) */
 	double			fsk_bits_per_sample;	/* fraction of a bit per sample */
 	int			super_samples;		/* number of samples in buffer for supervisory detection */
-	int			fsk_coeff[2];		/* coefficient k = 2*cos(2*PI*f/samplerate), k << 15 */
-	int			super_coeff[5];		/* coefficient for supervisory signal */
+	goertzel_t		fsk_goertzel[2];	/* filter for fsk decoding */
+	goertzel_t		super_goertzel[5];	/* filter for supervisory decoding */
 	int			fsk_polarity;		/* current polarity state of bit */
-	int16_t			*fsk_filter_spl;	/* array to hold ring buffer for bit decoding */
+	sample_t		*fsk_filter_spl;	/* array to hold ring buffer for bit decoding */
 	int			fsk_filter_size;	/* size of ring buffer */
 	int			fsk_filter_pos;		/* position to write next sample */
 	double			fsk_filter_step;	/* counts bit duration, to trigger decoding every 10th bit */
@@ -110,7 +111,7 @@ typedef struct nmt {
 	int			fsk_filter_count;	/* next bit to receive */
 	double			fsk_filter_level[256];	/* level infos */
 	double			fsk_filter_quality[256];/* quality infos */
-	int16_t			*super_filter_spl;	/* array with sample buffer for supervisory detection */
+	sample_t		*super_filter_spl;	/* array with sample buffer for supervisory detection */
 	int			super_filter_pos;	/* current sample position in filter_spl */
 	double			super_phaseshift256[4];	/* how much the phase of sine wave changes per sample */
 	double			super_phase256;		/* current phase */
@@ -118,7 +119,7 @@ typedef struct nmt {
 	double			dial_phase256;		/* current phase */
 	double			fsk_phaseshift256;	/* how much the phase of fsk synbol changes per sample */
 	double			fsk_phase256;		/* current phase */
-	int16_t			*frame_spl;		/* samples to store a complete rendered frame */
+	sample_t		*frame_spl;		/* samples to store a complete rendered frame */
 	int			frame_size;		/* total size of sample buffer */
 	int			frame_length;		/* current length of data in sample buffer */
 	int			frame_pos;		/* current sample position in frame_spl */

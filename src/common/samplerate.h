@@ -13,5 +13,5 @@ typedef struct samplerate {
 } samplerate_t;
 
 int init_samplerate(samplerate_t *state, double samplerate);
-int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, int16_t *output);
-int samplerate_upsample(samplerate_t *state, int16_t *input, int input_num, int16_t *output);
+int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num);
+int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sample_t *output);

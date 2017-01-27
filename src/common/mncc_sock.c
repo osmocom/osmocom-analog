@@ -26,7 +26,8 @@
 #include <sys/un.h>
 #include <stddef.h>
 #include <unistd.h>
-#include "../common/debug.h"
+#include "sample.h"
+#include "debug.h"
 #include "call.h"
 #include "mncc_sock.h"
 

@@ -8,5 +8,5 @@ typedef struct scrambler {
 
 void scrambler_init(void);
 void scrambler_setup(scrambler_t *scrambler, int samplerate);
-void scrambler(scrambler_t *scrambler, int16_t *samples, int length);
+void scrambler(scrambler_t *scrambler, sample_t *samples, int length);
 

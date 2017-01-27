@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include "sample.h"
 #include "compandor.h"
 
 //#define db2level(db)			pow(10, (double)db / 20.0)
@@ -64,9 +65,8 @@ void init_compandor(compandor_t *state, int samplerate, double attack_ms, double
 		sqrt_tab[i] = sqrt(i * 0.001);
 }
 
-void compress_audio(compandor_t *state, int16_t *samples, int num)
+void compress_audio(compandor_t *state, sample_t *samples, int num)
 {
-	int32_t sample;
 	double value, peak, envelope, step_up, step_down, unaffected;
 	int i;
 
@@ -79,7 +79,7 @@ void compress_audio(compandor_t *state, int16_t *samples, int num)
 //	printf("envelope=%.4f\n", envelope);
 	for (i = 0; i < num; i++) {
 		/* normalize sample value to unaffected level */
-		value = (double)(*samples) / unaffected;
+		value = *samples / unaffected;
 
 		/* 'peak' is the level that raises directly with the signal
 		 * level, but falls with specified recovery rate. */
@@ -100,13 +100,7 @@ void compress_audio(compandor_t *state, int16_t *samples, int num)
 //if (i > 47000.0 && i < 48144)
 //printf("time=%.4f envelope=%.4fdb, value=%.4f\n", (double)i/48000.0, 20*log10(envelope), value);
 
-		/* convert back from 0 DB level to sample value */
-		sample = (int)(value * unaffected);
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32768)
-			sample = -32768;
-		*samples++ = sample;
+		*samples++ = value * unaffected;
 	}
 //exit(0);
 
@@ -114,9 +108,8 @@ void compress_audio(compandor_t *state, int16_t *samples, int num)
 	state->c.peak = peak;
 }
 
-void expand_audio(compandor_t *state, int16_t *samples, int num)
+void expand_audio(compandor_t *state, sample_t *samples, int num)
 {
-	int32_t sample;
 	double value, peak, envelope, step_up, step_down, unaffected;
 	int i;
 
@@ -128,7 +121,7 @@ void expand_audio(compandor_t *state, int16_t *samples, int num)
 
 	for (i = 0; i < num; i++) {
 		/* normalize sample value to 0 DB level */
-		value = (double)(*samples) / unaffected;
+		value = *samples / unaffected;
 
 		/* for comments: see compress_audio() */
 		if (fabs(value) > peak)
@@ -144,13 +137,7 @@ void expand_audio(compandor_t *state, int16_t *samples, int num)
 
 		value = value * envelope;
 
-		/* convert back from 0 DB level to sample value */
-		sample = (int)(value * unaffected);
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32768)
-			sample = -32768;
-		*samples++ = sample;
+		*samples++ = value * unaffected;
 	}
 
 	state->e.envelope = envelope;

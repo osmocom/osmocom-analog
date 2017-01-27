@@ -25,10 +25,10 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
-#include "../common/goertzel.h"
 #include "bnetz.h"
 #include "dsp.h"
 
@@ -54,7 +54,7 @@ static double fsk_bits[2] = {
 };
 
 /* table for fast sine generation */
-int dsp_sine[256];
+static sample_t dsp_sine[256];
 
 /* global init for FSK */
 void dsp_init(void)
@@ -75,8 +75,7 @@ void dsp_init(void)
 /* Init transceiver instance. */
 int dsp_init_sender(bnetz_t *bnetz)
 {
-	double coeff;
-	int16_t *spl;
+	sample_t *spl;
 	int i;
 
 	if ((bnetz->sender.samplerate % 1000)) {
@@ -114,10 +113,7 @@ int dsp_init_sender(bnetz_t *bnetz)
 
 	/* count symbols */
 	for (i = 0; i < 2; i++) {
-		coeff = 2.0 * cos(2.0 * PI * fsk_bits[i] / (double)bnetz->sender.samplerate);
-		bnetz->fsk_coeff[i] = coeff * 32768.0;
-		PDEBUG(DDSP, DEBUG_DEBUG, "coeff[%d] = %d (must be -3601 and 2573 at 8000hz)\n", i, (int)bnetz->fsk_coeff[i]);
-
+		audio_goertzel_init(&bnetz->fsk_goertzel[i], fsk_bits[i], bnetz->sender.samplerate);
 		bnetz->phaseshift256[i] = 256.0 / ((double)bnetz->sender.samplerate / fsk_bits[i]);
 		PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift[%d] = %.4f (must be arround 64 at 8000hz)\n", i, bnetz->phaseshift256[i]);
 	}
@@ -205,7 +201,7 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 {
 	double level, result[2], softbit, quality;
 	int max;
-	int16_t *spl;
+	sample_t *spl;
 	int bit;
 
 	max = bnetz->samples_per_bit;
@@ -216,7 +212,7 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 	if (audio_detect_loss(&bnetz->sender.loss, level))
 		bnetz_loss_indication(bnetz);
 
-	audio_goertzel(spl, max, pos, bnetz->fsk_coeff, result, 2);
+	audio_goertzel(bnetz->fsk_goertzel, spl, max, pos, result, 2);
 
 	/* calculate soft bit from both frequencies */
 	softbit = (result[1] / level - result[0] / level + 1.0) / 2.0;
@@ -266,10 +262,10 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, int16_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
 	bnetz_t *bnetz = (bnetz_t *) sender;
-	int16_t *spl;
+	sample_t *spl;
 	int max, pos, step;
 	int i;
 
@@ -290,14 +286,13 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	bnetz->fsk_filter_pos = pos;
 
 	if (bnetz->dsp_mode == DSP_MODE_AUDIO && bnetz->callref) {
-		int16_t down[length]; /* more than enough */
 		int count;
 
-		count = samplerate_downsample(&bnetz->sender.srstate, samples, length, down);
+		count = samplerate_downsample(&bnetz->sender.srstate, samples, length);
 		spl = bnetz->sender.rxbuf;
 		pos = bnetz->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {
-			spl[pos++] = down[i];
+			spl[pos++] = samples[i];
 			if (pos == 160) {
 				call_tx_audio(bnetz->callref, spl, 160);
 				pos = 0;
@@ -308,7 +303,7 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 		bnetz->sender.rxbuf_pos = 0;
 }
 
-static void fsk_tone(bnetz_t *bnetz, int16_t *samples, int length, int tone)
+static void fsk_tone(bnetz_t *bnetz, sample_t *samples, int length, int tone)
 {
 	double phaseshift, phase;
 	int i;
@@ -326,9 +321,9 @@ static void fsk_tone(bnetz_t *bnetz, int16_t *samples, int length, int tone)
 	bnetz->phase256 = phase;
 }
 
-static int fsk_telegramm(bnetz_t *bnetz, int16_t *samples, int length)
+static int fsk_telegramm(bnetz_t *bnetz, sample_t *samples, int length)
 {
-	int16_t *spl;
+	sample_t *spl;
 	const char *telegramm;
 	int i, j;
 	double phaseshift, phase;
@@ -382,7 +377,7 @@ next_telegramm:
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, int16_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	bnetz_t *bnetz = (bnetz_t *) sender;
 	int len;

@@ -20,7 +20,7 @@ typedef struct fsk_fm_demod {
 	double		bit_time_uncorrected;	/* same as above, but not corrected by sync */
 
 	/* bit detection */
-	int16_t		*bit_buffer_spl;	/* samples ring buffer */
+	sample_t	*bit_buffer_spl;	/* samples ring buffer */
 	int		bit_buffer_len;		/* number of samples in ring buffer */
 	int		bit_buffer_half;	/* half of ring buffer */
 	int		bit_buffer_pos;		/* current position to write next sample */
@@ -35,7 +35,7 @@ typedef struct fsk_fm_demod {
 	double		sync_jitter;		/* what was the jitter of the sync */
 
 	/* speech */
-	int16_t		*speech_buffer;		/* holds one chunk of 12.5ms */
+	sample_t	*speech_buffer;		/* holds one chunk of 12.5ms */
 	int		speech_size;
 	int		speech_count;
 
@@ -52,7 +52,7 @@ typedef struct fsk_fm_demod {
 
 int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate);
 void fsk_fm_exit(fsk_fm_demod_t *fsk);
-void fsk_fm_demod(fsk_fm_demod_t *fsk, int16_t *samples, int length);
+void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length);
 void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset);
 void fsk_copy_sync(fsk_fm_demod_t *fsk_to, fsk_fm_demod_t *fsk_from);
 void fsk_demod_reset(fsk_fm_demod_t *fsk);

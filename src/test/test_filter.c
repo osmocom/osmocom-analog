@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
+#include "../common/sample.h"
 #include "../common/filter.h"
 #include "../common/debug.h"
 

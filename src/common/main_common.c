@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <termios.h>
+#include "sample.h"
 #include "main.h"
 #include "debug.h"
 #include "sender.h"

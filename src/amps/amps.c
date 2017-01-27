@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -902,7 +903,7 @@ void call_out_release(int callref, int cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, int16_t *samples, int count)
+void call_rx_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -916,7 +917,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		return;
 
 	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX) {
-		int16_t up[(int)((double)count * amps->sender.srstate.factor + 0.5) + 10];
+		sample_t up[(int)((double)count * amps->sender.srstate.factor + 0.5) + 10];
 		compress_audio(&amps->cstate, samples, count);
 		count = samplerate_upsample(&amps->sender.srstate, samples, count, up);
 		jitter_save(&amps->sender.dejitter, up, count);

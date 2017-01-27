@@ -85,12 +85,12 @@ typedef struct cnetz {
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, "Telegramm", .... */
 	fsk_fm_demod_t		fsk_demod;		/* demod process */
-	int16_t			fsk_deviation;		/* deviation of FSK signal on sound card */
-	int16_t			fsk_ramp_up[256];	/* samples of upward ramp shape */
-	int16_t			fsk_ramp_down[256];	/* samples of downward ramp shape */
+	double			fsk_deviation;		/* deviation of FSK signal on sound card */
+	sample_t		fsk_ramp_up[256];	/* samples of upward ramp shape */
+	sample_t		fsk_ramp_down[256];	/* samples of downward ramp shape */
 	double			fsk_noise;		/* send static between OgK frames */
 	double			fsk_bitduration;	/* duration of a bit in samples */
-	int16_t			*fsk_tx_buffer;		/* tx buffer for one data block */
+	sample_t		*fsk_tx_buffer;		/* tx buffer for one data block */
 	int			fsk_tx_buffer_size;	/* size of tx buffer (in samples) */
 	int			fsk_tx_buffer_length;	/* usage of buffer (in samples) */
 	int			fsk_tx_buffer_pos;	/* current position sending buffer */
@@ -98,7 +98,7 @@ typedef struct cnetz {
 	double			fsk_tx_phase;		/* current bit position */
 	uint64_t		fsk_tx_scount;		/* sample counter (used to sync multiple channels) */
 	int			scrambler;		/* 0 = normal speech, 1 = scrambled speech */
-	int16_t			*dsp_speech_buffer;	/* samples in one chunk */
+	sample_t		*dsp_speech_buffer;	/* samples in one chunk */
 	int			dsp_speech_length;	/* number of samples */
 	int			dsp_speech_pos;		/* current position in buffer */
 

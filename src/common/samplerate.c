@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include "sample.h"
 #include "samplerate.h"
 
 /* NOTE: This is quick and dirtry. */
@@ -44,19 +45,13 @@ int init_samplerate(samplerate_t *state, double samplerate)
 }
 
 /* convert input sample rate to 8000 Hz */
-int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, int16_t *output)
+int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 {
 	int output_num = 0, i, idx;
 	double factor = state->factor, in_index;
-	double spl[input_num];
-	int32_t value;
-
-	/* convert samples to double */
-	for (i = 0; i < input_num; i++)
-		spl[i] = *input++ / 32768.0;
 
 	/* filter down */
-	filter_process(&state->down.lp, spl, input_num);
+	filter_process(&state->down.lp, samples, input_num);
 
 	/* resample filtered result */
 	in_index = state->down.in_index;
@@ -68,12 +63,7 @@ int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, in
 		if (idx >= input_num)
 			break;
 		/* copy value from input to output */
-		value = spl[idx] * 32768.0;
-		if (value < -32768)
-			value = -32768;
-		else if (value > 32767)
-			value = 32767;
-		*output++ = value;
+		samples[i] = samples[idx];
 		/* count output number */
 		output_num++;
 		/* increment input index */
@@ -92,12 +82,17 @@ int samplerate_downsample(samplerate_t *state, int16_t *input, int input_num, in
 }
 
 /* convert 8000 Hz sample rate to output sample rate */
-int samplerate_upsample(samplerate_t *state, int16_t *input, int input_num, int16_t *output)
+int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sample_t *output)
 {
 	int output_num = 0, i, idx;
 	double factor = 1.0 / state->factor, in_index;
-	double spl[(int)((double)input_num / factor + 0.5) + 10]; /* add some fafety */
-	int32_t value;
+	sample_t buff[(int)((double)input_num / factor + 0.5) + 10]; /* add some fafety */
+	sample_t *samples;
+
+	if (input == output)
+		samples = buff;
+	else
+		samples = output;
 
 	/* resample input */
 	in_index = state->up.in_index;
@@ -109,7 +104,7 @@ int samplerate_upsample(samplerate_t *state, int16_t *input, int input_num, int1
 		if (idx >= input_num)
 			break;
 		/* copy value */
-		spl[i] = input[idx] / 32768.0;
+		samples[i] = input[idx];
 		/* count output number */
 		output_num++;
 		/* increment input index */
@@ -125,16 +120,12 @@ int samplerate_upsample(samplerate_t *state, int16_t *input, int input_num, int1
 	state->up.in_index = in_index;
 
 	/* filter up */
-	filter_process(&state->up.lp, spl, output_num);
+	filter_process(&state->up.lp, samples, output_num);
 
-	/* convert double to samples */
-	for (i = 0; i < output_num; i++) {
-		value = spl[i] * 32768.0;
-		if (value < -32768)
-			value = -32768;
-		else if (value > 32767)
-			value = 32767;
-		*output++ = value;
+	if (input == output) {
+		/* copy samples */
+		for (i = 0; i < input_num; i++)
+			*output++ = samples[i];
 	}
 
 	return output_num;

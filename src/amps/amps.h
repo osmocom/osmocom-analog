@@ -1,3 +1,4 @@
+#include "../common/goertzel.h"
 #include "../common/sender.h"
 #include "../common/compandor.h"
 #include "sysinfo.h"
@@ -54,15 +55,15 @@ typedef struct amps {
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
 	int			flip_polarity;		/* 1 = flip */
-	int16_t			fsk_deviation;		/* deviation of FSK signal on sound card */
-	int16_t			fsk_ramp_up[256];	/* samples of upward ramp shape */
-	int16_t			fsk_ramp_down[256];	/* samples of downward ramp shape */
+	double			fsk_deviation;		/* deviation of FSK signal on sound card */
+	sample_t		fsk_ramp_up[256];	/* samples of upward ramp shape */
+	sample_t		fsk_ramp_down[256];	/* samples of downward ramp shape */
 	double			fsk_bitduration;	/* duration of one bit in samples */
 	double			fsk_bitstep;		/* fraction of one bit each sample */
 	/* tx bits generation */
 	char			fsk_tx_frame[FSK_MAX_BITS + 1];	/* +1 because 0-termination */
 	int			fsk_tx_frame_pos;	/* current position sending bits */
-	int16_t			*fsk_tx_buffer;		/* tx buffer for one data block */
+	sample_t		*fsk_tx_buffer;		/* tx buffer for one data block */
 	int			fsk_tx_buffer_size;	/* size of tx buffer (in samples) */
 	int			fsk_tx_buffer_length;	/* usage of buffer (in samples) */
 	int			fsk_tx_buffer_pos;	/* current position sending buffer */
@@ -73,7 +74,7 @@ typedef struct amps {
 	double			highpass_x_last;	/* last input value */
 	double			highpass_y_last;	/* last output value */
 	/* rx detection of bits and sync */
-	int16_t			fsk_rx_last_sample;	/* last sample (for level change detection) */
+	sample_t		fsk_rx_last_sample;	/* last sample (for level change detection) */
 	double			fsk_rx_elapsed;		/* bit duration since last level change */
 	enum fsk_rx_sync	fsk_rx_sync;		/* sync state */
 	uint16_t		fsk_rx_sync_register;	/* shift register to detect sync word */
@@ -88,7 +89,7 @@ typedef struct amps {
 	/* the ex buffer holds the duration of one bit, and wrapps every
 	 * bit. */
 	double			fsk_rx_bitcount;	/* counts the bit. if it reaches or exceeds 1, the bit is complete and the next bit starts */
-	int16_t			*fsk_rx_window;		/* rx buffer for one bit */
+	sample_t		*fsk_rx_window;		/* rx buffer for one bit */
 	int			fsk_rx_window_length;	/* length of rx buffer */
 	int			fsk_rx_window_half;	/* half of length of rx buffer */
 	int			fsk_rx_window_begin;	/* where to begin detecting level */
@@ -131,8 +132,8 @@ typedef struct amps {
 	/* SAT tone */
 	int			sat;			/* use SAT tone 0..2 */
 	int			sat_samples;		/* number of samples in buffer for supervisory detection */
-	int			sat_coeff[5];		/* coefficient for SAT signal decoding */
-	int16_t			*sat_filter_spl;	/* array with sample buffer for supervisory detection */
+	goertzel_t		sat_goertzel[5];	/* filter for SAT signal decoding */
+	sample_t		*sat_filter_spl;	/* array with sample buffer for supervisory detection */
 	int			sat_filter_pos;		/* current sample position in filter_spl */
 	double			sat_phaseshift256[3];	/* how much the phase of sine wave changes per sample */
 	double			sat_phase256;		/* current phase */

@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include "sample.h"
 #include "sender.h"
 
 #define DISPLAY_INTERVAL 0.04
@@ -112,11 +113,11 @@ void display_wave_limit_scroll(int on)
  * y is in range of 0..5, so these are 5 steps, where 2 to 2.999 is the
  * center line. this is calculated by (HEIGHT * 2 - 1)
  */
-void display_wave(sender_t *sender, int16_t *samples, int length)
+void display_wave(sender_t *sender, sample_t *samples, int length)
 {
 	dispwav_t *disp = &sender->dispwav;
 	int pos, max;
-	int16_t *buffer;
+	sample_t *buffer;
 	int i, j, k, y;
 	int color = 9; /* default color */
 	int center_line;
@@ -146,11 +147,10 @@ void display_wave(sender_t *sender, int16_t *samples, int length)
 		if (pos == width) {
 			memset(&screen, ' ', sizeof(screen));
 			for (j = 0; j < width; j++) {
-				/* 32767 - buffer[j] never reaches 65536, so
-				 * the result is below HEIGHT * 2 - 1
-				 */
-				y = (32767 - (int)buffer[j]) * (HEIGHT * 2 - 1) / 65536;
-				screen[y >> 1][j] = (y & 1) ? '_' : '-';
+				y = (32767 - (int32_t)buffer[j]) * (HEIGHT * 2 - 1) / 65536;
+				/* only display level, if it is in range */
+				if (y >= 0 && y < HEIGHT * 2)
+					screen[y >> 1][j] = (y & 1) ? '_' : '-';
 			}
 			sprintf(screen[0], "(chan %d", sender->kanal);
 			*strchr(screen[0], '\0') = ')';

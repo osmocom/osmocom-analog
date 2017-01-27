@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "nmt.h"
@@ -414,10 +415,10 @@ static void trigger_frame_transmission(nmt_t *nmt)
 }
 
 /* send data using FSK */
-int fsk_dms_frame(nmt_t *nmt, int16_t *samples, int length)
+int fsk_dms_frame(nmt_t *nmt, sample_t *samples, int length)
 {
 	dms_t *dms = &nmt->dms;
-	int16_t *spl;
+	sample_t *spl;
 	int i;
 	int count, max;
 

@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../nmt/nmt.h"

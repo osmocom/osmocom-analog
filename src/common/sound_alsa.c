@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <alsa/asoundlib.h>
+#include "sample.h"
 #include "debug.h"
 #include "sender.h"
 
@@ -248,35 +249,66 @@ static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum p
 	}
 }
 
-int sound_write(void *inst, int16_t **samples, int num, enum paging_signal *paging_signal, int *on, int channels)
+int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *paging_signal, int *on, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
+	int32_t value;
 	int16_t buff[num << 1];
 	int rc;
 	int i, ii;
 
 	if (sound->pchannels == 2) {
+		/* two channels */
 		if (paging_signal && on && paging_signal[0] != PAGING_SIGNAL_NONE) {
 			int16_t paging[num << 1];
 			gen_paging_tone(sound, paging, num, paging_signal[0], on[0]);
 			for (i = 0, ii = 0; i < num; i++) {
-				buff[ii++] = samples[0][i];
+				value = samples[0][i];
+				if (value > 32767)
+					value = 32767;
+				else if (value < -32767)
+					value = -32767;
+				buff[ii++] = value;
 				buff[ii++] = paging[i];
 			}
 		} else if (channels == 2) {
 			for (i = 0, ii = 0; i < num; i++) {
-				buff[ii++] = samples[0][i];
-				buff[ii++] = samples[1][i];
+				value = samples[0][i];
+				if (value > 32767)
+					value = 32767;
+				else if (value < -32767)
+					value = -32767;
+				buff[ii++] = value;
+				value = samples[1][i];
+				if (value > 32767)
+					value = 32767;
+				else if (value < -32767)
+					value = -32767;
+				buff[ii++] = value;
 			}
 		} else {
 			for (i = 0, ii = 0; i < num; i++) {
-				buff[ii++] = samples[0][i];
-				buff[ii++] = samples[0][i];
+				value = samples[0][i];
+				if (value > 32767)
+					value = 32767;
+				else if (value < -32767)
+					value = -32767;
+				buff[ii++] = value;
+				buff[ii++] = value;
 			}
 		}
-		rc = snd_pcm_writei(sound->phandle, buff, num);
-	} else
-		rc = snd_pcm_writei(sound->phandle, samples[0], num);
+	} else {
+		/* one channel */
+		for (i = 0, ii = 0; i < num; i++) {
+			value = samples[0][i];
+			if (value > 32767)
+				value = 32767;
+			else if (value < -32767)
+				value = -32767;
+			buff[ii++] = value;
+		}
+	}
+	rc = snd_pcm_writei(sound->phandle, buff, num);
 
 	if (rc < 0) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
@@ -293,7 +325,7 @@ int sound_write(void *inst, int16_t **samples, int num, enum paging_signal *pagi
 
 #define KEEP_FRAMES	8	/* minimum frames not to read, due to bug in ALSA */
 
-int sound_read(void *inst, int16_t **samples, int num, int channels)
+int sound_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
 	int16_t buff[num << 1];
@@ -312,10 +344,7 @@ int sound_read(void *inst, int16_t **samples, int num, int channels)
 	if (in > num)
 		in = num;
 
-	if (sound->cchannels == 2)
-		rc = snd_pcm_readi(sound->chandle, buff, in);
-	else
-		rc = snd_pcm_readi(sound->chandle, samples[0], in);
+	rc = snd_pcm_readi(sound->chandle, buff, in);
 
 	if (rc < 0) {
 		if (errno == EAGAIN)
@@ -332,17 +361,17 @@ int sound_read(void *inst, int16_t **samples, int num, int channels)
 			for (i = 0, ii = 0; i < rc; i++) {
 				spl = buff[ii++];
 				spl += buff[ii++];
-				if (spl > 32767)
-					spl = 32767;
-				else if (spl < -32768)
-					spl = -32768;
-				samples[0][i] = spl;
+				samples[0][i] = (sample_t)spl;
 			}
 		} else {
 			for (i = 0, ii = 0; i < rc; i++) {
-				samples[0][i] = buff[ii++];
-				samples[1][i] = buff[ii++];
+				samples[0][i] = (sample_t)buff[ii++];
+				samples[1][i] = (sample_t)buff[ii++];
 			}
+		}
+	} else {
+		for (i = 0, ii = 0; i < rc; i++) {
+			samples[0][i] = (sample_t)buff[ii++];
 		}
 	}
 

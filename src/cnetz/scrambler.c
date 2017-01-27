@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "scrambler.h"
 
 #define PI		M_PI
@@ -42,7 +43,8 @@ void scrambler_init(void)
 	int i;
 
 	for (i = 0; i < 256; i++) {
-		carrier[i] = sin((double)i / 256.0 * 2 * PI);
+		/* our amplitude must be doubled, since we have one spectrum above and one below carrier */
+		carrier[i] = sin((double)i / 256.0 * 2 * PI) * 2.0;
 	}
 }
 
@@ -56,10 +58,8 @@ void scrambler_setup(scrambler_t *scrambler, int samplerate)
  * Then we got spectrum above carrier and mirrored spectrum below carrier.
  * Afterwards we cut off carrier frequency and frequencies above carrier.
  */
-void scrambler(scrambler_t *scrambler, int16_t *samples, int length)
+void scrambler(scrambler_t *scrambler, sample_t *samples, int length)
 {
-	double spl[length];
-	int32_t sample;
 	double phaseshift, phase;
 	int i;
 
@@ -68,7 +68,7 @@ void scrambler(scrambler_t *scrambler, int16_t *samples, int length)
 
 	for (i = 0; i < length; i++) {
 		/* modulate samples to carrier */
-		spl[i] = (double)samples[i] / 32768.0 * carrier[((uint8_t)phase) & 0xff];
+		samples[i] *= carrier[((uint8_t)phase) & 0xff];
 		phase += phaseshift;
 		if (phase >= 256.0)
 			phase -= 256.0;
@@ -77,17 +77,7 @@ void scrambler(scrambler_t *scrambler, int16_t *samples, int length)
 	scrambler->carrier_phase256 = phase;
 
 	/* cut off carrier frequency and modulation above carrier frequency */
-	filter_process(&scrambler->lp, spl, length);
-
-	for (i = 0; i < length; i++) {
-		/* store result */
-		sample = spl[i] * 2.0 * 32768.0;
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32768)
-			sample = -32768;
-		*samples++ = sample;
-	}
+	filter_process(&scrambler->lp, samples, length);
 }
 
 

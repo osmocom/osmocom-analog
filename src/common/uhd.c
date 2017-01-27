@@ -54,9 +54,6 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 	samplerate = rate;
 	check_rate = 1;
 
-#warning HACK
-if (tx_frequency < 200000000) tx_frequency = 463000000, rx_frequency = 463000000;
-
 	/* create USRP */
 	PDEBUG(DUHD, DEBUG_INFO, "Creating USRP with args \"%s\"...\n", device_args);
 	error = uhd_usrp_make(&usrp, device_args);

@@ -25,6 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/cause.h"
@@ -1799,7 +1800,7 @@ void call_out_release(int callref, int __attribute__((unused)) cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, int16_t *samples, int count)
+void call_rx_audio(int callref, sample_t *samples, int count)
 {
 	transaction_t *trans;
 	nmt_t *nmt;
@@ -1812,7 +1813,7 @@ void call_rx_audio(int callref, int16_t *samples, int count)
 		return;
 
 	if (nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF) {
-		int16_t up[(int)((double)count * nmt->sender.srstate.factor + 0.5) + 10];
+		sample_t up[(int)((double)count * nmt->sender.srstate.factor + 0.5) + 10];
 		if (nmt->compandor)
 			compress_audio(&nmt->cstate, samples, count);
 		count = samplerate_upsample(&nmt->sender.srstate, samples, count, up);

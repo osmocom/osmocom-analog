@@ -1,3 +1,4 @@
+#include "../common/goertzel.h"
 #include "../common/sender.h"
 
 enum dsp_mode {
@@ -26,9 +27,9 @@ typedef struct anetz {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
-	int			fsk_tone_coeff[2];	/* coefficient k = 2*cos(2*PI*f/samplerate), k << 15 */
+	goertzel_t		fsk_tone_goertzel[2];	/* filter for tone decoding */
 	int			samples_per_chunk;	/* how many samples lasts one chunk */
-	int16_t			*fsk_filter_spl;	/* array with samples_per_chunk */
+	sample_t		*fsk_filter_spl;	/* array with samples_per_chunk */
 	int			fsk_filter_pos;		/* current sample position in filter_spl */
 	int			tone_detected;		/* what tone has been detected */
 	int			tone_count;		/* how long has that tone been detected */

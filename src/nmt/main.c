@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "../common/sample.h"
 #include "../common/main.h"
 #include "../common/debug.h"
 #include "../common/timer.h"

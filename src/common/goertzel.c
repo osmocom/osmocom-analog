@@ -22,7 +22,8 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "../common/debug.h"
+#include "sample.h"
+#include "debug.h"
 #include "goertzel.h"
 
 /*
@@ -30,9 +31,9 @@
  */
 
 /* return average value (rectified value), that can be 0..1 */
-double audio_level(int16_t *samples, int length)
+double audio_level(sample_t *samples, int length)
 {
-	int32_t bias;
+	double bias;
 	double level;
 	int sk;
 	int n;
@@ -57,6 +58,12 @@ double audio_level(int16_t *samples, int length)
 	return level;
 }
 
+void audio_goertzel_init(goertzel_t *goertzel, double freq, int samplerate)
+{
+	memset(goertzel, 0, sizeof(*goertzel));
+	goertzel->coeff = 2.0 * cos(2.0 * M_PI * freq / (double)samplerate);
+}
+
 /*
  * goertzel filter
  */
@@ -70,11 +77,11 @@ double audio_level(int16_t *samples, int length)
  * result: array of result levels (average value of the sine, that is 1 / (PI/2) of the sine's peak)
  * k: number of frequencies to check
  */
-void audio_goertzel(int16_t *samples, int length, int offset, int *coeff, double *result, int k)
+void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int offset, double *result, int k)
 {
-	int32_t bias;
-	int32_t sk, sk1, sk2;
-	int64_t cos2pik;
+	double bias;
+	double sk, sk1, sk2;
+	double cos2pik;
 	int i, n;
 
 	/* calculate bias to remove DC */
@@ -88,10 +95,10 @@ void audio_goertzel(int16_t *samples, int length, int offset, int *coeff, double
 		sk = 0;
 		sk1 = 0;
 		sk2 = 0;
-		cos2pik = coeff[i];
+		cos2pik = goertzel[i].coeff;
 		/* note: after 'length' cycles, offset is restored to its initial value */
 		for (n = 0; n < length; n++) {
-			sk = ((cos2pik * sk1) >> 15) - sk2 + samples[offset++] - bias;
+			sk = (cos2pik * sk1) - sk2 + samples[offset++] - bias;
 			sk2 = sk1;
 			sk1 = sk;
 			if (offset == length)
@@ -99,10 +106,10 @@ void audio_goertzel(int16_t *samples, int length, int offset, int *coeff, double
 		}
 		/* compute level of signal */
 		result[i] = sqrt(
-			((double)sk * (double)sk) -
-			((double)((cos2pik * sk) >> 15) * (double)sk2) +
-			((double)sk2 * (double)sk2)
-				) / (double)length / 32767.0 * 2.0 * 0.63662; /* 1 / (PI/2) */
+			(sk * sk) -
+			(cos2pik * sk * sk2) +
+			(sk2 * sk2)
+				) / (double)length * 2.0 * 0.63662; /* 1 / (PI/2) */
 	}
 }
 

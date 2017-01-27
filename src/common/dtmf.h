@@ -10,5 +10,5 @@ typedef struct dtmf {
 
 void dtmf_init(dtmf_t *dtmf, int samplerate);
 void dtmf_set_tone(dtmf_t *dtmf, char tone);
-void dtmf_tone(dtmf_t *dtmf, int16_t *samples, int length);
+void dtmf_tone(dtmf_t *dtmf, sample_t *samples, int length);
 

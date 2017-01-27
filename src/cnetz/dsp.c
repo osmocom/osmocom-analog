@@ -25,6 +25,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -55,7 +56,7 @@ scrambler_t scrambler_test_scrambler1;
 scrambler_t scrambler_test_scrambler2;
 #endif
 
-static int16_t ramp_up[256], ramp_down[256];
+static sample_t ramp_up[256], ramp_down[256];
 
 void dsp_init(void)
 {
@@ -110,7 +111,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 
 	size = cnetz->fsk_bitduration * (double)BLOCK_BITS * 16.0; /* 16 blocks for distributed frames */
 	cnetz->fsk_tx_buffer_size = size * 1.1; /* more to compensate clock speed */
-	cnetz->fsk_tx_buffer = calloc(sizeof(int16_t), cnetz->fsk_tx_buffer_size);
+	cnetz->fsk_tx_buffer = calloc(sizeof(sample_t), cnetz->fsk_tx_buffer_size);
 	if (!cnetz->fsk_tx_buffer) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
 		rc = -ENOMEM;
@@ -123,7 +124,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	cnetz->fsk_noise = noise;
 
 	/* create speech buffer */
-	cnetz->dsp_speech_buffer = calloc(sizeof(int16_t), cnetz->sender.samplerate); /* buffer is greater than sr/1.1, just to be secure */
+	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), cnetz->sender.samplerate); /* buffer is greater than sr/1.1, just to be secure */
 	if (!cnetz->dsp_speech_buffer) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
 		rc = -ENOMEM;
@@ -242,7 +243,7 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 
 static int fsk_testtone_encode(cnetz_t *cnetz)
 {
-	int16_t *spl;
+	sample_t *spl;
 	double phase, bitstep;
 	int i, count;
 
@@ -275,7 +276,7 @@ static int fsk_testtone_encode(cnetz_t *cnetz)
 
 static int fsk_nothing_encode(cnetz_t *cnetz)
 {
-	int16_t *spl;
+	sample_t *spl;
 	double phase, bitstep, r;
 	int i, count;
 
@@ -288,7 +289,7 @@ static int fsk_nothing_encode(cnetz_t *cnetz)
 		/* add 198 bits of noise */
 		for (i = 0; i < 198; i++) {
 			do {
-				*spl++ = (double)((int16_t)(random() & 0xffff)) * r;
+				*spl++ = (double)((int16_t)random()) * r / 32768.0;
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
@@ -320,7 +321,7 @@ static int fsk_nothing_encode(cnetz_t *cnetz)
 static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 {
 	/* alloc samples, add 1 in case there is a rest */
-	int16_t *spl;
+	sample_t *spl;
 	double phase, bitstep, deviation;
 	int i, count;
 	char last;
@@ -437,7 +438,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 {
 	/* alloc samples, add 1 in case there is a rest */
-	int16_t *spl, *marker;
+	sample_t *spl, *marker;
 	double phase, bitstep, deviation;
 	int i, j, count;
 	char last;
@@ -570,7 +571,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 /* decode samples and hut for bit changes
  * use deviation to find greatest slope of the signal (bit change)
  */
-void sender_receive(sender_t *sender, int16_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
 	cnetz_t *cnetz = (cnetz_t *) sender;
 
@@ -590,10 +591,10 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 	return;
 }
 
-static int fsk_telegramm(cnetz_t *cnetz, int16_t *samples, int length)
+static int fsk_telegramm(cnetz_t *cnetz, sample_t *samples, int length)
 {
 	int count = 0, pos, copy, i, speech_length, speech_pos;
-	int16_t *spl, *speech_buffer;
+	sample_t *spl, *speech_buffer;
 	const char *bits;
 
 	speech_buffer = cnetz->dsp_speech_buffer;
@@ -756,7 +757,7 @@ again:
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, int16_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	cnetz_t *cnetz = (cnetz_t *) sender;
 	int count;
@@ -780,10 +781,9 @@ void sender_send(sender_t *sender, int16_t *samples, int length)
 }
 
 /* unshrink audio segment from the duration of 60 bits to 12.5 ms */
-void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
+void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 {
-	int16_t *spl;
-	int32_t value;
+	sample_t *spl;
 	int pos, i;
 	double x, y, x_last, y_last, factor;
 
@@ -801,17 +801,12 @@ void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
 	factor = cnetz->offset_factor;
 	for (i = 0; i < count; i++) {
 		/* change level */
-		x = (double)speech_buffer[i] / voice_deviation;
+		x = speech_buffer[i] / voice_deviation;
 		/* high-pass to remove low level frequencies, caused by level jump between audio chunks */
 		y = factor * (y_last + x - x_last);
 		x_last = x;
 		y_last = y;
-		value = (int32_t)y;
-		if (value < -32768.0)
-			value = -32768.0;
-		else if (value > 32767)
-			value = 32767;
-		speech_buffer[i] = value;
+		speech_buffer[i] = y;
 	}
 	cnetz->offset_y_last = y_last;
 
@@ -823,7 +818,7 @@ void unshrink_speech(cnetz_t *cnetz, int16_t *speech_buffer, int count)
 	if (cnetz->scrambler)
 		scrambler(&cnetz->scrambler_rx, speech_buffer, count);
 	/* 2. decompress time */
-	count = samplerate_downsample(&cnetz->sender.srstate, speech_buffer, count, speech_buffer);
+	count = samplerate_downsample(&cnetz->sender.srstate, speech_buffer, count);
 	/* 1. expand dynamics */
 	expand_audio(&cnetz->cstate, speech_buffer, count);
 	/* to call control */

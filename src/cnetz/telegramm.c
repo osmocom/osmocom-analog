@@ -26,6 +26,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "cnetz.h"

@@ -39,8 +39,8 @@ typedef struct sender {
 	char			audiodev[64];		/* audio device name (alsa or sdr) */
 	void			*(*audio_open)(const char *, double *, double *, int, double, int, double, double);
 	void 			(*audio_close)(void *);
-	int			(*audio_write)(void *, int16_t **, int, enum paging_signal *, int *, int);
-	int			(*audio_read)(void *, int16_t **, int, int);
+	int			(*audio_write)(void *, sample_t **, int, enum paging_signal *, int *, int);
+	int			(*audio_read)(void *, sample_t **, int, int);
 	int			(*audio_get_inbuffer)(void *);
 	int			samplerate;
 	samplerate_t		srstate;		/* sample rate conversion state */
@@ -64,7 +64,7 @@ typedef struct sender {
 	jitter_t		dejitter;
 
 	/* audio buffer for audio to send to caller (20ms = 160 samples @ 8000Hz) */
-	int16_t			rxbuf[160];
+	sample_t		rxbuf[160];
 	int			rxbuf_pos;		/* current fill of buffer */
 
 	/* loss of carrier detection */
@@ -87,7 +87,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 void sender_destroy(sender_t *sender);
 int sender_open_audio(void);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
-void sender_send(sender_t *sender, int16_t *samples, int count);
-void sender_receive(sender_t *sender, int16_t *samples, int count);
+void sender_send(sender_t *sender, sample_t *samples, int count);
+void sender_receive(sender_t *sender, sample_t *samples, int count);
 void sender_paging(sender_t *sender, int on);
 

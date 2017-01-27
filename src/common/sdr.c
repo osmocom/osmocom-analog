@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include "sample.h"
 #include "filter.h"
 #include "sender.h"
 #ifdef HAVE_UHD
@@ -241,7 +242,7 @@ void sdr_close(void *inst)
 	}
 }
 
-int sdr_write(void *inst, int16_t **samples, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
+int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
@@ -291,19 +292,19 @@ int sdr_write(void *inst, int16_t **samples, int num, enum paging_signal __attri
 	}
 
 	if (sdr->wave_tx_rec.fp) {
-		int16_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
+		sample_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
 		for (s = 0, ss = 0; s < num; s++) {
 			if (buff[ss] >= 1.0)
-				spl[0][s] = 32767;
+				spl[0][s] = 32767.0;
 			else if (buff[ss] <= -1.0)
-				spl[0][s] = -32767;
+				spl[0][s] = -32767.0;
 			else
 				spl[0][s] = 32767.0 * buff[ss];
 			ss++;
 			if (buff[ss] >= 1.0)
-				spl[1][s] = 32767;
+				spl[1][s] = 32767.0;
 			else if (buff[ss] <= -1.0)
-				spl[1][s] = -32767;
+				spl[1][s] = -32767.0;
 			else
 				spl[1][s] = 32767.0 * buff[ss];
 			ss++;
@@ -320,14 +321,14 @@ int sdr_write(void *inst, int16_t **samples, int num, enum paging_signal __attri
 	return sent;
 }
 
-int sdr_read(void *inst, int16_t **samples, int num, int channels)
+int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
 	double I[num], Q[num], i, q;
 	int count;
 	int c, s, ss;
-	double phase, rot, last_phase, spl, dev, rate;
+	double phase, rot, last_phase, dev, rate;
 
 	rate = sdr->samplerate;
 
@@ -338,19 +339,19 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 		return count;
 
 	if (sdr->wave_rx_rec.fp) {
-		int16_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
+		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
 		for (s = 0, ss = 0; s < count; s++) {
 			if (buff[ss] >= 1.0)
-				spl[0][s] = 32767;
+				spl[0][s] = 32767.0;
 			else if (buff[ss] <= -1.0)
-				spl[0][s] = -32767;
+				spl[0][s] = -32767.0;
 			else
 				spl[0][s] = 32767.0 * buff[ss];
 			ss++;
 			if (buff[ss] >= 1.0)
-				spl[1][s] = 32767;
+				spl[1][s] = 32767.0;
 			else if (buff[ss] <= -1.0)
-				spl[1][s] = -32767;
+				spl[1][s] = -32767.0;
 			else
 				spl[1][s] = 32767.0 * buff[ss];
 			ss++;
@@ -358,11 +359,11 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 		wave_write(&sdr->wave_rx_rec, spl_list, count);
 	}
 	if (sdr->wave_rx_play.fp) {
-		int16_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
+		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
 		wave_read(&sdr->wave_rx_play, spl_list, count);
 		for (s = 0, ss = 0; s < count; s++) {
-			buff[ss++] = (double)spl[0][s] / 32767.0;
-			buff[ss++] = (double)spl[1][s] / 32767.0;
+			buff[ss++] = spl[0][s] / 32767.0;
+			buff[ss++] = spl[1][s] / 32767.0;
 		}
 	}
 	display_iq(buff, count);
@@ -390,12 +391,7 @@ int sdr_read(void *inst, int16_t **samples, int num, int channels)
 			else if (dev > 0.49)
 				dev -= 1.0;
 			dev *= rate;
-			spl = dev / sdr->spl_deviation;
-			if (spl > 32766.0)
-				spl = 32766.0;
-			else if (spl < -32766.0)
-				spl = -32766.0;
-			samples[c][s] = spl;
+			samples[c][s] = dev / sdr->spl_deviation;
 		}
 		sdr->chan[c].rx_last_phase = last_phase;
 	}

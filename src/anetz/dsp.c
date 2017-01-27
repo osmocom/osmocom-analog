@@ -25,10 +25,10 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
-#include "../common/goertzel.h"
 #include "anetz.h"
 #include "dsp.h"
 
@@ -53,7 +53,7 @@ static double fsk_tones[2] = {
 };
 
 /* table for fast sine generation */
-int dsp_sine_tone[256];
+sample_t dsp_sine_tone[256];
 
 /* global init for audio processing */
 void dsp_init(void)
@@ -76,8 +76,7 @@ void dsp_init(void)
 /* Init transceiver instance. */
 int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
 {
-	int16_t *spl;
-	double coeff;
+	sample_t *spl;
 	int i;
 	double tone;
 
@@ -98,7 +97,7 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
 
 	anetz->samples_per_chunk = anetz->sender.samplerate * CHUNK_DURATION;
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per chunk duration.\n", anetz->samples_per_chunk);
-	spl = calloc(1, anetz->samples_per_chunk << 1);
+	spl = calloc(anetz->samples_per_chunk, sizeof(sample_t));
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
@@ -107,11 +106,8 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
 
 	anetz->tone_detected = -1;
 
-	for (i = 0; i < 2; i++) {
-		coeff = 2.0 * cos(2.0 * PI * fsk_tones[i] / (double)anetz->sender.samplerate);
-		anetz->fsk_tone_coeff[i] = coeff * 32768.0;
-		PDEBUG(DDSP, DEBUG_DEBUG, "RX %.0f Hz coeff = %d\n", fsk_tones[i], (int)anetz->fsk_tone_coeff[i]);
-	}
+	for (i = 0; i < 2; i++)
+		audio_goertzel_init(&anetz->fsk_tone_goertzel[i], fsk_tones[i], anetz->sender.samplerate);
 	tone = fsk_tones[(anetz->sender.loopback == 0) ? 0 : 1];
 	anetz->tone_phaseshift256 = 256.0 / ((double)anetz->sender.samplerate / tone);
 	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", tone, anetz->tone_phaseshift256);
@@ -159,7 +155,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 }
 
 /* Filter one chunk of audio an detect tone, quality and loss of signal. */
-static void fsk_decode_chunk(anetz_t *anetz, int16_t *spl, int max)
+static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 {
 	double level, result[2];
 
@@ -168,7 +164,7 @@ static void fsk_decode_chunk(anetz_t *anetz, int16_t *spl, int max)
 	if (audio_detect_loss(&anetz->sender.loss, level))
 		anetz_loss_indication(anetz);
 
-	audio_goertzel(spl, max, 0, anetz->fsk_tone_coeff, result, 2);
+	audio_goertzel(anetz->fsk_tone_goertzel, spl, max, 0, result, 2);
 
 	/* show quality of tone */
 	if (anetz->sender.loopback) {
@@ -189,10 +185,10 @@ static void fsk_decode_chunk(anetz_t *anetz, int16_t *spl, int max)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, int16_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
 	anetz_t *anetz = (anetz_t *) sender;
-	int16_t *spl;
+	sample_t *spl;
 	int max, pos;
 	int i;
 
@@ -211,14 +207,13 @@ void sender_receive(sender_t *sender, int16_t *samples, int length)
 
 	/* Forward audio to network (call process). */
 	if (anetz->dsp_mode == DSP_MODE_AUDIO && anetz->callref) {
-		int16_t down[length]; /* more than enough */
 		int count;
 
-		count = samplerate_downsample(&anetz->sender.srstate, samples, length, down);
+		count = samplerate_downsample(&anetz->sender.srstate, samples, length);
 		spl = anetz->sender.rxbuf;
 		pos = anetz->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {
-			spl[pos++] = down[i];
+			spl[pos++] = samples[i];
 			if (pos == 160) {
 				call_tx_audio(anetz->callref, spl, 160);
 				pos = 0;
@@ -242,7 +237,7 @@ void dsp_set_paging(anetz_t *anetz, double *freq)
 
 /* Generate audio stream of 4 simultanious paging tones. Keep phase for next call of function.
  * Use TX_PEAK_TONE*page_gain for all tones, which gives peak of 1/4th for each individual tone. */
-static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
+static void fsk_paging_tone(anetz_t *anetz, sample_t *samples, int length)
 {
 	double phaseshift[4], phase[4];
 	int i;
@@ -283,7 +278,7 @@ static void fsk_paging_tone(anetz_t *anetz, int16_t *samples, int length)
  * When tone changes to next tone, a transition of 2ms is performed. The last
  * tone is faded out and the new tone faded in.
  */
-static void fsk_paging_tone_sequence(anetz_t *anetz, int16_t *samples, int length, int numspl)
+static void fsk_paging_tone_sequence(anetz_t *anetz, sample_t *samples, int length, int numspl)
 {
 	double phaseshift[4], phase[4];
 	int i;
@@ -341,7 +336,7 @@ static void fsk_paging_tone_sequence(anetz_t *anetz, int16_t *samples, int lengt
 }
 
 /* Generate audio stream from tone. Keep phase for next call of function. */
-static void fsk_tone(anetz_t *anetz, int16_t *samples, int length)
+static void fsk_tone(anetz_t *anetz, sample_t *samples, int length)
 {
 	double phaseshift, phase;
 	int i;
@@ -360,7 +355,7 @@ static void fsk_tone(anetz_t *anetz, int16_t *samples, int length)
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, int16_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	anetz_t *anetz = (anetz_t *) sender;
 

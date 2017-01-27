@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include "sample.h"
 #include "sender.h"
 
 #define DISPLAY_INTERVAL 0.04

@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include <inttypes.h>
+#include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "amps.h"

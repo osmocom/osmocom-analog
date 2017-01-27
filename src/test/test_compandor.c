@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
+#include "../common/sample.h"
 #include "../common/compandor.h"
 
 #define level2db(level)		(20 * log10(level))
@@ -14,11 +15,11 @@
 
 static double test_frequency[3] = { 2000.0, 4000.0, 1000.0 };
 
-static int16_t samples_4db[SAMPLERATE];
-static int16_t samples_16db[SAMPLERATE];
-static int16_t samples_2db[SAMPLERATE];
-static int16_t samples_8db[SAMPLERATE];
-static int16_t samples_0db[SAMPLERATE];
+static sample_t samples_4db[SAMPLERATE];
+static sample_t samples_16db[SAMPLERATE];
+static sample_t samples_2db[SAMPLERATE];
+static sample_t samples_8db[SAMPLERATE];
+static sample_t samples_0db[SAMPLERATE];
 
 /* generate 2 samples: one with -4 dB, the other with -16 dB */
 static void generate_test_sample(double test_frequency)
@@ -36,7 +37,7 @@ static void generate_test_sample(double test_frequency)
 	}
 }
 
-static void check_level(int16_t *samples, double duration, const char *desc, double target_db)
+static void check_level(sample_t *samples, double duration, const char *desc, double target_db)
 {
 	int i;
 	int last = 0, envelop = 0;
@@ -67,7 +68,7 @@ static void check_level(int16_t *samples, double duration, const char *desc, dou
 int main(void)
 {
 	compandor_t cstate;
-	int16_t samples[SAMPLERATE * 2];
+	sample_t samples[SAMPLERATE * 2];
 	int f;
 
 	init_compandor(&cstate, SAMPLERATE, ATTACK_MS, RECOVERY_MS, UNAFFECTED);

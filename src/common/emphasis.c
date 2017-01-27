@@ -55,9 +55,8 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 	return 0;
 }
 
-void pre_emphasis(emphasis_t *state, int16_t *samples, int num)
+void pre_emphasis(emphasis_t *state, double *samples, int num)
 {
-	int32_t sample;
 	double x, y, x_last, factor, amp;
 	int i;
 
@@ -66,26 +65,20 @@ void pre_emphasis(emphasis_t *state, int16_t *samples, int num)
 	amp = state->p.amp;
 
 	for (i = 0; i < num; i++) {
-		x = (double)(*samples) / 32768.0;
+		x = *samples / 32768.0;
 
 		y = x - factor * x_last;
 
 		x_last = x;
 
-		sample = (int)(amp * y * 32768.0);
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32768)
-			sample = -32768;
-		*samples++ = sample;
+		*samples++ = (int)(amp * y * 32768.0);
 	}
 
 	state->p.x_last = x_last;
 }
 
-void de_emphasis(emphasis_t *state, int16_t *samples, int num)
+void de_emphasis(emphasis_t *state, double *samples, int num)
 {
-	int32_t sample;
 	double x, y, z, y_last, z_last, d_factor, h_factor, amp;
 	int i;
 
@@ -96,7 +89,7 @@ void de_emphasis(emphasis_t *state, int16_t *samples, int num)
 	amp = state->d.amp;
 
 	for (i = 0; i < num; i++) {
-		x = (double)(*samples) / 32768.0;
+		x = *samples / 32768.0;
 
 		/* de-emphasis */
 		y = x + d_factor * y_last;
@@ -107,12 +100,7 @@ void de_emphasis(emphasis_t *state, int16_t *samples, int num)
 		y_last = y;
 		z_last = z;
 
-		sample = (int)(amp * z * 32768.0);
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32768)
-			sample = -32768;
-		*samples++ = sample;
+		*samples++ = (int)(amp * z * 32768.0);
 	}
 
 	state->d.y_last = y_last;
