@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
+#include <math.h>
 #include "sample.h"
 #include "debug.h"
 #include "display.h"
@@ -114,6 +115,26 @@ const char *debug_amplitude(double level)
 	if (level < -1.0)
 		level = -1.0;
 	text[20 + (int)(level * 20)] = '*';
+
+	return text;
+}
+
+#define level2db(level)         (20 * log10(level))
+
+const char *debug_db(double level_db)
+{
+	static char text[128];
+	int l;
+
+	strcpy(text, ":  .  :  .  :  .  :  .  :  .  :  .  :  .  :  .  :   ");
+	if (level_db <= 0.0)
+		return text;
+	l = (int)round(level2db(level_db));
+	if (l > 3)
+		return text;
+	if (l < -48)
+		return text;
+	text[l + 48] = '*';
 
 	return text;
 }

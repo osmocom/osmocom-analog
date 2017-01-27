@@ -13,31 +13,12 @@
 
 static double get_level(double *samples)
 {
-#if 0
-	int i;
-	double last = 0, envelope = 0;
-	int up = 0;
-
-	for (i = SAMPLERATE/2; i < SAMPLERATE; i++) {
-		if (last < samples[i]) {
-			up = 1;
-		} else if (last > samples[i]) {
-			if (up) {
-				if (last > envelope)
-					envelope = last;
-			}
-			up = 0;
-		}
-		last = samples[i];
-	}
-#else
 	int i;
 	double envelope = 0;
 	for (i = SAMPLERATE/2; i < SAMPLERATE; i++) {
 		if (samples[i] > envelope)
 			envelope = samples[i];
 	}
-#endif
 
 	return envelope;
 }
@@ -72,7 +53,7 @@ int main(void)
 		gen_samples(samples, (double)i);
 		filter_process(&filter_low, samples, SAMPLERATE);
 		level = get_level(samples);
-		printf("%4d Hz: %.1f dB", i, level2db(level));
+		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
 		if (i == 1000)
 			printf(" cutoff\n");
 		else if (i == 2000)
@@ -91,7 +72,7 @@ int main(void)
 		gen_samples(samples, (double)i);
 		filter_process(&filter_high, samples, SAMPLERATE);
 		level = get_level(samples);
-		printf("%4d Hz: %.1f dB", i, level2db(level));
+		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
 		if (i == 2000)
 			printf(" cutoff\n");
 		else if (i == 1000)
@@ -112,7 +93,7 @@ int main(void)
 		filter_process(&filter_low, samples, SAMPLERATE);
 		filter_process(&filter_high, samples, SAMPLERATE);
 		level = get_level(samples);
-		printf("%4d Hz: %.1f dB", i, level2db(level));
+		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
 		if (i == 1000)
 			printf(" cutoff high\n");
 		else if (i == 2000)

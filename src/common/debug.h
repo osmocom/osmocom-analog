@@ -27,6 +27,7 @@
 void _printdebug(const char *file, const char *function, int line, int cat, int level, int chan, const char *fmt, ...) __attribute__ ((__format__ (__printf__, 7, 8)));
 
 const char *debug_amplitude(double level);
+const char *debug_db(double level_db);
 
 void debug_list_cat(void);
 int parse_debug_opt(const char *opt);
