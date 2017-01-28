@@ -450,7 +450,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	}
 
 	/* init audio processing */
-	rc = dsp_init_sender(amps, (de_emphasis == 0), tolerant);
+	rc = dsp_init_sender(amps, tolerant);
 	if (rc < 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init audio processing!\n");
 		goto error;

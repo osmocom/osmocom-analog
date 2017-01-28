@@ -64,6 +64,7 @@ int main(void)
 
 	for (i = 31.25; i < 4001; i = i * sqrt(sqrt(2.0))) {
 		gen_samples(samples, (double)i);
+		dc_filter(&estate, samples, SAMPLERATE);
 		de_emphasis(&estate, samples, SAMPLERATE);
 		level = get_level(samples);
 		printf("%s%.0f Hz: %.1f dB", debug_db(level), i, level2db(level));

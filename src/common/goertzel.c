@@ -30,30 +30,26 @@
  * audio level calculation
  */
 
-/* return average value (rectified value), that can be 0..1 */
+/* Return average value (rectified value)
+ * The input must not have any dc offset!
+ * For a perfect rectangualr wave, the result would equal the peak level.
+ * For a sine wave the result would be factor (2 / PI) below peak level.
+ */
 double audio_level(sample_t *samples, int length)
 {
-	double bias;
-	double level;
-	int sk;
+	double level, sk;
 	int n;
-
-	/* calculate bias */
-	bias = 0;
-	for (n = 0; n < length; n++)
-		bias += samples[n];
-	bias = bias / length;
 
 	/* level calculation */
 	level = 0;
 	for (n = 0; n < length; n++) {
-		sk = samples[n] - bias;
+		sk = samples[n];
 		if (sk < 0)
 			level -= (double)sk;
 		if (sk > 0)
 			level += (double)sk;
 	}
-	level = level / (double)length / 32767.0;
+	level = level / (double)length;
 
 	return level;
 }
@@ -79,16 +75,9 @@ void audio_goertzel_init(goertzel_t *goertzel, double freq, int samplerate)
  */
 void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int offset, double *result, int k)
 {
-	double bias;
 	double sk, sk1, sk2;
 	double cos2pik;
 	int i, n;
-
-	/* calculate bias to remove DC */
-	bias = 0;
-	for (n = 0; n < length; n++)
-		bias += samples[n];
-	bias = bias / length;
 
 	/* we do goertzel */
 	for (i = 0; i < k; i++) {
@@ -98,7 +87,7 @@ void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int off
 		cos2pik = goertzel[i].coeff;
 		/* note: after 'length' cycles, offset is restored to its initial value */
 		for (n = 0; n < length; n++) {
-			sk = (cos2pik * sk1) - sk2 + samples[offset++] - bias;
+			sk = (cos2pik * sk1) - sk2 + samples[offset++];
 			sk2 = sk1;
 			sk1 = sk;
 			if (offset == length)

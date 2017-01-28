@@ -27,7 +27,7 @@
 
 #define PI		M_PI
 
-#define CUT_OFF_H	300.0	/* cut-off frequency for high-pass filters */
+#define CUT_OFF_H	100.0	/* cut-off frequency for high-pass filter */
 
 static void gen_sine(double *samples, int num, int samplerate, double freq)
 {
@@ -106,8 +106,6 @@ void de_emphasis(emphasis_t *state, double *samples, int num)
 	double x, y, y_last, factor, amp;
 	int i;
 
-	filter_process(&state->d.hp, samples, num);
-
 	y_last = state->d.y_last;
 	factor = state->d.factor;
 	amp = state->d.amp;
@@ -124,5 +122,11 @@ void de_emphasis(emphasis_t *state, double *samples, int num)
 	}
 
 	state->d.y_last = y_last;
+}
+
+/* high pass filter to remove DC and low frequencies */
+void dc_filter(emphasis_t *state, double *samples, int num)
+{
+	filter_process(&state->d.hp, samples, num);
 }
 

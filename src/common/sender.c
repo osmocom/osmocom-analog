@@ -281,7 +281,7 @@ cant_recover:
 				display_wave(inst, samples[i], count);
 				sender_receive(inst, samples[i], count);
 			}
-			/* do pre emphasis towards radio, not wave_write */
+			/* do pre emphasis towards radio */
 			if (inst->pre_emphasis)
 				pre_emphasis(&inst->estate, samples[i], count);
 			/* set paging signal */
@@ -331,9 +331,11 @@ transmit_later:
 			/* rx gain */
 			if (inst->rx_gain != 1.0)
 				gain_samples(samples[i], count, inst->rx_gain);
-			/* do de emphasis from radio (then write_wave/wave_read), receive audio, process echo test */
-			if (inst->de_emphasis)
+			/* do filter and de-emphasis from radio receive audio, process echo test */
+			if (inst->de_emphasis) {
+				dc_filter(&inst->estate, samples[i], count);
 				de_emphasis(&inst->estate, samples[i], count);
+			}
 			if (inst->loopback != 1) {
 				display_wave(inst, samples[i], count);
 				sender_receive(inst, samples[i], count);

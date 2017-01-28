@@ -178,12 +178,11 @@ static void dsp_init_ramp(amps_t *amps)
 static void sat_reset(amps_t *amps, const char *reason);
 
 /* Init FSK of transceiver */
-int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
+int dsp_init_sender(amps_t *amps, int tolerant)
 {
 	sample_t *spl;
 	int i;
 	int rc;
-	double RC, dt;
 	int half;
 
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
@@ -255,14 +254,6 @@ int dsp_init_sender(amps_t *amps, int high_pass, int tolerant)
 	/* test tone */
 	amps->test_phaseshift256 = 256.0 / ((double)amps->sender.samplerate / 1000.0);
 	PDEBUG(DDSP, DEBUG_DEBUG, "test_phaseshift256 = %.4f\n", amps->test_phaseshift256);
-
-	/* use this filter to remove dc level for 0-crossing detection
-	 * if we have de-emphasis, we don't need it, so high_pass is not set. */
-	if (high_pass) {
-		RC = 1.0 / (CUT_OFF_HIGHPASS * 2.0 *3.14);
-		dt = 1.0 / amps->sender.samplerate;
-		amps->highpass_factor = RC / (RC + dt);
-	}
 
 	/* be more tolerant when syncing */
 	amps->fsk_rx_sync_tolerant = tolerant;
@@ -808,8 +799,7 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 	int max, pos;
 	int i;
 
-	/* SAT detection */
-
+	/* SAT / signalling tone detection */
 	max = amps->sat_samples;
 	spl = amps->sat_filter_spl;
 	pos = amps->sat_filter_pos;
@@ -853,25 +843,10 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
 	amps_t *amps = (amps_t *) sender;
-	double x, y, x_last, y_last, factor;
-	int i;
 
-	/* high pass filter to remove 0-level
-	 * if factor is not set, we should already have 0-level. */
-	factor = amps->highpass_factor;
-	if (factor) {
-		x_last = amps->highpass_x_last;
-		y_last = amps->highpass_y_last;
-		for (i = 0; i < length; i++) {
-			x = (double)samples[i];
-			y = factor * (y_last + x - x_last);
-			x_last = x;
-			y_last = y;
-			samples[i] = y;
-		}
-		amps->highpass_x_last = x_last;
-		amps->highpass_y_last = y_last;
-	}
+	/* dc filter required for FSK decoding and tone detection */
+	if (amps->de_emphasis)
+		dc_filter(&amps->estate, samples, length);
 
 	switch (amps->dsp_mode) {
 	case DSP_MODE_OFF:

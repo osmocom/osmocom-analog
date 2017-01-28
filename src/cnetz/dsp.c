@@ -812,6 +812,8 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 
 	/* 4. de-emphasis is done by cnetz code, not by common code */
 	/* de-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
+	if (cnetz->de_emphasis)
+		dc_filter(&cnetz->estate, speech_buffer, count);
 	if (cnetz->de_emphasis && !cnetz->scrambler)
 		de_emphasis(&cnetz->estate, speech_buffer, count);
 	/* 3. descramble */
