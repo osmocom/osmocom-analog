@@ -21,37 +21,60 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include "filter.h"
 #include "emphasis.h"
 #include "debug.h"
 
 #define PI		M_PI
 
-#define CUT_OFF_H	200.0	/* cut-off frequency for high-pass filters */
+#define CUT_OFF_H	300.0	/* cut-off frequency for high-pass filters */
+
+static void gen_sine(double *samples, int num, int samplerate, double freq)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		samples[i] = cos(2.0 * M_PI * freq / (double)samplerate * (double)i);
+}
+
+static double get_level(double *samples, int num)
+{
+	int i;
+	double envelope = 0;
+	for (i = num/2; i < num; i++) {
+		if (samples[i] > envelope)
+			envelope = samples[i];
+	}
+
+	return envelope;
+}
 
 int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 {
-	double factor, rc, dt;
+	double factor;
+	double test_samples[samplerate / 10];
 
 	memset(state, 0, sizeof(*state));
-	if (samplerate < 24000) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 24000 Hz!\n");
-		return -1;
-	}
 
 	/* exp (-2 * PI * CUT_OFF * delta_t) */
-	factor = exp(-2.0 * PI * cut_off / samplerate); /* 1/samplerate == delta_t */
+	factor = exp(-2.0 * PI * cut_off / (double)samplerate); /* 1/samplerate == delta_t */
+
 	PDEBUG(DDSP, DEBUG_DEBUG, "Emphasis factor = %.3f\n", factor);
 	state->p.factor = factor;
-	state->p.amp = samplerate / 6400.0;
-	state->d.d_factor = factor;
-	state->d.amp = 1.0 / (samplerate / 5750.0);
+	state->p.amp = 1.0;
+	state->d.factor = factor;
+	state->d.amp = 1.0;
 
-	/* high-pass filter prevents low frequency noise and dc level
-	 * from being amplified by de-emphasis */
-	rc = 1.0 / (CUT_OFF_H * 2.0 *3.14);
-	dt = 1.0 / samplerate;
-	state->d.h_factor = rc / (rc + dt);
-	PDEBUG(DDSP, DEBUG_DEBUG, "High-Pass factor = %.3f\n", state->d.h_factor);
+	filter_highpass_init(&state->d.hp, CUT_OFF_H, samplerate, 1);
+
+	/* calibrate amplification to be neutral at 1000 Hz */
+	gen_sine(test_samples, sizeof(test_samples) / sizeof(test_samples[0]), samplerate, 1000.0);
+	pre_emphasis(state, test_samples, sizeof(test_samples) / sizeof(test_samples[0]));
+	state->p.amp = 1.0 / get_level(test_samples, sizeof(test_samples) / sizeof(test_samples[0]));
+	gen_sine(test_samples, sizeof(test_samples) / sizeof(test_samples[0]), samplerate, 1000.0);
+	de_emphasis(state, test_samples, sizeof(test_samples) / sizeof(test_samples[0]));
+	state->d.amp = 1.0 / get_level(test_samples, sizeof(test_samples) / sizeof(test_samples[0]));
+
 	return 0;
 }
 
@@ -65,13 +88,14 @@ void pre_emphasis(emphasis_t *state, double *samples, int num)
 	amp = state->p.amp;
 
 	for (i = 0; i < num; i++) {
-		x = *samples / 32768.0;
+		x = *samples;
 
+		/* pre-emphasis */
 		y = x - factor * x_last;
 
 		x_last = x;
 
-		*samples++ = (int)(amp * y * 32768.0);
+		*samples++ = amp * y;
 	}
 
 	state->p.x_last = x_last;
@@ -79,31 +103,26 @@ void pre_emphasis(emphasis_t *state, double *samples, int num)
 
 void de_emphasis(emphasis_t *state, double *samples, int num)
 {
-	double x, y, z, y_last, z_last, d_factor, h_factor, amp;
+	double x, y, y_last, factor, amp;
 	int i;
 
+	filter_process(&state->d.hp, samples, num);
+
 	y_last = state->d.y_last;
-	z_last = state->d.z_last;
-	d_factor = state->d.d_factor;
-	h_factor = state->d.h_factor;
+	factor = state->d.factor;
 	amp = state->d.amp;
 
 	for (i = 0; i < num; i++) {
-		x = *samples / 32768.0;
+		x = *samples;
 
 		/* de-emphasis */
-		y = x + d_factor * y_last;
-
-		/* high pass */
-		z = h_factor * (z_last + y - y_last);
+		y = x + factor * y_last;
 
 		y_last = y;
-		z_last = z;
 
-		*samples++ = (int)(amp * z * 32768.0);
+		*samples++ = amp * y;
 	}
 
 	state->d.y_last = y_last;
-	state->d.z_last = z_last;
 }
 

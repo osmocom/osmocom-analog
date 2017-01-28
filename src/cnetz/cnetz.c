@@ -143,7 +143,7 @@
 /* uncomment this to do echo debugging (-L) on Speech Channel */
 //#define DEBUG_SPK
 
-#define CUT_OFF_EMPHASIS_CNETZ	796 /* 200 uS time constant */
+#define CUT_OFF_EMPHASIS_CNETZ	796.0 /* 200 uS time constant */
 
 /* Call reference for calls from mobile station to network
    This offset of 0x400000000 is required for MNCC interface. */

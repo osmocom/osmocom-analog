@@ -126,11 +126,11 @@ const char *debug_db(double level_db)
 	static char text[128];
 	int l;
 
-	strcpy(text, ":  .  :  .  :  .  :  .  :  .  :  .  :  .  :  .  :   ");
+	strcpy(text, ":  .  :  .  :  .  :  .  :  .  :  .  :  .  :  .  |  .  :  .  :  .  :  .  :  .  :  .  :  .  :  .  :");
 	if (level_db <= 0.0)
 		return text;
 	l = (int)round(level2db(level_db));
-	if (l > 3)
+	if (l > 48)
 		return text;
 	if (l < -48)
 		return text;

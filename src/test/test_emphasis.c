@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include "../common/sample.h"
+#include "../common/filter.h"
 #include "../common/emphasis.h"
 #include "../common/debug.h"
 
@@ -10,29 +11,17 @@
 #define db2level(db)		pow(10, (double)db / 20.0)
 
 #define SAMPLERATE	48000
-#define DEVIATION	8000.0
 
-static double test_freq[] = { 25, 50, 100, 200, 250, 300, 400, 500, 1000, 2000, 4000, 0 };
-
-static void check_level(sample_t *samples, double freq, const char *desc)
+static double get_level(double *samples)
 {
 	int i;
-	int last = 0, envelope = 0;
-	int up = 0;
-
-	for (i = 0; i < SAMPLERATE; i++) {
-		if (last < samples[i]) {
-			up = 1;
-		} else if (last > samples[i]) {
-			if (up) {
-				if (last > envelope)
-					envelope = last;
-			}
-			up = 0;
-		}
-		last = samples[i];
+	double envelope = 0;
+	for (i = SAMPLERATE/2; i < SAMPLERATE; i++) {
+		if (samples[i] > envelope)
+			envelope = samples[i];
 	}
-	printf("%s: f = %.0f envelop = %.4f\n", desc, freq, level2db((double)envelope / DEVIATION));
+
+	return envelope;
 }
 
 static void gen_samples(double *samples, double freq)
@@ -41,34 +30,47 @@ static void gen_samples(double *samples, double freq)
 	double value;
 
 	for (i = 0; i < SAMPLERATE; i++) {
-		value = sin(2.0 * M_PI * freq / (double)SAMPLERATE * (double)i);
-		samples[i] = value * DEVIATION;
+		value = cos(2.0 * M_PI * freq / (double)SAMPLERATE * (double)i);
+		samples[i] = value;
 	}
 }
 
 int main(void)
 {
 	emphasis_t estate;
+	double cut_off = CUT_OFF_EMPHASIS_DEFAULT;
 	double samples[SAMPLERATE];
-	int i;
+	double level;
+	double i;
 
 	debuglevel = DEBUG_DEBUG;
 
-	printf("1000 Hz shall be close to 0 dB, that is no significant change in volume.\n\n");
+	init_emphasis(&estate, SAMPLERATE, cut_off);
 
-	init_emphasis(&estate, SAMPLERATE, CUT_OFF_EMPHASIS_DEFAULT);
+	printf("testing pre-emphasis filter with cut-off frequency %.1f\n", cut_off);
 
-	for (i = 0; test_freq[i]; i++) {
-		gen_samples(samples, test_freq[i]);
+	for (i = 31.25; i < 4001; i = i * sqrt(sqrt(2.0))) {
+		gen_samples(samples, (double)i);
 		pre_emphasis(&estate, samples, SAMPLERATE);
-		check_level(samples, test_freq[i], "pre-emphasis");
+		level = get_level(samples);
+		printf("%s%.0f Hz: %.1f dB", debug_db(level), i, level2db(level));
+		if ((int)round(i) == 1000)
+			printf(" level=%.6f\n", level);
+		else
+			printf("\n");
 	}
 
-	/* generate sweep 0..4khz */
-	for (i = 0; test_freq[i]; i++) {
-		gen_samples(samples, test_freq[i]);
+	printf("testing de-emphasis filter with cut-off frequency %.1f\n", cut_off);
+
+	for (i = 31.25; i < 4001; i = i * sqrt(sqrt(2.0))) {
+		gen_samples(samples, (double)i);
 		de_emphasis(&estate, samples, SAMPLERATE);
-		check_level(samples, test_freq[i], "de-emphasis");
+		level = get_level(samples);
+		printf("%s%.0f Hz: %.1f dB", debug_db(level), i, level2db(level));
+		if ((int)round(i) == 1000)
+			printf(" level=%.6f\n", level);
+		else
+			printf("\n");
 	}
 
 	return 0;
