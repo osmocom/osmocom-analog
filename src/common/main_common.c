@@ -68,7 +68,7 @@ const char *read_iq_rx_wave = NULL;
 void print_help_common(const char *arg0, const char *ext_usage)
 {
 	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
-	printf("\noptions:\n");
+	printf("\nGlobal options:\n");
 	/*      -                                                                             - */
 	printf(" -h --help\n");
 	printf("        This help\n");
@@ -137,6 +137,7 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("    --read-iq-rx-wave <file>\n");
 	printf("        Replace received IQ data by given wave file.\n");
 #endif
+	printf("\nNetwork specific options:\n");
 }
 
 void print_hotkeys_common(void)
