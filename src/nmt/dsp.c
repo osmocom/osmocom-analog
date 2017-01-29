@@ -120,8 +120,8 @@ int dsp_init_sender(nmt_t *nmt)
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
 	init_compandor(&nmt->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
 
-	/* this should not happen. it is implied by previous check */
-	if (nmt->supervisory && nmt->sender.samplerate < 12000) {
+	/* a symbol rate of 1200 Hz, times check interval of FILTER_STEPS */
+	if (nmt->sender.samplerate < (double)BIT_RATE / (double)FILTER_STEPS) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 12000 Hz to process FSK+supervisory signal.\n");
 		return -EINVAL;
 	}
@@ -313,7 +313,7 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 	spl = nmt->fsk_filter_spl;
 
 	/* count time in bits */
-	nmt->rx_bits_count += 0.1;
+	nmt->rx_bits_count += FILTER_STEPS;
 
 	level = audio_level(spl, max);
 	/* limit level to prevent division by zero */
@@ -462,8 +462,8 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 		}
 		/* if 1/10th of a bit duration is reached, decode buffer */
 		step += bps;
-		if (step >= 0.1) {
-			step -= 0.1;
+		if (step >= FILTER_STEPS) {
+			step -= FILTER_STEPS;
 			fsk_decode_step(nmt, pos);
 		}
 	}
