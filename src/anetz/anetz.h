@@ -33,12 +33,12 @@ typedef struct anetz {
 	int			fsk_filter_pos;		/* current sample position in filter_spl */
 	int			tone_detected;		/* what tone has been detected */
 	int			tone_count;		/* how long has that tone been detected */
-	double			tone_phaseshift256;	/* how much the phase of sine wave changes per sample */
-	double			tone_phase256;		/* current phase */
+	double			tone_phaseshift65536;	/* how much the phase of sine wave changes per sample */
+	double			tone_phase65536;	/* current phase */
 	double			page_gain;		/* factor to raise the paging tones */
 	int			page_sequence;		/* if set, use paging tones in sequence rather than parallel */
-	double			paging_phaseshift256[4];/* how much the phase of sine wave changes per sample */
-	double			paging_phase256[4];	/* current phase */
+	double			paging_phaseshift65536[4];/* how much the phase of sine wave changes per sample */
+	double			paging_phase65536[4];	/* current phase */
 	int			paging_tone;		/* current tone (0..3) in sequenced mode */
 	int			paging_count;		/* current sample count of tone in seq. mode */
 	int			paging_transition;	/* set to number of samples during transition */

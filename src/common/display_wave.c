@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include <sys/ioctl.h>
 #include "sample.h"
 #include "sender.h"
@@ -110,10 +111,10 @@ void display_wave_limit_scroll(int on)
  * HEIGHT is odd, so the center line's char is '-' (otherwise '_')
  * (HEIGHT - 1) / 2 = 1, so the center line is drawn in line 1
  *
- * y is in range of 0..5, so these are 5 steps, where 2 to 2.999 is the
+ * y is in range of 0..4, so these are 5 steps, where 2 is the
  * center line. this is calculated by (HEIGHT * 2 - 1)
  */
-void display_wave(sender_t *sender, sample_t *samples, int length)
+void display_wave(sender_t *sender, sample_t *samples, int length, double range)
 {
 	dispwav_t *disp = &sender->dispwav;
 	int pos, max;
@@ -147,9 +148,16 @@ void display_wave(sender_t *sender, sample_t *samples, int length)
 		if (pos == width) {
 			memset(&screen, ' ', sizeof(screen));
 			for (j = 0; j < width; j++) {
-				y = (32767 - (int32_t)buffer[j]) * (HEIGHT * 2 - 1) / 65536;
+				/* Input value is scaled to range -1 .. 1 and then substracted from 1,
+				 * so the result ranges from 0 .. 2.
+				 * HEIGHT-1 is multiplied with the range, so a HEIGHT of 3 would allow
+				 * 0..4 (5 steps) and a HEIGHT of 11 would allow 0..20 (21 steps).
+				 * We always use odd number of steps, so there will be a center between
+				 * values.
+				 */
+				y = round((1.0 - buffer[j] / range) * (double)(HEIGHT - 1));
 				/* only display level, if it is in range */
-				if (y >= 0 && y < HEIGHT * 2)
+				if (y >= 0 && y < HEIGHT * 2 - 1)
 					screen[y >> 1][j] = (y & 1) ? '_' : '-';
 			}
 			sprintf(screen[0], "(chan %d", sender->kanal);

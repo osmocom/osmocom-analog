@@ -88,8 +88,8 @@ typedef struct bnetz {
 	int			fsk_filter_qualidx;	/* index of quality array above */
 	int			tone_detected;		/* what tone has been detected */
 	int			tone_count;		/* how long has that tone been detected */
-	double			phaseshift256[2];	/* how much the phase of sine wave changes per sample */
-	double			phase256;		/* current phase */
+	double			phaseshift65536[2];	/* how much the phase of sine wave changes per sample */
+	double			phase65536;		/* current phase */
 	int			telegramm;		/* set, if there is a valid telegram */
 	sample_t		*telegramm_spl;		/* 16 * samples_per_bit */
 	int			telegramm_pos;		/* current sample position in telegramm_spl */

@@ -24,7 +24,7 @@ typedef struct fsk_fm_demod {
 	int		bit_buffer_len;		/* number of samples in ring buffer */
 	int		bit_buffer_half;	/* half of ring buffer */
 	int		bit_buffer_pos;		/* current position to write next sample */
-	int		level_threshold;	/* threshold for detection of next level change */
+	double		level_threshold;	/* threshold for detection of next level change */
 	double		bits_per_sample;	/* duration of one sample in bits */
 	double		next_bit;		/* count time to detect bits */
 	int		bit_count;		/* counts bits, to match 4 bits at distributed signaling */
@@ -45,7 +45,7 @@ typedef struct fsk_fm_demod {
 	int		rx_buffer_count;	/* counter when receiving bits */
 
 	/* statistics */
-	int		change_levels[256];	/* ring buffer to store levels */
+	double		change_levels[256];	/* ring buffer to store levels */
 	double		change_when[256];	/* ring buffer to store time when level has changed */
 	uint8_t		change_pos;		/* index for next write */
 } fsk_fm_demod_t;

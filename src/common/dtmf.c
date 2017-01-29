@@ -25,10 +25,12 @@
 
 #define PI		M_PI
 
-#define TX_PEAK_DTMF	7000   /* single dtmf tone peak (note this is half to total peak) */ 
-#define DTMF_DURATION	0.100   /* duration in seconds */
+static double tx_peak_dtmf_low = 0.2818 / SPEECH_LEVEL;	/* -11 dBm, relative to speech level */ 
+static double tx_peak_dtmf_high	= 0.3548 / SPEECH_LEVEL;/* -9 dBm, relative to speech level */ 
+#define DTMF_DURATION	0.100	/* duration in seconds */
 
-static double dsp_sine_dtmf[256];
+static sample_t dsp_sine_dtmf_low[65536];
+static sample_t dsp_sine_dtmf_high[65536];
 
 void dtmf_init(dtmf_t *dtmf, int samplerate)
 {
@@ -39,8 +41,10 @@ void dtmf_init(dtmf_t *dtmf, int samplerate)
 	dtmf->max = (int)((double)samplerate * DTMF_DURATION + 0.5);
 
 	// FIXME: do this globally and not per instance */
-	for (i = 0; i < 256; i++)
-		dsp_sine_dtmf[i] = (int)(sin((double)i / 256.0 * 2.0 * PI) * TX_PEAK_DTMF);
+	for (i = 0; i < 65536; i++) {
+		dsp_sine_dtmf_low[i] = sin((double)i / 65536.0 * 2.0 * PI) * tx_peak_dtmf_low;
+		dsp_sine_dtmf_high[i] = sin((double)i / 65536.0 * 2.0 * PI) * tx_peak_dtmf_high;
+	}
 }
 
 /* set dtmf tone */
@@ -71,8 +75,8 @@ void dtmf_set_tone(dtmf_t *dtmf, char tone)
 	}
 	dtmf->tone = tone;
 	dtmf->pos = 0;
-	dtmf->phaseshift256[0] = 256.0 / ((double)dtmf->samplerate / f1);
-	dtmf->phaseshift256[1] = 256.0 / ((double)dtmf->samplerate / f2);
+	dtmf->phaseshift65536[0] = 65536.0 / ((double)dtmf->samplerate / f1);
+	dtmf->phaseshift65536[1] = 65536.0 / ((double)dtmf->samplerate / f2);
 }
 
 /* Generate audio stream from DTMF tone. Keep phase for next call of function. */
@@ -87,20 +91,20 @@ void dtmf_tone(dtmf_t *dtmf, sample_t *samples, int length)
 		return;
 	}
 
-	phaseshift = dtmf->phaseshift256;
-	phase = dtmf->phase256;
+	phaseshift = dtmf->phaseshift65536;
+	phase = dtmf->phase65536;
 	pos = dtmf->pos;
 	max = dtmf->max;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_dtmf[((uint8_t)phase[0]) & 0xff]
-			   + dsp_sine_dtmf[((uint8_t)phase[1]) & 0xff];
+		*samples++ = dsp_sine_dtmf_low[(uint16_t)phase[0]]
+			   + dsp_sine_dtmf_high[(uint16_t)phase[1]];
 		phase[0] += phaseshift[0];
-		if (phase[0] >= 256)
-			phase[0] -= 256;
+		if (phase[0] >= 65536)
+			phase[0] -= 65536;
 		phase[1] += phaseshift[1];
-		if (phase[1] >= 256)
-			phase[1] -= 256;
+		if (phase[1] >= 65536)
+			phase[1] -= 65536;
 
 		/* tone ends */
 		if (++pos == max) {

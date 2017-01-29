@@ -34,23 +34,36 @@
 
 #define PI			M_PI
 
-/* Notes on frequency deviation of supervidory signal:
+/* Notes on TX_PEAK_FSK level:
  *
- * The FSK deviation at 1500 Hz is 3.5 KHz. If we use a level of 10000
- * The supervisory deviation shall be 0.3 KHz: 10000 / 3.5 * 0.3 = 857
- * Supervisory is raised by pre-emphasis by factor 2.68 (4015 / 1500),
- * so we need to lower it: 857 / 2.68 = 320
+ * This deviation is -2.2db below the dBm0 deviation.
+ *
+ * At 1800 Hz the deviation shall be 4.2 kHz, so with emphasis the deviation
+ * at 1000 Hz would be theoretically 2.333 kHz. This is factor 0.777 below
+ * 3 kHz deviation we want at dBm0.
+ */
+
+/* Notes on TX_PEAK_SUPER (supervisory signal) level:
+ *
+ * This level has 0.3 kHz deviation at 4015 Hz.
+ *
+ * Same calculation as above, but now we want 0.3 kHz deviation after emphasis,
+ * so we calculate what we would need at 1000 Hz in relation to 3 kHz
+ * deviation.
  */
 
 /* signaling */
-#define BANDWIDTH		6000.0	/* maximum bandwidth FIXME */
-#define COMPANDOR_0DB		32767	/* works quite well */
-#define TX_PEAK_FSK		10000.0	/* peak amplitude of signaling FSK +-3.5 KHz @ 1500 Hz */
-#define TX_PEAK_SUPER		(TX_PEAK_FSK / 3.5 * 0.3 / 2.68) /* peak amplitude of supervisory signal +-0.3 KHz @ 4015 Hz */
+#define MAX_DEVIATION		4700.0
+#define MAX_MODULATION		4055.0
+#define DBM0_DEVIATION		3000.0	/* deviation of dBm0 at 1 kHz */
+#define COMPANDOR_0DB		1.0	/* A level of 0dBm (1.0) shall be unaccected */
+#define TX_PEAK_FSK		(4200.0 / 1800.0 * 1000.0 / DBM0_DEVIATION)
+#define TX_PEAK_SUPER		(300.0 / 4015.0 * 1000.0 / DBM0_DEVIATION)
+#define MAX_DISPLAY		1.4	/* something above dBm0 */
 #define BIT_RATE		1200	/* baud rate */
-#define STEPS_PER_BIT		10	/* step every 1/12000 sec */
+#define FILTER_STEPS		0.1	/* step every 1/12000 sec */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
-#define TX_PEAK_DIALTONE	16000.0	/* dial tone peak */
+#define TX_PEAK_DIALTONE	0.5	/* dial tone peak FIXME */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
 #define SUPER_DETECT_COUNT	4	/* number of measures to detect supervisory signal */
 #define MUTE_DURATION		0.280	/* a tiny bit more than two frames */
@@ -71,9 +84,9 @@ static double super_freq[5] = {
 };
 
 /* table for fast sine generation */
-static double dsp_tone_bit[2][2][256]; /* polarity, bit, phase */
-static double dsp_sine_super[256];
-static double dsp_sine_dialtone[256];
+static sample_t dsp_tone_bit[2][2][65536]; /* polarity, bit, phase */
+static sample_t dsp_sine_super[65536];
+static sample_t dsp_sine_dialtone[65536];
 
 /* global init for FSK */
 void dsp_init(void)
@@ -82,8 +95,8 @@ void dsp_init(void)
 	double s;
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for supervisory signal.\n");
-	for (i = 0; i < 256; i++) {
-		s = sin((double)i / 256.0 * 2.0 * PI);
+	for (i = 0; i < 65536; i++) {
+		s = sin((double)i / 65536.0 * 2.0 * PI);
 		/* supervisor sine */
 		dsp_sine_super[i] = s * TX_PEAK_SUPER;
 		/* dialtone sine */
@@ -92,7 +105,7 @@ void dsp_init(void)
 		dsp_tone_bit[0][1][i] = s * TX_PEAK_FSK;
 		dsp_tone_bit[1][1][i] = -s * TX_PEAK_FSK;
 		/* bit(0) 1.5 cycles */
-		s = sin((double)i / 256.0 * 3.0 * PI);
+		s = sin((double)i / 65536.0 * 3.0 * PI);
 		dsp_tone_bit[0][0][i] = s * TX_PEAK_FSK;
 		dsp_tone_bit[1][0][i] = -s * TX_PEAK_FSK;
 	}
@@ -115,9 +128,8 @@ int dsp_init_sender(nmt_t *nmt)
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
-	/* set deviation and modulation parameters */
-	nmt->sender.bandwidth = BANDWIDTH;
-	nmt->sender.sample_deviation = 2500.0 / (double)TX_PEAK_FSK; // FIXME: calc real value
+	/* set modulation parameters */
+	sender_set_fm(&nmt->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.0f (3.5 KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK);
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.0f (0.3 KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER);
@@ -166,22 +178,22 @@ int dsp_init_sender(nmt_t *nmt)
 	/* count symbols */
 	for (i = 0; i < 2; i++)
 		audio_goertzel_init(&nmt->fsk_goertzel[i], fsk_freq[i], nmt->sender.samplerate);
-	nmt->fsk_phaseshift256 = 256.0 / nmt->fsk_samples_per_bit;
-	PDEBUG(DDSP, DEBUG_DEBUG, "fsk_phaseshift = %.4f\n", nmt->fsk_phaseshift256);
+	nmt->fsk_phaseshift65536 = 65536.0 / nmt->fsk_samples_per_bit;
+	PDEBUG(DDSP, DEBUG_DEBUG, "fsk_phaseshift = %.4f\n", nmt->fsk_phaseshift65536);
 
 	/* count supervidory tones */
 	for (i = 0; i < 5; i++) {
 		audio_goertzel_init(&nmt->super_goertzel[i], super_freq[i], nmt->sender.samplerate);
 		if (i < 4) {
-			nmt->super_phaseshift256[i] = 256.0 / ((double)nmt->sender.samplerate / super_freq[i]);
-			PDEBUG(DDSP, DEBUG_DEBUG, "super_phaseshift[%d] = %.4f\n", i, nmt->super_phaseshift256[i]);
+			nmt->super_phaseshift65536[i] = 65536.0 / ((double)nmt->sender.samplerate / super_freq[i]);
+			PDEBUG(DDSP, DEBUG_DEBUG, "super_phaseshift[%d] = %.4f\n", i, nmt->super_phaseshift65536[i]);
 		}
 	}
 	super_reset(nmt);
 
 	/* dial tone */
-	nmt->dial_phaseshift256 = 256.0 / ((double)nmt->sender.samplerate / DIALTONE_HZ);
-	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", nmt->dial_phaseshift256);
+	nmt->dial_phaseshift65536 = 65536.0 / ((double)nmt->sender.samplerate / DIALTONE_HZ);
+	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", nmt->dial_phaseshift65536);
 
 	/* dtmf */
 	dtmf_init(&nmt->dtmf, 8000);
@@ -305,9 +317,8 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 
 	level = audio_level(spl, max);
 	/* limit level to prevent division by zero */
-	if (level < 0.01)
-		level = 0.01;
-//	level = 0.63662 / 2.0;
+	if (level < 0.001)
+		level = 0.001;
 
 	audio_goertzel(nmt->fsk_goertzel, spl, max, pos, result, 2);
 
@@ -353,9 +364,9 @@ static inline void fsk_decode_step(nmt_t *nmt, int pos)
 		printf("|%s|\n", debug_amplitude(quality));
 #endif
 		/* adjust level, so a peak level becomes 100% */
-		fsk_receive_bit(nmt, bit, quality, level / 0.63662 * 32768.0 / TX_PEAK_FSK);
+		fsk_receive_bit(nmt, bit, quality, level / 0.63662 / TX_PEAK_FSK);
 		if (nmt->dms_call)
-			fsk_receive_bit_dms(nmt, bit, quality, level / 0.63662 * 32768.0 / TX_PEAK_FSK);
+			fsk_receive_bit_dms(nmt, bit, quality, level / 0.63662 / TX_PEAK_FSK);
 		nmt->fsk_filter_sample = 10;
 	}
 }
@@ -368,26 +379,19 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 	audio_goertzel(&nmt->super_goertzel[nmt->supervisory - 1], samples, length, 0, &result[0], 1);
 	audio_goertzel(&nmt->super_goertzel[4], samples, length, 0, &result[1], 1); /* noise floor detection */
 
-#if 0
-	/* normalize levels */
-	result[0] *= 32768.0 / TX_PEAK_SUPER / 0.63662;
-	result[1] *= 32768.0 / TX_PEAK_SUPER / 0.63662;
-	printf("signal=%.4f noise=%.4f\n", result[0], result[1]);
-#endif
-
 	quality = (result[0] - result[1]) / result[0];
 	if (quality < 0)
 		quality = 0;
 
 	if (nmt->state == STATE_ACTIVE)
-		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", result[0] / 0.63662 * 32768.0 / TX_PEAK_SUPER * 100.0, quality * 100.0);
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", result[0] / 0.63662 / TX_PEAK_SUPER * 100.0, quality * 100.0);
 	if (quality > 0.5) {
 		if (nmt->super_detected == 0) {
 			nmt->super_detect_count++;
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 1;
 				nmt->super_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 32768.0 / TX_PEAK_SUPER * 100.0, quality * 100.0);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 / TX_PEAK_SUPER * 100.0, quality * 100.0);
 				nmt_rx_super(nmt, 1, quality);
 			}
 		} else
@@ -497,21 +501,21 @@ int fsk_render_frame(nmt_t *nmt, const char *frame, int length, sample_t *sample
 	int count = 0, i;
 
 	polarity = nmt->fsk_polarity;
-	phaseshift = nmt->fsk_phaseshift256;
-	phase = nmt->fsk_phase256;
+	phaseshift = nmt->fsk_phaseshift65536;
+	phase = nmt->fsk_phase65536;
 	for (i = 0; i < length; i++) {
 		bit = (frame[i] == '1');
 		do {
-			*sample++ = dsp_tone_bit[polarity][bit][(uint8_t)phase];
+			*sample++ = dsp_tone_bit[polarity][bit][(uint16_t)phase];
 			count++;
 			phase += phaseshift;
-		} while (phase < 256.0);
-		phase -= 256.0;
+		} while (phase < 65536.0);
+		phase -= 65536.0;
 		/* flip polarity when we have 1.5 sine waves */
 		if (bit == 0)
 			polarity = 1 - polarity;
 	}
-	nmt->fsk_phase256 = phase;
+	nmt->fsk_phase65536 = phase;
 	nmt->fsk_polarity = polarity;
 
 	/* return number of samples created for frame */
@@ -570,17 +574,17 @@ static void super_encode(nmt_t *nmt, sample_t *samples, int length)
         double phaseshift, phase;
 	int i;
 
-	phaseshift = nmt->super_phaseshift256[nmt->supervisory - 1];
-	phase = nmt->super_phase256;
+	phaseshift = nmt->super_phaseshift65536[nmt->supervisory - 1];
+	phase = nmt->super_phase65536;
 
 	for (i = 0; i < length; i++) {
-		*samples++ += dsp_sine_super[(uint8_t)phase];
+		*samples++ += dsp_sine_super[(uint16_t)phase];
 		phase += phaseshift;
-		if (phase >= 256)
-			phase -= 256;
+		if (phase >= 65536)
+			phase -= 65536;
 	}
 
-	nmt->super_phase256 = phase;
+	nmt->super_phase65536 = phase;
 }
 
 /* Generate audio stream from dial tone. Keep phase for next call of function. */
@@ -589,17 +593,17 @@ static void dial_tone(nmt_t *nmt, sample_t *samples, int length)
         double phaseshift, phase;
 	int i;
 
-	phaseshift = nmt->dial_phaseshift256;
-	phase = nmt->dial_phase256;
+	phaseshift = nmt->dial_phaseshift65536;
+	phase = nmt->dial_phase65536;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_dialtone[(uint8_t)phase];
+		*samples++ = dsp_sine_dialtone[(uint16_t)phase];
 		phase += phaseshift;
-		if (phase >= 256)
-			phase -= 256;
+		if (phase >= 65536)
+			phase -= 65536;
 	}
 
-	nmt->dial_phase256 = phase;
+	nmt->dial_phase65536 = phase;
 }
 
 /* Provide stream of audio toward radio unit */

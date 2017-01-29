@@ -1,8 +1,8 @@
 #include "../common/filter.h"
 
 typedef struct scrambler {
-	double		carrier_phaseshift256;	/* carrier phase shift per sample */
-	double		carrier_phase256;	/* current phase of carrier frequency */
+	double		carrier_phaseshift65536;/* carrier phase shift per sample */
+	double		carrier_phase65536;	/* current phase of carrier frequency */
 	filter_t	lp;			/* filter to remove carrier frequency */
 } scrambler_t;
 

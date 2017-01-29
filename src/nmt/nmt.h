@@ -113,12 +113,12 @@ typedef struct nmt {
 	double			fsk_filter_quality[256];/* quality infos */
 	sample_t		*super_filter_spl;	/* array with sample buffer for supervisory detection */
 	int			super_filter_pos;	/* current sample position in filter_spl */
-	double			super_phaseshift256[4];	/* how much the phase of sine wave changes per sample */
-	double			super_phase256;		/* current phase */
-	double			dial_phaseshift256;	/* how much the phase of sine wave changes per sample */
-	double			dial_phase256;		/* current phase */
-	double			fsk_phaseshift256;	/* how much the phase of fsk synbol changes per sample */
-	double			fsk_phase256;		/* current phase */
+	double			super_phaseshift65536[4];/* how much the phase of sine wave changes per sample */
+	double			super_phase65536;	/* current phase */
+	double			dial_phaseshift65536;	/* how much the phase of sine wave changes per sample */
+	double			dial_phase65536;	/* current phase */
+	double			fsk_phaseshift65536;	/* how much the phase of fsk synbol changes per sample */
+	double			fsk_phase65536;		/* current phase */
 	sample_t		*frame_spl;		/* samples to store a complete rendered frame */
 	int			frame_size;		/* total size of sample buffer */
 	int			frame_length;		/* current length of data in sample buffer */

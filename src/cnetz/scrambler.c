@@ -36,22 +36,22 @@
 #define TEST_1000HZ_DB	55.0
 
 /* sine wave for carrier to modulate to */
-static double carrier[256];
+static double carrier[65536];
 
 void scrambler_init(void)
 {
 	int i;
 
-	for (i = 0; i < 256; i++) {
+	for (i = 0; i < 65536; i++) {
 		/* our amplitude must be doubled, since we have one spectrum above and one below carrier */
-		carrier[i] = sin((double)i / 256.0 * 2 * PI) * 2.0;
+		carrier[i] = sin((double)i / 65536.0 * 2 * PI) * 2.0;
 	}
 }
 
 void scrambler_setup(scrambler_t *scrambler, int samplerate)
 {
 	filter_lowpass_init(&scrambler->lp, CARRIER_HZ - FILTER_BELOW, samplerate, FILTER_TURNS);
-	scrambler->carrier_phaseshift256 = 256.0 / ((double)samplerate / CARRIER_HZ);
+	scrambler->carrier_phaseshift65536 = 65536.0 / ((double)samplerate / CARRIER_HZ);
 }
 
 /* Modulate samples to carriere that is twice the mirror frequency.
@@ -63,18 +63,18 @@ void scrambler(scrambler_t *scrambler, sample_t *samples, int length)
 	double phaseshift, phase;
 	int i;
 
-	phaseshift = scrambler->carrier_phaseshift256;
-	phase = scrambler->carrier_phase256;
+	phaseshift = scrambler->carrier_phaseshift65536;
+	phase = scrambler->carrier_phase65536;
 
 	for (i = 0; i < length; i++) {
 		/* modulate samples to carrier */
-		samples[i] *= carrier[((uint8_t)phase) & 0xff];
+		samples[i] *= carrier[(uint16_t)phase];
 		phase += phaseshift;
-		if (phase >= 256.0)
-			phase -= 256.0;
+		if (phase >= 65536.0)
+			phase -= 65536.0;
 	}
 
-	scrambler->carrier_phase256 = phase;
+	scrambler->carrier_phase65536 = phase;
 
 	/* cut off carrier frequency and modulation above carrier frequency */
 	filter_process(&scrambler->lp, samples, length);

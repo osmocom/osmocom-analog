@@ -11,7 +11,7 @@
 
 #define SAMPLERATE	48000
 
-static double get_level(double *samples)
+static double get_level(sample_t *samples)
 {
 	int i;
 	double envelope = 0;
@@ -23,7 +23,7 @@ static double get_level(double *samples)
 	return envelope;
 }
 
-static void gen_samples(double *samples, double freq)
+static void gen_samples(sample_t *samples, double freq)
 {
 	int i;
 	double value;
@@ -38,7 +38,7 @@ int main(void)
 {
 	filter_t filter_low;
 	filter_t filter_high;
-	double samples[SAMPLERATE];
+	sample_t samples[SAMPLERATE];
 	double level;
 	int iter = 2;
 	int i;

@@ -41,8 +41,6 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->kanal = kanal;
 	sender->sendefrequenz = sendefrequenz;
 	sender->empfangsfrequenz = empfangsfrequenz;
-	sender->bandwidth = 4000; /* default is overwritten by dsp.c */
-	sender->sample_deviation = 0.2; /* default is overwritten by dsp.c */
 	strncpy(sender->audiodev, audiodev, sizeof(sender->audiodev) - 1);
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
@@ -168,21 +166,21 @@ int sender_open_audio(void)
 		}
 
 		if (master->write_rx_wave) {
-			rc = wave_create_record(&master->wave_rx_rec, master->write_rx_wave, master->samplerate, channels);
+			rc = wave_create_record(&master->wave_rx_rec, master->write_rx_wave, master->samplerate, channels, master->max_deviation);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 				return rc;
 			}
 		}
 		if (master->write_tx_wave) {
-			rc = wave_create_record(&master->wave_tx_rec, master->write_tx_wave, master->samplerate, channels);
+			rc = wave_create_record(&master->wave_tx_rec, master->write_tx_wave, master->samplerate, channels, master->max_deviation);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 				return rc;
 			}
 		}
 		if (master->read_rx_wave) {
-			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, master->samplerate, channels);
+			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, master->samplerate, channels, master->max_deviation);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
@@ -190,7 +188,7 @@ int sender_open_audio(void)
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, master->bandwidth, master->sample_deviation);
+		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, master->max_deviation, master->max_modulation);
 		if (!master->audio) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "No audio device!\n");
 			return -EIO;
@@ -223,6 +221,17 @@ void sender_destroy(sender_t *sender)
 	wave_destroy_playback(&sender->wave_rx_play);
 
 	jitter_destroy(&sender->dejitter);
+}
+
+void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double dBm0_deviation, double max_display)
+{
+	sender->max_deviation = max_deviation;
+	sender->max_modulation = max_modulation;
+	sender->dBm0_deviation = dBm0_deviation;
+	sender->max_display = max_display;
+
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Maxium deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Deviation at dBm0 (audio level): %.1f kHz\n", dBm0_deviation / 1000.0);
 }
 
 static void gain_samples(sample_t *samples, int length, double gain)
@@ -278,12 +287,14 @@ cant_recover:
 				sender_send(inst, samples[i], count);
 			/* internal loopback: loop back TX audio to RX */
 			if (inst->loopback == 1) {
-				display_wave(inst, samples[i], count);
+				display_wave(inst, samples[i], count, inst->max_display);
 				sender_receive(inst, samples[i], count);
 			}
 			/* do pre emphasis towards radio */
 			if (inst->pre_emphasis)
 				pre_emphasis(&inst->estate, samples[i], count);
+			/* normal level to frequency deviation of dBm0 */
+			gain_samples(samples[i], count, inst->dBm0_deviation);
 			/* set paging signal */
 			paging_signal[i] = inst->paging_signal;
 			on[i] = inst->paging_on;
@@ -328,6 +339,8 @@ transmit_later:
 
 		/* loop through all channels */
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
+			/* frequency deviation of dBm0 to normal level */
+			gain_samples(samples[i], count, 1.0 / inst->dBm0_deviation);
 			/* rx gain */
 			if (inst->rx_gain != 1.0)
 				gain_samples(samples[i], count, inst->rx_gain);
@@ -337,7 +350,7 @@ transmit_later:
 				de_emphasis(&inst->estate, samples[i], count);
 			}
 			if (inst->loopback != 1) {
-				display_wave(inst, samples[i], count);
+				display_wave(inst, samples[i], count, inst->max_display);
 				sender_receive(inst, samples[i], count);
 			}
 			if (inst->loopback == 3)

@@ -43,9 +43,12 @@ extern int voice_deviation;
 
 #define PI		M_PI
 
-#define BANDWIDTH	5500.0	/* maximum bandwidth */
-#define FSK_DEVIATION	10000
-#define COMPANDOR_0DB	30000
+#define MAX_DEVIATION	4000.0
+#define MAX_MODULATION	5280.0
+#define DBM0_DEVIATION	4000.0	/* deviation of dBm0 at 1 kHz */
+#define COMPANDOR_0DB	1.0	/* A level of 0dBm (1.0) shall be unaccected */
+#define FSK_DEVIATION	(2500.0 / DBM0_DEVIATION) /* no emphasis */
+#define MAX_DISPLAY	1.4	/* something above dBm0, no emphasis */
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
 #define CUT_OFF_OFFSET	300.0	/* cut off frequency for offset filter (level correction between subsequent audio chunks) */
@@ -76,7 +79,7 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 			c = -sqrt(-c);
 		else
 			c = sqrt(c);
-		ramp_down[i] = (int)(c * (double)cnetz->fsk_deviation);
+		ramp_down[i] = c * (double)cnetz->fsk_deviation;
 		ramp_up[i] = -ramp_down[i];
 	}
 }
@@ -90,9 +93,8 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
 
-	/* set deviation and modulation parameters */
-	cnetz->sender.bandwidth = BANDWIDTH;
-	cnetz->sender.sample_deviation = 2500.0 / (double)FSK_DEVIATION;
+	/* set modulation parameters */
+	sender_set_fm(&cnetz->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
 
 	if (measure_speed) {
 		cnetz->measure_speed = measure_speed;
@@ -119,7 +121,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	}
 
 	/* create devation and ramp */
-	cnetz->fsk_deviation = FSK_DEVIATION; /* be sure not to overflow -32767 .. 32767 */
+	cnetz->fsk_deviation = FSK_DEVIATION;
 	dsp_init_ramp(cnetz);
 	cnetz->fsk_noise = noise;
 
@@ -465,7 +467,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		*marker = -32768; /* indicator for inserting speech */
+		*marker = 999; /* marker for inserting speech */
 	}
 	/* add 46 * (1+4+1 + 60) bits */
 	for (i = 0; i < 46; i++) {
@@ -556,7 +558,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		*marker = -32768; /* indicator for inserting speech */
+		*marker = 999; /* marker for inserting speech */
 	}
 
 	/* depending on the number of samples, return the number */
@@ -706,7 +708,7 @@ again:
 	if (length - count < copy)
 		copy = length - count;
 	for (i = 0; i < copy; i++) {
-		if (*spl == -32768) {
+		if (*spl == 999) {
 			/* marker found to insert new chunk of audio */
 			jitter_load(&cnetz->sender.dejitter, speech_buffer, 100);
 			/* 1. compress dynamics */
@@ -722,15 +724,9 @@ again:
 				pre_emphasis(&cnetz->estate, speech_buffer, speech_length);
 			/* change level */
 			if (voice_deviation != 1) {
-				int sample, j;
-				for (j = 0; j < speech_length; j++) {
-					sample = speech_buffer[j] * voice_deviation;
-					if (sample > 32767)
-						sample = 32767;
-					if (sample < -32768)
-						sample = -32768;
-					speech_buffer[j] = sample;
-				}
+				int j;
+				for (j = 0; j < speech_length; j++)
+					speech_buffer[j] *= (double)voice_deviation;
 			}
 			speech_pos = 0;
 		}
@@ -801,7 +797,7 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 	factor = cnetz->offset_factor;
 	for (i = 0; i < count; i++) {
 		/* change level */
-		x = speech_buffer[i] / voice_deviation;
+		x = speech_buffer[i] / (double)voice_deviation;
 		/* high-pass to remove low level frequencies, caused by level jump between audio chunks */
 		y = factor * (y_last + x - x_last);
 		x_last = x;

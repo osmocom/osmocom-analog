@@ -34,9 +34,19 @@
 
 #define PI		3.1415927
 
+/* Notes on TX_PEAK_TONE level:
+ *
+ * At 2000 Hz the deviation shall be 4 kHz, so with emphasis the deviation
+ * at 1000 Hz would be theoretically 2 kHz. This is factor 0.714 below
+ * 2.8 kHz deviation we want at dBm0.
+ */
+
 /* signaling */
-#define BANDWIDTH	5000.0	/* maximum bandwidth */ 
-#define TX_PEAK_TONE	5000.0	/* peak amplitude for all tones */
+#define MAX_DEVIATION	4000.0
+#define MAX_MODULATION	3000.0
+#define DBM0_DEVIATION	2800.0	/* deviation of dBm0 at 1 kHz */
+#define TX_PEAK_TONE	(4000.0 / 2000.0 * 1000.0 / DBM0_DEVIATION)
+#define MAX_DISPLAY	1.4	/* something above dBm0 */
 #define BIT_DURATION	0.010	/* bit length: 10 ms */
 #define FILTER_STEP	0.001	/* step every 1 ms */
 #define METERING_HZ	2900	/* metering pulse frequency */
@@ -54,7 +64,7 @@ static double fsk_bits[2] = {
 };
 
 /* table for fast sine generation */
-static sample_t dsp_sine[256];
+static sample_t dsp_sine[65536];
 
 /* global init for FSK */
 void dsp_init(void)
@@ -62,13 +72,8 @@ void dsp_init(void)
 	int i;
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table.\n");
-	for (i = 0; i < 256; i++) {
-		dsp_sine[i] = (int)(sin((double)i / 256.0 * 2.0 * PI) * TX_PEAK_TONE);
-	}
-
-	if (TX_PEAK_TONE > 32767.0) {
-		fprintf(stderr, "TX_PEAK_TONE definition too high, please fix!\n");
-		abort();
+	for (i = 0; i < 65536; i++) {
+		dsp_sine[i] = sin((double)i / 65536.0 * 2.0 * PI) * TX_PEAK_TONE;
 	}
 }
 
@@ -85,9 +90,8 @@ int dsp_init_sender(bnetz_t *bnetz)
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
-	/* set deviation and modulation parameters */
-	bnetz->sender.bandwidth = BANDWIDTH;
-	bnetz->sender.sample_deviation = 1250.0 / (double)TX_PEAK_TONE; // FIXME: calc real value
+	/* set modulation parameters */
+	sender_set_fm(&bnetz->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
 
 	audio_init_loss(&bnetz->sender.loss, LOSS_INTERVAL, bnetz->sender.loss_volume, LOSS_TIME);
 
@@ -114,8 +118,8 @@ int dsp_init_sender(bnetz_t *bnetz)
 	/* count symbols */
 	for (i = 0; i < 2; i++) {
 		audio_goertzel_init(&bnetz->fsk_goertzel[i], fsk_bits[i], bnetz->sender.samplerate);
-		bnetz->phaseshift256[i] = 256.0 / ((double)bnetz->sender.samplerate / fsk_bits[i]);
-		PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift[%d] = %.4f (must be arround 64 at 8000hz)\n", i, bnetz->phaseshift256[i]);
+		bnetz->phaseshift65536[i] = 65536.0 / ((double)bnetz->sender.samplerate / fsk_bits[i]);
+		PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift[%d] = %.4f (must be arround 64 at 8000hz)\n", i, bnetz->phaseshift65536[i]);
 	}
 
 	return 0;
@@ -241,9 +245,9 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 	// FIXME: better threshold
 	/* adjust level, so we get peak of sine curve */
 	if (level / 0.63 > 0.05 && (softbit > 0.75 || softbit < 0.25)) {
-		fsk_receive_tone(bnetz, bit, 1, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);
+		fsk_receive_tone(bnetz, bit, 1, level / 0.63662 / TX_PEAK_TONE, quality);
 	} else
-		fsk_receive_tone(bnetz, bit, 0, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);
+		fsk_receive_tone(bnetz, bit, 0, level / 0.63662 / TX_PEAK_TONE, quality);
 
 	if (bnetz->fsk_filter_bit != bit) {
 		/* if we have a bit change, reset sample counter to one half bit duration */
@@ -256,7 +260,7 @@ static inline void fsk_decode_step(bnetz_t *bnetz, int pos)
 		printf("|%s|\n", debug_amplitude(quality);
 #endif
 		/* adjust level, so we get peak of sine curve */
-		fsk_receive_bit(bnetz, bit, level / 0.63662 * 32768.0 / TX_PEAK_TONE, quality);
+		fsk_receive_bit(bnetz, bit, level / 0.63662 / TX_PEAK_TONE, quality);
 		bnetz->fsk_filter_sample = 10;
 	}
 }
@@ -308,17 +312,17 @@ static void fsk_tone(bnetz_t *bnetz, sample_t *samples, int length, int tone)
 	double phaseshift, phase;
 	int i;
 
-	phase = bnetz->phase256;
-	phaseshift = bnetz->phaseshift256[tone];
+	phase = bnetz->phase65536;
+	phaseshift = bnetz->phaseshift65536[tone];
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine[(uint8_t)phase];
+		*samples++ = dsp_sine[(uint16_t)phase];
 		phase += phaseshift;
-		if (phase >= 256)
-			phase -= 256;
+		if (phase >= 65536)
+			phase -= 65536;
 	}
 
-	bnetz->phase256 = phase;
+	bnetz->phase65536 = phase;
 }
 
 static int fsk_telegramm(bnetz_t *bnetz, sample_t *samples, int length)
@@ -342,17 +346,17 @@ next_telegramm:
 		bnetz->telegramm_pos = 0;
 		spl = bnetz->telegramm_spl;
 		/* render telegramm */
-		phase = bnetz->phase256;
+		phase = bnetz->phase65536;
 		for (i = 0; i < 16; i++) {
-			phaseshift = bnetz->phaseshift256[telegramm[i] == '1'];
+			phaseshift = bnetz->phaseshift65536[telegramm[i] == '1'];
 			for (j = 0; j < bnetz->samples_per_bit; j++) {
-				*spl++ = dsp_sine[(uint8_t)phase];
+				*spl++ = dsp_sine[(uint16_t)phase];
 				phase += phaseshift;
-				if (phase >= 256)
-					phase -= 256;
+				if (phase >= 65536)
+					phase -= 65536;
 			}
 		}
-		bnetz->phase256 = phase;
+		bnetz->phase65536 = phase;
 	}
 
 	/* send audio from telegramm */

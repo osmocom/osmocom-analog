@@ -27,6 +27,7 @@
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;
 	int pchannels, cchannels;
+	double spl_deviation;		/* how much deviation is one sample step */
 	double paging_phaseshift;	/* phase to shift every sample */
 	double paging_phase;	 	/* current phase */
 } sound_t;
@@ -131,7 +132,7 @@ static int sound_prepare(sound_t *sound)
 	return 0;
 }
 
-void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, double __attribute__((unused)) paging_frequency, int samplerate, double __attribute__((unused)) bandwidth, double __attribute__((unused)) sample_deviation)
+void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, double __attribute__((unused)) paging_frequency, int samplerate, double max_deviation, double __attribute__((unused)) max_modulation)
 {
 	sound_t *sound;
 	int rc;
@@ -147,6 +148,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 		return NULL;
 	}
 
+	sound->spl_deviation = max_deviation / 32767.0;
 	sound->paging_phaseshift = 1.0 / ((double)samplerate / 1000.0);
 
 	rc = snd_pcm_open(&sound->phandle, audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
@@ -252,6 +254,7 @@ static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum p
 int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *paging_signal, int *on, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
+	double spl_deviation = sound->spl_deviation;
 	int32_t value;
 	int16_t buff[num << 1];
 	int rc;
@@ -263,7 +266,7 @@ int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *pag
 			int16_t paging[num << 1];
 			gen_paging_tone(sound, paging, num, paging_signal[0], on[0]);
 			for (i = 0, ii = 0; i < num; i++) {
-				value = samples[0][i];
+				value = samples[0][i] / spl_deviation;
 				if (value > 32767)
 					value = 32767;
 				else if (value < -32767)
@@ -273,13 +276,13 @@ int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *pag
 			}
 		} else if (channels == 2) {
 			for (i = 0, ii = 0; i < num; i++) {
-				value = samples[0][i];
+				value = samples[0][i] / spl_deviation;
 				if (value > 32767)
 					value = 32767;
 				else if (value < -32767)
 					value = -32767;
 				buff[ii++] = value;
-				value = samples[1][i];
+				value = samples[1][i] / spl_deviation;
 				if (value > 32767)
 					value = 32767;
 				else if (value < -32767)
@@ -288,7 +291,7 @@ int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *pag
 			}
 		} else {
 			for (i = 0, ii = 0; i < num; i++) {
-				value = samples[0][i];
+				value = samples[0][i] / spl_deviation;
 				if (value > 32767)
 					value = 32767;
 				else if (value < -32767)
@@ -300,7 +303,7 @@ int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *pag
 	} else {
 		/* one channel */
 		for (i = 0, ii = 0; i < num; i++) {
-			value = samples[0][i];
+			value = samples[0][i] / spl_deviation;
 			if (value > 32767)
 				value = 32767;
 			else if (value < -32767)
@@ -328,6 +331,7 @@ int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *pag
 int sound_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
+	double spl_deviation = sound->spl_deviation;
 	int16_t buff[num << 1];
 	int32_t spl;
 	int in, rc;
@@ -361,17 +365,17 @@ int sound_read(void *inst, sample_t **samples, int num, int channels)
 			for (i = 0, ii = 0; i < rc; i++) {
 				spl = buff[ii++];
 				spl += buff[ii++];
-				samples[0][i] = (sample_t)spl;
+				samples[0][i] = (double)spl * spl_deviation;
 			}
 		} else {
 			for (i = 0, ii = 0; i < rc; i++) {
-				samples[0][i] = (sample_t)buff[ii++];
-				samples[1][i] = (sample_t)buff[ii++];
+				samples[0][i] = (double)buff[ii++] * spl_deviation;
+				samples[1][i] = (double)buff[ii++] * spl_deviation;
 			}
 		}
 	} else {
 		for (i = 0, ii = 0; i < rc; i++) {
-			samples[0][i] = (sample_t)buff[ii++];
+			samples[0][i] = (double)buff[ii++] * spl_deviation;
 		}
 	}
 

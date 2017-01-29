@@ -4,8 +4,8 @@ typedef struct dtmf {
 	char	tone;			/* current tone to be played */
 	int	pos;			/* sample counter for tone */
 	int	max;			/* max number of samples for tone duration */
-	double	phaseshift256[2];	/* how much the phase of sine wave changes per sample */
-	double	phase256[2];		/* current phase */
+	double	phaseshift65536[2];	/* how much the phase of sine wave changes per sample */
+	double	phase65536[2];		/* current phase */
 } dtmf_t;
 
 void dtmf_init(dtmf_t *dtmf, int samplerate);

@@ -124,7 +124,7 @@ int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sam
 
 	if (input == output) {
 		/* copy samples */
-		for (i = 0; i < input_num; i++)
+		for (i = 0; i < output_num; i++)
 			*output++ = samples[i];
 	}
 

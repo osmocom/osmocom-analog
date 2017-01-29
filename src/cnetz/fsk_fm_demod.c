@@ -148,7 +148,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 		goto error;
 	}
 
-	fsk->level_threshold = 655;
+	fsk->level_threshold = 0.1;
 
 	return 0;
 
@@ -170,9 +170,10 @@ void fsk_fm_exit(fsk_fm_demod_t *fsk)
 }
 
 /* get levels, sync time and jitter from sync sequence or frame data */
-static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_avg, int *_probes, int num, double *_time, double *_jitter)
+static inline void get_levels(fsk_fm_demod_t *fsk, double *_min, double *_max, double *_avg, int *_probes, int num, double *_time, double *_jitter)
 {
-	int min = 32767, max = -32768, avg = 0, count = 0, level;
+	int count = 0;
+	double min = 0, max = 0, avg = 0, level;
 	double time = 0, t, sync_average, sync_time, jitter = 0;
 	int bit_offset;
 	int i;
@@ -192,19 +193,20 @@ static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_a
 		if (t > BITS_PER_SUPERFRAME / 2)
 			t -= BITS_PER_SUPERFRAME;
 //if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V)
-//	printf("%d: level=%d%% @%.2f difference=%.2f\n", bit_offset, level * 100 / 65536, fsk->change_when[(fsk->change_pos - 1 - i) & 0xff], t);
+//	printf("%d: level=%.0f%% @%.2f difference=%.2f\n", bit_offset, level * 100, fsk->change_when[(fsk->change_pos - 1 - i) & 0xff], t);
 		time += t;
 
-		if (level < min)
+		if (i == 0 || level < min)
 			min = level;
-		if (level > max)
+		if (i == 0 || level > max)
 			max = level;
 		avg += level;
 		count++;
 	}
 
+	/* should never happen */
 	if (!count) {
-		*_min = *_max = *_avg = 0;
+		*_min = *_max = *_avg = 0.0;
 		return;
 	}
 
@@ -219,7 +221,7 @@ static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_a
 	*_probes = count;
 	*_min = min;
 	*_max = max;
-	*_avg = avg / count;
+	*_avg = avg / (double)count;
 
 	if (_time) {
 //		if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V)
@@ -254,15 +256,16 @@ static inline void get_levels(fsk_fm_demod_t *fsk, int *_min, int *_max, int *_a
 	}
 }
 
-static inline void got_bit(fsk_fm_demod_t *fsk, int bit, int change_level)
+static inline void got_bit(fsk_fm_demod_t *fsk, int bit, double change_level)
 {
-	int min, max, avg, probes;
+	int probes;
+	double min, max, avg;
 
 	/* count bits, but do not exceed 4 bits per SPK block */
 	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* for first bit, we have only half of the modulation deviation, so we multiply level by two */
 		if (fsk->bit_count == 0)
-			change_level *= 2;
+			change_level *= 2.0;
 		if (fsk->bit_count == 4)
 			return;
 	}
@@ -284,20 +287,20 @@ static inline void got_bit(fsk_fm_demod_t *fsk, int bit, int change_level)
 		 * for all other bits in the sync sequence.
 		 * after sync, the theshold is set to half of the average of
 		 * all changes in the sync sequence */
-		if (change_level) {
-			fsk->level_threshold = (double)change_level / 2.0;
+		if (change_level > 0.0) {
+			fsk->level_threshold = change_level / 2.0;
 		} else if ((fsk->rx_sync & 0x1f) == 0x00 || (fsk->rx_sync & 0x1f) == 0x1f) {
 			if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V)
-				fsk->level_threshold = 655;
+				fsk->level_threshold = 0.01;
 		}
 		if (detect_sync(fsk->rx_sync)) {
 			fsk->sync = FSK_SYNC_POSITIVE;
 got_sync:
 			get_levels(fsk, &min, &max, &avg, &probes, 30, &fsk->sync_time, &fsk->sync_jitter);
-			fsk->sync_level = (double)avg / 65535.0;
+			fsk->sync_level = avg / 2.0;
 			if (fsk->sync == FSK_SYNC_NEGATIVE)
 				fsk->sync_level = -fsk->sync_level;
-//			printf("sync (change min=%d%% max=%d%% avg=%d%% sync_time=%.2f jitter=%.2f probes=%d)\n", min * 100 / 65535, max * 100 / 65535, avg * 100 / 65535, fsk->sync_time, fsk->sync_jitter, probes);
+//			printf("sync (change min=%.0f%% max=%.0f%% avg=%.0f%% sync_time=%.2f jitter=%.2f probes=%d)\n", min * 100, max * 100, avg * 100, fsk->sync_time, fsk->sync_jitter, probes);
 			fsk->level_threshold = (double)avg / 2.0;
 			fsk->rx_sync = 0;
 			fsk->rx_buffer_count = 0;
@@ -342,6 +345,10 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 	change_at = -1;
 	change_positive = -1;
 
+	/* get level range (level_min and level_max) and also
+	 * get maximum slope (change_max) and where it was
+	 * (change_at) and what direction it went (change_positive)
+	 */
 	for (i = 0; i < fsk->bit_buffer_len; i++) {
 		last_s = s;
 		s = fsk->bit_buffer_spl[fsk->bit_buffer_pos++];
@@ -417,7 +424,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 		if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 #ifdef DEBUG_DECODER
 			DEBUG_DECODER
-				puts(debug_amplitude(samples[i] / 32768.0));
+				puts(debug_amplitude(samples[i]));
 #endif
 			find_change(fsk);
 		} else {
@@ -441,7 +448,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 			if (t >= 0.5 && t < 5.5) {
 #ifdef DEBUG_DECODER
 				DEBUG_DECODER
-					puts(debug_amplitude(samples[i] / 32768.0));
+					puts(debug_amplitude(samples[i]));
 #endif
 				find_change(fsk);
 			} else

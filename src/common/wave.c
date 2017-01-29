@@ -34,7 +34,7 @@ struct fmt {
 	uint16_t	bits_sample; /* bits per sample (one channel) */
 };
 
-int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, int channels)
+int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, int channels, double max_deviation)
 {
 	/* RIFFxxxxWAVEfmt xxxx(fmt size)dataxxxx... */
 	char dummyheader[4 + 4 + 4 + 4 + 4 + sizeof(struct fmt) + 4 + 4];
@@ -43,6 +43,7 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 	memset(rec, 0, sizeof(*rec));
 	rec->samplerate = samplerate;
 	rec->channels = channels;
+	rec->max_deviation = max_deviation;
 
 	rec->fp = fopen(filename, "w");
 	if (!rec->fp) {
@@ -58,7 +59,7 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 	return 0;
 }
 
-int wave_create_playback(wave_play_t *play, const char *filename, int samplerate, int channels)
+int wave_create_playback(wave_play_t *play, const char *filename, int samplerate, int channels, double max_deviation)
 {
 	uint8_t buffer[256];
 	struct fmt fmt;
@@ -68,6 +69,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 
 	memset(play, 0, sizeof(*play));
 	play->channels = channels;
+	play->max_deviation = max_deviation;
 
 	play->fp = fopen(filename, "r");
 	if (!play->fp) {
@@ -196,6 +198,8 @@ error:
 
 int wave_read(wave_play_t *play, sample_t **samples, int length)
 {
+	double max_deviation = play->max_deviation;
+	int16_t value; /* must be int16, so assembling bytes work */
 	uint8_t buff[2 * length * play->channels];
 	int __attribute__((__unused__)) len;
 	int i, j, c;
@@ -212,11 +216,12 @@ int wave_read(wave_play_t *play, sample_t **samples, int length)
 	if (!play->left)
 		printf("*** Finished reading WAVE file.\n");
 
-	/* read and correct endiness */
+	/* read and correct endianness */
 	len = fread(buff, 1, 2 * length * play->channels, play->fp);
 	for (i = 0, j = 0; i < length; i++) {
 		for (c = 0; c < play->channels; c++) {
-			samples[c][i] = (double)(buff[j] + (buff[j + 1] << 8));
+			value = buff[j] + (buff[j + 1] << 8);
+			samples[c][i] = (double)value / 32767.0 * max_deviation;
 			j += 2;
 		}
 	}
@@ -226,15 +231,16 @@ int wave_read(wave_play_t *play, sample_t **samples, int length)
 
 int wave_write(wave_rec_t *rec, sample_t **samples, int length)
 {
+	double max_deviation = rec->max_deviation;
 	int32_t value;
 	uint8_t buff[2 * length * rec->channels];
 	int __attribute__((__unused__)) len;
 	int i, j, c;
 
-	/* write and correct endiness */
+	/* write and correct endianness */
 	for (i = 0, j = 0; i < length; i++) {
 		for (c = 0; c < rec->channels; c++) {
-			value = samples[c][i];
+			value = samples[c][i] / max_deviation * 32767.0;
 			if (value > 32767)
 				value = 32767;
 			else if (value < -32767)

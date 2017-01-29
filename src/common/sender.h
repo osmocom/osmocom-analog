@@ -31,8 +31,12 @@ typedef struct sender {
 	double			sendefrequenz;		/* transmitter frequency */
 	double			empfangsfrequenz;	/* receiver frequency */
 	double			ruffrequenz;		/* special paging frequency used for B-Netz */
-	double			bandwidth;		/* max NF frequency to be transmitted unaffected by filtering */
-	double			sample_deviation;	/* frequency deviation of one sample step (after pre-emphasis) */
+
+	/* fm levels */
+	double			max_deviation;		/* max frequency deviation */
+	double			max_modulation;		/* max frequency modulated */
+	double			dBm0_deviation;		/* deviation of 1000 Hz reference tone at dBm0 */
+	double			max_display;		/* level of displaying wave form */
 
 	/* audio */
 	void			*audio;
@@ -85,6 +89,7 @@ extern int cant_recover;
 
 int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum paging_signal paging_signal);
 void sender_destroy(sender_t *sender);
+void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double dBm0_deviation, double max_display);
 int sender_open_audio(void);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, sample_t *samples, int count);

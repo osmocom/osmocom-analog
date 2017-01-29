@@ -15,7 +15,7 @@ typedef struct emphasis {
 #define CUT_OFF_EMPHASIS_DEFAULT 300.0
 
 int init_emphasis(emphasis_t *state, int samplerate, double cut_off);
-void pre_emphasis(emphasis_t *state, double *samples, int num);
-void de_emphasis(emphasis_t *state, double *samples, int num);
-void dc_filter(emphasis_t *state, double *samples, int num);
+void pre_emphasis(emphasis_t *state, sample_t *samples, int num);
+void de_emphasis(emphasis_t *state, sample_t *samples, int num);
+void dc_filter(emphasis_t *state, sample_t *samples, int num);
 

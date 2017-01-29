@@ -35,6 +35,9 @@
 /* Minimum level value to keep state */
 #define ENVELOPE_MIN	0.001
 
+/* Maximum level, to prevent sqrt_tab to overflow */
+#define ENVELOPE_MAX	9.990
+
 static double sqrt_tab[10000];
 
 /*
@@ -43,7 +46,7 @@ static double sqrt_tab[10000];
  * Hopefully this is correct
  *
  */
-void init_compandor(compandor_t *state, int samplerate, double attack_ms, double recovery_ms, int unaffected_level)
+void init_compandor(compandor_t *state, int samplerate, double attack_ms, double recovery_ms, double unaffected_level)
 {
 	int i;
 
@@ -95,6 +98,8 @@ void compress_audio(compandor_t *state, sample_t *samples, int num)
 			envelope = peak;
 		if (envelope < ENVELOPE_MIN)
 			envelope = ENVELOPE_MIN;
+		if (envelope > ENVELOPE_MAX)
+			envelope = ENVELOPE_MAX;
 
 		value = value / sqrt_tab[(int)(envelope / 0.001)];
 //if (i > 47000.0 && i < 48144)

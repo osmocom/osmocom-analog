@@ -135,14 +135,14 @@ typedef struct amps {
 	goertzel_t		sat_goertzel[5];	/* filter for SAT signal decoding */
 	sample_t		*sat_filter_spl;	/* array with sample buffer for supervisory detection */
 	int			sat_filter_pos;		/* current sample position in filter_spl */
-	double			sat_phaseshift256[3];	/* how much the phase of sine wave changes per sample */
-	double			sat_phase256;		/* current phase */
+	double			sat_phaseshift65536[3];	/* how much the phase of sine wave changes per sample */
+	double			sat_phase65536;		/* current phase */
 	int			sat_detected;		/* current detection state flag */
 	int			sat_detect_count;	/* current number of consecutive detections/losses */
 	int			sig_detected;		/* current detection state flag */
 	int			sig_detect_count;	/* current number of consecutive detections/losses */
-	double			test_phaseshift256;	/* how much the phase of sine wave changes per sample */
-	double			test_phase256;		/* current phase */
+	double			test_phaseshift65536;	/* how much the phase of sine wave changes per sample */
+	double			test_phase65536;	/* current phase */
 
 	transaction_t		*trans_list;		/* list of transactions */
 

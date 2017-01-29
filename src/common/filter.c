@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include "sample.h"
 #include "filter.h"
 
 #define PI M_PI
@@ -65,7 +66,7 @@ void filter_highpass_init(filter_t *bq, double frequency, int samplerate, int it
 	bq->b2 = (1 - K / Q + K * K) * norm;
 }
 
-void filter_process(filter_t *bq, double *samples, int length)
+void filter_process(filter_t *bq, sample_t *samples, int length)
 {
 	double a0, a1, a2, b1, b2;
 	double *z1, *z2;

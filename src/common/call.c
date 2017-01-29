@@ -35,6 +35,23 @@
 
 #define DISC_TIMEOUT	30
 
+//#define DEBUG_LEVEL
+
+#ifdef DEBUG_LEVEL
+static double level_of(double *samples, int count)
+{
+	double level = 0;
+	int i;
+
+	for (i = 0; i < count; i++) {
+		if (samples[i] > level)
+			level = samples[i];
+	}
+
+	return level;
+}
+#endif
+
 /* stream patterns/announcements */
 int16_t *test_spl = NULL;
 int16_t *ringback_spl = NULL;
@@ -221,7 +238,7 @@ static void get_test_patterns(int16_t *samples, int length)
 		if (pos >= size)
 			*samples++ = 0;
 		else
-			*samples++ = spl[pos] >> 1;
+			*samples++ = spl[pos] >> 2;
 		if (++pos == max)
 			pos = 0;
 	}
@@ -477,7 +494,8 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 		return 0;
 
 	/* open sound device for call control */
-	call.sound = sound_open(audiodev, NULL, NULL, 1, 0.0, samplerate, 3700.0, 0.0);
+	/* use +3.17 dBm0 (factor 1.44) for complete range of sound card */
+	call.sound = sound_open(audiodev, NULL, NULL, 1, 0.0, samplerate, 1.44, 4000.0);
 	if (!call.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 
@@ -677,7 +695,6 @@ void process_call(int c)
 		default:
 			jitter_load(&call.dejitter, samples, count);
 		}
-		samples_to_int16(spl, samples, count);
 		samples_list[0] = samples;
 		rc = sound_write(call.sound, samples_list, count, NULL, NULL, 1);
 		if (rc < 0) {
@@ -904,8 +921,6 @@ void call_in_release(int callref, int cause)
 /* forward audio to MNCC or call instance */
 void call_tx_audio(int callref, sample_t *samples, int count)
 {
-	int16_t spl[count];
-
 	if (!callref)
 		return;
 
@@ -920,6 +935,10 @@ void call_tx_audio(int callref, sample_t *samples, int count)
 		/* forward audio */
 		data->msg_type = ANALOG_8000HZ;
 		data->callref = callref;
+#ifdef DEBUG_LEVEL
+		double lev = level_of(samples, count);
+		printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
+#endif
 		samples_to_int16((int16_t *)data->data, samples, count);
 
 		mncc_write(buf, sizeof(buf));
@@ -934,6 +953,7 @@ void call_tx_audio(int callref, sample_t *samples, int count)
 	} else
 	/* else, if no sound is used, send test tone to mobile */
 	if (call.state == CALL_CONNECT) {
+		int16_t spl[count];
 		get_test_patterns(spl, count);
 		int16_to_samples(samples, spl, count);
 		call_rx_audio(callref, samples, count);
@@ -953,6 +973,13 @@ void call_mncc_clock(void)
 			data->callref = process->callref;
 			/* try to get patterns, else copy the samples we got */
 			get_process_patterns(process, (int16_t *)data->data, 160);
+#ifdef DEBUG_LEVEL
+			sample_t samples[160];
+			int16_to_samples(samples, (int16_t *)data->data, 160);
+			double lev = level_of(samples, 160);
+			printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
+			samples_to_int16((int16_t *)data->data, samples, 160);
+#endif
 			mncc_write(buf, sizeof(buf));
 		}
 		process = process->next;
@@ -978,6 +1005,10 @@ void call_mncc_recv(uint8_t *buf, int length)
 		if (is_process_pattern(data->callref))
 			return;
 		int16_to_samples(samples, (int16_t *)data->data, count);
+#ifdef DEBUG_LEVEL
+		double lev = level_of(samples, count);
+		printf("festnetz-level: %s                  %.4f\n", debug_db(lev), (20 * log10(lev)));
+#endif
 		call_rx_audio(data->callref, samples, count);
 		return;
 	}

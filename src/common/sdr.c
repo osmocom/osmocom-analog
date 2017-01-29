@@ -47,7 +47,6 @@ typedef struct sdr {
 	sdr_chan_t *chan;	/* settings for all channels */
 	int paging_channel;	/* if set, points to paging channel */
 	sdr_chan_t paging_chan;	/* settings for extra paging channel */
-	double spl_deviation;	/* how to convert a sample step into deviation (Hz) */
 	int channels;		/* number of frequencies */
 	double samplerate;	/* IQ rate */
 	double amplitude;	/* amplitude of each carrier */
@@ -84,14 +83,18 @@ int sdr_init(const char *device_args, double rx_gain, double tx_gain, const char
 	return 0;
 }
 
-void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int channels, double paging_frequency, int samplerate, double bandwidth, double sample_deviation)
+void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int channels, double paging_frequency, int samplerate, double max_deviation, double max_modulation)
 {
 	sdr_t *sdr;
+	double bandwidth;
 	double tx_center_frequency, rx_center_frequency;
 	int rc;
 	int c;
 
 	display_iq_init(samplerate);
+
+	bandwidth = 2.0 * (max_deviation + max_modulation);
+	PDEBUG(DSDR, DEBUG_INFO, "Using Bandwidth of 2 * (%.1f + %.1f) = %.1f\n", max_deviation / 1000, max_modulation / 1000, bandwidth / 1000);
 
 	if (channels < 1) {
 		PDEBUG(DSDR, DEBUG_ERROR, "No channel given, please fix!\n");
@@ -105,7 +108,6 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 	sdr->channels = channels;
 	sdr->samplerate = samplerate;
-	sdr->spl_deviation = sample_deviation;
 	sdr->amplitude = 0.4 / (double)channels; // FIXME: actual amplitude 0.1?
 
 	/* special case where we use a paging frequency */
@@ -124,8 +126,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz, RX = %.6f MHz\n", c, tx_frequency[c] / 1e6, rx_frequency[c] / 1e6);
 		sdr->chan[c].tx_frequency = tx_frequency[c];
 		sdr->chan[c].rx_frequency = rx_frequency[c];
-		filter_lowpass_init(&sdr->chan[c].rx_lp[0], bandwidth, samplerate, 1);
-		filter_lowpass_init(&sdr->chan[c].rx_lp[1], bandwidth, samplerate, 1);
+		filter_lowpass_init(&sdr->chan[c].rx_lp[0], bandwidth / 2.0, samplerate, 1);
+		filter_lowpass_init(&sdr->chan[c].rx_lp[1], bandwidth / 2.0, samplerate, 1);
 	}
 	if (sdr->paging_channel) {
 		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
@@ -190,21 +192,21 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB, RX %.1f dB\n", sdr_tx_gain, sdr_rx_gain);
 
 	if (sdr_write_iq_rx_wave) {
-		rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2);
+		rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2, 1.0);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto error;
 		}
 	}
 	if (sdr_write_iq_tx_wave) {
-		rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2);
+		rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2, 1.0);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto error;
 		}
 	}
 	if (sdr_read_iq_rx_wave) {
-		rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2);
+		rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2, 1.0);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 			goto error;
@@ -269,7 +271,7 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 		/* modulate */
 		for (s = 0, ss = 0; s < num; s++) {
 			/* deviation is defined by the sample value and the offset */
-			dev = offset + (double)samples[c][s] * sdr->spl_deviation;
+			dev = offset + samples[c][s];
 #ifdef FAST_SINE
 			phase += 256.0 * dev / rate;
 			if (phase < 0.0)
@@ -294,20 +296,8 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 	if (sdr->wave_tx_rec.fp) {
 		sample_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
 		for (s = 0, ss = 0; s < num; s++) {
-			if (buff[ss] >= 1.0)
-				spl[0][s] = 32767.0;
-			else if (buff[ss] <= -1.0)
-				spl[0][s] = -32767.0;
-			else
-				spl[0][s] = 32767.0 * buff[ss];
-			ss++;
-			if (buff[ss] >= 1.0)
-				spl[1][s] = 32767.0;
-			else if (buff[ss] <= -1.0)
-				spl[1][s] = -32767.0;
-			else
-				spl[1][s] = 32767.0 * buff[ss];
-			ss++;
+			spl[0][s] = buff[ss++];
+			spl[1][s] = buff[ss++];
 		}
 		wave_write(&sdr->wave_tx_rec, spl_list, num);
 	}
@@ -325,7 +315,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
-	double I[num], Q[num], i, q;
+	sample_t I[num], Q[num], i, q;
 	int count;
 	int c, s, ss;
 	double phase, rot, last_phase, dev, rate;
@@ -341,20 +331,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 	if (sdr->wave_rx_rec.fp) {
 		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
 		for (s = 0, ss = 0; s < count; s++) {
-			if (buff[ss] >= 1.0)
-				spl[0][s] = 32767.0;
-			else if (buff[ss] <= -1.0)
-				spl[0][s] = -32767.0;
-			else
-				spl[0][s] = 32767.0 * buff[ss];
-			ss++;
-			if (buff[ss] >= 1.0)
-				spl[1][s] = 32767.0;
-			else if (buff[ss] <= -1.0)
-				spl[1][s] = -32767.0;
-			else
-				spl[1][s] = 32767.0 * buff[ss];
-			ss++;
+			spl[0][s] = buff[ss++];
+			spl[1][s] = buff[ss++];
 		}
 		wave_write(&sdr->wave_rx_rec, spl_list, count);
 	}
@@ -362,8 +340,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
 		wave_read(&sdr->wave_rx_play, spl_list, count);
 		for (s = 0, ss = 0; s < count; s++) {
-			buff[ss++] = spl[0][s] / 32767.0;
-			buff[ss++] = spl[1][s] / 32767.0;
+			buff[ss++] = spl[0][s];
+			buff[ss++] = spl[1][s];
 		}
 	}
 	display_iq(buff, count);
@@ -391,7 +369,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 			else if (dev > 0.49)
 				dev -= 1.0;
 			dev *= rate;
-			samples[c][s] = dev / sdr->spl_deviation;
+			samples[c][s] = dev;
 		}
 		sdr->chan[c].rx_last_phase = last_phase;
 	}

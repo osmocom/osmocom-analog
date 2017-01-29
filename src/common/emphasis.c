@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include "sample.h"
 #include "filter.h"
 #include "emphasis.h"
 #include "debug.h"
@@ -29,7 +30,7 @@
 
 #define CUT_OFF_H	100.0	/* cut-off frequency for high-pass filter */
 
-static void gen_sine(double *samples, int num, int samplerate, double freq)
+static void gen_sine(sample_t *samples, int num, int samplerate, double freq)
 {
 	int i;
 
@@ -37,7 +38,7 @@ static void gen_sine(double *samples, int num, int samplerate, double freq)
 		samples[i] = cos(2.0 * M_PI * freq / (double)samplerate * (double)i);
 }
 
-static double get_level(double *samples, int num)
+static double get_level(sample_t *samples, int num)
 {
 	int i;
 	double envelope = 0;
@@ -52,7 +53,7 @@ static double get_level(double *samples, int num)
 int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 {
 	double factor;
-	double test_samples[samplerate / 10];
+	sample_t test_samples[samplerate / 10];
 
 	memset(state, 0, sizeof(*state));
 
@@ -78,7 +79,7 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 	return 0;
 }
 
-void pre_emphasis(emphasis_t *state, double *samples, int num)
+void pre_emphasis(emphasis_t *state, sample_t *samples, int num)
 {
 	double x, y, x_last, factor, amp;
 	int i;
@@ -101,7 +102,7 @@ void pre_emphasis(emphasis_t *state, double *samples, int num)
 	state->p.x_last = x_last;
 }
 
-void de_emphasis(emphasis_t *state, double *samples, int num)
+void de_emphasis(emphasis_t *state, sample_t *samples, int num)
 {
 	double x, y, y_last, factor, amp;
 	int i;
@@ -125,7 +126,7 @@ void de_emphasis(emphasis_t *state, double *samples, int num)
 }
 
 /* high pass filter to remove DC and low frequencies */
-void dc_filter(emphasis_t *state, double *samples, int num)
+void dc_filter(emphasis_t *state, sample_t *samples, int num)
 {
 	filter_process(&state->d.hp, samples, num);
 }

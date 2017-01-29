@@ -99,10 +99,13 @@
 
 #define PI			M_PI
 
-#define BANDWIDTH		20000.0	/* maximum bandwidth */
-#define FSK_DEVIATION		32767.0	/* +-8 KHz */
-#define SAT_DEVIATION		8192.0	/* +-2 KHz */
-#define COMPANDOR_0DB		45000	/* works quite well */
+#define MAX_DEVIATION		8000.0
+#define MAX_MODULATION		10000.0
+#define DBM0_DEVIATION		2900.0  /* deviation of dBm0 at 1 kHz */
+#define COMPANDOR_0DB		1.0     /* A level of 0dBm (1.0) shall be unaccected */
+#define FSK_DEVIATION		(8000.0 / DBM0_DEVIATION)	/* no emphasis */
+#define SAT_DEVIATION		(2000.0 / DBM0_DEVIATION)	/* no emphasis */
+#define MAX_DISPLAY		(8000.0 / DBM0_DEVIATION)	/* no emphasis */
 #define BITRATE			10000
 #define SIG_TONE_CROSSINGS	2000	/* 2000 crossings are 100ms @ 10 KHz */
 #define SIG_TONE_MINBITS	950	/* minimum bit durations to detect signaling tone (1000 is perfect for 100 ms) */
@@ -116,7 +119,7 @@
 #define CUT_OFF_HIGHPASS	300.0   /* cut off frequency for high pass filter to remove dc level from sound card / sample */
 #define BEST_QUALITY		0.68	/* Best possible RX quality */
 
-static int16_t ramp_up[256], ramp_down[256];
+static sample_t ramp_up[256], ramp_down[256];
 
 static double sat_freq[5] = {
 	5970.0,
@@ -126,8 +129,8 @@ static double sat_freq[5] = {
 	10000.0, /* signaling tone */
 };
 
-static int dsp_sine_sat[256];
-static int dsp_sine_test[256];
+static sample_t dsp_sine_sat[65536];
+static sample_t dsp_sine_test[65536];
 
 static uint8_t dsp_sync_check[0x800];
 
@@ -138,10 +141,10 @@ void dsp_init(void)
 	double s;
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for SAT signal.\n");
-	for (i = 0; i < 256; i++) {
-		s = sin((double)i / 256.0 * 2.0 * PI);
-		dsp_sine_sat[i] = (int)(s * SAT_DEVIATION);
-		dsp_sine_test[i] = (int)(s * FSK_DEVIATION);
+	for (i = 0; i < 65536; i++) {
+		s = sin((double)i / 65536.0 * 2.0 * PI);
+		dsp_sine_sat[i] = s * SAT_DEVIATION;
+		dsp_sine_test[i] = s * FSK_DEVIATION;
 	}
 
 	/* sync checker */
@@ -170,7 +173,7 @@ static void dsp_init_ramp(amps_t *amps)
 		else
 			c = sqrt(c);
 #endif
-		ramp_down[i] = (int)(c * (double)amps->fsk_deviation);
+		ramp_down[i] = c * (double)amps->fsk_deviation;
 		ramp_up[i] = -ramp_down[i];
 	}
 }
@@ -190,9 +193,8 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
 
-	/* set deviation and modulation parameters */
-	amps->sender.bandwidth = BANDWIDTH;
-	amps->sender.sample_deviation = 8000.0 / (double)FSK_DEVIATION;
+	/* set modulation parameters */
+	sender_set_fm(&amps->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
 
 	if (amps->sender.samplerate < 96000) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 96000 Hz to process FSK and SAT signals.\n");
@@ -229,7 +231,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->fsk_rx_window = spl;
 
 	/* create devation and ramp */
-	amps->fsk_deviation = FSK_DEVIATION; /* be sure not to overflow 32767 */
+	amps->fsk_deviation = FSK_DEVIATION;
 	dsp_init_ramp(amps);
 
 	/* allocate ring buffer for SAT signal detection */
@@ -245,15 +247,15 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	for (i = 0; i < 5; i++) {
 		audio_goertzel_init(&amps->sat_goertzel[i], sat_freq[i], amps->sender.samplerate);
 		if (i < 3) {
-			amps->sat_phaseshift256[i] = 256.0 / ((double)amps->sender.samplerate / sat_freq[i]);
-			PDEBUG(DDSP, DEBUG_DEBUG, "sat_phaseshift256[%d] = %.4f\n", i, amps->sat_phaseshift256[i]);
+			amps->sat_phaseshift65536[i] = 65536.0 / ((double)amps->sender.samplerate / sat_freq[i]);
+			PDEBUG(DDSP, DEBUG_DEBUG, "sat_phaseshift65536[%d] = %.4f\n", i, amps->sat_phaseshift65536[i]);
 		}
 	}
 	sat_reset(amps, "Initial state");
 
 	/* test tone */
-	amps->test_phaseshift256 = 256.0 / ((double)amps->sender.samplerate / 1000.0);
-	PDEBUG(DDSP, DEBUG_DEBUG, "test_phaseshift256 = %.4f\n", amps->test_phaseshift256);
+	amps->test_phaseshift65536 = 65536.0 / ((double)amps->sender.samplerate / 1000.0);
+	PDEBUG(DDSP, DEBUG_DEBUG, "test_phaseshift65536 = %.4f\n", amps->test_phaseshift65536);
 
 	/* be more tolerant when syncing */
 	amps->fsk_rx_sync_tolerant = tolerant;
@@ -401,7 +403,7 @@ again:
 //printf("pos=%d length=%d copy=%d\n", pos, length, copy);
 	for (i = 0; i < copy; i++) {
 #ifdef DEBUG_ENCODER
-		puts(debug_amplitude((double)spl[pos] / 32767.0));
+		puts(debug_amplitude((double)spl[pos]));
 #endif
 		*samples++ = spl[pos++];
 	}
@@ -422,26 +424,19 @@ done:
 static void sat_encode(amps_t *amps, sample_t *samples, int length)
 {
         double phaseshift, phase;
-	int32_t sample;
 	int i;
 
-	phaseshift = amps->sat_phaseshift256[amps->sat];
-	phase = amps->sat_phase256;
+	phaseshift = amps->sat_phaseshift65536[amps->sat];
+	phase = amps->sat_phase65536;
 
 	for (i = 0; i < length; i++) {
-		sample = *samples;
-		sample += dsp_sine_sat[(uint8_t)phase];
-		if (sample > 32767)
-			sample = 32767;
-		else if (sample < -32767)
-			sample = -32767;
-		*samples++ = sample;
+		*samples++ += dsp_sine_sat[(uint16_t)phase];
 		phase += phaseshift;
-		if (phase >= 256)
-			phase -= 256;
+		if (phase >= 65536)
+			phase -= 65536;
 	}
 
-	amps->sat_phase256 = phase;
+	amps->sat_phase65536 = phase;
 }
 
 static void test_tone_encode(amps_t *amps, sample_t *samples, int length)
@@ -449,17 +444,17 @@ static void test_tone_encode(amps_t *amps, sample_t *samples, int length)
         double phaseshift, phase;
 	int i;
 
-	phaseshift = amps->test_phaseshift256;
-	phase = amps->test_phase256;
+	phaseshift = amps->test_phaseshift65536;
+	phase = amps->test_phase65536;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_test[(uint8_t)phase];
+		*samples++ = dsp_sine_test[(uint16_t)phase];
 		phase += phaseshift;
-		if (phase >= 256)
-			phase -= 256;
+		if (phase >= 65536)
+			phase -= 65536;
 	}
 
-	amps->test_phase256 = phase;
+	amps->test_phase65536 = phase;
 }
 
 /* Provide stream of audio toward radio unit */
@@ -735,9 +730,9 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 	if (quality[1] < 0)
 		quality[1] = 0;
 
-	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] * 32767.0 / SAT_DEVIATION / 0.63662 * 100.0, quality[0] * 100.0);
+	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] / SAT_DEVIATION / 0.63662 * 100.0, quality[0] * 100.0);
 	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
-		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] * 32767.0 / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
+		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
 	}
 	if (quality[0] > SAT_QUALITY) {
 		if (amps->sat_detected == 0) {

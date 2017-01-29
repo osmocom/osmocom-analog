@@ -9,6 +9,6 @@ typedef struct filter {
 
 void filter_lowpass_init(filter_t *bq, double frequency, int samplerate, int iterations);
 void filter_highpass_init(filter_t *bq, double frequency, int samplerate, int iterations);
-void filter_process(filter_t *bq, double *samples, int length);
+void filter_process(filter_t *bq, sample_t *samples, int length);
 
 #endif /* _FILTER_H */
