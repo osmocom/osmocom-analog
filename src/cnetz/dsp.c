@@ -85,7 +85,7 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], double noise)
+int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
 {
 	int rc = 0;
 	double size;
@@ -123,7 +123,6 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], do
 	/* create devation and ramp */
 	cnetz->fsk_deviation = FSK_DEVIATION;
 	dsp_init_ramp(cnetz);
-	cnetz->fsk_noise = noise;
 
 	/* create speech buffer */
 	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), cnetz->sender.samplerate); /* buffer is greater than sr/1.1, just to be secure */
@@ -279,32 +278,20 @@ static int fsk_testtone_encode(cnetz_t *cnetz)
 static int fsk_nothing_encode(cnetz_t *cnetz)
 {
 	sample_t *spl;
-	double phase, bitstep, r;
+	double phase, bitstep;
 	int i, count;
 
 	spl = cnetz->fsk_tx_buffer;
 	phase = cnetz->fsk_tx_phase;
 	bitstep = cnetz->fsk_tx_bitstep * 256.0;
 
-	if (cnetz->fsk_noise) {
-		r = cnetz->fsk_noise;
-		/* add 198 bits of noise */
-		for (i = 0; i < 198; i++) {
-			do {
-				*spl++ = (double)((int16_t)random()) * r / 32768.0;
-				phase += bitstep;
-			} while (phase < 256.0);
-			phase -= 256.0;
-		}
-	} else {
-		/* add 198 bits of silence */
-		for (i = 0; i < 198; i++) {
-			do {
-				*spl++ = 0;
-				phase += bitstep;
-			} while (phase < 256.0);
-			phase -= 256.0;
-		}
+	/* add 198 bits of silence */
+	for (i = 0; i < 198; i++) {
+		do {
+			*spl++ = 0;
+			phase += bitstep;
+		} while (phase < 256.0);
+		phase -= 256.0;
 	}
 
 	/* depending on the number of samples, return the number */

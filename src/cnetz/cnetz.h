@@ -88,7 +88,6 @@ typedef struct cnetz {
 	double			fsk_deviation;		/* deviation of FSK signal on sound card */
 	sample_t		fsk_ramp_up[256];	/* samples of upward ramp shape */
 	sample_t		fsk_ramp_down[256];	/* samples of downward ramp shape */
-	double			fsk_noise;		/* send static between OgK frames */
 	double			fsk_bitduration;	/* duration of a bit in samples */
 	sample_t		*fsk_tx_buffer;		/* tx buffer for one data block */
 	int			fsk_tx_buffer_size;	/* size of tx buffer (in samples) */
@@ -123,7 +122,7 @@ int cnetz_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum cnetz_chan_type chan_type);
 const char *chan_type_long_name(enum cnetz_chan_type chan_type);
 int cnetz_init(void);
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, double noise, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback);
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
 int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);

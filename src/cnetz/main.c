@@ -45,7 +45,6 @@ int measure_speed = 0;
 double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
 const char *flip_polarity = "auto";
-double noise = 0.0;
 int ms_power = 0; /* 0..3 */
 int auth = 0;
 int voice_deviation = 1;
@@ -70,8 +69,6 @@ void print_help(const char *arg0)
 	printf("        base station generates two virtual base stations with both polarities.\n");
 	printf("        Once a mobile registers, the correct polarity is selected and used.\n");
 	printf("        (default = %s)\n", flip_polarity);
-	printf(" -N --noise 0.0 .. 1.0 (default = %.1f)\n", noise);
-	printf("	Between frames on OgK, send noise at given level. Use 0.0 for Silence.\n");
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station 0..3. (default = '%d')\n", ms_power);
 	printf("	0 = 50-125 mW;  1 = 0.5-1 W;  2 = 4-8 W;  3 = 10-20 W\n");
@@ -99,7 +96,6 @@ static int handle_options(int argc, char **argv)
 		{"measure-speed", 0, 0, 'M'},
 		{"clock-speed", 1, 0, 'S'},
 		{"flip-polarity", 1, 0, 'F'},
-		{"noise", 1, 0, 'N'},
 		{"ms-power", 1, 0, 'P'},
 		{"authentication", 0, 0, 'A'},
 		{"voice-deviation", 0, 0, 'V'},
@@ -156,10 +152,6 @@ static int handle_options(int argc, char **argv)
 				fprintf(stderr, "Given polarity '%s' is illegal, see help!\n", optarg);
 				exit(0);
 			}
-			skip_args += 2;
-			break;
-		case 'N':
-			noise = strtold(optarg, NULL);
 			skip_args += 2;
 			break;
 		case 'P':
@@ -302,7 +294,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], samplerate, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, noise, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], samplerate, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
