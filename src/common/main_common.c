@@ -435,6 +435,10 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 	if (sender_open_audio())
 		return;
 
+	/* afterwards open call audio, because we cannot wait for SDR to open */
+	if (call_open_audio())
+		return;
+
 	/* real time priority */
 	if (rt_prio > 0) {
 		struct sched_param schedp;

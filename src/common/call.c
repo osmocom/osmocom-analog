@@ -181,8 +181,10 @@ typedef struct call {
 	int disc_cause;		/* cause that has been sent by transceiver instance for release */
 	char station_id[16];
 	char dialing[16];
+	char audiodev[64];	/* headphone interface, if used */
+	int samplerate;		/* sample rate of headphone interface */
 	void *sound;		/* headphone interface */
-	int latspl;		/* sample latency at sound interface */
+	int latspl;		/* sample latency at headphone interface */
 	samplerate_t srstate;	/* patterns/announcement upsampling */
 	jitter_t dejitter;	/* headphone audio dejittering */
 	int audio_pos;		/* position when playing patterns */
@@ -486,22 +488,14 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 	call.use_mncc_sock = use_mncc_sock;
 	call.send_patterns = send_patterns;
 	call.release_on_disconnect = release_on_disconnect;
+	call.samplerate = samplerate;
+	strncpy(call.audiodev, audiodev, sizeof(call.audiodev) - 1);
 
 	if (call.use_mncc_sock)
 		return 0;
 
 	if (!audiodev[0])
 		return 0;
-
-	/* open sound device for call control */
-	/* use +3.17 dBm0 (factor 1.44) for complete range of sound card */
-	call.sound = sound_open(audiodev, NULL, NULL, 1, 0.0, samplerate, 1.44, 4000.0);
-	if (!call.sound) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
-
-		rc = -EIO;
-		goto error;
-	}
 
 	rc = init_samplerate(&call.srstate, samplerate);
 	if (rc < 0) {
@@ -520,6 +514,22 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 error:
 	call_cleanup();
 	return rc;
+}
+
+int call_open_audio(void)
+{
+	if (!call.audiodev[0])
+		return 0;
+
+	/* open sound device for call control */
+	/* use factor 1.4 of speech level for complete range of sound card */
+	call.sound = sound_open(call.audiodev, NULL, NULL, 1, 0.0, call.samplerate, 1.4, 4000.0);
+	if (!call.sound) {
+		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
+		return -EIO;
+	}
+
+	return 0;
 }
 
 void call_cleanup(void)

@@ -11,6 +11,7 @@ enum number_type {
 
 int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int use_mncc_sock, int send_patterns, int release_on_disconnect);
 void call_cleanup(void);
+int call_open_audio(void);
 void process_call(int c);
 void clear_console_text(void);
 void print_console_text(void);
