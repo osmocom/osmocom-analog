@@ -53,6 +53,10 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->write_tx_wave = write_tx_wave;
 	sender->read_rx_wave = read_rx_wave;
 
+	/* no gain with SDR */
+	if (!strcmp(audiodev, "sdr"))
+		sender->rx_gain = 1.0;
+
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
 
 	/* if we find a channel that uses the same device as we do,

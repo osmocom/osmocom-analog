@@ -102,7 +102,7 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -g --rx-gain <dB>\n");
 	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
 	printf("        level of the sound device is too low, even after setting maximum level\n");
-	printf("        with the mixer settings.\n");
+	printf("        with the mixer settings. (Works with sound card only.)\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
