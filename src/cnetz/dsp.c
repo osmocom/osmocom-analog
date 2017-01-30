@@ -199,7 +199,8 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 {
 	struct clock_speed *cs = &cnetz->clock_speed;
 	double ti;
-	double speed_ppm_rx[2], speed_ppm_tx[2];
+	double speed_ppm_rx_avg[2], speed_ppm_tx_avg[2];
+	int i;
 
 	if (!cnetz->measure_speed)
 		return;
@@ -235,11 +236,29 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 
 	if (!cs->spl_count[2] || !cs->spl_count[3])
 		return;
-	speed_ppm_rx[0] = ((double)cs->spl_count[0] / (double)cnetz->sender.samplerate) / (cs->last_ti[0] - cs->start_ti[0]) * 1000000.0 - 1000000.0;
-	speed_ppm_tx[0] = ((double)cs->spl_count[1] / (double)cnetz->sender.samplerate) / (cs->last_ti[1] - cs->start_ti[1]) * 1000000.0 - 1000000.0;
-	speed_ppm_rx[1] = ((double)cs->spl_count[2] / (double)cnetz->sender.samplerate) / (cs->last_ti[2] - cs->start_ti[2]) * 1000000.0 - 1000000.0;
-	speed_ppm_tx[1] = ((double)cs->spl_count[3] / (double)cnetz->sender.samplerate) / (cs->last_ti[3] - cs->start_ti[3]) * 1000000.0 - 1000000.0;
-	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx[0], speed_ppm_tx[0], speed_ppm_rx[1], speed_ppm_tx[1]);
+	cs->speed_ppm_rx[0][cs->idx & 0xff] = ((double)cs->spl_count[0] / (double)cnetz->sender.samplerate) / (cs->last_ti[0] - cs->start_ti[0]) * 1000000.0 - 1000000.0;
+	cs->speed_ppm_tx[0][cs->idx & 0xff] = ((double)cs->spl_count[1] / (double)cnetz->sender.samplerate) / (cs->last_ti[1] - cs->start_ti[1]) * 1000000.0 - 1000000.0;
+	cs->speed_ppm_rx[1][cs->idx & 0xff] = ((double)cs->spl_count[2] / (double)cnetz->sender.samplerate) / (cs->last_ti[2] - cs->start_ti[2]) * 1000000.0 - 1000000.0;
+	cs->speed_ppm_tx[1][cs->idx & 0xff] = ((double)cs->spl_count[3] / (double)cnetz->sender.samplerate) / (cs->last_ti[3] - cs->start_ti[3]) * 1000000.0 - 1000000.0;
+	cs->idx++;
+	cs->num++;
+	if (cs->num > 30)
+		cs->num = 30;
+	speed_ppm_rx_avg[0] = 0.0;
+	speed_ppm_tx_avg[0] = 0.0;
+	speed_ppm_rx_avg[1] = 0.0;
+	speed_ppm_tx_avg[1] = 0.0;
+	for (i = 0; i < cs->num; i++) {
+		speed_ppm_rx_avg[0] += cs->speed_ppm_rx[0][(cs->idx - i - 1) & 0xff];
+		speed_ppm_tx_avg[0] += cs->speed_ppm_tx[0][(cs->idx - i - 1) & 0xff];
+		speed_ppm_rx_avg[1] += cs->speed_ppm_rx[1][(cs->idx - i - 1) & 0xff];
+		speed_ppm_tx_avg[1] += cs->speed_ppm_tx[1][(cs->idx - i - 1) & 0xff];
+	}
+	speed_ppm_rx_avg[0] /= (double)cs->num;
+	speed_ppm_tx_avg[0] /= (double)cs->num;
+	speed_ppm_rx_avg[1] /= (double)cs->num;
+	speed_ppm_tx_avg[1] /= (double)cs->num;
+	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx_avg[0], speed_ppm_tx_avg[0], speed_ppm_rx_avg[1], speed_ppm_tx_avg[1]);
 }
 
 static int fsk_testtone_encode(cnetz_t *cnetz)
