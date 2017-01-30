@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
 		polarity = 1; /* positive */
 	else if (!strcmp(flip_polarity, "yes"))
 		polarity = -1; /* negative */
-	if (!strcmp(audiodev[0], "sdr"))
+	else if (!strcmp(audiodev[0], "sdr"))
 		polarity = 1; /* SDR is always positive */
 	else {
 		fprintf(stderr, "You must define, if the the TX deviation polarity has to be flipped. (-F yes | no) See help.\n");
