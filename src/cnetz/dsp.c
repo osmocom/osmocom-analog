@@ -195,18 +195,16 @@ void dsp_cleanup_sender(cnetz_t *cnetz)
 /* receive sample time and calculate speed against system clock
  * tx: indicates transmit stream
  * result: if set the actual signal speed is used (instead of sample rate) */
-void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
+void calc_clock_speed(cnetz_t *cnetz, double samples, int tx, int result)
 {
 	struct clock_speed *cs = &cnetz->clock_speed;
 	double ti;
-	double speed_ppm_rx_avg[2], speed_ppm_tx_avg[2];
+	double speed_ppm_avg[4];
+	int index = (result << 1) | tx;
 	int i;
 
 	if (!cnetz->measure_speed)
 		return;
-
-	if (result)
-		tx += 2;
 
 	ti = get_time();
 
@@ -219,46 +217,36 @@ void calc_clock_speed(cnetz_t *cnetz, uint64_t samples, int tx, int result)
 		return;
 
 	/* start sample counting */
-	if (cs->start_ti[tx] == 0.0) {
-		cs->start_ti[tx] = ti;
-		cs->spl_count[tx] = 0;
+	if (cs->start_ti[index] == 0.0) {
+		cs->start_ti[index] = ti;
+		cs->spl_count[index] = 0.0;
 		return;
 	}
 
 	/* add elapsed time */
-	cs->last_ti[tx] = ti;
-	cs->spl_count[tx] += samples;
+	cs->last_ti[index] = ti;
+	cs->spl_count[index] += samples;
 
 	/* only calculate speed, if one second has elapsed */
-	if (ti - cs->meas_ti <= 1.0)
+	if (ti - cs->meas_ti <= 2.0)
 		return;
-	cs->meas_ti += 1.0;
+	cs->meas_ti += 2.0;
 
-	if (!cs->spl_count[2] || !cs->spl_count[3])
+	/* add to ring buffer */
+	if (!cs->spl_count[0] || !cs->spl_count[1] || !cs->spl_count[2] || !cs->spl_count[3])
 		return;
-	cs->speed_ppm_rx[0][cs->idx & 0xff] = ((double)cs->spl_count[0] / (double)cnetz->sender.samplerate) / (cs->last_ti[0] - cs->start_ti[0]) * 1000000.0 - 1000000.0;
-	cs->speed_ppm_tx[0][cs->idx & 0xff] = ((double)cs->spl_count[1] / (double)cnetz->sender.samplerate) / (cs->last_ti[1] - cs->start_ti[1]) * 1000000.0 - 1000000.0;
-	cs->speed_ppm_rx[1][cs->idx & 0xff] = ((double)cs->spl_count[2] / (double)cnetz->sender.samplerate) / (cs->last_ti[2] - cs->start_ti[2]) * 1000000.0 - 1000000.0;
-	cs->speed_ppm_tx[1][cs->idx & 0xff] = ((double)cs->spl_count[3] / (double)cnetz->sender.samplerate) / (cs->last_ti[3] - cs->start_ti[3]) * 1000000.0 - 1000000.0;
-	cs->idx++;
-	cs->num++;
-	if (cs->num > 30)
-		cs->num = 30;
-	speed_ppm_rx_avg[0] = 0.0;
-	speed_ppm_tx_avg[0] = 0.0;
-	speed_ppm_rx_avg[1] = 0.0;
-	speed_ppm_tx_avg[1] = 0.0;
-	for (i = 0; i < cs->num; i++) {
-		speed_ppm_rx_avg[0] += cs->speed_ppm_rx[0][(cs->idx - i - 1) & 0xff];
-		speed_ppm_tx_avg[0] += cs->speed_ppm_tx[0][(cs->idx - i - 1) & 0xff];
-		speed_ppm_rx_avg[1] += cs->speed_ppm_rx[1][(cs->idx - i - 1) & 0xff];
-		speed_ppm_tx_avg[1] += cs->speed_ppm_tx[1][(cs->idx - i - 1) & 0xff];
+
+	for (index = 0; index < 4; index++) {
+		cs->speed_ppm[index][cs->idx[index] & 0xff] = (cs->spl_count[index] / (double)cnetz->sender.samplerate) / (cs->last_ti[index] - cs->start_ti[index]) * 1000000.0 - 1000000.0;
+		cs->idx[index]++;
+		if (cs->num[index]++ > 30)
+			cs->num[index] = 30;
+		speed_ppm_avg[index] = 0.0;
+		for (i = 0; i < cs->num[index]; i++)
+			speed_ppm_avg[index] += cs->speed_ppm[index][(cs->idx[index] - i - 1) & 0xff];
+		speed_ppm_avg[index] /= (double)cs->num[index];
 	}
-	speed_ppm_rx_avg[0] /= (double)cs->num;
-	speed_ppm_tx_avg[0] /= (double)cs->num;
-	speed_ppm_rx_avg[1] /= (double)cs->num;
-	speed_ppm_tx_avg[1] /= (double)cs->num;
-	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Clock: RX=%.2f TX=%.2f; Signal: RX=%.2f TX=%.2f ppm\n", speed_ppm_rx_avg[0], speed_ppm_tx_avg[0], speed_ppm_rx_avg[1], speed_ppm_tx_avg[1]);
+	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Clock: RX=%.3f TX=%.3f; Signal: RX=%.3f TX=%.3f ppm\n", speed_ppm_avg[0], speed_ppm_avg[1], speed_ppm_avg[2], speed_ppm_avg[3]);
 }
 
 static int fsk_testtone_encode(cnetz_t *cnetz)
@@ -622,7 +610,7 @@ again:
 		/* a new hyper frame starts */
 		if (cnetz->sched_ts == 0 && cnetz->sched_r_m == 0) {
 			/* measure actual signal speed */
-			calc_clock_speed(cnetz, cnetz->sender.samplerate * 24 / 10, 1, 1);
+			calc_clock_speed(cnetz, (double)cnetz->sender.samplerate * 2.4, 1, 1);
 			/* sync TX (might not be required, if there is no error in math calculation) */
 			if (!cnetz->sender.master) { /* if no link to a master, we are master */
 				/* we are master, so we store sample count and phase */

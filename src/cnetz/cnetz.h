@@ -50,12 +50,11 @@ struct clock_speed {
 	double			meas_ti;		/* time stamp for measurement interval */
 	double			start_ti[4];		/* time stamp for start of counting */
 	double			last_ti[4];		/* time stamp of last received time */
-	uint64_t		spl_count[4];		/* sample counter for sound card */
+	double			spl_count[4];		/* sample counter for sound card */
 	/* making average of measurement values */
-	double			speed_ppm_rx[2][256];	/* history of clock speed measurements */
-	double			speed_ppm_tx[2][256];
-	int			idx;			/* index of current value */
-	int			num;			/* total num of values so far */
+	double			speed_ppm[4][256];	/* history of clock speed measurements */
+	int			idx[4];			/* index of current value */
+	int			num[4];			/* total num of values so far */
 };
 
 /* instance of cnetz sender */

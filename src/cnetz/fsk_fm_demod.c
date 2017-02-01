@@ -475,7 +475,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 		fsk->bit_time_uncorrected += fsk->bits_per_sample;
 		if (fsk->bit_time_uncorrected >= BITS_PER_SUPERFRAME) {
 			fsk->bit_time_uncorrected -= BITS_PER_SUPERFRAME;
-			calc_clock_speed(fsk->cnetz, fsk->cnetz->sender.samplerate * 24 / 10, 0, 1);
+			calc_clock_speed(fsk->cnetz, (double)fsk->cnetz->sender.samplerate * 2.4, 0, 1);
 		}
 	}
 }
