@@ -123,9 +123,9 @@ static struct nmt_channels {
 	const char *short_name;
 	const char *long_name;
 } nmt_channels[] = {
-	{ CHAN_TYPE_CC,		"CC",	"calling channel" },
-	{ CHAN_TYPE_TC,		"TC",	"traffic channel" },
-	{ CHAN_TYPE_CC_TC,	"CC/TC","combined calling & traffic channel" },
+	{ CHAN_TYPE_CC,		"CC",	"calling channel (incomming calls)" },
+	{ CHAN_TYPE_TC,		"TC",	"traffic channel (outgoing calls)" },
+	{ CHAN_TYPE_CC_TC,	"CC/TC","combined calling & traffic channel (both way calls)" },
 	{ CHAN_TYPE_TEST,	"TEST",	"test channel" },
 	{ 0, NULL, NULL }
 };
@@ -145,10 +145,8 @@ int nmt_channel_by_short_name(const char *short_name)
 	int i;
 
 	for (i = 0; nmt_channels[i].short_name; i++) {
-		if (!strcasecmp(nmt_channels[i].short_name, short_name)) {
-			PDEBUG(DNMT, DEBUG_INFO, "Selecting channel '%s' = %s\n", nmt_channels[i].short_name, nmt_channels[i].long_name);
+		if (!strcasecmp(nmt_channels[i].short_name, short_name))
 			return nmt_channels[i].chan_type;
-		}
 	}
 
 	return -1;
@@ -292,10 +290,8 @@ uint8_t nmt_country_by_short_name(const char *short_name)
 	int i;
 
 	for (i = 0; nmt_country[i].short_name; i++) {
-		if (!strcasecmp(nmt_country[i].short_name, short_name)) {
-			PDEBUG(DNMT, DEBUG_INFO, "Selecting country code %d of %s,%s (provider '%s')\n", nmt_country[i].y, nmt_country[i].short_name, nmt_country[i].long_name, nmt_country[i].provider_name);
+		if (!strcasecmp(nmt_country[i].short_name, short_name))
 			return nmt_country[i].y;
-		}
 	}
 
 	return 0;
@@ -341,6 +337,16 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, 
 		goto error;
 	}
 
+	timer_init(&nmt->timer, nmt_timeout, nmt);
+	nmt->sysinfo.chan_type = chan_type;
+	nmt->sysinfo.ms_power = ms_power;
+	nmt->sysinfo.traffic_area = traffic_area;
+	nmt->sysinfo.area_no = area_no;
+	nmt->compandor = compandor;
+	nmt->supervisory = supervisory;
+	nmt->send_callerid = send_callerid;
+	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
+
 	/* init audio processing */
 	rc = dsp_init_sender(nmt);
 	if (rc < 0) {
@@ -362,18 +368,15 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, 
 		goto error;
 	}
 
-	timer_init(&nmt->timer, nmt_timeout, nmt);
-	nmt->sysinfo.chan_type = chan_type;
-	nmt->sysinfo.ms_power = ms_power;
-	nmt->sysinfo.traffic_area = traffic_area;
-	nmt->sysinfo.area_no = area_no;
-	nmt->compandor = compandor;
-	nmt->supervisory = supervisory;
-	nmt->send_callerid = send_callerid;
-	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
-
 	/* go into idle state */
 	nmt_go_idle(nmt);
+
+	PDEBUG(DNMT, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, (traffic_area & 0xf) % 10, area_no);
+	if (nmt->supervisory)
+		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using supervisory signal %d\n", supervisory);
+	else
+		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using no supervisory signal\n");
 
 	return 0;
 

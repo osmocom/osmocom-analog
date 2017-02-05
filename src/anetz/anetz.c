@@ -206,6 +206,8 @@ int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain
 	/* go into idle state */
 	anetz_go_idle(anetz);
 
+	PDEBUG(DANETZ, DEBUG_NOTICE, "Created 'Kanal' #%d\n", kanal);
+
 	return 0;
 
 error:

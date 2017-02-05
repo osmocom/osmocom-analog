@@ -226,6 +226,9 @@ error_paging:
 	/* go into idle state */
 	bnetz_go_idle(bnetz);
 
+	PDEBUG(DBNETZ, DEBUG_NOTICE, "Created 'Kanal' #%d\n", kanal);
+	PDEBUG(DBNETZ, DEBUG_NOTICE, " -> Using station ID (Gruppenfreisignal) %d\n", gfs);
+
 	return 0;
 
 error:

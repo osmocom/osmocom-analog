@@ -365,6 +365,8 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 	cnetz_flush_other_transactions(cnetz, trans2);
 #endif
 
+	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' #%d of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+
 	return 0;
 
 error:
@@ -678,9 +680,9 @@ static struct cnetz_channels {
 	const char *short_name;
 	const char *long_name;
 } cnetz_channels[] = {
-	{ CHAN_TYPE_OGK_SPK,	"OgK/SpK","combined calling & traffic channel" },
-	{ CHAN_TYPE_OGK,	"OgK",	"calling channel" },
-	{ CHAN_TYPE_SPK,	"SpK",	"traffic channel" },
+	{ CHAN_TYPE_OGK_SPK,	"OgK/SpK","combined control & voice channel" },
+	{ CHAN_TYPE_OGK,	"OgK",	"control channel" },
+	{ CHAN_TYPE_SPK,	"SpK",	"voice channel" },
 	{ 0, NULL, NULL }
 };
 
@@ -699,10 +701,8 @@ int cnetz_channel_by_short_name(const char *short_name)
 	int i;
 
 	for (i = 0; cnetz_channels[i].short_name; i++) {
-		if (!strcasecmp(cnetz_channels[i].short_name, short_name)) {
-			PDEBUG(DCNETZ, DEBUG_INFO, "Selecting channel '%s' = %s\n", cnetz_channels[i].short_name, cnetz_channels[i].long_name);
+		if (!strcasecmp(cnetz_channels[i].short_name, short_name))
 			return cnetz_channels[i].chan_type;
-		}
 	}
 
 	return -1;

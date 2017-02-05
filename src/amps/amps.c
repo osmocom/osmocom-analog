@@ -480,6 +480,8 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	amps_new_state(amps, STATE_BUSY);
 #endif
 
+	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+
 	return 0;
 
 error:
