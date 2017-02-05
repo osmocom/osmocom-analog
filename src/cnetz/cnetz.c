@@ -743,7 +743,6 @@ void transaction_timeout(struct timer *timer)
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
 		if (trans->try == N) {
 			trans_new_state(trans, TRANS_WBN);
-			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 			break;
 		}
 		trans->try++;
