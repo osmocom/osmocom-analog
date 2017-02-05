@@ -23,16 +23,18 @@ libcommon_a_SOURCES = \
 	../common/cause.c \
 	../common/emphasis.c \
 	../common/compandor.c \
+	../common/fft.c \
 	../common/sender.c \
 	../common/display_wave.c \
-	../common/display_iq.c \
 	../common/main_common.c
 
 if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR
 
 libcommon_a_SOURCES += \
-	../common/sdr.c
+	../common/sdr.c \
+	../common/display_iq.c \
+	../common/display_spectrum.c
 endif
 
 if HAVE_UHD

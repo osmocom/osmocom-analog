@@ -92,6 +92,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	int c;
 
 	display_iq_init(samplerate);
+	display_spectrum_init(samplerate);
 
 	bandwidth = 2.0 * (max_deviation + max_modulation);
 	PDEBUG(DSDR, DEBUG_INFO, "Using Bandwidth of 2 * (%.1f + %.1f) = %.1f\n", max_deviation / 1000, max_modulation / 1000, bandwidth / 1000);
@@ -345,6 +346,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 		}
 	}
 	display_iq(buff, count);
+	display_spectrum(buff, count);
 
 	for (c = 0; c < channels; c++) {
 		rot = sdr->chan[c].rx_rot;

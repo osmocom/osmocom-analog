@@ -97,10 +97,16 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	clear_console_text();
 //	printf("%s%s:%d %s() %s: %s\033[0;39m", debug_cat[cat].color, file, line, function, debug_level[level], buffer);
 	display_wave_limit_scroll(1);
+#ifdef HAVE_SDR
 	display_iq_limit_scroll(1);
+	display_spectrum_limit_scroll(1);
+#endif
 	printf("%s%s:%d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
 	display_wave_limit_scroll(0);
+#ifdef HAVE_SDR
 	display_iq_limit_scroll(0);
+	display_spectrum_limit_scroll(0);
+#endif
 	print_console_text();
 	fflush(stdout);
 }

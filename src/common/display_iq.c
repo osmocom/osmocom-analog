@@ -41,8 +41,8 @@ void display_iq_init(int samplerate)
 	memset(&disp, 0, sizeof(disp));
 	disp.interval_max = (double)samplerate * DISPLAY_INTERVAL + 0.5;
 	/* should not happen due to low interval */
-	if (disp.interval_max < MAX_DISPLAY_IQ + 1)
-		disp.interval_max = MAX_DISPLAY_IQ + 1;
+	if (disp.interval_max < MAX_DISPLAY_IQ - 1)
+		disp.interval_max = MAX_DISPLAY_IQ - 1;
 }
 
 void display_iq_on(int on)
@@ -132,8 +132,9 @@ void display_iq(float *samples, int length)
 				pos = 0;
 			continue;
 		}
-		buffer[pos++] = *samples++;
-		buffer[pos++] = *samples++;
+		buffer[pos * 2] = samples[i * 2];
+		buffer[pos * 2 + 1] = samples[i * 2 + 1];
+		pos++;
 		if (pos == MAX_DISPLAY_IQ) {
 			memset(&screen, ' ', sizeof(screen));
 			memset(&overdrive, 0, sizeof(overdrive));

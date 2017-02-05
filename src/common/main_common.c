@@ -501,14 +501,26 @@ next_char:
 			goto next_char;
 		case 'w':
 			/* toggle display */
+#ifdef HAVE_SDR
 			display_iq_on(0);
+			display_spectrum_on(0);
+#endif
 			display_wave_on(-1);
 			goto next_char;
+#ifdef HAVE_SDR
 		case 'q':
 			/* toggle display */
 			display_wave_on(0);
+			display_spectrum_on(0);
 			display_iq_on(-1);
 			goto next_char;
+		case 's':
+			/* toggle spectrum */
+			display_wave_on(0);
+			display_iq_on(0);
+			display_spectrum_on(-1);
+			goto next_char;
+#endif
 		case 'i':
 			/* dump info */
 			dump_info();
