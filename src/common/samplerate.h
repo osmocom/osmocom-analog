@@ -4,10 +4,12 @@ typedef struct samplerate {
 	double factor;
 	struct {
 		filter_t lp;
+		sample_t last_sample;
 		double in_index;
 	} down;
 	struct {
 		filter_t lp;
+		sample_t last_sample;
 		double in_index;
 	} up;
 } samplerate_t;
