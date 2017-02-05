@@ -109,7 +109,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 	sdr->channels = channels;
 	sdr->samplerate = samplerate;
-	sdr->amplitude = 0.4 / (double)channels; // FIXME: actual amplitude 0.1?
+	sdr->amplitude = 1.0 / (double)channels;
 
 	/* special case where we use a paging frequency */
 	if (paging_frequency) {
