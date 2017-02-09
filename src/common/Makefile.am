@@ -24,6 +24,7 @@ libcommon_a_SOURCES = \
 	../common/emphasis.c \
 	../common/compandor.c \
 	../common/fft.c \
+	../common/fm_modulation.c \
 	../common/sender.c \
 	../common/display_wave.c \
 	../common/main_common.c

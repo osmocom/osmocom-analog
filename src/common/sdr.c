@@ -24,55 +24,38 @@
 #include <math.h>
 #include "sample.h"
 #include "filter.h"
+#include "fm_modulation.h"
 #include "sender.h"
 #ifdef HAVE_UHD
 #include "uhd.h"
 #endif
 #include "debug.h"
 
-//#define FAST_SINE
-
 typedef struct sdr_chan {
-	double tx_frequency;	/* frequency used */
-	double rx_frequency;	/* frequency used */
-	double offset;		/* offset to calculated center frequency */
-	double tx_phase;	/* current phase of FM (used to shift and modulate ) */
-	double rx_rot;		/* rotation step per sample to shift rx frequency (used to shift) */
-	double rx_phase;	/* current rotation phase (used to shift) */
-	double rx_last_phase;	/* last phase of FM (used to demodulate) */
-	filter_t rx_lp[2];	/* filters received IQ signal */
+	double		tx_frequency;	/* frequency used */
+	double		rx_frequency;	/* frequency used */
+	fm_mod_t	mod;		/* modulator instance */
+	fm_demod_t	demod;		/* demodulator instance */
 } sdr_chan_t;
 
 typedef struct sdr {
-	sdr_chan_t *chan;	/* settings for all channels */
-	int paging_channel;	/* if set, points to paging channel */
-	sdr_chan_t paging_chan;	/* settings for extra paging channel */
-	int channels;		/* number of frequencies */
-	double samplerate;	/* IQ rate */
-	double amplitude;	/* amplitude of each carrier */
-	wave_rec_t wave_rx_rec;
-	wave_rec_t wave_tx_rec;
-	wave_play_t wave_rx_play;
+	sdr_chan_t	*chan;		/* settings for all channels */
+	int		paging_channel;	/* if set, points to paging channel */
+	sdr_chan_t	paging_chan;	/* settings for extra paging channel */
+	int		channels;	/* number of frequencies */
+	double		samplerate;	/* IQ rate */
+	double		amplitude;	/* amplitude of each carrier */
+	wave_rec_t	wave_rx_rec;
+	wave_rec_t	wave_tx_rec;
+	wave_play_t	wave_rx_play;
 } sdr_t;
 
 static const char *sdr_device_args;
 static double sdr_rx_gain, sdr_tx_gain;
 const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave;
 
-#ifdef FAST_SINE
-static float sdr_sine[256];
-#endif
-
 int sdr_init(const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave)
 {
-#ifdef FAST_SINE
-	int i;
-
-	for (i = 0; i < 256; i++) {
-		sdr_sine[i] = sin(2.0*M_PI*i/256);
-	}
-#endif
-
 	sdr_device_args = strdup(device_args);
 	sdr_rx_gain = rx_gain;
 	sdr_tx_gain = tx_gain;
@@ -127,8 +110,6 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz, RX = %.6f MHz\n", c, tx_frequency[c] / 1e6, rx_frequency[c] / 1e6);
 		sdr->chan[c].tx_frequency = tx_frequency[c];
 		sdr->chan[c].rx_frequency = rx_frequency[c];
-		filter_lowpass_init(&sdr->chan[c].rx_lp[0], bandwidth / 2.0, samplerate, 1);
-		filter_lowpass_init(&sdr->chan[c].rx_lp[1], bandwidth / 2.0, samplerate, 1);
 	}
 	if (sdr->paging_channel) {
 		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
@@ -180,15 +161,18 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: TX %.6f MHz, RX %.6f\n", tx_center_frequency / 1e6, rx_center_frequency / 1e6);
 	/* set offsets to center frequency */
 	for (c = 0; c < channels; c++) {
-		double rx_offset;
-		sdr->chan[c].offset = sdr->chan[c].tx_frequency - tx_center_frequency;
+		double tx_offset, rx_offset;
+		tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
 		rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
-		sdr->chan[c].rx_rot = 2 * M_PI * -rx_offset / sdr->samplerate;
-		PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz, RX offset: %.6f MHz\n", c, sdr->chan[c].offset / 1e6, rx_offset / 1e6);
+		PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz, RX offset: %.6f MHz\n", c, tx_offset / 1e6, rx_offset / 1e6);
+		fm_mod_init(&sdr->chan[c].mod, sdr->samplerate, tx_offset, sdr->amplitude);
+		fm_demod_init(&sdr->chan[c].demod, sdr->samplerate, rx_offset, bandwidth);
 	}
 	if (sdr->paging_channel) {
-		sdr->chan[sdr->paging_channel].offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
-		PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", sdr->chan[sdr->paging_channel].offset / 1e6);
+		double tx_offset;
+		tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
+		PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
+		fm_mod_init(&sdr->chan[sdr->paging_channel].mod, sdr->samplerate, tx_offset, sdr->amplitude);
 	}
 	PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB, RX %.1f dB\n", sdr_tx_gain, sdr_rx_gain);
 
@@ -250,7 +234,6 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
 	int c, s, ss;
-	double rate, offset, phase, amplitude, dev;
 	int sent;
 
 	if (channels != sdr->channels) {
@@ -259,39 +242,13 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 	}
 
 	/* process all channels */
-	rate = sdr->samplerate;
-	amplitude = sdr->amplitude;
 	memset(buff, 0, sizeof(buff));
 	for (c = 0; c < channels; c++) {
-		phase = sdr->chan[c].tx_phase;
-		/* switch offset to paging channel, if requested */
+		/* switch to paging channel, if requested */
 		if (on[c] && sdr->paging_channel)
-			offset = sdr->chan[sdr->paging_channel].offset;
+			fm_modulate(&sdr->chan[sdr->paging_channel].mod, samples[c], num, buff);
 		else
-			offset = sdr->chan[c].offset;
-		/* modulate */
-		for (s = 0, ss = 0; s < num; s++) {
-			/* deviation is defined by the sample value and the offset */
-			dev = offset + samples[c][s];
-#ifdef FAST_SINE
-			phase += 256.0 * dev / rate;
-			if (phase < 0.0)
-				phase += 256.0;
-			if (phase >= 256.0)
-				phase -= 256.0;
-			buff[ss++] += sdr_sine[((int)phase + 64) & 0xff] * amplitude;
-			buff[ss++] += sdr_sine[(int)phase & 0xff] * amplitude;
-#else
-			phase += 2.0 * M_PI * dev / rate;
-			if (phase < 0.0)
-				phase += 2.0 * M_PI;
-			if (phase >= 2.0 * M_PI)
-				phase -= 2.0 * M_PI;
-			buff[ss++] += cos(phase) * amplitude;
-			buff[ss++] += sin(phase) * amplitude;
-#endif
-		}
-		sdr->chan[c].tx_phase = phase;
+			fm_modulate(&sdr->chan[c].mod, samples[c], num, buff);
 	}
 
 	if (sdr->wave_tx_rec.fp) {
@@ -316,12 +273,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
-	sample_t I[num], Q[num], i, q;
 	int count;
 	int c, s, ss;
-	double phase, rot, last_phase, dev, rate;
-
-	rate = sdr->samplerate;
 
 #ifdef HAVE_UHD
 	count = uhd_receive(buff, num);
@@ -349,31 +302,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 	display_spectrum(buff, count);
 
 	for (c = 0; c < channels; c++) {
-		rot = sdr->chan[c].rx_rot;
-		phase = sdr->chan[c].rx_phase;
-		for (s = 0, ss = 0; s < count; s++) {
-			phase += rot;
-			i = buff[ss++];
-			q = buff[ss++];
-			I[s] = i * cos(phase) - q * sin(phase);
-			Q[s] = i * sin(phase) + q * cos(phase);
-		}
-		sdr->chan[c].rx_phase = phase;
-		filter_process(&sdr->chan[c].rx_lp[0], I, count);
-		filter_process(&sdr->chan[c].rx_lp[1], Q, count);
-		last_phase = sdr->chan[c].rx_last_phase;
-		for (s = 0; s < count; s++) {
-			phase = atan2(Q[s], I[s]);
-			dev = (phase - last_phase) / 2 / M_PI;
-			last_phase = phase;
-			if (dev < -0.49)
-				dev += 1.0;
-			else if (dev > 0.49)
-				dev -= 1.0;
-			dev *= rate;
-			samples[c][s] = dev;
-		}
-		sdr->chan[c].rx_last_phase = last_phase;
+		fm_demodulate(&sdr->chan[c].demod, samples[c], count, buff);
 	}
 
 	return count;
