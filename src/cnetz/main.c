@@ -47,7 +47,6 @@ int set_clock_speed = 0;
 const char *flip_polarity = "auto";
 int ms_power = 0; /* 0..3 */
 int auth = 0;
-int voice_deviation = 1;
 
 void print_help(const char *arg0)
 {
@@ -76,9 +75,6 @@ void print_help(const char *arg0)
 	printf("        Enable authentication on the base station. Since we cannot\n");
 	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
 	printf("	we just accept any card. With this we get the vendor IDs of the phone.\n");
-	printf(" -V --voice-deviation\n");
-	printf("	For some unknown reason, Siemens C5 use double deviation for voice.\n");
-	printf("	This option raises audio level on TX and lowers on RX.\n");
 	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 	print_hotkeys_common();
@@ -98,7 +94,6 @@ static int handle_options(int argc, char **argv)
 		{"flip-polarity", 1, 0, 'F'},
 		{"ms-power", 1, 0, 'P'},
 		{"authentication", 0, 0, 'A'},
-		{"voice-deviation", 0, 0, 'V'},
 		{0, 0, 0, 0}
 	};
 
@@ -164,10 +159,6 @@ static int handle_options(int argc, char **argv)
 			break;
 		case 'A':
 			auth = 1;
-			skip_args += 1;
-			break;
-		case 'V':
-			voice_deviation = 2;
 			skip_args += 1;
 			break;
 		default:

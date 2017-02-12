@@ -34,8 +34,6 @@
 #include "telegramm.h"
 #include "dsp.h"
 
-extern int voice_deviation;
-
 /* test function to mirror received audio from ratio back to radio */
 //#define TEST_SCRAMBLE
 /* test the audio quality after cascading two scramblers (TEST_SCRAMBLE must be defined) */
@@ -721,12 +719,6 @@ again:
 			/* pre-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
 			if (cnetz->pre_emphasis && !cnetz->scrambler)
 				pre_emphasis(&cnetz->estate, speech_buffer, speech_length);
-			/* change level */
-			if (voice_deviation != 1) {
-				int j;
-				for (j = 0; j < speech_length; j++)
-					speech_buffer[j] *= (double)voice_deviation;
-			}
 			speech_pos = 0;
 		}
 		/* copy speech as long as we have something left in buffer */
@@ -796,7 +788,7 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 	factor = cnetz->offset_factor;
 	for (i = 0; i < count; i++) {
 		/* change level */
-		x = speech_buffer[i] / (double)voice_deviation;
+		x = speech_buffer[i];
 		/* high-pass to remove low level frequencies, caused by level jump between audio chunks */
 		y = factor * (y_last + x - x_last);
 		x_last = x;
