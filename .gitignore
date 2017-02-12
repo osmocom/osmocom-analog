@@ -32,3 +32,4 @@ src/test/test_compandor
 src/test/test_emphasis
 src/test/test_dms
 src/test/test_sms
+src/test/test_performance

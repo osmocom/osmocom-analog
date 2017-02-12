@@ -6,7 +6,8 @@ noinst_PROGRAMS = \
 	test_compandor \
 	test_emphasis \
 	test_dms \
-	test_sms
+	test_sms \
+	test_performance
 
 test_filter_SOURCES = test_filter.c dummy.c
 
@@ -51,6 +52,15 @@ test_sms_SOURCES = \
 	test_sms.c
 
 test_sms_LDADD = \
+	$(COMMON_LA) \
+	$(top_builddir)/src/common/libcommon.a \
+	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
+	-lm
+
+test_performance_SOURCES = dummy.c test_performance.c
+
+test_performance_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
