@@ -44,7 +44,7 @@ extern int voice_deviation;
 #define PI		M_PI
 
 #define MAX_DEVIATION	4000.0
-#define MAX_MODULATION	5280.0
+#define MAX_MODULATION	3000.0
 #define DBM0_DEVIATION	4000.0	/* deviation of dBm0 at 1 kHz */
 #define COMPANDOR_0DB	1.0	/* A level of 0dBm (1.0) shall be unaccected */
 #define FSK_DEVIATION	(2500.0 / DBM0_DEVIATION) /* no emphasis */
@@ -123,6 +123,9 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
 	/* create devation and ramp */
 	cnetz->fsk_deviation = FSK_DEVIATION;
 	dsp_init_ramp(cnetz);
+
+	/* init low pass filter for received signal */
+	filter_lowpass_init(&cnetz->lp, MAX_MODULATION, cnetz->sender.samplerate, 2);
 
 	/* create speech buffer */
 	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), cnetz->sender.samplerate); /* buffer is greater than sr/1.1, just to be secure */
@@ -582,8 +585,10 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	return;
 #endif
 
-	if (cnetz->dsp_mode != DSP_MODE_OFF)
+	if (cnetz->dsp_mode != DSP_MODE_OFF) {
+		filter_process(&cnetz->lp, samples, length);
 		fsk_fm_demod(&cnetz->fsk_demod, samples, length);
+	}
 	return;
 }
 
