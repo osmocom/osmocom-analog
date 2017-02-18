@@ -45,3 +45,10 @@ libcommon_a_SOURCES += \
 	../common/uhd.c
 endif
 
+if HAVE_SOAPY
+AM_CPPFLAGS += -DHAVE_SOAPY
+
+libcommon_a_SOURCES += \
+	../common/soapy.c
+endif
+

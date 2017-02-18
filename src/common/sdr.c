@@ -29,6 +29,9 @@
 #ifdef HAVE_UHD
 #include "uhd.h"
 #endif
+#ifdef HAVE_SOAPY
+#include "soapy.h"
+#endif
 #include "debug.h"
 
 typedef struct sdr_chan {
@@ -50,12 +53,15 @@ typedef struct sdr {
 	wave_play_t	wave_rx_play;
 } sdr_t;
 
+static int sdr_use_uhd, sdr_use_soapy;
 static const char *sdr_device_args;
 static double sdr_rx_gain, sdr_tx_gain;
 const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave;
 
-int sdr_init(const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave)
+int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave)
 {
+	sdr_use_uhd = sdr_uhd;
+	sdr_use_soapy = sdr_soapy;
 	sdr_device_args = strdup(device_args);
 	sdr_rx_gain = rx_gain;
 	sdr_tx_gain = tx_gain;
@@ -199,9 +205,19 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 
 #ifdef HAVE_UHD
-	rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
-	if (rc)
-		goto error;
+	if (sdr_use_uhd) {
+		rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
+		if (rc)
+			goto error;
+	}
+#endif
+
+#ifdef HAVE_SOAPY
+	if (sdr_use_soapy) {
+		rc = soapy_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
+		if (rc)
+			goto error;
+	}
 #endif
 
 	return sdr;
@@ -216,7 +232,13 @@ void sdr_close(void *inst)
 	sdr_t *sdr = (sdr_t *)inst;
 
 #ifdef HAVE_UHD
-	uhd_close();
+	if (sdr_use_uhd)
+		uhd_close();
+#endif
+
+#ifdef HAVE_SOAPY
+	if (sdr_use_soapy)
+		soapy_close();
 #endif
 
 	if (sdr) {
@@ -234,7 +256,7 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
 	int c, s, ss;
-	int sent;
+	int sent = 0;
 
 	if (channels != sdr->channels) {
 		PDEBUG(DSDR, DEBUG_ERROR, "Invalid number of channels, please fix!\n");
@@ -261,7 +283,12 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 	}
 
 #ifdef HAVE_UHD
-	sent = uhd_send(buff, num);
+	if (sdr_use_uhd)
+		sent = uhd_send(buff, num);
+#endif
+#ifdef HAVE_SOAPY
+	if (sdr_use_soapy)
+		sent = soapy_send(buff, num);
 #endif
 	if (sent < 0)
 		return sent;
@@ -273,11 +300,16 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buff[num * 2];
-	int count;
+	int count = 0;
 	int c, s, ss;
 
 #ifdef HAVE_UHD
-	count = uhd_receive(buff, num);
+	if (sdr_use_uhd)
+		count = uhd_receive(buff, num);
+#endif
+#ifdef HAVE_SOAPY
+	if (sdr_use_soapy)
+		count = soapy_receive(buff, num);
 #endif
 	if (count <= 0)
 		return count;
@@ -312,10 +344,15 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 int sdr_get_inbuffer(void __attribute__((__unused__)) *inst)
 {
 //	sdr_t *sdr = (sdr_t *)inst;
-	int count;
+	int count = 0;
 
 #ifdef HAVE_UHD
-	count = uhd_get_inbuffer();
+	if (sdr_use_uhd)
+		count = uhd_get_inbuffer();
+#endif
+#ifdef HAVE_SOAPY
+	if (sdr_use_soapy)
+		count = soapy_get_inbuffer();
 #endif
 	if (count < 0)
 		return count;

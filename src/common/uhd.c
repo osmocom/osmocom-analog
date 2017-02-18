@@ -166,14 +166,14 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
         tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 	error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
 	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", tx_frequency);
+		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequeny to %.0f Hz\n", tx_frequency);
 		uhd_close();
 		return -EIO;
 	}
         tune_request.target_freq = rx_frequency;
 	error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
 	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rx_frequency);
+		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequeny to %.0f Hz\n", rx_frequency);
 		uhd_close();
 		return -EIO;
 	}
@@ -327,7 +327,7 @@ int uhd_receive(float *buff, int max)
 	while (1) {
 		if (max < (int)rx_samps_per_buff) {
 			PDEBUG(DUHD, DEBUG_ERROR, "SDR rx buffer overflow!\n");
-			return 0;
+			break;
 		}
 		/* read RX stream */
 		buffs_ptr[0] = buff;
@@ -362,7 +362,7 @@ int uhd_receive(float *buff, int max)
 					}
 					check_rate = 0;
 					rx_gap = diff_time * (double)samplerate + 0.5;
-					PDEBUG(DUHD, DEBUG_ERROR, "Lost rx frame(s): A gap of %.6f secods (%d samples), \n", diff_time, rx_gap);
+					PDEBUG(DUHD, DEBUG_ERROR, "Lost rx frame(s): A gap of %.6f seconds (%d samples), \n", diff_time, rx_gap);
 				}
 			}
 			break;

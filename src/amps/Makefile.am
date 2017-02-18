@@ -22,5 +22,6 @@ amps_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 

@@ -16,6 +16,7 @@ test_filter_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 
 test_compandor_SOURCES = test_compandor.c
@@ -32,6 +33,7 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 
 test_dms_SOURCES = \
@@ -44,6 +46,7 @@ test_dms_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 
 test_sms_SOURCES = \
@@ -56,6 +59,7 @@ test_sms_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 
 test_performance_SOURCES = dummy.c test_performance.c
@@ -65,5 +69,6 @@ test_performance_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 

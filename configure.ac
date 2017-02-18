@@ -26,10 +26,17 @@ AC_CANONICAL_HOST
 
 PKG_CHECK_MODULES(ALSA, alsa >= 1.0)
 
-have_sdr=no
-PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, have_sdr=yes have_uhd=yes, have_uhd=no)
-AM_CONDITIONAL(HAVE_UHD, test "x$have_uhd" == "xyes" )
-AM_CONDITIONAL(HAVE_SDR, test "x$have_sdr" == "xyes" )
+
+with_sdr=no
+AC_ARG_WITH([uhd], [AS_HELP_STRING([--with-uhd], [compile with UHD driver @<:@default=check@:>@]) ], [], [with_uhd="check"])
+AC_ARG_WITH([soapy], [AS_HELP_STRING([--with-soapy], [compile with SoapySDR driver @<:@default=check@:>@]) ], [], [with_soapy="check"])
+AS_IF([test "x$with_uhd" != xno], [PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, with_sdr=yes with_uhd=yes, with_uhd=no)])
+AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.6.0, with_sdr=yes with_soapy=yes, with_soapy=no)])
+AM_CONDITIONAL(HAVE_UHD, test "x$with_uhd" == "xyes" )
+AM_CONDITIONAL(HAVE_SOAPY, test "x$with_soapy" == "xyes" )
+AM_CONDITIONAL(HAVE_SDR, test "x$with_sdr" == "xyes" )
+AS_IF([test "x$with_uhd" == "xyes"],[AC_MSG_NOTICE( Compiling with UHD SDR support )], [])
+AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR support )], [])
 
 AC_OUTPUT(
     src/common/Makefile

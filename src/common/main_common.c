@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <termios.h>
+#include <errno.h>
 #include "sample.h"
 #include "main.h"
 #include "debug.h"
@@ -61,6 +62,8 @@ const char *write_rx_wave = NULL;
 const char *write_tx_wave = NULL;
 const char *read_rx_wave = NULL;
 static const char *sdr_args = "";
+static int sdr_uhd = 0;
+static int sdr_soapy = 0;
 double sdr_rx_gain = 0, sdr_tx_gain = 0;
 const char *write_iq_rx_wave = NULL;
 const char *write_iq_tx_wave = NULL;
@@ -124,8 +127,17 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Replace received audio by given wave file.\n");
 #ifdef HAVE_SDR
 	printf("\nSDR options:\n");
+#ifdef HAVE_UHD
+	printf("    --sdr-uhd\n");
+	printf("        Force UHD driver\n");
+#endif
+#ifdef HAVE_SOAPY
+	printf("    --sdr-soapy\n");
+	printf("        Force SoapySDR driver\n");
+#endif
 	printf("    --sdr-args <args>\n");
-	printf("        Optional SDR device arguments\n");
+	printf("        Optional SDR device arguments, seperated by comma\n");
+	printf("        e.g. --sdr-args <key>=<value>[,<key>=<value>[,...]]\n");
 	printf("    --sdr-rx-gain <gain>\n");
 	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_rx_gain);
 	printf("    --sdr-tx-gain <gain>\n");
@@ -154,12 +166,14 @@ void print_hotkeys_common(void)
 #define	OPT_READ_RX_WAVE	1003
 #define	OPT_CALL_SAMPLERATE	1004
 
-#define	OPT_SDR_ARGS		1100
-#define	OPT_SDR_RX_GAIN		1101
-#define	OPT_SDR_TX_GAIN		1102
-#define	OPT_WRITE_IQ_RX_WAVE	1103
-#define	OPT_WRITE_IQ_TX_WAVE	1104
-#define	OPT_READ_IQ_RX_WAVE	1105
+#define	OPT_SDR_UHD		1100
+#define	OPT_SDR_SOAPY		1101
+#define	OPT_SDR_ARGS		1102
+#define	OPT_SDR_RX_GAIN		1103
+#define	OPT_SDR_TX_GAIN		1104
+#define	OPT_WRITE_IQ_RX_WAVE	1105
+#define	OPT_WRITE_IQ_TX_WAVE	1106
+#define	OPT_READ_IQ_RX_WAVE	1107
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -172,7 +186,7 @@ static struct option long_options_common[] = {
 	{"buffer", 1, 0, 'b'},
 	{"pre-emphasis", 0, 0, 'p'},
 	{"de-emphasis", 0, 0, 'd'},
-	{"rx-gain", 0, 0, 'g'},
+	{"rx-gain", 1, 0, 'g'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"call-device", 1, 0, 'c'},
 	{"call-samplerate", 1, 0, OPT_CALL_SAMPLERATE},
@@ -182,6 +196,8 @@ static struct option long_options_common[] = {
 	{"write-rx-wave", 1, 0, OPT_WRITE_RX_WAVE},
 	{"write-tx-wave", 1, 0, OPT_WRITE_TX_WAVE},
 	{"read-rx-wave", 1, 0, OPT_READ_RX_WAVE},
+	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
+	{"sdr-soapy", 0, 0, OPT_SDR_SOAPY},
 	{"sdr-args", 1, 0, OPT_SDR_ARGS},
 	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
 	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
@@ -331,6 +347,14 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		read_rx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_SDR_UHD:
+		sdr_uhd = 1;
+		*skip_args += 1;
+		break;
+	case OPT_SDR_SOAPY:
+		sdr_soapy = 1;
+		*skip_args += 1;
+		break;
 	case OPT_SDR_ARGS:
 		sdr_args = strdup(optarg);
 		*skip_args += 2;
@@ -413,8 +437,25 @@ int init_common(const char *station_id, int station_id_digits)
 		return rc;
 	}
 
+#ifdef HAVE_UHD
+ #ifdef HAVE_SOAPY
+	if ((sdr_uhd == 1 && sdr_soapy == 1) || (sdr_uhd == 0 && sdr_soapy == 0)) {
+		fprintf(stderr, "UHD and SoapySDR drivers are compiled in. You must choose which one you want: --sdr-uhd or --sdr-soapy\n");
+		return -EINVAL;
+	}
+ #else
+ 	sdr_uhd = 1;
+ 	sdr_soapy = 0;
+ #endif
+#else
+ #ifdef HAVE_SOAPY
+ 	sdr_uhd = 0;
+ 	sdr_soapy = 1;
+ #endif
+#endif
+
 #ifdef HAVE_SDR
-	rc = sdr_init(sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave);
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave);
 	if (rc < 0)
 		return rc;
 #endif
