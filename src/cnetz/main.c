@@ -252,6 +252,12 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
+	/* OgK must be the first channel, so it becomes master. This is required for syncing SPK channels */
+	if (i != 0) {
+		fprintf(stderr, "The first channel you defined must be OgK (control) or OgK/SPK (control/speech) channel type. Quitting!\n");
+		goto fail;
+	}
+
 	/* check for mandatory OgK */
 	for (i = 0; i < num_kanal; i++) {
 		if (chan_type[i] == CHAN_TYPE_SPK || chan_type[i] == CHAN_TYPE_OGK_SPK)
