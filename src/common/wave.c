@@ -22,8 +22,88 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <pthread.h>
 #include "sample.h"
 #include "wave.h"
+
+/* NOTE: No locking required for writing and reading buffer pointers, since 'int' is atomic on >=32 bit machines */
+
+static void *record_child(void *arg)
+{
+	wave_rec_t *rec = (wave_rec_t *)arg;
+	int to_write, to_end, len;
+
+	while (!rec->finish || rec->buffer_writep != rec->buffer_readp) {
+		/* how much data is in buffer */
+		to_write = (rec->buffer_size + rec->buffer_writep - rec->buffer_readp) % rec->buffer_size;
+		if (to_write == 0) {
+			usleep(10000);
+			continue;
+		}
+		/* only write up to the end of buffer */
+		to_end = rec->buffer_size - rec->buffer_readp;
+		if (to_end < to_write)
+			to_write = to_end;
+		/* write */
+		errno = 0;
+		len = fwrite(rec->buffer + rec->buffer_readp, 1, to_write, rec->fp);
+		/* quit on error */
+		if (len < 0) {
+error:
+			fprintf(stderr, "Failed to write to recording wave file! (errno %d)\n", errno);
+			rec->finish = 1;
+			return NULL;
+		}
+		/* increment read pointer */
+		rec->buffer_readp += len;
+		if (rec->buffer_readp == rec->buffer_size)
+			rec->buffer_readp = 0;
+		/* quit on end of file */
+		if (len != to_write)
+			goto error;
+	}
+
+	return NULL;
+}
+
+static void *playback_child(void *arg)
+{
+	wave_play_t *play = (wave_play_t *)arg;
+	int to_read, to_end, len;
+
+	while(!play->finish) {
+		/* how much space is in buffer */
+		to_read = (play->buffer_size + play->buffer_readp - play->buffer_writep - 1) % play->buffer_size;
+		if (to_read == 0) {
+			usleep(10000);
+			continue;
+		}
+		/* only read up to the end of buffer */
+		to_end = play->buffer_size - play->buffer_writep;
+		if (to_end < to_read)
+			to_read = to_end;
+		/* read */
+		len = fread(play->buffer + play->buffer_writep, 1, to_read, play->fp);
+		/* quit on error */
+		if (len < 0) {
+			fprintf(stderr, "Failed to read from playback wave file! (errno %d)\n", errno);
+			play->finish = 1;
+			return NULL;
+		}
+		/* increment write pointer */
+		play->buffer_writep += len;
+		if (play->buffer_writep == play->buffer_size)
+			play->buffer_writep = 0;
+		/* quit on end of file */
+		if (len != to_read) {
+			play->finish = 1;
+			return NULL;
+		}
+	}
+
+	return NULL;
+}
 
 struct fmt {
 	uint16_t	format; /* 1 = pcm, 2 = adpcm */
@@ -39,6 +119,7 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 	/* RIFFxxxxWAVEfmt xxxx(fmt size)dataxxxx... */
 	char dummyheader[4 + 4 + 4 + 4 + 4 + sizeof(struct fmt) + 4 + 4];
 	int __attribute__((__unused__)) len;
+	int rc;
 
 	memset(rec, 0, sizeof(*rec));
 	rec->samplerate = samplerate;
@@ -54,9 +135,34 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 	memset(&dummyheader, 0, sizeof(dummyheader));
 	len = fwrite(dummyheader, 1, sizeof(dummyheader), rec->fp);
 
+	rec->buffer_size = samplerate * 2 * channels;
+	rec->buffer = calloc(rec->buffer_size, 1);
+	if (!rec->buffer) {
+		fprintf(stderr, "No mem!\n");
+		rc = ENOMEM;
+		goto error;
+	}
+
+	rc = pthread_create(&rec->tid, NULL, record_child, rec);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to create thread to record wave file! (errno %d)\n", errno);
+		goto error;
+	}
+
 	printf("*** Writing received audio to %s.\n", filename);
 
 	return 0;
+
+error:
+	if (rec->buffer) {
+		free(rec->buffer);
+		rec->buffer = NULL;
+	}
+	if (rec->fp) {
+		fclose(rec->fp);
+		rec->fp = NULL;
+	}
+	return rc;
 }
 
 int wave_create_playback(wave_play_t *play, const char *filename, int samplerate, int channels, double max_deviation)
@@ -67,6 +173,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 	int gotfmt = 0, gotdata = 0;
 	int rc = -EINVAL;
 
+	memset(&fmt, 0, sizeof(fmt));
 	memset(play, 0, sizeof(*play));
 	play->channels = channels;
 	play->max_deviation = max_deviation;
@@ -186,71 +293,128 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 
 	play->left = chunk / 2 / channels;
 
+	play->buffer_size = samplerate * 2 * channels;
+	play->buffer = calloc(play->buffer_size, 1);
+	if (!play->buffer) {
+		fprintf(stderr, "No mem!\n");
+		rc = -ENOMEM;
+		goto error;
+	}
+
+	rc = pthread_create(&play->tid, NULL, playback_child, play);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to create thread to playback wave file! (errno %d)\n", errno);
+		goto error;
+	}
+
 	printf("*** Replacing received audio by %s.\n", filename);
 
 	return 0;
 
 error:
-	fclose(play->fp);
-	play->fp = NULL;
+	if (play->buffer) {
+		free(play->buffer);
+		play->buffer = NULL;
+	}
+	if (play->fp) {
+		fclose(play->fp);
+		play->fp = NULL;
+	}
 	return rc;
-}
-
-int wave_read(wave_play_t *play, sample_t **samples, int length)
-{
-	double max_deviation = play->max_deviation;
-	int16_t value; /* must be int16, so assembling bytes work */
-	uint8_t buff[2 * length * play->channels];
-	int __attribute__((__unused__)) len;
-	int i, j, c;
-
-	if (length > (int)play->left) {
-		for (c = 0; c < play->channels; c++)
-			memset(samples[c], 0, sizeof(samples[c][0] * length));
-		length = play->left;
-	}
-	if (!length)
-		return length;
-
-	play->left -= length;
-	if (!play->left)
-		printf("*** Finished reading WAVE file.\n");
-
-	/* read and correct endianness */
-	len = fread(buff, 1, 2 * length * play->channels, play->fp);
-	for (i = 0, j = 0; i < length; i++) {
-		for (c = 0; c < play->channels; c++) {
-			value = buff[j] + (buff[j + 1] << 8);
-			samples[c][i] = (double)value / 32767.0 * max_deviation;
-			j += 2;
-		}
-	}
-
-	return length;
 }
 
 int wave_write(wave_rec_t *rec, sample_t **samples, int length)
 {
 	double max_deviation = rec->max_deviation;
 	int32_t value;
-	uint8_t buff[2 * length * rec->channels];
 	int __attribute__((__unused__)) len;
-	int i, j, c;
+	int i, c;
+	int to_write;
 
-	/* write and correct endianness */
-	for (i = 0, j = 0; i < length; i++) {
+	/* on error, don't write more */
+	if (rec->finish)
+		return 0;
+
+	/* how much space is in buffer */
+	to_write = (rec->buffer_size + rec->buffer_readp - rec->buffer_writep - 1) % rec->buffer_size;
+	to_write /= 2 * rec->channels;
+	if (to_write < length)
+		fprintf(stderr, "Record wave buffer overflow.\n");
+	else
+		to_write = length;
+	if (to_write == 0)
+		return 0;
+
+	for (i = 0; i < to_write; i++) {
 		for (c = 0; c < rec->channels; c++) {
 			value = samples[c][i] / max_deviation * 32767.0;
 			if (value > 32767)
 				value = 32767;
 			else if (value < -32767)
 				value = -32767;
-			buff[j++] = value;
-			buff[j++] = value >> 8;
+			rec->buffer[rec->buffer_writep] = value;
+			rec->buffer_writep = (rec->buffer_writep + 1) % rec->buffer_size;
+			rec->buffer[rec->buffer_writep] = value >> 8;
+			rec->buffer_writep = (rec->buffer_writep + 1) % rec->buffer_size;
 		}
 	}
-	len = fwrite(buff, 1, 2 * length * rec->channels, rec->fp);
-	rec->written += length;
+	rec->written += to_write;
+
+	return to_write;
+}
+
+int wave_read(wave_play_t *play, sample_t **samples, int length)
+{
+	double max_deviation = play->max_deviation;
+	int16_t value; /* must be int16, so assembling bytes work */
+	int __attribute__((__unused__)) len;
+	int i, c;
+	int to_read;
+
+	/* we have finished */
+	if (play->left == 0) {
+		to_read = 0;
+read_empty:
+		for (i = to_read; i < length; i++) {
+			for (c = 0; c < play->channels; c++)
+				samples[c][i] = 0;
+		}
+		return length;
+	}
+
+	/* how much do we read from buffer */
+	to_read = (play->buffer_size + play->buffer_writep - play->buffer_readp) % play->buffer_size;
+	to_read /= 2 * play->channels;
+	if (to_read > (int)play->left)
+		to_read = play->left;
+	if (to_read > length)
+		to_read = length;
+
+	if (to_read == 0 && play->finish) {
+		if (play->left) {
+			printf("*** Finished reading WAVE file. (short read)\n");
+			play->left = 0;
+		}
+		goto read_empty;
+	}
+
+	/* read from buffer */
+	for (i = 0; i < to_read; i++) {
+		for (c = 0; c < play->channels; c++) {
+			value = play->buffer[play->buffer_readp];
+			play->buffer_readp = (play->buffer_readp + 1) % play->buffer_size;
+			value |= play->buffer[play->buffer_readp] << 8;
+			play->buffer_readp = (play->buffer_readp + 1) % play->buffer_size;
+			samples[c][i] = (double)value / 32767.0 * max_deviation;
+		}
+	}
+	play->left -= to_read;
+
+	if (!play->left)
+		printf("*** Finished reading WAVE file.\n");
+
+	if (to_read < length)
+		goto read_empty;
 
 	return length;
 }
@@ -264,6 +428,17 @@ void wave_destroy_record(wave_rec_t *rec)
 
 	if (!rec->fp)
 		return;
+
+	/* on error, thread has terminated */
+	if (rec->finish) {
+		fclose(rec->fp);
+		rec->fp = NULL;
+		return;
+	}
+
+	/* finish thread */
+	rec->finish = 1;
+	pthread_join(rec->tid, NULL);
 
 	/* cue */
 	fprintf(rec->fp, "cue %c%c%c%c%c%c%c%c", 4, 0, 0, 0, 0,0,0,0);
@@ -312,6 +487,8 @@ void wave_destroy_record(wave_rec_t *rec)
 	/* data */
 	fprintf(rec->fp, "data%c%c%c%c", size & 0xff, (size >> 8) & 0xff, (size >> 16) & 0xff, size >> 24);
 
+	free(rec->buffer);
+	rec->buffer = NULL;
 	fclose(rec->fp);
 	rec->fp = NULL;
 
@@ -323,6 +500,12 @@ void wave_destroy_playback(wave_play_t *play)
 	if (!play->fp)
 		return;
 
+	/* finish thread if not already */
+	play->finish = 1;
+	pthread_join(play->tid, NULL);
+
+	free(play->buffer);
+	play->buffer = NULL;
 	fclose(play->fp);
 	play->fp = NULL;
 }

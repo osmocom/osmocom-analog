@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
 #include <math.h>
 #include <sys/ioctl.h>
 #include "sample.h"

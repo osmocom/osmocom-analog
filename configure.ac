@@ -24,8 +24,10 @@ dnl Checks for typedefs, structures and compiler characteristics
 
 AC_CANONICAL_HOST
 
-PKG_CHECK_MODULES(ALSA, alsa >= 1.0)
+AC_CHECK_LIB([m], [main])
+AC_CHECK_LIB([pthread], [main])
 
+PKG_CHECK_MODULES(ALSA, alsa >= 1.0)
 
 with_sdr=no
 AC_ARG_WITH([uhd], [AS_HELP_STRING([--with-uhd], [compile with UHD driver @<:@default=check@:>@]) ], [], [with_uhd="check"])
