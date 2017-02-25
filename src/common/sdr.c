@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
 #include "sample.h"
 #include "filter.h"
@@ -225,6 +226,20 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 error:
 	sdr_close(sdr);
 	return NULL;
+}
+
+/* start streaming */
+int sdr_start(void __attribute__((__unused__)) *inst)
+{
+//	sdr_t *sdr = (sdr_t *)inst;
+
+#ifdef HAVE_UHD
+	return uhd_start();
+#endif
+#ifdef HAVE_SOAPY
+	return soapy_start();
+#endif
+	return -EINVAL;
 }
 
 void sdr_close(void *inst)

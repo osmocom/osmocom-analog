@@ -170,10 +170,15 @@ int soapy_open(const char *device_args, double tx_frequency, double rx_frequency
 		return -EIO;
 	}
 
+	return 0;
+}
+
+/* start streaming */
+int soapy_start(void)
+{
 	/* enable rx stream */
 	if (SoapySDRDevice_activateStream(sdr, rxStream, 0, 0, 0) != 0) {
 		PDEBUG(DUHD, DEBUG_ERROR, "Failed to issue RX stream command\n");
-		soapy_close();
 		return -EIO;
 	}
 	return 0;

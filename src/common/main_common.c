@@ -475,8 +475,6 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 	/* open audio */
 	if (sender_open_audio())
 		return;
-
-	/* afterwards open call audio, because we cannot wait for SDR to open */
 	if (call_open_audio())
 		return;
 
@@ -505,6 +503,12 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
 	signal(SIGHUP, sighandler);
 	signal(SIGTERM, sighandler);
 	signal(SIGPIPE, sighandler);
+
+	/* start streaming */
+	if (sender_start_audio())
+		*quit = 1;
+	if (call_start_audio())
+		*quit = 1;
 
 	while(!(*quit)) {
 		begin_time = get_time();

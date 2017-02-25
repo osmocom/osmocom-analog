@@ -532,6 +532,14 @@ int call_open_audio(void)
 	return 0;
 }
 
+int call_start_audio(void)
+{
+	if (!call.audiodev[0])
+		return 0;
+
+	return sound_start(call.sound);
+}
+
 void call_cleanup(void)
 {
 	if (call.use_mncc_sock)

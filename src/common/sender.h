@@ -42,6 +42,7 @@ typedef struct sender {
 	void			*audio;
 	char			audiodev[64];		/* audio device name (alsa or sdr) */
 	void			*(*audio_open)(const char *, double *, double *, int, double, int, double, double);
+	int 			(*audio_start)(void *);
 	void 			(*audio_close)(void *);
 	int			(*audio_write)(void *, sample_t **, int, enum paging_signal *, int *, int);
 	int			(*audio_read)(void *, sample_t **, int, int);
@@ -91,6 +92,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 void sender_destroy(sender_t *sender);
 void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double dBm0_deviation, double max_display);
 int sender_open_audio(void);
+int sender_start_audio(void);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, sample_t *samples, int count);
 void sender_receive(sender_t *sender, sample_t *samples, int count);

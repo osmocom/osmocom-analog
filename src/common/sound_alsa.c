@@ -112,7 +112,6 @@ error:
 static int sound_prepare(sound_t *sound)
 {
 	int rc;
-	int16_t buff[2];
 
 	rc = snd_pcm_prepare(sound->phandle);
 	if (rc < 0) {
@@ -125,9 +124,6 @@ static int sound_prepare(sound_t *sound)
 		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
 		return rc;
 	}
-
-	/* trigger capturing */
-	snd_pcm_readi(sound->chandle, buff, 1);
 
 	return 0;
 }
@@ -194,6 +190,18 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 error:
 	sound_close(sound);
 	return NULL;
+}
+
+/* start streaming */
+int sound_start(void *inst)
+{
+	sound_t *sound = (sound_t *)inst;
+	int16_t buff[2];
+
+	/* trigger capturing */
+	snd_pcm_readi(sound->chandle, buff, 1);
+
+	return 0;
 }
 
 void sound_close(void *inst)

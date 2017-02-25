@@ -236,6 +236,14 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 		return -EIO;
 	}
 
+	return 0;
+}
+
+/* start streaming */
+int uhd_start(void)
+{
+	uhd_error error;
+
 	/* enable rx stream */
 	memset(&stream_cmd, 0, sizeof(stream_cmd));
 	stream_cmd.stream_mode = UHD_STREAM_MODE_START_CONTINUOUS;
@@ -243,7 +251,6 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 	error = uhd_rx_streamer_issue_stream_cmd(rx_streamer, &stream_cmd);
 	if (error) {
 		PDEBUG(DUHD, DEBUG_ERROR, "Failed to issue RX stream command\n");
-		uhd_close();
 		return -EIO;
 	}
 	return 0;

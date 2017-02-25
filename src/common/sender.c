@@ -97,6 +97,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 #ifdef HAVE_SDR
 		if (!strcmp(audiodev, "sdr")) {
 			sender->audio_open = sdr_open;
+			sender->audio_start = sdr_start;
 			sender->audio_close = sdr_close;
 			sender->audio_read = sdr_read;
 			sender->audio_write = sdr_write;
@@ -105,6 +106,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 #endif
 		{
 			sender->audio_open = sound_open;
+			sender->audio_start = sound_start;
 			sender->audio_close = sound_close;
 			sender->audio_read = sound_read;
 			sender->audio_write = sound_write;
@@ -200,6 +202,24 @@ int sender_open_audio(void)
 	}
 
 	return 0;
+}
+
+int sender_start_audio(void)
+{
+	sender_t *master;
+	int rc = 0;
+
+	for (master = sender_head; master; master = master->next) {
+		/* skip audio slaves */
+		if (master->master)
+			continue;
+
+		rc = master->audio_start(master->audio);
+		if (rc)
+			break;
+	}
+
+	return rc;
 }
 
 /* Destroy transceiver instance and unlink from list. */
