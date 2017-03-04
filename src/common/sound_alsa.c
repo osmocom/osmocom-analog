@@ -323,8 +323,10 @@ int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *pag
 
 	if (rc < 0) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
-		if (rc == -EPIPE)
+		if (rc == -EPIPE) {
 			sound_prepare(sound);
+			sound_start(sound);
+		}
 		return rc;
 	}
 
@@ -363,8 +365,10 @@ int sound_read(void *inst, sample_t **samples, int num, int channels)
 			return 0;
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to read audio from interface (%s)\n", snd_strerror(rc));
 		/* recover read */
-		if (rc == -EPIPE)
+		if (rc == -EPIPE) {
 			sound_prepare(sound);
+			sound_start(sound);
+		}
 		return rc;
 	}
 
@@ -391,14 +395,15 @@ int sound_read(void *inst, sample_t **samples, int num, int channels)
 }
 
 /* 
- * get playback buffer fill
+ * get playback buffer space
  *
- * return number of frames */
-int sound_get_inbuffer(void *inst)
+ * return number of samples to be sent */
+int sound_get_tosend(void *inst, int latspl)
 {
 	sound_t *sound = (sound_t *)inst;
 	int rc;
 	snd_pcm_sframes_t delay;
+	int tosend;
 
 	rc = snd_pcm_delay(sound->phandle, &delay);
 	if (rc < 0) {
@@ -406,12 +411,15 @@ int sound_get_inbuffer(void *inst)
 			PDEBUG(DSOUND, DEBUG_ERROR, "Buffer underrun: Please use higher latency and enable real time scheduling\n");
 		else
 			PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
-		if (rc == -EPIPE)
+		if (rc == -EPIPE) {
 			sound_prepare(sound);
+			sound_start(sound);
+		}
 		return rc;
 	}
 
-	return delay;
+	tosend = latspl - delay;
+	return tosend;
 }
 
 int sound_is_stereo_capture(void *inst)

@@ -46,7 +46,7 @@ typedef struct sender {
 	void 			(*audio_close)(void *);
 	int			(*audio_write)(void *, sample_t **, int, enum paging_signal *, int *, int);
 	int			(*audio_read)(void *, sample_t **, int, int);
-	int			(*audio_get_inbuffer)(void *);
+	int			(*audio_get_tosend)(void *, int);
 	int			samplerate;
 	samplerate_t		srstate;		/* sample rate conversion state */
 	double			rx_gain;		/* factor of level to apply on rx samples */

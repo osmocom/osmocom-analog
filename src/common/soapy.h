@@ -4,5 +4,5 @@ int soapy_start(void);
 void soapy_close(void);
 int soapy_send(float *buff, int num);
 int soapy_receive(float *buff, int max);
-int soapy_get_inbuffer(void);
+int soapy_get_tosend(int latspl);
 

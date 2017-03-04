@@ -101,7 +101,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 			sender->audio_close = sdr_close;
 			sender->audio_read = sdr_read;
 			sender->audio_write = sdr_write;
-			sender->audio_get_inbuffer = sdr_get_inbuffer;
+			sender->audio_get_tosend = sdr_get_tosend;
 		} else
 #endif
 		{
@@ -110,7 +110,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 			sender->audio_close = sound_close;
 			sender->audio_read = sound_read;
 			sender->audio_write = sound_write;
-			sender->audio_get_inbuffer = sound_get_inbuffer;
+			sender->audio_get_tosend = sound_get_tosend;
 		}
 	}
 
@@ -282,12 +282,8 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 		samples[i] = buff[i];
 	}
 
-	count = sender->audio_get_inbuffer(sender->audio);
+	count = sender->audio_get_tosend(sender->audio, latspl);
 	if (count < 0) {
-		/* special case when the device is not yet ready to transmit packets */
-		if (count == -EAGAIN) {
-			goto transmit_later;
-		}
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE) {
 			if (cant_recover) {
@@ -300,8 +296,7 @@ cant_recover:
 		}
 		return;
 	}
-	if (count < latspl) {
-		count = latspl - count;
+	if (count > 0) {
 		/* loop through all channels */
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
 			/* load TX data from audio loop or from sender instance */
@@ -338,7 +333,6 @@ cant_recover:
 			return;
 		}
 	}
-transmit_later:
 
 	count = sender->audio_read(sender->audio, samples, latspl, num_chan);
 	if (count < 0) {

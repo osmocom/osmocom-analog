@@ -5,5 +5,5 @@ void *sdr_open(const char *audiodev, double *tx_frequency, double *rx_frequency,
 void sdr_close(void *inst);
 int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal *paging_signal, int *on, int channels);
 int sdr_read(void *inst, sample_t **samples, int num, int channels);
-int sdr_get_inbuffer(void *inst);
+int sdr_get_tosend(void *inst, int latspl);
 

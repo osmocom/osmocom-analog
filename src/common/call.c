@@ -681,15 +681,14 @@ void process_call(int c)
 	int count;
 	int rc;
 
-	count = sound_get_inbuffer(call.sound);
+	count = sound_get_tosend(call.sound, call.latspl);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE)
 			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
 		return;
 	}
-	if (count < call.latspl) {
-		count = call.latspl - count;
+	if (count > 0) {
 		int16_t spl[count + 10]; /* more than enough, count will be reduced by scaling with factor */
 		switch(call.state) {
 		case CALL_ALERTING:

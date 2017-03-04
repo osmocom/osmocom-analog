@@ -379,19 +379,24 @@ int uhd_receive(float *buff, int max)
 	return got;
 }
 
-/* estimate current unsent number of samples */
-int uhd_get_inbuffer(void)
+/* estimate number of samples that can be sent */
+int uhd_get_tosend(int latspl)
 {
 	double advance;
+	int tosend;
 
 	/* we need the rx time stamp to determine how much data is already sent in advance */
 	if (rx_time_secs == 0 && rx_time_fract_sec == 0.0)
-		return -EAGAIN;
+		return 0;
 
 	/* if we have not yet sent any data, we set initial tx time stamp */
 	if (tx_time_secs == 0 && tx_time_fract_sec == 0.0) {
 		tx_time_secs = rx_time_secs;
-		tx_time_fract_sec = rx_time_fract_sec;
+		tx_time_fract_sec = rx_time_fract_sec + (double)latspl / samplerate;
+		if (tx_time_fract_sec >= 1.0) {
+			tx_time_fract_sec -= 1.0;
+			tx_time_secs++;
+		}
 	}
 
 	/* we check how advance our transmitted time stamp is */
@@ -399,7 +404,10 @@ int uhd_get_inbuffer(void)
 	/* in case of underrun: */
 	if (advance < 0)
 		advance = 0;
+	tosend = latspl - (int)(advance * samplerate);
+	if (tosend < 0)
+		tosend = 0;
 
-	return (int)(advance * samplerate);
+	return tosend;
 }
 

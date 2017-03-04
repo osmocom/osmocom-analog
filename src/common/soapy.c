@@ -262,25 +262,26 @@ int soapy_receive(float *buff, int max)
 	return got;
 }
 
-/* estimate current unsent number of samples */
-int soapy_get_inbuffer(void)
+/* estimate number of samples that can be sent */
+int soapy_get_tosend(int latspl)
 {
-	long long advance;
+	int tosend;
 
 	/* we need the rx time stamp to determine how much data is already sent in advance */
 	if (rx_count == 0)
-		return -EAGAIN;
+		return 0;
 
 	/* if we have not yet sent any data, we set initial tx time stamp */
 	if (tx_count == 0)
-		tx_count = rx_count;
+		tx_count = rx_count + latspl;
 
 	/* we check how advance our transmitted time stamp is */
-	advance = tx_count - rx_count;
+	tosend = latspl - (tx_count - rx_count);
 	/* in case of underrun: */
-	if (advance < 0)
-		advance = 0;
+	if (tosend < 0)
+		tosend = 0;
 
-	return advance;
+	return tosend;
 }
+
 

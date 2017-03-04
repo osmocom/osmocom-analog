@@ -234,10 +234,12 @@ int sdr_start(void __attribute__((__unused__)) *inst)
 //	sdr_t *sdr = (sdr_t *)inst;
 
 #ifdef HAVE_UHD
-	return uhd_start();
+	if (sdr_use_uhd)
+		return uhd_start();
 #endif
 #ifdef HAVE_SOAPY
-	return soapy_start();
+	if (sdr_use_soapy)
+		return soapy_start();
 #endif
 	return -EINVAL;
 }
@@ -356,18 +358,18 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 }
 
 /* how many delay (in audio sample duration) do we have in the buffer */
-int sdr_get_inbuffer(void __attribute__((__unused__)) *inst)
+int sdr_get_tosend(void __attribute__((__unused__)) *inst, int latspl)
 {
 //	sdr_t *sdr = (sdr_t *)inst;
 	int count = 0;
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd)
-		count = uhd_get_inbuffer();
+		count = uhd_get_tosend(latspl);
 #endif
 #ifdef HAVE_SOAPY
 	if (sdr_use_soapy)
-		count = soapy_get_inbuffer();
+		count = soapy_get_tosend(latspl);
 #endif
 	if (count < 0)
 		return count;
