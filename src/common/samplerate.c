@@ -25,24 +25,22 @@
 #include "sample.h"
 #include "samplerate.h"
 
-int init_samplerate(samplerate_t *state, double samplerate)
+int init_samplerate(samplerate_t *state, double low_samplerate, double high_samplerate)
 {
-#if 0
-	if ((samplerate % 8000)) {
-		fprintf(stderr, "Sample rate must be a muliple of 8000 to support MNCC socket interface, aborting!\n");
-		return -EINVAL;
-	}
-#endif
 	memset(state, 0, sizeof(*state));
-	state->factor = samplerate / 8000.0;
+	state->factor = high_samplerate / low_samplerate;
+	if (state->factor < 1.0) {
+		fprintf(stderr, "Software error: Low sample rate must be lower than high sample rate, aborting!\n");
+		abort();
+	}
 
-	filter_lowpass_init(&state->up.lp, 3300.0, samplerate, 2);
-	filter_lowpass_init(&state->down.lp, 3300.0, samplerate, 2);
+	filter_lowpass_init(&state->up.lp, 3300.0, high_samplerate, 2);
+	filter_lowpass_init(&state->down.lp, 3300.0, high_samplerate, 2);
 
 	return 0;
 }
 
-/* convert input sample rate to 8000 Hz */
+/* convert high sample rate to low sample rate */
 int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 {
 	int output_num = 0, i, idx;
@@ -96,7 +94,7 @@ int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 	return output_num;
 }
 
-/* convert 8000 Hz sample rate to output sample rate */
+/* convert low sample rate to high sample rate */
 int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sample_t *output)
 {
 	int output_num = 0, i, idx;
