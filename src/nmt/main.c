@@ -348,9 +348,6 @@ int main(int argc, char *argv[])
 		print_image();
 
 	/* init functions */
-	rc = init_common(station_id, 7);
-	if (rc < 0)
-		goto fail;
 	rc = init_frame();
 	if (rc < 0) {
 		fprintf(stderr, "Failed to setup frames. Quitting!\n");
@@ -380,16 +377,13 @@ int main(int argc, char *argv[])
 
 	nmt_check_channels();
 
-	main_common(&quit, latency, interval, myhandler);
+	main_common(&quit, latency, interval, myhandler, station_id, 7);
 
 fail:
 	/* fifo */
 	if (sms_deliver_fd > 0)
 		close(sms_deliver_fd);
 	unlink(SMS_DELIVER);
-
-	/* cleanup functions */
-	cleanup_common();
 
 	/* destroy transceiver instance */
 	while (sender_head)

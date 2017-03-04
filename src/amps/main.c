@@ -283,9 +283,6 @@ int main(int argc, char *argv[])
 	sid_stations(sid);
 
 	/* init functions */
-	rc = init_common(station_id, 10);
-	if (rc < 0)
-		goto fail;
 	dsp_init();
 	init_frame();
 
@@ -356,12 +353,9 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %d ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0) / 1e6, amps_channel2freq(kanal[i], 1) / 1e6);
 	}
 
-	main_common(&quit, latency, interval, NULL);
+	main_common(&quit, latency, interval, NULL, station_id, 10);
 
 fail:
-	/* cleanup functions */
-	cleanup_common();
-
 	/* destroy transceiver instance */
 	while (sender_head)
 		amps_destroy(sender_head);

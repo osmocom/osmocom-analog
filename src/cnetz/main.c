@@ -228,9 +228,6 @@ int main(int argc, char *argv[])
 		print_image();
 
 	/* init functions */
-	rc = init_common(station_id, 7);
-	if (rc < 0)
-		goto fail;
 	scrambler_init();
 	init_sysinfo();
 	dsp_init();
@@ -303,12 +300,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	main_common(&quit, latency, interval, NULL);
+	main_common(&quit, latency, interval, NULL, station_id, 7);
 
 fail:
-	/* cleanup functions */
-	cleanup_common();
-
 	flush_db();
 
 	/* destroy transceiver instance */

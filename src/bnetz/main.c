@@ -164,9 +164,6 @@ int main(int argc, char *argv[])
 		print_image();
 
 	/* init functions */
-	rc = init_common(station_id, 5);
-	if (rc < 0)
-		goto fail;
 	dsp_init();
 	bnetz_init();
 
@@ -187,12 +184,9 @@ int main(int argc, char *argv[])
 		printf("To call phone, switch transmitter (using paging signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0) / 1e6);
 	}
 
-	main_common(&quit, latency, interval, NULL);
+	main_common(&quit, latency, interval, NULL, station_id, 5);
 
 fail:
-	/* cleanup functions */
-	cleanup_common();
-
 	/* destroy transceiver instance */
 	while(sender_head)
 		bnetz_destroy(sender_head);

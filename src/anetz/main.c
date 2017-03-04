@@ -166,10 +166,6 @@ int main(int argc, char *argv[])
 	if (!loopback)
 		print_image();
 
-	/* init functions */
-	rc = init_common(station_id, 5);
-	if (rc < 0)
-		goto fail;
 	dsp_init();
 	anetz_init();
 
@@ -183,12 +179,9 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], anetz_kanal2freq(kanal[i], 0) / 1e6, anetz_kanal2freq(kanal[i], 1) / 1e6);
 	}
 
-	main_common(&quit, latency, interval, NULL);
+	main_common(&quit, latency, interval, NULL, station_id, 5);
 
 fail:
-	/* cleanup functions */
-	cleanup_common();
-
 	/* destroy transceiver instance */
 	while (sender_head)
 		anetz_destroy(sender_head);

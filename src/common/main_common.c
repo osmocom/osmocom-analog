@@ -417,8 +417,14 @@ static int get_char()
 		return -1;
 }
 
-int init_common(const char *station_id, int station_id_digits)
+/* Loop through all transceiver instances of one network. */
+void main_common(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits)
 {
+	int latspl;
+	sender_t *sender;
+	double last_time_call = 0, begin_time, now, sleep;
+	struct termios term, term_orig;
+	int c;
 	int rc;
 
 	/* init mncc */
@@ -426,7 +432,7 @@ int init_common(const char *station_id, int station_id_digits)
 		rc = mncc_init("/tmp/bsc_mncc");
 		if (rc < 0) {
 			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			return rc;
+			return;
 		}
 	}
 
@@ -434,14 +440,14 @@ int init_common(const char *station_id, int station_id_digits)
 	rc = call_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
-		return rc;
+		return;
 	}
 
 #ifdef HAVE_UHD
  #ifdef HAVE_SOAPY
 	if ((sdr_uhd == 1 && sdr_soapy == 1) || (sdr_uhd == 0 && sdr_soapy == 0)) {
 		fprintf(stderr, "UHD and SoapySDR drivers are compiled in. You must choose which one you want: --sdr-uhd or --sdr-soapy\n");
-		return -EINVAL;
+		return;
 	}
  #else
  	sdr_uhd = 1;
@@ -457,20 +463,8 @@ int init_common(const char *station_id, int station_id_digits)
 #ifdef HAVE_SDR
 	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave);
 	if (rc < 0)
-		return rc;
+		return;
 #endif
-
-	return 0;
-}
-
-/* Loop through all transceiver instances of one network. */
-void main_common(int *quit, int latency, int interval, void (*myhandler)(void))
-{
-	int latspl;
-	sender_t *sender;
-	double last_time_call = 0, begin_time, now, sleep;
-	struct termios term, term_orig;
-	int c;
 
 	/* open audio */
 	if (sender_open_audio())
@@ -609,11 +603,11 @@ next_char:
 		schedp.sched_priority = 0;
 		sched_setscheduler(0, SCHED_OTHER, &schedp);
 	}
-}
 
-void cleanup_common(void)
-{
+	/* cleanup call control */
 	call_cleanup();
+
+	/* close mncc socket */
 	if (use_mncc_sock)
 		mncc_exit();
 }
