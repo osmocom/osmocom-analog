@@ -111,13 +111,13 @@ The transmitter will now shift frequency according the the level of the sound ca
 </p>
 
 <p>
-<font color="red">Importaint: We need to transmit correct polarity, use auto polarity detection always!</font>
+<font color="red">Importaint: We need to transmit correct polarity!</font>
 </p>
 
 <p>
 In my case, my sound card is connected to a transmitter, where a positive sample value causes a negative frequency deviation.
 This is why I need to flip the polarity of the signal, so I generate a negative sample value that causes a positive frequency deviation.
-I use the '-f yes' option or '--flip-polarity yes'.
+I use the '-F yes' option or '--flip-polarity yes'.
 Also it is essential to use a transmitter with direct access to the modulator and and a receiver with direct access to the disciminator.
 I use '-p -d' or '--pre-emphasis --de-emphasis' to process emphasis for audio signal in software.
 I use the calling channel (control channel) 334, which could also be used as traffic channel (voice channel).
