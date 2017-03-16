@@ -48,6 +48,9 @@ typedef struct fsk_fm_demod {
 	double		change_levels[256];	/* ring buffer to store levels */
 	double		change_when[256];	/* ring buffer to store time when level has changed */
 	uint8_t		change_pos;		/* index for next write */
+
+	/* debug */
+	FILE		*debug_fp;		/* file pointer for debugging output */
 } fsk_fm_demod_t;
 
 int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate);

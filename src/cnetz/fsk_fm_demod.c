@@ -100,6 +100,16 @@
  * 
  */
 
+/* Words on debugging:
+ *
+ * A debug file can be written. It will show the current sample that is right
+ * in the middle of the search window. Additional information is shown right
+ * of the sample graph.
+ */
+
+/* use to debug decoder */
+//#define DEBUG_DECODER
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -111,11 +121,6 @@
 #include "cnetz.h"
 #include "dsp.h"
 #include "telegramm.h"
-
-/* use to debug decoder */
-//#define DEBUG_DECODER	if (1)
-//#define DEBUG_DECODER	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V)
-//#define DEBUG_DECODER	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V && sync)
 
 int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate)
 {
@@ -150,6 +155,17 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 	fsk->level_threshold = 0.1;
 
+#ifdef DEBUG_DECODER
+	char debug_filename[256];
+	sprintf(debug_filename, "/tmp/debug_decoder_channel_%d.txt\n", cnetz->sender.kanal);
+	fsk->debug_fp = fopen(debug_filename, "w");
+	if (!fsk->debug_fp) {
+		fprintf(stderr, "Failed to open decoder debug file '%s'!\n", debug_filename);
+		exit(0);
+	} else
+		printf("**** Writing decoder debug file '%s' ****\n", debug_filename);
+#endif
+
 	return 0;
 
 error:
@@ -167,6 +183,13 @@ void fsk_fm_exit(fsk_fm_demod_t *fsk)
 		free(fsk->speech_buffer);
 		fsk->speech_buffer = NULL;
 	}
+
+#ifdef DEBUG_DECODER
+	if (fsk->debug_fp) {
+		fclose(fsk->debug_fp);
+		fsk->debug_fp = NULL;
+	}
+#endif
 }
 
 /* get levels, sync time and jitter from sync sequence or frame data */
@@ -271,7 +294,6 @@ static inline void got_bit(fsk_fm_demod_t *fsk, int bit, double change_level)
 	}
 	fsk->bit_count++;
 
-//printf("bit %d\n", bit);
 	fsk->change_levels[fsk->change_pos] = change_level;
 	fsk->change_when[fsk->change_pos++] = fsk->bit_time;
 
@@ -296,6 +318,9 @@ static inline void got_bit(fsk_fm_demod_t *fsk, int bit, double change_level)
 		if (detect_sync(fsk->rx_sync)) {
 			fsk->sync = FSK_SYNC_POSITIVE;
 got_sync:
+#ifdef DEBUG_DECODER
+			fprintf(fsk->debug_fp, " SYNC!");
+#endif
 			get_levels(fsk, &min, &max, &avg, &probes, 30, &fsk->sync_time, &fsk->sync_jitter);
 			fsk->sync_level = avg / 2.0;
 			if (fsk->sync == FSK_SYNC_NEGATIVE)
@@ -318,6 +343,9 @@ got_sync:
 		fsk->rx_buffer[fsk->rx_buffer_count] = bit + '0';
 		if (++fsk->rx_buffer_count == 150) {
 			fsk->sync = FSK_SYNC_NONE;
+#ifdef DEBUG_DECODER
+			fprintf(fsk->debug_fp, " FRAME DONE!");
+#endif
 			if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 				/* received 40 bits after start of block */
 				fsk->sync_time = fmod(fsk->sync_time - (7+33) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
@@ -382,11 +410,13 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 	 * if we are in sync, we remember last change. after 1.5
 	 * bits after sync average, we measure the first bit
 	 * and then all subsequent bits after 1.0 bits */
-//DEBUG_DECODER printf("next_bit=%.4f\n", next_bit);
 	if (level_max - level_min > threshold && change_at == fsk->bit_buffer_half) {
 #ifdef DEBUG_DECODER
-		DEBUG_DECODER
-			printf("receive bit change to %d (level=%.3f, threshold=%.3f)\n", change_positive, level_max - level_min, threshold);
+		fprintf(fsk->debug_fp, " CHANGE %d->%d (level=%.3f, threshold=%.3f)",
+				fsk->last_change_positive,
+				change_positive,
+				level_max - level_min,
+				threshold);
 #endif
 		fsk->last_change_positive = change_positive;
 		if (!fsk->sync) {
@@ -396,12 +426,7 @@ static inline void find_change(fsk_fm_demod_t *fsk)
 	}
 	if (fsk->next_bit <= 0.0) {
 #ifdef DEBUG_DECODER
-		DEBUG_DECODER {
-			if (fsk->sync)
-				printf("sampling here bit %d\n", fsk->last_change_positive);
-			else
-				printf("no bit change\n");
-		}
+		fprintf(fsk->debug_fp, " SAMPLING %d", fsk->last_change_positive);
 #endif
 		fsk->next_bit += 1.0;
 		got_bit(fsk, fsk->last_change_positive, 0);
@@ -420,13 +445,21 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 		fsk->bit_buffer_spl[fsk->bit_buffer_pos++] = samples[i];
 		if (fsk->bit_buffer_pos == fsk->bit_buffer_len)
 			fsk->bit_buffer_pos = 0;
+
 		/* for each sample process buffer */
 		if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 #ifdef DEBUG_DECODER
-			DEBUG_DECODER
-				puts(debug_amplitude(samples[i]));
+			/* show deviation of middle sample in windows (in a range of +-5000 Hz) */
+			fprintf(fsk->debug_fp, "%s",
+				debug_amplitude(
+					fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_half) % fsk->bit_buffer_len] / 5000.0
+				)
+			);
 #endif
 			find_change(fsk);
+#ifdef DEBUG_DECODER
+			fprintf(fsk->debug_fp, "\n");
+#endif
 		} else {
 			/* in distributed signaling, measure over 5 bits, but ignore 5th bit.
 			 * also reset next_bit, as soon as we reach the window */
@@ -438,19 +471,24 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 			if (t < 0.5) {
 				fsk->next_bit = 1.0 - fsk->bits_per_sample;
 #ifdef DEBUG_DECODER
-				if (fsk->bit_count) {
-					DEBUG_DECODER
-						printf("start spk_block bit count=%d\n", fsk->bit_count);
-				}
+				if (fsk->bit_count)
+					fprintf(fsk->debug_fp, "---- SPK(V) BLOCK START ----\n");
 #endif
 				fsk->bit_count = 0;
 			} else
 			if (t >= 0.5 && t < 5.5) {
 #ifdef DEBUG_DECODER
-				DEBUG_DECODER
-					puts(debug_amplitude(samples[i]));
+				/* show deviation of middle sample in windows (in a range of +-5000 Hz) */
+				fprintf(fsk->debug_fp, "%s",
+					debug_amplitude(
+						fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_half) % fsk->bit_buffer_len] / 5000.0
+					)
+				);
 #endif
 				find_change(fsk);
+#ifdef DEBUG_DECODER
+				fprintf(fsk->debug_fp, "\n");
+#endif
 			} else
 			if (t >= 5.5 && t < 65.5) {
 				/* get audio for the duration of 60 bits */
