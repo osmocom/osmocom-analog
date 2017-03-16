@@ -68,6 +68,7 @@ double sdr_rx_gain = 0, sdr_tx_gain = 0;
 const char *write_iq_rx_wave = NULL;
 const char *write_iq_tx_wave = NULL;
 const char *read_iq_rx_wave = NULL;
+const char *read_iq_tx_wave = NULL;
 void print_help_common(const char *arg0, const char *ext_usage)
 {
 	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
@@ -148,6 +149,8 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Write transmitted IQ data to given wave file.\n");
 	printf("    --read-iq-rx-wave <file>\n");
 	printf("        Replace received IQ data by given wave file.\n");
+	printf("    --read-iq-tx-wave <file>\n");
+	printf("        Replace transmitted IQ data by given wave file.\n");
 #endif
 	printf("\nNetwork specific options:\n");
 }
@@ -174,6 +177,7 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_IQ_RX_WAVE	1105
 #define	OPT_WRITE_IQ_TX_WAVE	1106
 #define	OPT_READ_IQ_RX_WAVE	1107
+#define	OPT_READ_IQ_TX_WAVE	1108
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -204,6 +208,7 @@ static struct option long_options_common[] = {
 	{"write-iq-rx-wave", 1, 0, OPT_WRITE_IQ_RX_WAVE},
 	{"write-iq-tx-wave", 1, 0, OPT_WRITE_IQ_TX_WAVE},
 	{"read-iq-rx-wave", 1, 0, OPT_READ_IQ_RX_WAVE},
+	{"read-iq-tx-wave", 1, 0, OPT_READ_IQ_TX_WAVE},
 	{0, 0, 0, 0}
 };
 
@@ -379,6 +384,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		read_iq_rx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_READ_IQ_TX_WAVE:
+		read_iq_tx_wave = strdup(optarg);
+		*skip_args += 2;
+		break;
 	default:
 		exit (0);
 	}
@@ -461,7 +470,7 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 #endif
 
 #ifdef HAVE_SDR
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave);
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave, read_iq_tx_wave);
 	if (rc < 0)
 		return;
 #endif

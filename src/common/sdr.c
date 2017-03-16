@@ -52,14 +52,15 @@ typedef struct sdr {
 	wave_rec_t	wave_rx_rec;
 	wave_rec_t	wave_tx_rec;
 	wave_play_t	wave_rx_play;
+	wave_play_t	wave_tx_play;
 } sdr_t;
 
 static int sdr_use_uhd, sdr_use_soapy;
 static const char *sdr_device_args;
 static double sdr_rx_gain, sdr_tx_gain;
-const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave;
+const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave, *sdr_read_iq_tx_wave;
 
-int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave)
+int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave, const char *read_iq_tx_wave)
 {
 	sdr_use_uhd = sdr_uhd;
 	sdr_use_soapy = sdr_soapy;
@@ -69,6 +70,7 @@ int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain
 	sdr_write_iq_rx_wave = write_iq_rx_wave;
 	sdr_write_iq_tx_wave = write_iq_tx_wave;
 	sdr_read_iq_rx_wave = read_iq_rx_wave;
+	sdr_read_iq_tx_wave = read_iq_tx_wave;
 
 	return 0;
 }
@@ -186,21 +188,28 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	if (sdr_write_iq_rx_wave) {
 		rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2, 1.0);
 		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto error;
 		}
 	}
 	if (sdr_write_iq_tx_wave) {
 		rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2, 1.0);
 		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto error;
 		}
 	}
 	if (sdr_read_iq_rx_wave) {
 		rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2, 1.0);
 		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			goto error;
+		}
+	}
+	if (sdr_read_iq_tx_wave) {
+		rc = wave_create_playback(&sdr->wave_tx_play, sdr_read_iq_tx_wave, sdr->samplerate, 2, 1.0);
+		if (rc < 0) {
+			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 			goto error;
 		}
 	}
@@ -262,6 +271,7 @@ void sdr_close(void *inst)
 		wave_destroy_record(&sdr->wave_rx_rec);
 		wave_destroy_record(&sdr->wave_tx_rec);
 		wave_destroy_playback(&sdr->wave_rx_play);
+		wave_destroy_playback(&sdr->wave_tx_play);
 		free(sdr->chan);
 		free(sdr);
 		sdr = NULL;
@@ -297,6 +307,14 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 			spl[1][s] = buff[ss++];
 		}
 		wave_write(&sdr->wave_tx_rec, spl_list, num);
+	}
+	if (sdr->wave_tx_play.fp) {
+		sample_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
+		wave_read(&sdr->wave_tx_play, spl_list, num);
+		for (s = 0, ss = 0; s < num; s++) {
+			buff[ss++] = spl[0][s];
+			buff[ss++] = spl[1][s];
+		}
 	}
 
 #ifdef HAVE_UHD
