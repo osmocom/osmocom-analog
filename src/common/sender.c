@@ -297,6 +297,9 @@ cant_recover:
 		return;
 	}
 	if (count > 0) {
+		/* limit to our buffer */
+		if (count > latspl)
+			count = latspl;
 		/* loop through all channels */
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
 			/* load TX data from audio loop or from sender instance */

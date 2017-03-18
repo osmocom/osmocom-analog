@@ -32,8 +32,8 @@ SoapySDRStream *rxStream = NULL;
 SoapySDRStream *txStream = NULL;
 static int			tx_samps_per_buff, rx_samps_per_buff;
 static double			samplerate;
-static long long		rx_count = 0;
-static long long		tx_count = 0;
+static uint64_t			rx_count = 0;
+static uint64_t			tx_count = 0;
 
 int soapy_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth)
 {
@@ -266,7 +266,8 @@ int soapy_receive(float *buff, int max)
 
 	while (1) {
 		if (max < rx_samps_per_buff) {
-			PDEBUG(DUHD, DEBUG_ERROR, "SDR rx buffer overflow!\n");
+			/* no more space this time */
+			PDEBUG(DUHD, DEBUG_ERROR, "SDR RX overflow!\n");
 			break;
 		}
 		/* read RX stream */
@@ -299,13 +300,15 @@ int soapy_get_tosend(int latspl)
 
 	/* if we have not yet sent any data, we set initial tx time stamp */
 	if (tx_count == 0)
-		tx_count = rx_count + latspl;
+		tx_count = rx_count;
 
 	/* we check how advance our transmitted time stamp is */
 	tosend = latspl - (tx_count - rx_count);
 	/* in case of underrun: */
-	if (tosend < 0)
+	if (tosend < 0) {
+		PDEBUG(DUHD, DEBUG_ERROR, "SDR TX underrun!\n");
 		tosend = 0;
+	}
 
 	return tosend;
 }

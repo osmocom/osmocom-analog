@@ -369,7 +369,8 @@ int uhd_receive(float *buff, int max)
 
 	while (1) {
 		if (max < (int)rx_samps_per_buff) {
-			PDEBUG(DUHD, DEBUG_ERROR, "SDR rx buffer overflow!\n");
+			/* no more space this time */
+			PDEBUG(DUHD, DEBUG_ERROR, "SDR RX overflow!\n");
 			break;
 		}
 		/* read RX stream */
