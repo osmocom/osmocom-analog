@@ -45,10 +45,10 @@ static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
 static int			rx_gap = 0; /* if we missed samples, we fill our rx data with zeroes */
 
-int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain)
+int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth)
 {
 	uhd_error error;
-	double got_frequency, got_rate, got_gain;
+	double got_frequency, got_rate, got_gain, got_bandwidth;
 	size_t channel = 0;
 
 	samplerate = rate;
@@ -198,6 +198,42 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 	}
 	if (got_frequency != rx_frequency) {
 		PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %0.f Hz\n", rx_frequency, got_frequency);
+		uhd_close();
+		return -EINVAL;
+	}
+
+	/* set bandwidth */
+	if (uhd_usrp_set_tx_bandwidth(usrp, bandwidth, channel) != 0) {
+		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
+		uhd_close();
+		return -EIO;
+	}
+	if (uhd_usrp_set_rx_bandwidth(usrp, bandwidth, channel) != 0) {
+		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
+		uhd_close();
+		return -EIO;
+	}
+
+	/* see what bandwidth actually is */
+	error = uhd_usrp_get_tx_bandwidth(usrp, channel, &got_bandwidth);
+	if (error) {
+		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX bandwidth\n");
+		uhd_close();
+		return -EIO;
+	}
+	if (got_bandwidth != bandwidth) {
+		PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
+		uhd_close();
+		return -EINVAL;
+	}
+	error = uhd_usrp_get_rx_bandwidth(usrp, channel, &got_bandwidth);
+	if (error) {
+		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX bandwidth\n");
+		uhd_close();
+		return -EIO;
+	}
+	if (got_bandwidth != bandwidth) {
+		PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
 		uhd_close();
 		return -EINVAL;
 	}

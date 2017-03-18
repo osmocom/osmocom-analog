@@ -62,6 +62,7 @@ const char *write_rx_wave = NULL;
 const char *write_tx_wave = NULL;
 const char *read_rx_wave = NULL;
 static const char *sdr_args = "";
+static double sdr_bandwidth = 0.0;
 static int sdr_uhd = 0;
 static int sdr_soapy = 0;
 double sdr_rx_gain = 0, sdr_tx_gain = 0;
@@ -139,6 +140,8 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("    --sdr-args <args>\n");
 	printf("        Optional SDR device arguments, seperated by comma\n");
 	printf("        e.g. --sdr-args <key>=<value>[,<key>=<value>[,...]]\n");
+	printf("    --sdr-bandwidth <bandwidth>\n");
+	printf("        Give IF filter bandwidth to use. If not, sample rate is used.\n");
 	printf("    --sdr-rx-gain <gain>\n");
 	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_rx_gain);
 	printf("    --sdr-tx-gain <gain>\n");
@@ -174,10 +177,11 @@ void print_hotkeys_common(void)
 #define	OPT_SDR_ARGS		1102
 #define	OPT_SDR_RX_GAIN		1103
 #define	OPT_SDR_TX_GAIN		1104
-#define	OPT_WRITE_IQ_RX_WAVE	1105
-#define	OPT_WRITE_IQ_TX_WAVE	1106
-#define	OPT_READ_IQ_RX_WAVE	1107
-#define	OPT_READ_IQ_TX_WAVE	1108
+#define	OPT_SDR_BANDWIDTH	1105
+#define	OPT_WRITE_IQ_RX_WAVE	1106
+#define	OPT_WRITE_IQ_TX_WAVE	1107
+#define	OPT_READ_IQ_RX_WAVE	1108
+#define	OPT_READ_IQ_TX_WAVE	1109
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -203,6 +207,7 @@ static struct option long_options_common[] = {
 	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
 	{"sdr-soapy", 0, 0, OPT_SDR_SOAPY},
 	{"sdr-args", 1, 0, OPT_SDR_ARGS},
+	{"sdr-bandwidth", 1, 0, OPT_SDR_BANDWIDTH},
 	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
 	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
 	{"write-iq-rx-wave", 1, 0, OPT_WRITE_IQ_RX_WAVE},
@@ -364,6 +369,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		sdr_args = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_SDR_BANDWIDTH:
+		sdr_bandwidth = atof(optarg);
+		*skip_args += 2;
+		break;
 	case OPT_SDR_RX_GAIN:
 		sdr_rx_gain = atof(optarg);
 		*skip_args += 2;
@@ -470,7 +479,9 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 #endif
 
 #ifdef HAVE_SDR
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave, read_iq_tx_wave);
+	if (sdr_bandwidth == 0.0)
+		sdr_bandwidth = samplerate;
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave, read_iq_tx_wave);
 	if (rc < 0)
 		return;
 #endif

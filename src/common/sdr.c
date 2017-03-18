@@ -59,14 +59,16 @@ static int sdr_use_uhd, sdr_use_soapy;
 static const char *sdr_device_args;
 static double sdr_rx_gain, sdr_tx_gain;
 const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave, *sdr_read_iq_tx_wave;
+static double sdr_bandwidth;
 
-int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain, double tx_gain, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave, const char *read_iq_tx_wave)
+int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain, double tx_gain, double bandwidth, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave, const char *read_iq_tx_wave)
 {
 	sdr_use_uhd = sdr_uhd;
 	sdr_use_soapy = sdr_soapy;
 	sdr_device_args = strdup(device_args);
 	sdr_rx_gain = rx_gain;
 	sdr_tx_gain = tx_gain;
+	sdr_bandwidth = bandwidth;
 	sdr_write_iq_rx_wave = write_iq_rx_wave;
 	sdr_write_iq_tx_wave = write_iq_tx_wave;
 	sdr_read_iq_rx_wave = read_iq_rx_wave;
@@ -87,7 +89,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	display_spectrum_init(samplerate);
 
 	bandwidth = 2.0 * (max_deviation + max_modulation);
-	PDEBUG(DSDR, DEBUG_INFO, "Using Bandwidth of 2 * (%.1f + %.1f) = %.1f\n", max_deviation / 1000, max_modulation / 1000, bandwidth / 1000);
+	PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of 2 * (%.1f + %.1f) = %.1f\n", max_deviation / 1000, max_modulation / 1000, bandwidth / 1000);
 
 	if (channels < 1) {
 		PDEBUG(DSDR, DEBUG_ERROR, "No channel given, please fix!\n");
@@ -216,7 +218,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd) {
-		rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
+		rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth);
 		if (rc)
 			goto error;
 	}
@@ -224,7 +226,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_SOAPY
 	if (sdr_use_soapy) {
-		rc = soapy_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain);
+		rc = soapy_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth);
 		if (rc)
 			goto error;
 	}

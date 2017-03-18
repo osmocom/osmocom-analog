@@ -1,5 +1,5 @@
 
-int soapy_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain);
+int soapy_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth);
 int soapy_start(void);
 void soapy_close(void);
 int soapy_send(float *buff, int num);

@@ -1,5 +1,5 @@
 
-int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain);
+int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth);
 int uhd_start(void);
 void uhd_close(void);
 int uhd_send(float *buff, int num);
