@@ -305,23 +305,28 @@ void sdr_close(void *inst)
 int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
-	float buff[num * 2];
+	float buffer[num * 2], *buff = NULL;
 	int c, s, ss;
 	int sent = 0;
 
-	if (channels != sdr->channels) {
+	if (channels != sdr->channels && channels != 0) {
 		PDEBUG(DSDR, DEBUG_ERROR, "Invalid number of channels, please fix!\n");
 		abort();
 	}
 
 	/* process all channels */
-	memset(buff, 0, sizeof(buff));
-	for (c = 0; c < channels; c++) {
-		/* switch to paging channel, if requested */
-		if (on[c] && sdr->paging_channel)
-			fm_modulate(&sdr->chan[sdr->paging_channel].mod, samples[c], num, buff);
-		else
-			fm_modulate(&sdr->chan[c].mod, samples[c], num, buff);
+	if (channels) {
+		memset(buffer, 0, sizeof(buffer));
+		buff = buffer;
+		for (c = 0; c < channels; c++) {
+			/* switch to paging channel, if requested */
+			if (on[c] && sdr->paging_channel)
+				fm_modulate(&sdr->chan[sdr->paging_channel].mod, samples[c], num, buff);
+			else
+				fm_modulate(&sdr->chan[c].mod, samples[c], num, buff);
+		}
+	} else {
+		buff = (float *)samples;
 	}
 
 	if (sdr->wave_tx_rec.fp) {
@@ -358,9 +363,15 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
-	float buff[num * 2];
+	float buffer[num * 2], *buff = NULL;
 	int count = 0;
 	int c, s, ss;
+
+	if (channels) {
+		buff = buffer;
+	} else {
+		buff = (float *)samples;
+	}
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd)
@@ -392,8 +403,9 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 	display_iq(buff, count);
 	display_spectrum(buff, count);
 
-	for (c = 0; c < channels; c++) {
-		fm_demodulate(&sdr->chan[c].demod, samples[c], count, buff);
+	if (channels) {
+		for (c = 0; c < channels; c++)
+			fm_demodulate(&sdr->chan[c].demod, samples[c], count, buff);
 	}
 
 	return count;
