@@ -63,213 +63,248 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 		return -EIO;
 	}
 
-	/* create streamers */
-	error = uhd_tx_streamer_make(&tx_streamer);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to create TX streamer\n");
-		uhd_close();
-		return -EIO;
-	}
-	error = uhd_rx_streamer_make(&rx_streamer);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to create RX streamer\n");
-		uhd_close();
-		return -EIO;
+	if (tx_frequency) {
+		/* create streamers */
+		error = uhd_tx_streamer_make(&tx_streamer);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create TX streamer\n");
+			uhd_close();
+			return -EIO;
+		}
+
+		/* set rate */
+		error = uhd_usrp_set_tx_rate(usrp, rate, channel);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
+			uhd_close();
+			return -EIO;
+		}
+
+		/* see what rate actually is */
+		error = uhd_usrp_get_tx_rate(usrp, channel, &got_rate);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX rate\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_rate != rate) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
+			uhd_close();
+			return -EINVAL;
+		}
+
+		/* set gain */
+		error = uhd_usrp_set_tx_gain(usrp, tx_gain, channel, "");
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
+			uhd_close();
+			return -EIO;
+		}
+
+		/* see what gain actually is */
+		error = uhd_usrp_get_tx_gain(usrp, channel, "", &got_gain);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX gain\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_gain != tx_gain) {
+			PDEBUG(DUHD, DEBUG_NOTICE, "Given TX gain %.0f is not supported, we use %0.f\n", tx_gain, got_gain);
+			tx_gain = got_gain;
+		}
+
+		/* set frequency */
+		memset(&tune_request, 0, sizeof(tune_request));
+		tune_request.target_freq = tx_frequency;
+		tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
+		tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
+		error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequeny to %.0f Hz\n", tx_frequency);
+			uhd_close();
+			return -EIO;
+		}
+
+		/* see what frequency actually is */
+		error = uhd_usrp_get_tx_freq(usrp, channel, &got_frequency);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX frequency\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_frequency != tx_frequency) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %0.f Hz\n", tx_frequency, got_frequency);
+			uhd_close();
+			return -EINVAL;
+		}
+
+		/* set bandwidth */
+		if (uhd_usrp_set_tx_bandwidth(usrp, bandwidth, channel) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
+			uhd_close();
+			return -EIO;
+		}
+
+		/* see what bandwidth actually is */
+		error = uhd_usrp_get_tx_bandwidth(usrp, channel, &got_bandwidth);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX bandwidth\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_bandwidth != bandwidth) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
+			uhd_close();
+			return -EINVAL;
+		}
+
+		/* set up streamer */
+		memset(&stream_args, 0, sizeof(stream_args));
+		stream_args.cpu_format = "fc32";
+		stream_args.otw_format = "sc16";
+		stream_args.args = "";
+		stream_args.channel_list = &channel;
+		stream_args.n_channels = 1;
+		error = uhd_usrp_get_tx_stream(usrp, &stream_args, tx_streamer);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX streamer args\n");
+			uhd_close();
+			return -EIO;
+		}
+
+		/* get buffer sizes */
+		error = uhd_tx_streamer_max_num_samps(tx_streamer, &tx_samps_per_buff);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX streamer sample buffer\n");
+			uhd_close();
+			return -EIO;
+		}
 	}
 
-	/* create rx metadata */
-	error = uhd_rx_metadata_make(&rx_metadata);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to create RX metadata\n");
-		uhd_close();
-		return -EIO;
-	}
+	if (rx_frequency) {
+		/* create streamers */
+		error = uhd_rx_streamer_make(&rx_streamer);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create RX streamer\n");
+			uhd_close();
+			return -EIO;
+		}
 
-	/* set rate */
-	error = uhd_usrp_set_tx_rate(usrp, rate, channel);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
-		uhd_close();
-		return -EIO;
-	}
-	error = uhd_usrp_set_rx_rate(usrp, rate, channel);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
-		uhd_close();
-		return -EIO;
-	}
+		/* create metadata */
+		error = uhd_rx_metadata_make(&rx_metadata);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create RX metadata\n");
+			uhd_close();
+			return -EIO;
+		}
 
-	/* see what rate actually is */
-	error = uhd_usrp_get_tx_rate(usrp, channel, &got_rate);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX rate\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_rate != rate) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
-		uhd_close();
-		return -EINVAL;
-	}
-	error = uhd_usrp_get_rx_rate(usrp, channel, &got_rate);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX rate\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_rate != rate) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
-		uhd_close();
-		return -EINVAL;
-	}
+		/* set rate */
+		error = uhd_usrp_set_rx_rate(usrp, rate, channel);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
+			uhd_close();
+			return -EIO;
+		}
 
-	/* set gain */
-	error = uhd_usrp_set_tx_gain(usrp, tx_gain, channel, "");
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
-		uhd_close();
-		return -EIO;
-	}
-	error = uhd_usrp_set_rx_gain(usrp, rx_gain, channel, "");
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
-		uhd_close();
-		return -EIO;
-	}
+		/* see what rate actually is */
+		error = uhd_usrp_get_rx_rate(usrp, channel, &got_rate);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX rate\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_rate != rate) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
+			uhd_close();
+			return -EINVAL;
+		}
 
-	/* see what gain actually is */
-	error = uhd_usrp_get_tx_gain(usrp, channel, "", &got_gain);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX gain\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_gain != tx_gain) {
-		PDEBUG(DUHD, DEBUG_NOTICE, "Given TX gain %.0f is not supported, we use %0.f\n", tx_gain, got_gain);
-		tx_gain = got_gain;
-	}
-	error = uhd_usrp_get_rx_gain(usrp, channel, "", &got_gain);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX gain\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_gain != rx_gain) {
-		PDEBUG(DUHD, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
-		rx_gain = got_gain;
-	}
+		/* set gain */
+		error = uhd_usrp_set_rx_gain(usrp, rx_gain, channel, "");
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
+			uhd_close();
+			return -EIO;
+		}
 
-	/* set frequency */
-	memset(&tune_request, 0, sizeof(tune_request));
-        tune_request.target_freq = tx_frequency;
-        tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
-        tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
-	error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequeny to %.0f Hz\n", tx_frequency);
-		uhd_close();
-		return -EIO;
-	}
-        tune_request.target_freq = rx_frequency;
-	error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequeny to %.0f Hz\n", rx_frequency);
-		uhd_close();
-		return -EIO;
-	}
+		/* see what gain actually is */
+		error = uhd_usrp_get_rx_gain(usrp, channel, "", &got_gain);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX gain\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_gain != rx_gain) {
+			PDEBUG(DUHD, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
+			rx_gain = got_gain;
+		}
 
-	/* see what frequency actually is */
-	error = uhd_usrp_get_tx_freq(usrp, channel, &got_frequency);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX frequency\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_frequency != tx_frequency) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %0.f Hz\n", tx_frequency, got_frequency);
-		uhd_close();
-		return -EINVAL;
-	}
-	error = uhd_usrp_get_rx_freq(usrp, channel, &got_frequency);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX frequency\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_frequency != rx_frequency) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %0.f Hz\n", rx_frequency, got_frequency);
-		uhd_close();
-		return -EINVAL;
-	}
+		/* set frequency */
+		memset(&tune_request, 0, sizeof(tune_request));
+		tune_request.target_freq = rx_frequency;
+		tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
+		tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
+		error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequeny to %.0f Hz\n", rx_frequency);
+			uhd_close();
+			return -EIO;
+		}
 
-	/* set bandwidth */
-	if (uhd_usrp_set_tx_bandwidth(usrp, bandwidth, channel) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
-		uhd_close();
-		return -EIO;
-	}
-	if (uhd_usrp_set_rx_bandwidth(usrp, bandwidth, channel) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
-		uhd_close();
-		return -EIO;
-	}
+		/* see what frequency actually is */
+		error = uhd_usrp_get_rx_freq(usrp, channel, &got_frequency);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX frequency\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_frequency != rx_frequency) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %0.f Hz\n", rx_frequency, got_frequency);
+			uhd_close();
+			return -EINVAL;
+		}
 
-	/* see what bandwidth actually is */
-	error = uhd_usrp_get_tx_bandwidth(usrp, channel, &got_bandwidth);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX bandwidth\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_bandwidth != bandwidth) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
-		uhd_close();
-		return -EINVAL;
-	}
-	error = uhd_usrp_get_rx_bandwidth(usrp, channel, &got_bandwidth);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX bandwidth\n");
-		uhd_close();
-		return -EIO;
-	}
-	if (got_bandwidth != bandwidth) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
-		uhd_close();
-		return -EINVAL;
-	}
+		/* set bandwidth */
+		if (uhd_usrp_set_rx_bandwidth(usrp, bandwidth, channel) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
+			uhd_close();
+			return -EIO;
+		}
 
-	/* set up streamer */
-	memset(&stream_args, 0, sizeof(stream_args));
-        stream_args.cpu_format = "fc32";
-        stream_args.otw_format = "sc16";
-        stream_args.args = "";
-        stream_args.channel_list = &channel;
-        stream_args.n_channels = 1;
-	error = uhd_usrp_get_tx_stream(usrp, &stream_args, tx_streamer);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX streamer args\n");
-		uhd_close();
-		return -EIO;
-	}
-	error = uhd_usrp_get_rx_stream(usrp, &stream_args, rx_streamer);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX streamer args\n");
-		uhd_close();
-		return -EIO;
-	}
+		/* see what bandwidth actually is */
+		error = uhd_usrp_get_rx_bandwidth(usrp, channel, &got_bandwidth);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX bandwidth\n");
+			uhd_close();
+			return -EIO;
+		}
+		if (got_bandwidth != bandwidth) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
+			uhd_close();
+			return -EINVAL;
+		}
 
-	/* get buffer sizes */
-	error = uhd_tx_streamer_max_num_samps(tx_streamer, &tx_samps_per_buff);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX streamer sample buffer\n");
-		uhd_close();
-		return -EIO;
-	}
-	error = uhd_rx_streamer_max_num_samps(rx_streamer, &rx_samps_per_buff);
-	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX streamer sample buffer\n");
-		uhd_close();
-		return -EIO;
+		/* set up streamer */
+		memset(&stream_args, 0, sizeof(stream_args));
+		stream_args.cpu_format = "fc32";
+		stream_args.otw_format = "sc16";
+		stream_args.args = "";
+		stream_args.channel_list = &channel;
+		stream_args.n_channels = 1;
+		error = uhd_usrp_get_rx_stream(usrp, &stream_args, rx_streamer);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX streamer args\n");
+			uhd_close();
+			return -EIO;
+		}
+
+		/* get buffer sizes */
+		error = uhd_rx_streamer_max_num_samps(rx_streamer, &rx_samps_per_buff);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX streamer sample buffer\n");
+			uhd_close();
+			return -EIO;
+		}
 	}
 
 	return 0;

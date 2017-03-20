@@ -81,7 +81,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 {
 	sdr_t *sdr;
 	double bandwidth;
-	double tx_center_frequency, rx_center_frequency;
+	double tx_center_frequency = 0.0, rx_center_frequency = 0.0;
 	int rc;
 	int c;
 
@@ -117,102 +117,124 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
 		goto error;
 	}
-	for (c = 0; c < channels; c++) {
-		PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz, RX = %.6f MHz\n", c, tx_frequency[c] / 1e6, rx_frequency[c] / 1e6);
-		sdr->chan[c].tx_frequency = tx_frequency[c];
-		sdr->chan[c].rx_frequency = rx_frequency[c];
-	}
-	if (sdr->paging_channel) {
-		PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
-		sdr->chan[sdr->paging_channel].tx_frequency = paging_frequency;
+
+	if (tx_frequency) {
+		/* calculate required bandwidth (IQ rate) */
+		for (c = 0; c < channels; c++) {
+			PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz\n", c, tx_frequency[c] / 1e6);
+			sdr->chan[c].tx_frequency = tx_frequency[c];
+		}
+		if (sdr->paging_channel) {
+			PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
+			sdr->chan[sdr->paging_channel].tx_frequency = paging_frequency;
+		}
+
+		double tx_low_frequency = sdr->chan[0].tx_frequency, tx_high_frequency = sdr->chan[0].tx_frequency;
+		for (c = 1; c < channels; c++) {
+			if (sdr->chan[c].tx_frequency < tx_low_frequency)
+				tx_low_frequency = sdr->chan[c].tx_frequency;
+			if (sdr->chan[c].tx_frequency > tx_high_frequency)
+				tx_high_frequency = sdr->chan[c].tx_frequency;
+		}
+		if (sdr->paging_channel) {
+			if (sdr->chan[sdr->paging_channel].tx_frequency < tx_low_frequency)
+				tx_low_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
+			if (sdr->chan[sdr->paging_channel].tx_frequency > tx_high_frequency)
+				tx_high_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
+		}
+		/* range of TX */
+		double range = tx_high_frequency - tx_low_frequency;
+		if (range)
+			PDEBUG(DSDR, DEBUG_DEBUG, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
+		if (range * 2 > sdr->samplerate) {
+			// why that? actually i don't know. i just want to be safe....
+			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies.\n");
+			PDEBUG(DSDR, DEBUG_NOTICE, "The given rate is %.6f MHz, but required rate must be >= %.6f MHz\n", sdr->samplerate / 1e6, range * 2.0 / 1e6);
+			PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
+			goto error;
+		}
+		tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
+		PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: TX %.6f MHz\n", tx_center_frequency / 1e6);
+		/* set offsets to center frequency */
+		for (c = 0; c < channels; c++) {
+			double tx_offset;
+			tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
+			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz\n", c, tx_offset / 1e6);
+			fm_mod_init(&sdr->chan[c].mod, sdr->samplerate, tx_offset, sdr->amplitude);
+		}
+		if (sdr->paging_channel) {
+			double tx_offset;
+			tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
+			PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
+			fm_mod_init(&sdr->chan[sdr->paging_channel].mod, sdr->samplerate, tx_offset, sdr->amplitude);
+		}
+		/* show gain */
+		PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB\n", sdr_tx_gain);
+		/* open wave */
+		if (sdr_write_iq_tx_wave) {
+			rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2, 1.0);
+			if (rc < 0) {
+				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				goto error;
+			}
+		}
+		if (sdr_read_iq_tx_wave) {
+			rc = wave_create_playback(&sdr->wave_tx_play, sdr_read_iq_tx_wave, sdr->samplerate, 2, 1.0);
+			if (rc < 0) {
+				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				goto error;
+			}
+		}
 	}
 
-	/* calculate required bandwidth (IQ rate) */
-	double tx_low_frequency = sdr->chan[0].tx_frequency, tx_high_frequency = sdr->chan[0].tx_frequency;
-	double rx_low_frequency = sdr->chan[0].rx_frequency, rx_high_frequency = sdr->chan[0].rx_frequency;
-	double range;
-	for (c = 1; c < channels; c++) {
-		if (sdr->chan[c].tx_frequency < tx_low_frequency)
-			tx_low_frequency = sdr->chan[c].tx_frequency;
-		if (sdr->chan[c].tx_frequency > tx_high_frequency)
-			tx_high_frequency = sdr->chan[c].tx_frequency;
-		if (sdr->chan[c].rx_frequency < rx_low_frequency)
-			rx_low_frequency = sdr->chan[c].rx_frequency;
-		if (sdr->chan[c].rx_frequency > rx_high_frequency)
-			rx_high_frequency = sdr->chan[c].rx_frequency;
-	}
-	if (sdr->paging_channel) {
-		if (sdr->chan[sdr->paging_channel].tx_frequency < tx_low_frequency)
-			tx_low_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
-		if (sdr->chan[sdr->paging_channel].tx_frequency > tx_high_frequency)
-			tx_high_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
-	}
-	/* range of TX */
-	range = tx_high_frequency - tx_low_frequency;
-	if (range)
-		PDEBUG(DSDR, DEBUG_DEBUG, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
-	if (range * 2 > sdr->samplerate) {
-		// why that? actually i don't know. i just want to be safe....
-		PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies.\n");
-		PDEBUG(DSDR, DEBUG_NOTICE, "The given rate is %.6f MHz, but required rate must be >= %.6f MHz\n", sdr->samplerate / 1e6, range * 2.0 / 1e6);
-		PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
-		goto error;
-	}
-	tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
-	/* range of RX */
-	range = rx_high_frequency - rx_low_frequency;
-	if (range)
-		PDEBUG(DSDR, DEBUG_DEBUG, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
-	if (range * 2.0 > sdr->samplerate) {
-		// why that? actually i don't know. i just want to be safe....
-		PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
-		goto error;
-	}
-	rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
-	PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: TX %.6f MHz, RX %.6f\n", tx_center_frequency / 1e6, rx_center_frequency / 1e6);
-	/* set offsets to center frequency */
-	for (c = 0; c < channels; c++) {
-		double tx_offset, rx_offset;
-		tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
-		rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
-		PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz, RX offset: %.6f MHz\n", c, tx_offset / 1e6, rx_offset / 1e6);
-		fm_mod_init(&sdr->chan[c].mod, sdr->samplerate, tx_offset, sdr->amplitude);
-		fm_demod_init(&sdr->chan[c].demod, sdr->samplerate, rx_offset, bandwidth);
-	}
-	if (sdr->paging_channel) {
-		double tx_offset;
-		tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
-		PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
-		fm_mod_init(&sdr->chan[sdr->paging_channel].mod, sdr->samplerate, tx_offset, sdr->amplitude);
-	}
-	PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB, RX %.1f dB\n", sdr_tx_gain, sdr_rx_gain);
+	if (rx_frequency) {
+		for (c = 0; c < channels; c++) {
+			PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: RX = %.6f MHz\n", c, rx_frequency[c] / 1e6);
+			sdr->chan[c].rx_frequency = rx_frequency[c];
+		}
 
-	if (sdr_write_iq_rx_wave) {
-		rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2, 1.0);
-		if (rc < 0) {
-			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+		/* calculate required bandwidth (IQ rate) */
+		double rx_low_frequency = sdr->chan[0].rx_frequency, rx_high_frequency = sdr->chan[0].rx_frequency;
+		for (c = 1; c < channels; c++) {
+			if (sdr->chan[c].rx_frequency < rx_low_frequency)
+				rx_low_frequency = sdr->chan[c].rx_frequency;
+			if (sdr->chan[c].rx_frequency > rx_high_frequency)
+				rx_high_frequency = sdr->chan[c].rx_frequency;
+		}
+		/* range of RX */
+		double range = rx_high_frequency - rx_low_frequency;
+		if (range)
+			PDEBUG(DSDR, DEBUG_DEBUG, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
+		if (range * 2.0 > sdr->samplerate) {
+			// why that? actually i don't know. i just want to be safe....
+			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
 			goto error;
 		}
-	}
-	if (sdr_write_iq_tx_wave) {
-		rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2, 1.0);
-		if (rc < 0) {
-			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
-			goto error;
+		rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
+		PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: RX %.6f MHz\n", rx_center_frequency / 1e6);
+		/* set offsets to center frequency */
+		for (c = 0; c < channels; c++) {
+			double rx_offset;
+			rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
+			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
+			fm_demod_init(&sdr->chan[c].demod, sdr->samplerate, rx_offset, bandwidth);
 		}
-	}
-	if (sdr_read_iq_rx_wave) {
-		rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2, 1.0);
-		if (rc < 0) {
-			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
-			goto error;
+		/* show gain */
+		PDEBUG(DSDR, DEBUG_INFO, "Using gain: RX %.1f dB\n", sdr_rx_gain);
+		/* open wave */
+		if (sdr_write_iq_rx_wave) {
+			rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2, 1.0);
+			if (rc < 0) {
+				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				goto error;
+			}
 		}
-	}
-	if (sdr_read_iq_tx_wave) {
-		rc = wave_create_playback(&sdr->wave_tx_play, sdr_read_iq_tx_wave, sdr->samplerate, 2, 1.0);
-		if (rc < 0) {
-			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
-			goto error;
+		if (sdr_read_iq_rx_wave) {
+			rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2, 1.0);
+			if (rc < 0) {
+				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				goto error;
+			}
 		}
 	}
 

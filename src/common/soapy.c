@@ -68,132 +68,156 @@ int soapy_open(const char *device_args, double tx_frequency, double rx_frequency
 		return -EIO;
 	}
 
-	/* set rate */
-	if (SoapySDRDevice_setSampleRate(sdr, SOAPY_SDR_TX, channel, rate) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
-		soapy_close();
-		return -EIO;
-	}
-	if (SoapySDRDevice_setSampleRate(sdr, SOAPY_SDR_RX, channel, rate) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
-		soapy_close();
-		return -EIO;
+	if (tx_frequency) {
+		/* set rate */
+		if (SoapySDRDevice_setSampleRate(sdr, SOAPY_SDR_TX, channel, rate) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
+			soapy_close();
+			return -EIO;
+		}
+
+		/* see what rate actually is */
+		got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_TX, channel);
+		if (got_rate != rate) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
+			soapy_close();
+			return -EINVAL;
+		}
+
+		/* set gain */
+		if (SoapySDRDevice_setGain(sdr, SOAPY_SDR_TX, channel, tx_gain) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
+			soapy_close();
+			return -EIO;
+		}
+
+		/* see what gain actually is */
+		got_gain = SoapySDRDevice_getGain(sdr, SOAPY_SDR_TX, channel);
+		if (got_gain != tx_gain) {
+			PDEBUG(DUHD, DEBUG_NOTICE, "Given TX gain %.0f is not supported, we use %0.f\n", tx_gain, got_gain);
+			tx_gain = got_gain;
+		}
+
+		/* set frequency */
+		if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_TX, channel, tx_frequency, NULL) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
+			soapy_close();
+			return -EIO;
+		}
+
+		/* see what frequency actually is */
+		got_frequency = SoapySDRDevice_getFrequency(sdr, SOAPY_SDR_TX, channel);
+		if (got_frequency != tx_frequency) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %0.f Hz\n", tx_frequency, got_frequency);
+			soapy_close();
+			return -EINVAL;
+		}
+
+		/* set bandwidth */
+		if (SoapySDRDevice_setBandwidth(sdr, SOAPY_SDR_TX, channel, bandwidth) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
+			soapy_close();
+			return -EIO;
+		}
+
+		/* see what bandwidth actually is */
+		got_bandwidth = SoapySDRDevice_getBandwidth(sdr, SOAPY_SDR_TX, channel);
+		if (got_bandwidth != bandwidth) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
+			soapy_close();
+			return -EINVAL;
+		}
+
+		/* set up streamer */
+		if (SoapySDRDevice_setupStream(sdr, &txStream, SOAPY_SDR_TX, SOAPY_SDR_CF32, &channel, 1, NULL) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX streamer args\n");
+			soapy_close();
+			return -EIO;
+		}
+
+		/* get buffer sizes */
+		tx_samps_per_buff = SoapySDRDevice_getStreamMTU(sdr, txStream);
+		if (tx_samps_per_buff == 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX streamer sample buffer\n");
+			soapy_close();
+			return -EIO;
+		}
 	}
 
-	/* see what rate actually is */
-	got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_TX, channel);
-	if (got_rate != rate) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
-		soapy_close();
-		return -EINVAL;
-	}
-	got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_RX, channel);
-	if (got_rate != rate) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
-		soapy_close();
-		return -EINVAL;
-	}
+	if (rx_frequency) {
+		/* set rate */
+		if (SoapySDRDevice_setSampleRate(sdr, SOAPY_SDR_RX, channel, rate) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
+			soapy_close();
+			return -EIO;
+		}
 
-	/* set gain */
-	if (SoapySDRDevice_setGain(sdr, SOAPY_SDR_TX, channel, tx_gain) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
-		soapy_close();
-		return -EIO;
-	}
-	if (SoapySDRDevice_setGain(sdr, SOAPY_SDR_RX, channel, rx_gain) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
-		soapy_close();
-		return -EIO;
-	}
+		/* see what rate actually is */
+		got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_RX, channel);
+		if (got_rate != rate) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
+			soapy_close();
+			return -EINVAL;
+		}
 
-	/* see what gain actually is */
-	got_gain = SoapySDRDevice_getGain(sdr, SOAPY_SDR_TX, channel);
-	if (got_gain != tx_gain) {
-		PDEBUG(DUHD, DEBUG_NOTICE, "Given TX gain %.0f is not supported, we use %0.f\n", tx_gain, got_gain);
-		tx_gain = got_gain;
-	}
-	got_gain = SoapySDRDevice_getGain(sdr, SOAPY_SDR_RX, channel);
-	if (got_gain != rx_gain) {
-		PDEBUG(DUHD, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
-		rx_gain = got_gain;
-	}
+		/* set gain */
+		if (SoapySDRDevice_setGain(sdr, SOAPY_SDR_RX, channel, rx_gain) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
+			soapy_close();
+			return -EIO;
+		}
 
-	/* set frequency */
-	if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_TX, channel, tx_frequency, NULL) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
-		soapy_close();
-		return -EIO;
-	}
-	if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_RX, channel, rx_frequency, NULL) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
-		soapy_close();
-		return -EIO;
-	}
+		/* see what gain actually is */
+		got_gain = SoapySDRDevice_getGain(sdr, SOAPY_SDR_RX, channel);
+		if (got_gain != rx_gain) {
+			PDEBUG(DUHD, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
+			rx_gain = got_gain;
+		}
 
-	/* see what frequency actually is */
-	got_frequency = SoapySDRDevice_getFrequency(sdr, SOAPY_SDR_TX, channel);
-	if (got_frequency != tx_frequency) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %0.f Hz\n", tx_frequency, got_frequency);
-		soapy_close();
-		return -EINVAL;
-	}
-	got_frequency = SoapySDRDevice_getFrequency(sdr, SOAPY_SDR_RX, channel);
-	if (got_frequency != rx_frequency) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %0.f Hz\n", rx_frequency, got_frequency);
-		soapy_close();
-		return -EINVAL;
-	}
+		/* set frequency */
+		if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_RX, channel, rx_frequency, NULL) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
+			soapy_close();
+			return -EIO;
+		}
 
-	/* set bandwidth */
-	if (SoapySDRDevice_setBandwidth(sdr, SOAPY_SDR_TX, channel, bandwidth) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
-		soapy_close();
-		return -EIO;
-	}
-	if (SoapySDRDevice_setBandwidth(sdr, SOAPY_SDR_RX, channel, bandwidth) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
-		soapy_close();
-		return -EIO;
-	}
+		/* see what frequency actually is */
+		got_frequency = SoapySDRDevice_getFrequency(sdr, SOAPY_SDR_RX, channel);
+		if (got_frequency != rx_frequency) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %0.f Hz\n", rx_frequency, got_frequency);
+			soapy_close();
+			return -EINVAL;
+		}
 
-	/* see what bandwidth actually is */
-	got_bandwidth = SoapySDRDevice_getBandwidth(sdr, SOAPY_SDR_TX, channel);
-	if (got_bandwidth != bandwidth) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
-		soapy_close();
-		return -EINVAL;
-	}
-	got_bandwidth = SoapySDRDevice_getBandwidth(sdr, SOAPY_SDR_RX, channel);
-	if (got_bandwidth != bandwidth) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
-		soapy_close();
-		return -EINVAL;
-	}
+		/* set bandwidth */
+		if (SoapySDRDevice_setBandwidth(sdr, SOAPY_SDR_RX, channel, bandwidth) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
+			soapy_close();
+			return -EIO;
+		}
 
-	/* set up streamer */
-	if (SoapySDRDevice_setupStream(sdr, &txStream, SOAPY_SDR_TX, SOAPY_SDR_CF32, &channel, 1, NULL) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX streamer args\n");
-		soapy_close();
-		return -EIO;
-	}
-	if (SoapySDRDevice_setupStream(sdr, &rxStream, SOAPY_SDR_RX, SOAPY_SDR_CF32, &channel, 1, NULL) != 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX streamer args\n");
-		soapy_close();
-		return -EIO;
-	}
+		/* see what bandwidth actually is */
+		got_bandwidth = SoapySDRDevice_getBandwidth(sdr, SOAPY_SDR_RX, channel);
+		if (got_bandwidth != bandwidth) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
+			soapy_close();
+			return -EINVAL;
+		}
 
-	/* get buffer sizes */
-	tx_samps_per_buff = SoapySDRDevice_getStreamMTU(sdr, txStream);
-	if (tx_samps_per_buff == 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX streamer sample buffer\n");
-		soapy_close();
-		return -EIO;
-	}
-	rx_samps_per_buff = SoapySDRDevice_getStreamMTU(sdr, rxStream);
-	if (rx_samps_per_buff == 0) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX streamer sample buffer\n");
-		soapy_close();
-		return -EIO;
+		/* set up streamer */
+		if (SoapySDRDevice_setupStream(sdr, &rxStream, SOAPY_SDR_RX, SOAPY_SDR_CF32, &channel, 1, NULL) != 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX streamer args\n");
+			soapy_close();
+			return -EIO;
+		}
+
+		/* get buffer sizes */
+		rx_samps_per_buff = SoapySDRDevice_getStreamMTU(sdr, rxStream);
+		if (rx_samps_per_buff == 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX streamer sample buffer\n");
+			soapy_close();
+			return -EIO;
+		}
 	}
 
 	return 0;
