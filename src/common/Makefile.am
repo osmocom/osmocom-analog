@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(UHD_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(UHD_CFLAGS) $(SOAPY_CFLAGS)
 
 noinst_LIBRARIES = libcommon.a
 
