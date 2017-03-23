@@ -55,7 +55,7 @@ int soapy_open(const char *device_args, double tx_frequency, double rx_frequency
 			soapy_close();
 			return -EIO;
 		}
-		val++;
+		*val++ = '\0';
 		arg_string = strchr(val, ',');
 		if (arg_string)
 			*arg_string++ = '\0';
