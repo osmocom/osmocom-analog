@@ -22,7 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include "sample.h"
-#include "filter.h"
+#include "iir_filter.h"
 #include "emphasis.h"
 #include "debug.h"
 
@@ -66,7 +66,7 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 	state->d.factor = factor;
 	state->d.amp = 1.0;
 
-	filter_highpass_init(&state->d.hp, CUT_OFF_H, samplerate, 1);
+	iir_highpass_init(&state->d.hp, CUT_OFF_H, samplerate, 1);
 
 	/* calibrate amplification to be neutral at 1000 Hz */
 	gen_sine(test_samples, sizeof(test_samples) / sizeof(test_samples[0]), samplerate, 1000.0);
@@ -128,6 +128,6 @@ void de_emphasis(emphasis_t *state, sample_t *samples, int num)
 /* high pass filter to remove DC and low frequencies */
 void dc_filter(emphasis_t *state, sample_t *samples, int num)
 {
-	filter_process(&state->d.hp, samples, num);
+	iir_process(&state->d.hp, samples, num);
 }
 

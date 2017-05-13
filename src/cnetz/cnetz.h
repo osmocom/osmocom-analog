@@ -88,7 +88,7 @@ typedef struct cnetz {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, "Telegramm", .... */
-	filter_t		lp;			/* low pass filter to eliminate noise above 5280 Hz */
+	iir_filter_t		lp;			/* low pass filter to eliminate noise above 5280 Hz */
 	fsk_fm_demod_t		fsk_demod;		/* demod process */
 	double			fsk_deviation;		/* deviation of FSK signal on sound card */
 	sample_t		fsk_ramp_up[256];	/* samples of upward ramp shape */

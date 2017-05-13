@@ -25,7 +25,7 @@
 #include "sample.h"
 #include "samplerate.h"
 
-int init_samplerate(samplerate_t *state, double low_samplerate, double high_samplerate)
+int init_samplerate(samplerate_t *state, double low_samplerate, double high_samplerate, double filter_cutoff)
 {
 	memset(state, 0, sizeof(*state));
 	state->factor = high_samplerate / low_samplerate;
@@ -34,8 +34,8 @@ int init_samplerate(samplerate_t *state, double low_samplerate, double high_samp
 		abort();
 	}
 
-	filter_lowpass_init(&state->up.lp, 3300.0, high_samplerate, 2);
-	filter_lowpass_init(&state->down.lp, 3300.0, high_samplerate, 2);
+	iir_lowpass_init(&state->up.lp, filter_cutoff, high_samplerate, 2);
+	iir_lowpass_init(&state->down.lp, filter_cutoff, high_samplerate, 2);
 
 	return 0;
 }
@@ -49,7 +49,7 @@ int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 	sample_t last_sample;
 
 	/* filter down */
-	filter_process(&state->down.lp, samples, input_num);
+	iir_process(&state->down.lp, samples, input_num);
 
 	/* get last sample for interpolation */
 	last_sample = state->down.last_sample;
@@ -144,7 +144,7 @@ int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sam
 	state->up.in_index = in_index;
 
 	/* filter up */
-	filter_process(&state->up.lp, samples, output_num);
+	iir_process(&state->up.lp, samples, output_num);
 
 	if (input == output) {
 		/* copy samples */

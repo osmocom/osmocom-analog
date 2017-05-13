@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <math.h>
 #include "sample.h"
-#include "filter.h"
+#include "iir_filter.h"
 #include "fm_modulation.h"
 #include "sender.h"
 #ifdef HAVE_UHD

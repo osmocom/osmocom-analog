@@ -5,7 +5,7 @@ typedef struct emphasis {
 		double amp;
 	} p;
 	struct {
-		filter_t hp;
+		iir_filter_t hp;
 		double y_last;
 		double factor;
 		double amp;

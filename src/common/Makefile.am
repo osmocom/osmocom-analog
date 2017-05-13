@@ -12,7 +12,7 @@ libcommon_a_SOURCES = \
 	../common/goertzel.c \
 	../common/jitter.c \
 	../common/loss.c \
-	../common/filter.c \
+	../common/iir_filter.c \
 	../common/dtmf.c \
 	../common/samplerate.c \
 	../common/call.c \

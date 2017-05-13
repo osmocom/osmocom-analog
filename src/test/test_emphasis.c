@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include "../common/sample.h"
-#include "../common/filter.h"
+#include "../common/iir_filter.h"
 #include "../common/emphasis.h"
 #include "../common/debug.h"
 

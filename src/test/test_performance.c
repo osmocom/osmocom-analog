@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include "../common/sample.h"
-#include "../common/filter.h"
+#include "../common/iir_filter.h"
 #include "../common/fm_modulation.h"
 #include "../common/debug.h"
 
@@ -33,7 +33,7 @@ sample_t samples[SAMPLES];
 float buff[SAMPLES * 2];
 fm_mod_t mod;
 fm_demod_t demod;
-filter_t lp;
+iir_filter_t lp;
 
 int main(void)
 {
@@ -47,19 +47,19 @@ int main(void)
 	fm_demodulate(&demod, samples, SAMPLES, buff);
 	T_STOP("FM demodulate", SAMPLES)
 
-	filter_lowpass_init(&lp, 10000.0 / 2.0, 50000, 1);
+	iir_lowpass_init(&lp, 10000.0 / 2.0, 50000, 1);
 	T_START()
-	filter_process(&lp, samples, SAMPLES);
+	iir_process(&lp, samples, SAMPLES);
 	T_STOP("low-pass filter (second order)", SAMPLES)
 
-	filter_lowpass_init(&lp, 10000.0 / 2.0, 50000, 2);
+	iir_lowpass_init(&lp, 10000.0 / 2.0, 50000, 2);
 	T_START()
-	filter_process(&lp, samples, SAMPLES);
+	iir_process(&lp, samples, SAMPLES);
 	T_STOP("low-pass filter (fourth order)", SAMPLES)
 
-	filter_lowpass_init(&lp, 10000.0 / 2.0, 50000, 4);
+	iir_lowpass_init(&lp, 10000.0 / 2.0, 50000, 4);
 	T_START()
-	filter_process(&lp, samples, SAMPLES);
+	iir_process(&lp, samples, SAMPLES);
 	T_STOP("low-pass filter (eigth order)", SAMPLES)
 
 	return 0;

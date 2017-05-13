@@ -15,7 +15,7 @@ typedef struct fm_demod {
 	double phase;		/* current rotation phase (used to shift) */
 	double rot;		/* rotation step per sample to shift rx frequency (used to shift) */
 	double last_phase;	/* last phase of FM (used to demodulate) */
-	filter_t lp[2];		/* filters received IQ signal */
+	iir_filter_t lp[2];	/* filters received IQ signal */
 	double *sin_tab;	/* sine/cosine table rotation */
 } fm_demod_t;
 

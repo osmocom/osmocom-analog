@@ -123,7 +123,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
 	dsp_init_ramp(cnetz);
 
 	/* init low pass filter for received signal */
-	filter_lowpass_init(&cnetz->lp, MAX_MODULATION, cnetz->sender.samplerate, 2);
+	iir_lowpass_init(&cnetz->lp, MAX_MODULATION, cnetz->sender.samplerate, 2);
 
 	/* create speech buffer */
 	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), cnetz->sender.samplerate); /* buffer is greater than sr/1.1, just to be secure */
@@ -134,7 +134,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
 	}
 
 	/* reinit the sample rate to shrink/expand audio */
-	init_samplerate(&cnetz->sender.srstate, 0x8000, (double)cnetz->sender.samplerate / 1.1); /* 66 <-> 60 */
+	init_samplerate(&cnetz->sender.srstate, 8000.0, (double)cnetz->sender.samplerate / 1.1, 3300.0); /* 66 <-> 60 */
 
 	rc = fsk_fm_init(&cnetz->fsk_demod, cnetz, cnetz->sender.samplerate, (double)BITRATE / (1.0 + clock_speed[0] / 1000000.0));
 	if (rc < 0)
@@ -584,7 +584,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 #endif
 
 	if (cnetz->dsp_mode != DSP_MODE_OFF) {
-		filter_process(&cnetz->lp, samples, length);
+		iir_process(&cnetz->lp, samples, length);
 		fsk_fm_demod(&cnetz->fsk_demod, samples, length);
 	}
 	return;

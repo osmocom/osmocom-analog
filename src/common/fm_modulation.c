@@ -23,7 +23,7 @@
 #include <string.h>
 #include <math.h>
 #include "sample.h"
-#include "filter.h"
+#include "iir_filter.h"
 #include "fm_modulation.h"
 
 //#define FAST_SINE
@@ -110,8 +110,8 @@ void fm_demod_init(fm_demod_t *demod, double samplerate, double offset, double b
 #endif
 
 	/* use fourth order (2 iter) filter, since it is as fast as second order (1 iter) filter */
-	filter_lowpass_init(&demod->lp[0], bandwidth / 2.0, samplerate, 2);
-	filter_lowpass_init(&demod->lp[1], bandwidth / 2.0, samplerate, 2);
+	iir_lowpass_init(&demod->lp[0], bandwidth / 2.0, samplerate, 2);
+	iir_lowpass_init(&demod->lp[1], bandwidth / 2.0, samplerate, 2);
 
 #ifdef FAST_SINE
 	int i;
@@ -169,8 +169,8 @@ void fm_demodulate(fm_demod_t *demod, sample_t *samples, int num, float *buff)
 		Q[s] = i * _sin + q * _cos;
 	}
 	demod->phase = phase;
-	filter_process(&demod->lp[0], I, num);
-	filter_process(&demod->lp[1], Q, num);
+	iir_process(&demod->lp[0], I, num);
+	iir_process(&demod->lp[1], Q, num);
 	last_phase = demod->last_phase;
 	for (s = 0; s < num; s++) {
 		phase = atan2(Q[s], I[s]);

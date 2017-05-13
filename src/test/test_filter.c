@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include "../common/sample.h"
-#include "../common/filter.h"
+#include "../common/iir_filter.h"
 #include "../common/debug.h"
 
 #define level2db(level)		(20 * log10(level))
@@ -36,8 +36,8 @@ static void gen_samples(sample_t *samples, double freq)
 
 int main(void)
 {
-	filter_t filter_low;
-	filter_t filter_high;
+	iir_filter_t filter_low;
+	iir_filter_t filter_high;
 	sample_t samples[SAMPLERATE];
 	double level;
 	int iter = 2;
@@ -47,11 +47,11 @@ int main(void)
 
 	printf("testing low-pass filter with %d iterations\n", iter);
 
-	filter_lowpass_init(&filter_low, 1000.0, SAMPLERATE, iter);
+	iir_lowpass_init(&filter_low, 1000.0, SAMPLERATE, iter);
 
 	for (i = 0; i < 4001; i += 100) {
 		gen_samples(samples, (double)i);
-		filter_process(&filter_low, samples, SAMPLERATE);
+		iir_process(&filter_low, samples, SAMPLERATE);
 		level = get_level(samples);
 		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
 		if (i == 1000)
@@ -66,11 +66,11 @@ int main(void)
 
 	printf("testing high-pass filter with %d iterations\n", iter);
 
-	filter_highpass_init(&filter_high, 2000.0, SAMPLERATE, iter);
+	iir_highpass_init(&filter_high, 2000.0, SAMPLERATE, iter);
 
 	for (i = 0; i < 4001; i += 100) {
 		gen_samples(samples, (double)i);
-		filter_process(&filter_high, samples, SAMPLERATE);
+		iir_process(&filter_high, samples, SAMPLERATE);
 		level = get_level(samples);
 		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
 		if (i == 2000)
@@ -85,13 +85,13 @@ int main(void)
 
 	printf("testing band-pass filter with %d iterations\n", iter);
 
-	filter_lowpass_init(&filter_low, 2000.0, SAMPLERATE, iter);
-	filter_highpass_init(&filter_high, 1000.0, SAMPLERATE, iter);
+	iir_lowpass_init(&filter_low, 2000.0, SAMPLERATE, iter);
+	iir_highpass_init(&filter_high, 1000.0, SAMPLERATE, iter);
 
 	for (i = 0; i < 4001; i += 100) {
 		gen_samples(samples, (double)i);
-		filter_process(&filter_low, samples, SAMPLERATE);
-		filter_process(&filter_high, samples, SAMPLERATE);
+		iir_process(&filter_low, samples, SAMPLERATE);
+		iir_process(&filter_high, samples, SAMPLERATE);
 		level = get_level(samples);
 		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
 		if (i == 1000)

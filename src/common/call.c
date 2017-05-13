@@ -497,7 +497,7 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 	if (!audiodev[0])
 		return 0;
 
-	rc = init_samplerate(&call.srstate, 8000.0, (double)samplerate);
+	rc = init_samplerate(&call.srstate, 8000.0, (double)samplerate, 3300.0);
 	if (rc < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to init sample rate conversion!\n");
 		goto error;
