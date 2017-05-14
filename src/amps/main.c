@@ -260,14 +260,27 @@ int main(int argc, char *argv[])
 		print_help(argv[-skip_args]);
 		return 0;
 	}
+	if (use_sdr) {
+		/* set audiodev */
+		for (i = 0; i < num_kanal; i++)
+			audiodev[i] = "sdr";
+		num_audiodev = num_kanal;
+		/* set channel types for more than 1 channel */
+		if (num_kanal > 1 && num_chan_type == 0) {
+			chan_type[0] = CHAN_TYPE_CC_PC;
+			for (i = 1; i < num_kanal; i++)
+				chan_type[i] = CHAN_TYPE_VC;
+			num_chan_type = num_kanal;
+		}
+	}
 	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use defualt */
+		num_audiodev = 1; /* use default */
 	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
 	if (num_kanal == 1 && num_chan_type == 0)
-		num_chan_type = 1; /* use defualt */
+		num_chan_type = 1; /* use default */
 	if (num_kanal != num_chan_type) {
 		fprintf(stderr, "You need to specify as many channel types as you have channels.\n");
 		exit(0);
@@ -315,7 +328,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You did not define any VC (voice) channel. You will not be able to make any call.\n");
 
 	/* SDR always requires emphasis */
-	if (!strcmp(audiodev[0], "sdr")) {
+	if (use_sdr) {
 		do_pre_emphasis = 1;
 		do_de_emphasis = 1;
 	}
@@ -333,7 +346,7 @@ int main(int argc, char *argv[])
 		polarity = 1; /* positive */
 	else if (!strcmp(flip_polarity, "yes"))
 		polarity = -1; /* negative */
-	else if (!strcmp(audiodev[0], "sdr"))
+	else if (use_sdr)
 		polarity = 1; /* SDR is always positive */
 	else {
 		fprintf(stderr, "You must define, if the the TX deviation polarity has to be flipped. (-F yes | no) See help.\n");
@@ -345,7 +358,7 @@ int main(int argc, char *argv[])
 		amps_si si;
 
 		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
-		rc = amps_create(kanal[i], chan_type[i], audiodev[i], samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, &si, sid, scc, polarity, tolerant, loopback);
+		rc = amps_create(kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, &si, sid, scc, polarity, tolerant, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

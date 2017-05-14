@@ -61,10 +61,13 @@ int rt_prio = 0;
 const char *write_rx_wave = NULL;
 const char *write_tx_wave = NULL;
 const char *read_rx_wave = NULL;
+int use_sdr = 0;
 static const char *sdr_args = "";
 static double sdr_bandwidth = 0.0;
+#ifdef HAVE_SDR
 static int sdr_uhd = 0;
 static int sdr_soapy = 0;
+#endif
 double sdr_rx_gain = 0, sdr_tx_gain = 0;
 const char *write_iq_rx_wave = NULL;
 const char *write_iq_tx_wave = NULL;
@@ -85,9 +88,9 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf(" -k --kanal <channel>\n");
 	printf(" -k --channel <channel>\n");
 	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");
-	printf(" -a --audio-device hw:<card>,<device> | sdr\n");
+	printf(" -a --audio-device hw:<card>,<device>\n");
 	printf("        Sound card and device number (default = '%s')\n", audiodev[0]);
-	printf("        SDR device, if supported\n");
+	printf("        Don't set it for SDR!\n");
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
 	printf(" -i --interval 1..25\n");
@@ -358,11 +361,23 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		*skip_args += 2;
 		break;
 	case OPT_SDR_UHD:
+#ifdef HAVE_SDR
+		use_sdr = 1;
 		sdr_uhd = 1;
+#else
+		fprintf(stderr, "UHD SDR support not compiled in!\n");
+		exit(0);
+#endif
 		*skip_args += 1;
 		break;
 	case OPT_SDR_SOAPY:
+#ifdef HAVE_SDR
+		use_sdr = 1;
 		sdr_soapy = 1;
+#else
+		fprintf(stderr, "SoapySDR support not compiled in!\n");
+		exit(0);
+#endif
 		*skip_args += 1;
 		break;
 	case OPT_SDR_ARGS:
@@ -461,24 +476,12 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 		return;
 	}
 
-#ifdef HAVE_UHD
- #ifdef HAVE_SOAPY
-	if ((sdr_uhd == 1 && sdr_soapy == 1) || (sdr_uhd == 0 && sdr_soapy == 0)) {
-		fprintf(stderr, "UHD and SoapySDR drivers are compiled in. You must choose which one you want: --sdr-uhd or --sdr-soapy\n");
+#ifdef HAVE_SDR
+	if ((sdr_uhd == 1 && sdr_soapy == 1)) {
+		fprintf(stderr, "You must choose which one you want: --sdr-uhd or --sdr-soapy\n");
 		return;
 	}
- #else
- 	sdr_uhd = 1;
- 	sdr_soapy = 0;
- #endif
-#else
- #ifdef HAVE_SOAPY
- 	sdr_uhd = 0;
- 	sdr_soapy = 1;
- #endif
-#endif
 
-#ifdef HAVE_SDR
 	if (sdr_bandwidth == 0.0)
 		sdr_bandwidth = samplerate;
 	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_args, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave, read_iq_tx_wave);

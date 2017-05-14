@@ -201,14 +201,27 @@ int main(int argc, char *argv[])
 		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", CNETZ_OGK_KANAL);
 		mandatory = 1;
 	}
+	if (use_sdr) {
+		/* set audiodev */
+		for (i = 0; i < num_kanal; i++)
+			audiodev[i] = "sdr";
+		num_audiodev = num_kanal;
+		/* set channel types for more than 1 channel */
+		if (num_kanal > 1 && num_chan_type == 0) {
+			chan_type[0] = CHAN_TYPE_OGK;
+			for (i = 1; i < num_kanal; i++)
+				chan_type[i] = CHAN_TYPE_SPK;
+			num_chan_type = num_kanal;
+		}
+	}
 	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use defualt */
+		num_audiodev = 1; /* use default */
 	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
 	if (num_kanal == 1 && num_chan_type == 0)
-		num_chan_type = 1; /* use defualt */
+		num_chan_type = 1; /* use default */
 	if (num_kanal != num_chan_type) {
 		fprintf(stderr, "You need to specify as many channel types as you have channels.\n");
 		exit(0);
@@ -264,7 +277,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You did not define any SpK (speech) channel. You will not be able to make any call.\n");
 
 	/* SDR always requires emphasis */
-	if (!strcmp(audiodev[0], "sdr")) {
+	if (use_sdr) {
 		do_pre_emphasis = 1;
 		do_de_emphasis = 1;
 	}
@@ -283,12 +296,12 @@ int main(int argc, char *argv[])
 		polarity = 1; /* positive */
 	if (!strcmp(flip_polarity, "yes"))
 		polarity = -1; /* negative */
-	if (!strcmp(audiodev[0], "sdr") && polarity == 0)
+	if (use_sdr && polarity == 0)
 		polarity = 1; /* SDR is always positive */
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], samplerate, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

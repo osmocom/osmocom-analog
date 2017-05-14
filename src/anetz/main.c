@@ -156,8 +156,14 @@ int main(int argc, char *argv[])
 		print_help(argv[-skip_args]);
 		return 0;
 	}
+	if (use_sdr) {
+		/* set audiodev */
+		for (i = 0; i < num_kanal; i++)
+			audiodev[i] = "sdr";
+		num_audiodev = num_kanal;
+	}
 	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use defualt */
+		num_audiodev = 1; /* use default */
 	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
@@ -171,7 +177,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = anetz_create(kanal[i], audiodev[i], samplerate, rx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, lossdetect / 100.0);
+		rc = anetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, lossdetect / 100.0);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

@@ -169,7 +169,7 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume)
+int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume)
 {
 	anetz_t *anetz;
 	int rc;
@@ -188,7 +188,7 @@ int anetz_create(int kanal, const char *audiodev, int samplerate, double rx_gain
 	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(kanal, 0), anetz_kanal2freq(kanal, 1), audiodev, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_volume, PAGING_SIGNAL_NONE);
+	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(kanal, 0), anetz_kanal2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, loss_volume, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

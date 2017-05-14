@@ -33,7 +33,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum paging_signal paging_signal)
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum paging_signal paging_signal)
 {
 	sender_t *master, *slave;
 	int rc = 0;
@@ -54,7 +54,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->read_rx_wave = read_rx_wave;
 
 	/* no gain with SDR */
-	if (!strcmp(audiodev, "sdr"))
+	if (use_sdr)
 		sender->rx_gain = 1.0;
 
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
@@ -74,12 +74,12 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 			break;
 	}
 	if (master) {
-		if (master->paging_signal != PAGING_SIGNAL_NONE && !!strcmp(master->audiodev, "sdr")) {
+		if (master->paging_signal != PAGING_SIGNAL_NONE && !use_sdr) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because its second audio channel is used for paging signal! Use different audio device.\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
-		if (paging_signal != PAGING_SIGNAL_NONE && !!strcmp(audiodev, "sdr")) {
+		if (paging_signal != PAGING_SIGNAL_NONE && !use_sdr) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %d, because we need a second audio channel for paging signal! Use different audio device.\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
@@ -95,7 +95,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	} else {
 		/* link audio device */
 #ifdef HAVE_SDR
-		if (!strcmp(audiodev, "sdr")) {
+		if (use_sdr) {
 			sender->audio_open = sdr_open;
 			sender->audio_start = sdr_start;
 			sender->audio_close = sdr_close;
