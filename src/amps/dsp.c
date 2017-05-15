@@ -393,6 +393,9 @@ again:
 		}
 		if (c == 'i')
 			c = (amps->channel_busy) ? '0' : '1';
+		/* invert, if polarity of the cell is negative */
+		if (amps->flip_polarity)
+			c ^= 1;
 		len = fsk_encode(amps, c);
 		amps->fsk_tx_frame_pos++;
 	}

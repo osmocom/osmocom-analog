@@ -36,6 +36,9 @@
 /* uncomment this to debug bits */
 //#define BIT_DEBUGGING
 
+/* uncomment this to debug all messages (control filler / global action messages) */
+//#define DEBUG_ALL_MESSAGES
+
 /*
  * parity
  */
@@ -2683,6 +2686,10 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 	int sum_bits, bits;
 	int i, t4 = 0;
 
+#ifdef DEBUG_ALL_MESSAGES
+	debug=1;
+#endif
+
 	memset(spaces, ' ', ie_desc_max_len);
 	spaces[ie_desc_max_len] = '\0';
 
@@ -3296,17 +3303,15 @@ static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 	bits[10] = 'i';
 	strcpy(bits + 11, sync_word);
 	bits[22] = 'i';
-	/* WORD A (msb first) */
 	k = 23;
 	for (i = 0; i < 5; i++) {
+		/* WORD A (msb first) */
 		for (j = 39; j >= 0; j--) {
 			bits[k++] = ((word_a >> j) & 1) + '0';
 			if ((j % 10) == 0)
 				bits[k++] = 'i';
 		}
-	}
-	/* WORD B (msb first) */
-	for (i = 0; i < 5; i++) {
+		/* WORD B (msb first) */
 		for (j = 39; j >= 0; j--) {
 			bits[k++] = ((word_b >> j) & 1) + '0';
 			if ((j % 10) == 0)
@@ -3325,15 +3330,10 @@ static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 		text[23] = '\0';
 #ifdef BIT_DEBUGGING
 		PDEBUG(DFRAME, DEBUG_INFO, "TX FOCC: %s\n", text);
-		for (i = 0; i < 5; i++) {
+		for (i = 0; i < 10; i++) {
 			strncpy(text, bits + 23 + i * 44, 44);
 			text[44] = '\0';
-			PDEBUG(DFRAME, DEBUG_DEBUG, "  word a - %s\n", text);
-		}
-		for (i = 5; i < 10; i++) {
-			strncpy(text, bits + 23 + i * 44, 44);
-			text[44] = '\0';
-			PDEBUG(DFRAME, DEBUG_DEBUG, "  word b - %s\n", text);
+			PDEBUG(DFRAME, DEBUG_DEBUG, "  word %c - %s\n", (i & 1) ? 'b' : 'a', text);
 		}
 #endif
 	}
@@ -3437,14 +3437,6 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 send:
 	amps_encode_focc_bits(word, word, bits);
 
-	/* invert, if polarity of the cell is negative */
-	if (amps->flip_polarity) {
-		int i;
-
-		for (i = 0; bits[i]; i++)
-			bits[i] ^= 1;
-	}
-
 	return 0;
 }
 
@@ -3479,14 +3471,6 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 		return 1;
 
 	amps_encode_fvc_bits(word, bits);
-
-	/* invert, if polarity of the cell is negative */
-	if (amps->flip_polarity) {
-		int i;
-
-		for (i = 0; bits[i]; i++)
-			bits[i] ^= 1;
-	}
 
 	return 0;
 }
@@ -3536,15 +3520,10 @@ static void amps_decode_bits_focc(amps_t *amps, const char *bits)
 	if (debuglevel == DEBUG_DEBUG) {
 		char text[64];
 
-		for (i = 0; i < 5; i++) {
+		for (i = 0; i < 10; i++) {
 			strncpy(text, bits + i * 44, 44);
 			text[44] = '\0';
-			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word a - %s%s\n", text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
-		}
-		for (i = 5; i < 10; i++) {
-			strncpy(text, bits + i * 44, 44);
-			text[44] = '\0';
-			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word b - %s%s\n", text, (crc_b_ok[i % 5]) ? " ok" : " BAD CRC!");
+			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word %c - %s%s\n", (i & 1) ? 'b' : 'a', text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
 		}
 	}
 

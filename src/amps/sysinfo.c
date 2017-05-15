@@ -61,7 +61,7 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, 
 
 	/* Word 1 */
 	si->word1.sid1 = sid1;
-	si->word1.ep = 1; /* shall be 0 */
+	si->word1.ep = 0; /* shall be 0 */
 	si->word1.auth = 0;
 	si->word1.pci = 0;
 
