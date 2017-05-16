@@ -71,7 +71,7 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating smooth ramp table.\n");
 	for (i = 0; i < 256; i++) {
 		c = cos((double)i / 256.0 * PI);
-		/* use cosine-square ramp. tests showed that phones are more
+		/* use square-root of cosine ramp. tests showed that phones are more
 		 * happy with that. */
 		if (c < 0)
 			c = -sqrt(-c);
@@ -126,7 +126,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
 	iir_lowpass_init(&cnetz->lp, MAX_MODULATION, cnetz->sender.samplerate, 2);
 
 	/* create speech buffer */
-	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), cnetz->sender.samplerate); /* buffer is greater than sr/1.1, just to be secure */
+	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), (int)(cnetz->fsk_bitduration * 70.0)); /* more to compensate clock speed. we just need it to fill 62 bits (60 bits, including pause bits). */
 	if (!cnetz->dsp_speech_buffer) {
 		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
 		rc = -ENOMEM;
@@ -430,8 +430,15 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 /* encode one distributed data block into samples
  * input: 184 data bits (including barker code)
  * output: samples
- * 	if a sample contains 0x8000, it indicates where to insert speech block
- * return number of samples */
+ * 	if a sample contains a marker, it indicates where to insert speech block
+ * return number of samples
+ *
+ * the marker is placed in the middle of the 6th bit.
+ * because we have a transition (ramp) in the middle of each bit.
+ * the phone will see the position of the marker as start of the 6th bit.
+ * the marker marks the pont where the speech is ramped up, so the phone
+ * will see the speech completely ramped up after the 6th bit
+ */
 static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 {
 	/* alloc samples, add 1 in case there is a rest */
@@ -454,7 +461,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		marker = spl;
+		marker = spl - (int)(cnetz->fsk_bitduration / 2.0); /* in the middle of the 6th bit */
 		for (j = 0; j < 60; j++) {
 			do {
 				*spl++ = 0;
@@ -462,7 +469,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		*marker = 999; /* marker for inserting speech */
+		*marker += 10.0; /* marker for inserting speech */
 	}
 	/* add 46 * (1+4+1 + 60) bits */
 	for (i = 0; i < 46; i++) {
@@ -529,7 +536,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			}
 			last = bits[i * 4 + j];
 		}
-		/* unmodulated bit */
+		/* ramp down */
 		if (last == '0') {
 			/* ramp up to 0 */
 			do {
@@ -545,7 +552,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		marker = spl;
+		marker = spl - (int)(cnetz->fsk_bitduration / 2.0); /* in the middle of the 6th bit */
 		for (j = 0; j < 60; j++) {
 			do {
 				*spl++ = 0;
@@ -553,7 +560,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 			} while (phase < 256.0);
 			phase -= 256.0;
 		}
-		*marker = 999; /* marker for inserting speech */
+		*marker += 10.0; /* marker for inserting speech */
 	}
 
 	/* depending on the number of samples, return the number */
@@ -705,25 +712,47 @@ again:
 	if (length - count < copy)
 		copy = length - count;
 	for (i = 0; i < copy; i++) {
-		if (*spl == 999) {
+		if (*spl > 5.0) { /* marker found */
+			int begin, end, j;
+			/* correct marker (not the best way) */
+			*spl -= 10.0;
+			begin = (int)cnetz->fsk_bitduration;
+			end = (int)(cnetz->fsk_bitduration * 61.0);
 			/* marker found to insert new chunk of audio */
-			jitter_load(&cnetz->sender.dejitter, speech_buffer, 100);
+			jitter_load(&cnetz->sender.dejitter, speech_buffer + begin, 100);
 			/* 1. compress dynamics */
-			compress_audio(&cnetz->cstate, speech_buffer, 100);
+			compress_audio(&cnetz->cstate, speech_buffer + begin, 100);
 			/* 2. upsample */
-			speech_length = samplerate_upsample(&cnetz->sender.srstate, speech_buffer, 100, speech_buffer);
+			speech_length = samplerate_upsample(&cnetz->sender.srstate, speech_buffer + begin, 100, speech_buffer + begin);
 			/* 3. scramble */
 			if (cnetz->scrambler)
-				scrambler(&cnetz->scrambler_tx, speech_buffer, speech_length);
+				scrambler(&cnetz->scrambler_tx, speech_buffer + begin, speech_length);
 			/* 4. pre-emphasis is done by cnetz code, not by common code */
 			/* pre-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
 			if (cnetz->pre_emphasis && !cnetz->scrambler)
-				pre_emphasis(&cnetz->estate, speech_buffer, speech_length);
+				pre_emphasis(&cnetz->estate, speech_buffer + begin, speech_length);
+			/* 5.1 ramp before speech */
+			for (j = 0; j < begin; j++) {
+				/* ramp up from 0 to speech level */
+				speech_buffer[j] = speech_buffer[begin] * (ramp_up[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
+			}
+			speech_length += begin; /* add one bit duration before speech*/
+			/* 5.2. ramp after speech */
+			while (speech_length < end) {
+				speech_buffer[speech_length] = speech_buffer[speech_length - 1];
+				speech_length++;
+			}
+			speech_length = end; /* shorten 'speech_length', if greater than 'end' */
+			for (j = 0; j < begin; j++) {
+				/* ramp down from speech level to 0 */
+				speech_buffer[end + j] = speech_buffer[end - 1] * (ramp_down[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
+			}
+			speech_length += begin; /* add one bit duration after speech */
 			speech_pos = 0;
 		}
-		/* copy speech as long as we have something left in buffer */
+		/* add speech as long as we have something left in buffer */
 		if (speech_pos < speech_length)
-			*samples++ = speech_buffer[speech_pos++];
+			*samples++ = *spl + speech_buffer[speech_pos++];
 		else
 			*samples++ = *spl;
 		spl++;
