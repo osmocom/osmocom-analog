@@ -431,7 +431,7 @@ The base station receives the call acknowledge signal and sends the call hold si
 
 <p>
 When the mobile station receives the call hold signal, it indicates ringing tone to the mobile subscriber.
-Additionally the car's siren is turned on (if connected to the phone), if the mobile subscriber is outside the car.
+Additionally the car's siren is turned on, if it is connected to the phone and if the ignition of the car is turned off.
 </p>
 
 <p>
@@ -504,6 +504,7 @@ Reduced transmit power:
 <p>
 When the mobile phone starts outgoing call on a channel that uses GFS ('Gruppenfreisignal') 19, the transmit power is reduced to 100 mW.
 Even if no GFS is selected, the power is reduced on a channel that broadcasts GFS 19.
+(Do not mess up GFS signal 19 with radio channel 19. GFS signal 19 is used to reduce mobile station's power, while radio channel 19 is used to page the mobile station.)
 </p>
 
 <p class="toppic">
@@ -804,7 +805,7 @@ The D0...D3 lines must be pulled up to 5V using a resistor, so they are in high 
 <center><img src="b-netz_dioden1.jpg"/></center>
 
 <p>
-Now I can program any phone just by setting jumers.
+Now I can "program" any subscriber ID, just by setting jumers.
 I call this "JPROM" (Jumper Programmable Read Only Memory).
 </p>
 
