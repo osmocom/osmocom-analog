@@ -19,7 +19,7 @@ typedef struct display_iq {
 	float	buffer[MAX_DISPLAY_IQ * 2];
 } dispiq_t;
 
-#define MAX_DISPLAY_SPECTRUM 256
+#define MAX_DISPLAY_SPECTRUM 1024
 
 typedef struct display_spectrum {
 	int	interval_pos;

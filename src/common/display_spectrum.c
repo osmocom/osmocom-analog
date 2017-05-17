@@ -94,19 +94,33 @@ void display_spectrum(float *samples, int length)
 	int pos, max;
 	double *buffer_I, *buffer_Q;
 	int color = 9; /* default color */
-	int i, j, k, count;
-	int m;
-	double I, Q, v, c;
+	int i, j, k, o;
+	double I, Q, v;
 	int s, e;
 
 	if (!spectrum_on)
 		return;
 
 	get_win_size(&width, &h);
-	if (width > MAX_DISPLAY_SPECTRUM)
-		width = MAX_DISPLAY_SPECTRUM;
+	if (width > MAX_DISPLAY_WIDTH)
+		width = MAX_DISPLAY_WIDTH;
 
-	int heigh[width], low[width];
+	/* calculate size of FFT */
+	int m, fft_size = 0, fft_taps = 0;
+	for (m = 0; m < 16; m++) {
+		if ((1 << m) > MAX_DISPLAY_SPECTRUM)
+			break;
+		if ((1 << m) <= width) {
+			fft_taps = m;
+			fft_size = 1 << m;
+		}
+	}
+	if (m == 16) {
+		fprintf(stderr, "Size of spectrum is not a power of 2, please fix!\n");
+		abort();
+	}
+
+	int heigh[fft_size], low[fft_size];
 
 	pos = disp.interval_pos;
 	max = disp.interval_max;
@@ -114,7 +128,7 @@ void display_spectrum(float *samples, int length)
 	buffer_Q = disp.buffer_Q;
 
 	for (i = 0; i < length; i++) {
-		if (pos >= MAX_DISPLAY_SPECTRUM) {
+		if (pos >= fft_size) {
 			if (++pos == max)
 				pos = 0;
 			continue;
@@ -122,106 +136,80 @@ void display_spectrum(float *samples, int length)
 		buffer_I[pos] = samples[i * 2];
 		buffer_Q[pos] = samples[i * 2 + 1];
 		pos++;
-		if (pos == MAX_DISPLAY_SPECTRUM) {
-			/* calculate number of taps */
-			for (m = 0; m < 16; m++) {
-				if ((1 << m) == MAX_DISPLAY_SPECTRUM)
-					break;
-			}
-			if (m == 16) {
-				fprintf(stderr, "Size of spectrum is not a power of 2, please fix!\n");
-				abort();
-			}
-			fft_process(1, m, buffer_I, buffer_Q);
-			count = 0;
-			c = 0.0;
+		if (pos == fft_size) {
+			fft_process(1, fft_taps, buffer_I, buffer_Q);
 			k = 0;
-			for (j = 0; j < MAX_DISPLAY_SPECTRUM; j++) {
+			for (j = 0; j < fft_size; j++) {
 				/* scale result vertically */
-				I = buffer_I[(j + MAX_DISPLAY_SPECTRUM / 2) % MAX_DISPLAY_SPECTRUM];
-				Q = buffer_Q[(j + MAX_DISPLAY_SPECTRUM / 2) % MAX_DISPLAY_SPECTRUM];
+				I = buffer_I[(j + fft_size / 2) % fft_size];
+				Q = buffer_Q[(j + fft_size / 2) % fft_size];
 				v = sqrt(I*I + Q*Q);
 				v = log10(v) * 20 + db;
 				if (v < 0)
 					v = 0;
 				v /= db;
-				/* scale down result horizontally by combining values */
-				if (v > c)
-					c = v;
 				buffer_max[j] -= DISPLAY_INTERVAL / 10.0;
-				if (c > buffer_max[j])
-					buffer_max[j] = c;
-				count += width;
-				while (count >= MAX_DISPLAY_SPECTRUM) {
-					if (k >= width) {
-						fprintf(stderr, "Too many output values, please fix!\n");
-						abort();
-					}
-					/* heigh is the maximum value */
-					heigh[k] = (double)(HEIGHT * 2 - 1) * (1.0 - buffer_max[j]);
-					if (heigh[k] < 0)
-						heigh[k] = 0;
-					if (heigh[k] >= (HEIGHT * 2))
-						heigh[k] = (HEIGHT * 2) - 1;
-					/* low is the current value */
-					low[k] = (double)(HEIGHT * 2 - 1) * (1.0 - c);
-					if (low[k] < 0)
-						low[k] = 0;
-					if (low[k] >= (HEIGHT * 2))
-						low[k] = (HEIGHT * 2) - 1;
-					k++;
-					c = 0.0;
-					count -= MAX_DISPLAY_SPECTRUM;
-				}
-			}
-			if (k != width) {
-				fprintf(stderr, "k must be %d but is %d, please fix!\n", width, k);
-				abort();
+				if (v > buffer_max[j])
+					buffer_max[j] = v;
+				
+				/* heigh is the maximum value */
+				heigh[j] = (double)(HEIGHT * 2 - 1) * (1.0 - buffer_max[j]);
+				if (heigh[j] < 0)
+					heigh[j] = 0;
+				if (heigh[j] >= (HEIGHT * 2))
+					heigh[j] = (HEIGHT * 2) - 1;
+				/* low is the current value */
+				low[j] = (double)(HEIGHT * 2 - 1) * (1.0 - v);
+				if (low[j] < 0)
+					low[j] = 0;
+				if (low[j] >= (HEIGHT * 2))
+					low[j] = (HEIGHT * 2) - 1;
 			}
 			/* plot scaled buffer */
 			memset(&screen, ' ', sizeof(screen));
 			memset(&screen_color, 7, sizeof(screen_color)); /* all white */
 			sprintf(screen[0], "(spectrum log %.0f dB", db);
 			*strchr(screen[0], '\0') = ')';
-			for (j = 0; j < width; j++) {
+			o = (width - fft_size) / 2; /* offset from left border */
+			for (j = 0; j < fft_size; j++) {
 				s = e = low[j];
 				if (j > 0 && low[j - 1] > e)
 					e = low[j - 1] - 1;
-				if (j < width - 1 && low[j + 1] > e)
+				if (j < fft_size - 1 && low[j + 1] > e)
 					e = low[j + 1] - 1;
 				if (s == e) {
 					if ((s & 1) == 0)
-						screen[s >> 1][j] = '\'';
+						screen[s >> 1][j + o] = '\'';
 					else
-						screen[s >> 1][j] = '.';
-					screen_color[s >> 1][j] = 3;
+						screen[s >> 1][j + o] = '.';
+					screen_color[s >> 1][j + o] = 13;
 				} else {
 					if ((s & 1) == 0)
-						screen[s >> 1][j] = ':';
+						screen[s >> 1][j + o] = ':';
 					else
-						screen[s >> 1][j] = '.';
-					screen_color[s >> 1][j] = 3;
+						screen[s >> 1][j + o] = '.';
+					screen_color[s >> 1][j + o] = 13;
 					if ((e & 1) == 0)
-						screen[e >> 1][j] = '\'';
+						screen[e >> 1][j + o] = '\'';
 					else
-						screen[e >> 1][j] = ':';
-					screen_color[e >> 1][j] = 3;
+						screen[e >> 1][j + o] = ':';
+					screen_color[e >> 1][j + o] = 13;
 					for (k = (s >> 1) + 1; k < (e >> 1); k++) {
-						screen[k][j] = ':';
-						screen_color[k][j] = 3;
+						screen[k][j + o] = ':';
+						screen_color[k][j + o] = 13;
 					}
 				}
 				s = heigh[j];
 				e = low[j];
 				if ((s >> 1) < (e >> 1)) {
 					if ((s & 1) == 0)
-						screen[s >> 1][j] = ':';
+						screen[s >> 1][j + o] = ':';
 					else
-						screen[s >> 1][j] = '.';
-					screen_color[s >> 1][j] = 4;
+						screen[s >> 1][j + o] = '.';
+					screen_color[s >> 1][j + o] = 4;
 					for (k = (s >> 1) + 1; k < (e >> 1); k++) {
-						screen[k][j] = ':';
-						screen_color[k][j] = 4;
+						screen[k][j + o] = ':';
+						screen_color[k][j + o] = 4;
 					}
 				}
 			}
@@ -230,7 +218,7 @@ void display_spectrum(float *samples, int length)
 				for (k = 0; k < width; k++) {
 					if (screen_color[j][k] != color) {
 						color = screen_color[j][k];
-						printf("\033[1;3%dm", color);
+						printf("\033[%d;3%dm", color / 10, color % 10);
 					}
 					putchar(screen[j][k]);
 				}
