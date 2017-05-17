@@ -597,6 +597,27 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	return;
 }
 
+/* shrink audio segment from 12.5 ms to the duration of 60 bits */
+static int shrink_speech(cnetz_t *cnetz, sample_t *speech_buffer)
+{
+	int speech_length;
+
+	jitter_load(&cnetz->sender.dejitter, speech_buffer, 100);
+	/* 1. compress dynamics */
+	compress_audio(&cnetz->cstate, speech_buffer, 100);
+	/* 2. upsample */
+	speech_length = samplerate_upsample(&cnetz->sender.srstate, speech_buffer, 100, speech_buffer);
+	/* 3. scramble */
+	if (cnetz->scrambler)
+		scrambler(&cnetz->scrambler_tx, speech_buffer, speech_length);
+	/* 4. pre-emphasis is done by cnetz code, not by common code */
+	/* pre-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
+	if (cnetz->pre_emphasis && !cnetz->scrambler)
+		pre_emphasis(&cnetz->estate, speech_buffer, speech_length);
+
+	return speech_length;
+}
+
 static int fsk_telegramm(cnetz_t *cnetz, sample_t *samples, int length)
 {
 	int count = 0, pos, copy, i, speech_length, speech_pos;
@@ -718,26 +739,15 @@ again:
 			*spl -= 10.0;
 			begin = (int)cnetz->fsk_bitduration;
 			end = (int)(cnetz->fsk_bitduration * 61.0);
-			/* marker found to insert new chunk of audio */
-			jitter_load(&cnetz->sender.dejitter, speech_buffer + begin, 100);
-			/* 1. compress dynamics */
-			compress_audio(&cnetz->cstate, speech_buffer + begin, 100);
-			/* 2. upsample */
-			speech_length = samplerate_upsample(&cnetz->sender.srstate, speech_buffer + begin, 100, speech_buffer + begin);
-			/* 3. scramble */
-			if (cnetz->scrambler)
-				scrambler(&cnetz->scrambler_tx, speech_buffer + begin, speech_length);
-			/* 4. pre-emphasis is done by cnetz code, not by common code */
-			/* pre-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */
-			if (cnetz->pre_emphasis && !cnetz->scrambler)
-				pre_emphasis(&cnetz->estate, speech_buffer + begin, speech_length);
-			/* 5.1 ramp before speech */
+			/* get audio */
+			speech_length = shrink_speech(cnetz, speech_buffer + begin);
+			/* ramp before speech */
 			for (j = 0; j < begin; j++) {
 				/* ramp up from 0 to speech level */
 				speech_buffer[j] = speech_buffer[begin] * (ramp_up[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
 			}
 			speech_length += begin; /* add one bit duration before speech*/
-			/* 5.2. ramp after speech */
+			/* ramp after speech */
 			while (speech_length < end) {
 				speech_buffer[speech_length] = speech_buffer[speech_length - 1];
 				speech_length++;

@@ -57,7 +57,7 @@ static void remove_db(cnetz_db_t *db)
 	while (*dbp && *dbp != db)
 		dbp = &((*dbp)->next);
 	if (!(*dbp)) {
-		PDEBUG(DDB, DEBUG_ERROR, "Transaction not in list, please fix!!\n");
+		PDEBUG(DDB, DEBUG_ERROR, "Subscriber not in list, please fix!!\n");
 		abort();
 	}
 	*dbp = db->next;

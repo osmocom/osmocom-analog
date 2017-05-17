@@ -84,11 +84,11 @@ int dsp_init_sender(bnetz_t *bnetz)
 	int i;
 
 	if ((bnetz->sender.samplerate % (int)(1.0 / (double)BIT_DURATION))) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Samples rate must be a multiple of %d bits per second.\n", (int)(1.0 / (double)BIT_DURATION));
+		PDEBUG(DDSP, DEBUG_ERROR, "Samples rate must be a multiple of %d (bits per second).\n", (int)(1.0 / (double)BIT_DURATION));
 		return -EINVAL;
 	}
 	if ((bnetz->sender.samplerate % (int)(1.0 / (double)FILTER_STEP))) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Samples rate must be a multiple of %d bits per second.\n", (int)(1.0 / (double)FILTER_STEP));
+		PDEBUG(DDSP, DEBUG_ERROR, "Samples rate must be a multiple of %d (FSK probes per second).\n", (int)(1.0 / (double)FILTER_STEP));
 		return -EINVAL;
 	}
 
