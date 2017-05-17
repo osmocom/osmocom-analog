@@ -1,6 +1,6 @@
 #include "../common/compandor.h"
 #include "../common/sender.h"
-#include "fsk_fm_demod.h"
+#include "fsk_demod.h"
 #include "scrambler.h"
 #include "transaction.h"
 

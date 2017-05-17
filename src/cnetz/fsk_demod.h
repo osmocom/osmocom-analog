@@ -10,6 +10,11 @@ enum fsk_sync {
 	FSK_SYNC_NEGATIVE,
 };
 
+enum demod_type {
+	FSK_DEMOD_SLOPE, /* check for highest slope (good for sound cards) */
+	FSK_DEMOD_LEVEL, /* check for zero crossing (good for SDR) */
+};
+
 typedef struct cnetz cnetz_t;
 
 typedef struct fsk_fm_demod {
@@ -20,6 +25,7 @@ typedef struct fsk_fm_demod {
 	double		bit_time_uncorrected;	/* same as above, but not corrected by sync */
 
 	/* bit detection */
+	enum demod_type	demod_type;		/* how to demodulate bits */
 	sample_t	*bit_buffer_spl;	/* samples ring buffer */
 	int		bit_buffer_len;		/* number of samples in ring buffer */
 	int		bit_buffer_half;	/* half of ring buffer */
@@ -53,7 +59,7 @@ typedef struct fsk_fm_demod {
 	FILE		*debug_fp;		/* file pointer for debugging output */
 } fsk_fm_demod_t;
 
-int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate);
+int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate, enum demod_type);
 void fsk_fm_exit(fsk_fm_demod_t *fsk);
 void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length);
 void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset);

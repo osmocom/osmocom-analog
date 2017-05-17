@@ -10,7 +10,7 @@ cnetz_SOURCES = \
 	sysinfo.c \
 	telegramm.c \
 	dsp.c \
-	fsk_fm_demod.c \
+	fsk_demod.c \
 	scrambler.c \
 	image.c \
 	ansage.c \

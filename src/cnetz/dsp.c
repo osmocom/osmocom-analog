@@ -83,7 +83,7 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
+int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], int use_sdr)
 {
 	int rc = 0;
 	double size;
@@ -136,7 +136,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2])
 	/* reinit the sample rate to shrink/expand audio */
 	init_samplerate(&cnetz->sender.srstate, 8000.0, (double)cnetz->sender.samplerate / 1.1, 3300.0); /* 66 <-> 60 */
 
-	rc = fsk_fm_init(&cnetz->fsk_demod, cnetz, cnetz->sender.samplerate, (double)BITRATE / (1.0 + clock_speed[0] / 1000000.0));
+	rc = fsk_fm_init(&cnetz->fsk_demod, cnetz, cnetz->sender.samplerate, (double)BITRATE / (1.0 + clock_speed[0] / 1000000.0), (use_sdr) ? FSK_DEMOD_LEVEL : FSK_DEMOD_SLOPE);
 	if (rc < 0)
 		goto error;
 

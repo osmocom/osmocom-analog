@@ -140,7 +140,7 @@
 #include "telegramm.h"
 #include "dsp.h"
 
-/* uncomment this to do echo debugging (-L) on Speech Channel */
+/* uncomment this to do echo debugging (-l) on Speech Channel */
 //#define DEBUG_SPK
 
 #define CUT_OFF_EMPHASIS_CNETZ	796.0 /* 200 uS time constant */
@@ -290,7 +290,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 #endif
 
 	/* init audio processing */
-	rc = dsp_init_sender(cnetz, measure_speed, clock_speed);
+	rc = dsp_init_sender(cnetz, measure_speed, clock_speed, use_sdr);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
 		goto error;
