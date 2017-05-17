@@ -87,7 +87,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_rate != rate) {
+		if (fabs(got_rate - rate) > 0.001) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
 			uhd_close();
 			return -EINVAL;
@@ -108,7 +108,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_gain != tx_gain) {
+		if (fabs(got_gain - tx_gain) > 0.001) {
 			PDEBUG(DUHD, DEBUG_NOTICE, "Given TX gain %.0f is not supported, we use %0.f\n", tx_gain, got_gain);
 			tx_gain = got_gain;
 		}
@@ -132,7 +132,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_frequency != tx_frequency) {
+		if (fabs(got_frequency - tx_frequency) > 0.001) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %0.f Hz\n", tx_frequency, got_frequency);
 			uhd_close();
 			return -EINVAL;
@@ -152,7 +152,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_bandwidth != bandwidth) {
+		if (fabs(got_bandwidth - bandwidth) > 0.001) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
 			uhd_close();
 			return -EINVAL;
@@ -213,7 +213,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_rate != rate) {
+		if (fabs(got_rate - rate) > 0.001) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %0.f Hz\n", rate, got_rate);
 			uhd_close();
 			return -EINVAL;
@@ -234,7 +234,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_gain != rx_gain) {
+		if (fabs(got_gain - rx_gain) > 0.001) {
 			PDEBUG(DUHD, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
 			rx_gain = got_gain;
 		}
@@ -258,7 +258,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_frequency != rx_frequency) {
+		if (fabs(got_frequency - rx_frequency) > 0.001) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %0.f Hz\n", rx_frequency, got_frequency);
 			uhd_close();
 			return -EINVAL;
@@ -278,7 +278,7 @@ int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, 
 			uhd_close();
 			return -EIO;
 		}
-		if (got_bandwidth != bandwidth) {
+		if (fabs(got_bandwidth - bandwidth) > 0.001) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %0.f Hz\n", bandwidth, got_bandwidth);
 			uhd_close();
 			return -EINVAL;
@@ -439,10 +439,10 @@ int uhd_receive(float *buff, int max)
 						PDEBUG(DUHD, DEBUG_ERROR, "Received rate (%.0f) does not match defined rate (%.0f), use diffrent sample rate that UHD device can handle!\n", (double)got / got_time, samplerate);
 						return -EPERM;
 					}
-					check_rate = 0;
 					rx_gap = diff_time * (double)samplerate + 0.5;
 					PDEBUG(DUHD, DEBUG_ERROR, "Lost rx frame(s): A gap of %.6f seconds (%d samples), \n", diff_time, rx_gap);
 				}
+				check_rate = 0;
 			}
 			break;
 		}
