@@ -47,6 +47,7 @@ int set_clock_speed = 0;
 const char *flip_polarity = "auto";
 int ms_power = 0; /* 0..3 */
 int auth = 0;
+enum demod_type demod = FSK_DEMOD_AUTO;
 
 void print_help(const char *arg0)
 {
@@ -75,6 +76,15 @@ void print_help(const char *arg0)
 	printf("        Enable authentication on the base station. Since we cannot\n");
 	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
 	printf("	we just accept any card. With this we get the vendor IDs of the phone.\n");
+	printf(" -D --demod auto | slope | level\n");
+	printf("        Adjust demodulation algorithm. Use 'slope' to detect a level change\n");
+	printf("        by finding the highest slope of a bit transition. It is useful, if\n");
+	printf("        the receiver drifts to 0 after a while, due to DC decoupling. This\n");
+	printf("        happens in every analog receiver and in every sound card input.\n");
+	printf("        Use 'level' to detect a level change by passing zero level. This\n");
+	printf("        requires a DC coupled signal, which is produced by SDR.\n");
+	printf("        Use 'auto' to select 'slope' for sound card input and 'level' for SDR\n");
+	printf("        input. (default = '%s')\n", (demod == FSK_DEMOD_LEVEL) ? "level" : (demod == FSK_DEMOD_SLOPE) ? "slope" : "auto");
 	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 	print_hotkeys_common();
@@ -94,10 +104,11 @@ static int handle_options(int argc, char **argv)
 		{"flip-polarity", 1, 0, 'F'},
 		{"ms-power", 1, 0, 'P'},
 		{"authentication", 0, 0, 'A'},
+		{"demod", 1, 0, 'D'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("T:MS:F:N:P:AV", long_options_special);
+	set_options_common("T:MS:F:N:P:AD:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -160,6 +171,19 @@ static int handle_options(int argc, char **argv)
 		case 'A':
 			auth = 1;
 			skip_args += 1;
+			break;
+		case 'D':
+			if (!strcasecmp(optarg, "auto"))
+				demod = FSK_DEMOD_AUTO;
+			else if (!strcasecmp(optarg, "slope"))
+				demod = FSK_DEMOD_SLOPE;
+			else if (!strcasecmp(optarg, "level"))
+				demod = FSK_DEMOD_LEVEL;
+			else {
+				fprintf(stderr, "Given demodulation type '%s' is illegal, see help!\n", optarg);
+				exit(0);
+			}
+			skip_args += 2;
 			break;
 		default:
 			opt_switch_common(c, argv[0], &skip_args);
@@ -299,9 +323,20 @@ int main(int argc, char *argv[])
 	if (use_sdr && polarity == 0)
 		polarity = 1; /* SDR is always positive */
 
+	/* demodulation algorithm */
+	if (demod == FSK_DEMOD_AUTO)
+		demod = (use_sdr) ? FSK_DEMOD_LEVEL : FSK_DEMOD_SLOPE;
+	if (demod == FSK_DEMOD_LEVEL && !use_sdr) {
+		fprintf(stderr, "*******************************************************************************\n");
+		fprintf(stderr, "I strongly suggest to use 'slope' demodulation algorithm!!!\n");
+		fprintf(stderr, "Using sound card will cause the DC levels to return to 0. Using 'level' assumes\n");
+		fprintf(stderr, "that a frequency offset never returns to 0. (Use this only with SDR.)\n");
+		fprintf(stderr, "*******************************************************************************\n");
+	}
+
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, auth, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

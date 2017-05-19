@@ -11,6 +11,7 @@ enum fsk_sync {
 };
 
 enum demod_type {
+	FSK_DEMOD_AUTO, /* auto selection of the demod type below */
 	FSK_DEMOD_SLOPE, /* check for highest slope (good for sound cards) */
 	FSK_DEMOD_LEVEL, /* check for zero crossing (good for SDR) */
 };

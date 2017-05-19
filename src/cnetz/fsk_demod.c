@@ -135,7 +135,7 @@
 #include "dsp.h"
 #include "telegramm.h"
 
-int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate, enum demod_type demod_type)
+int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitrate, enum demod_type demod)
 {
 	int len, half;
 
@@ -146,12 +146,19 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 	}
 
 	fsk->cnetz = cnetz;
-	fsk->demod_type = demod_type;
+	fsk->demod_type = demod;
 
-	if (demod_type == FSK_DEMOD_SLOPE)
+	switch (demod) {
+	case FSK_DEMOD_SLOPE:
 		PDEBUG(DDSP, DEBUG_INFO, "Detecting level change by looking at slope (good for sound cards)\n");
-	if (demod_type == FSK_DEMOD_LEVEL)
+		break;
+	case FSK_DEMOD_LEVEL:
 		PDEBUG(DDSP, DEBUG_INFO, "Detecting level change by looking zero crosssing (good for SDR)\n");
+		break;
+	default:
+		PDEBUG(DDSP, DEBUG_ERROR, "Wrong demod type, please fix!\n");
+		abort();
+	}
 
 	len = (int)((double)samplerate / bitrate + 0.5);
 	half = (int)((double)samplerate / bitrate / 2.0 + 0.5);
