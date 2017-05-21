@@ -605,7 +605,7 @@ prepare_frame:
 		amps->fsk_rx_frame[amps->fsk_rx_frame_count] = '\0';
 		more = amps_decode_frame(amps, amps->fsk_rx_frame, amps->fsk_rx_frame_count, amps->fsk_rx_frame_level / (double)amps->fsk_rx_frame_count, amps->fsk_rx_frame_quality / amps->fsk_rx_frame_level, (amps->fsk_rx_sync == FSK_SYNC_NEGATIVE));
 		if (more) {
-			/* switch to next worda length without DCC included */
+			/* switch to next word length without DCC included */
 			amps->fsk_rx_frame_length = 240;
 			goto prepare_frame;
 		} else {

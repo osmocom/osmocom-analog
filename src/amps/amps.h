@@ -102,7 +102,8 @@ typedef struct amps {
 	double			fsk_rx_frame_level;	/* sum of level of all bits */
 	double			fsk_rx_frame_quality;	/* sum of quality of all bits */
 	/* RECC frame states */
-	int			rx_recc_word_count;	/* counts received words */
+	int			rx_recc_nawc;		/* counts down received words */
+	int			rx_recc_word_count;	/* counts up received words */
 	uint32_t		rx_recc_min1;		/* mobile id */
 	uint16_t		rx_recc_min2;
 	uint8_t			rx_recc_msg_type;	/* message (3 values) */
@@ -110,6 +111,7 @@ typedef struct amps {
 	uint8_t			rx_recc_order;
 	uint32_t		rx_recc_esn;
 	uint32_t		rx_recc_scm;
+	uint8_t			rx_recc_mpci;
 	char			rx_recc_dialing[33];	/* received dial string */
 	/* FOCC frame states */
 	int			rx_focc_word_count;	/* counts received words */
@@ -158,7 +160,7 @@ const char *chan_type_short_name(enum amps_chan_type chan_type);
 const char *chan_type_long_name(enum amps_chan_type chan_type);
 double amps_channel2freq(int channel, int uplink);
 enum amps_chan_type amps_channel2type(int channel);
-char amps_channel2band(int channel);
+const char *amps_channel2band(int channel);
 const char *amps_min22number(uint16_t min2);
 const char *amps_min12number(uint32_t min1);
 void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2);
@@ -168,7 +170,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 void amps_destroy(sender_t *sender);
 void amps_rx_signaling_tone(amps_t *amps, int tone, double quality);
 void amps_rx_sat(amps_t *amps, int tone, double quality);
-void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, const char *dialing);
+void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, const char *dialing);
 transaction_t *amps_tx_frame_focc(amps_t *amps);
 transaction_t *amps_tx_frame_fvc(amps_t *amps);
 

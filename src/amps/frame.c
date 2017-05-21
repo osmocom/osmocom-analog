@@ -1713,21 +1713,21 @@ static const char *ie_cmac(uint64_t value)
 {
 	switch (value) {
 	case 0:
-		return "6 dbW";
+		return "6 dbW (4 Watts)";
 	case 1:
-		return "2 dbW";
+		return "2 dbW (1.6 Watts)";
 	case 2:
-		return "-2 dbW";
+		return "-2 dbW (630 Milliwatts)";
 	case 3:
-		return "-6 dbW";
+		return "-6 dbW (250 Milliwatts)";
 	case 4:
-		return "-10 dbW";
+		return "-10 dbW (100 Milliwatts)";
 	case 5:
-		return "-14 dbW";
+		return "-14 dbW (40 Milliwatts)";
 	case 6:
-		return "-18 dbW";
+		return "-18 dbW (16 Milliwatts)";
 	}
-	return "-22";
+	return "-22 dbW (6.3 Milliwatts)";
 }
 
 static const char *ie_cmax(uint64_t value)
@@ -2777,7 +2777,7 @@ uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t reg
 	frame.ie[AMPS_IE_E] = e;
 	frame.ie[AMPS_IE_REGH] = regh;
 	frame.ie[AMPS_IE_REGR] = regr;
-	frame.ie[AMPS_IE_DTX] = dtx;
+	frame.ie[AMPS_IE_DTX_Support] = dtx;
 	frame.ie[AMPS_IE_N_1] = n_1;
 	frame.ie[AMPS_IE_RCF] = rcf;
 	frame.ie[AMPS_IE_CPA] = cpa;
@@ -3141,6 +3141,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 	if (first) {
 		memset(amps->rx_recc_dialing, 0, sizeof(amps->rx_recc_dialing));
 		amps->rx_recc_word_count = 0;
+		amps->rx_recc_nawc = nawc;
 		if (f == 0) {
 			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received first word, but F bit is not set.\n");
 			return 0;
@@ -3150,6 +3151,10 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word, but F bit is set.\n");
 			return 0;
 		}
+		amps->rx_recc_nawc--;
+		if (amps->rx_recc_nawc != nawc) {
+			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word with NAWC missmatch!\n");
+		}
 	}
 
 	msg_count = amps->rx_recc_word_count;
@@ -3158,8 +3163,6 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received too many words.\n");
 		return 0;
 	}
-
-//	amps->rx_recc_word[msg_count] = word;
 
 	if (msg_count == 0)
 		w = &abbreviated_address_word;
@@ -3210,6 +3213,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		amps->rx_recc_ordq = frame->ie[AMPS_IE_ORDQ];
 		amps->rx_recc_order = frame->ie[AMPS_IE_ORDER];
 		amps->rx_recc_scm |= frame->ie[AMPS_IE_SCM] << 4;
+		amps->rx_recc_mpci = frame->ie[AMPS_IE_MPCI];
 	}
 	if (amps->rx_recc_word_count == 2 && frame) {
 		if (amps->si.word2.s)
@@ -3258,16 +3262,17 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		amps->rx_recc_dialing[31] = digit2number[frame->ie[AMPS_IE_DIGIT_32]];
 	}
 
-	if (msg_count >= 3 && nawc == 0) {
+	PDEBUG_CHAN(DFRAME, DEBUG_INFO, "expecting %d more word(s) to come\n", amps->rx_recc_nawc);
+
+	if (msg_count >= 3 && amps->rx_recc_nawc == 0) {
 		/* if no digit messages are present, send NULL as dial string (paging reply) */
-		amps_rx_recc(amps, amps->rx_recc_scm, amps->rx_recc_esn, amps->rx_recc_min1, amps->rx_recc_min2, amps->rx_recc_msg_type, amps->rx_recc_ordq, amps->rx_recc_order, (msg_count > 3) ? amps->rx_recc_dialing : NULL);
+		amps_rx_recc(amps, amps->rx_recc_scm, amps->rx_recc_mpci, amps->rx_recc_esn, amps->rx_recc_min1, amps->rx_recc_min2, amps->rx_recc_msg_type, amps->rx_recc_ordq, amps->rx_recc_order, (msg_count > 3) ? amps->rx_recc_dialing : NULL);
 	}
 
 	amps->rx_recc_word_count++;
 
 done:
-//printf("left=%d\n", (word >> 44) & 0x7);
-	if (nawc > 0)
+	if (amps->rx_recc_nawc > 0)
 		return 1;
 
 	return 0;
@@ -3464,7 +3469,7 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 	if (amps->tx_fvc_send) {
 		amps->tx_fvc_send = 0;
 		if (amps->tx_fvc_chan)
-			word = amps_encode_mobile_station_control_message_word1_b(amps->sat, amps->sat, 0, 0, 0, amps->si.vmac, amps->tx_fvc_chan);
+			word = amps_encode_mobile_station_control_message_word1_b(amps->sat, amps->sat, (amps->si.word2.dtx) ? 1 : 0, 0, 0, amps->si.vmac, amps->tx_fvc_chan);
 		else
 			word = amps_encode_mobile_station_control_message_word1_a(amps->sat, amps->tx_fvc_msg_type, amps->tx_fvc_ordq, amps->tx_fvc_order);
 	} else

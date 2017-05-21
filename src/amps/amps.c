@@ -95,14 +95,20 @@ enum amps_chan_type amps_channel2type(int channel)
 	return CHAN_TYPE_VC;
 }
 
-char amps_channel2band(int channel)
+const char *amps_channel2band(int channel)
 {
+	if (channel >= 991 && channel <= 1023)
+		return "A''";
+	if (channel >= 1 && channel <= 333)
+		return "A";
 	if (channel >= 334 && channel <= 666)
-		return 'B';
+		return "B";
+	if (channel >= 667 && channel <= 716)
+		return "A'";
 	if (channel >= 717 && channel <= 799)
-		return 'B';
+		return "B'";
 
-	return 'A';
+	return "<invalid>";
 }
 
 static inline int digit2binary(int digit)
@@ -227,9 +233,26 @@ const char *amps_scm(uint8_t scm)
 {
 	static char text[64];
 
-	sprintf(text, "Class %d / %sontinuous / %d MHz", (scm >> 2) + (scm & 3) + 1, (scm & 4) ? "Disc" : "C", (scm & 8) ? 25 : 20);
+	sprintf(text, "Class %d / %sontinuous / %d MHz", ((scm & 16) >> 2) + (scm & 3) + 1, (scm & 4) ? "Disc" : "C", (scm & 8) ? 25 : 20);
 
 	return text;
+}
+
+const char *amps_mpci(uint8_t mpci)
+{
+	switch (mpci) {
+	case 0:
+		return "TIA/EIA-553 or IS-54A mobile station";
+	case 1:
+		return "TIA/EIA-627 dual-mode mobile station";
+	case 2:
+		return "reserved (see TIA/EIA IS-95)";
+	case 3:
+		return "EIATIA/EIA-136 dual-mode mobile station";
+	default:
+		return "MPCI INVALID, PLEASE FIX!";
+	}
+
 }
 
 const char *amps_state_name(enum amps_state state)
@@ -383,10 +406,10 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	amps_t *amps;
 	int rc;
 	enum amps_chan_type ct;
-	char band;
+	const char *band;
 
 	/* check for channel number */
-	if (channel < 1 || channel > 666) {
+	if (channel < 1 || (channel > 799 && channel < 991) || channel > 1023) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d invalid.\n", channel);
 		return -EINVAL;
 	}
@@ -420,11 +443,11 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 
 	/* check if sid machtes channel band */
 	band = amps_channel2band(channel);
-	if (band == 'A' && (sid & 1) == 0 && chan_type != CHAN_TYPE_VC) {
+	if (band[0] == 'A' && (sid & 1) == 0 && chan_type != CHAN_TYPE_VC) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system A, but your SID %d is even and belongs to system B. Please give odd SID.\n", channel, sid);
 		return -EINVAL;
 	}
-	if (band == 'B' && (sid & 1) == 1 && chan_type != CHAN_TYPE_VC) {
+	if (band[0] == 'B' && (sid & 1) == 1 && chan_type != CHAN_TYPE_VC) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system B, but your SID %d is odd and belongs to system A. Please give even SID.\n", channel, sid);
 		return -EINVAL;
 	}
@@ -434,13 +457,18 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s'. This is a hack, but the only way to use control channel and voice channel on one transceiver. Some phones may reject this, but all my phones don't.\n", chan_type_long_name(chan_type));
 	}
 
+	/* check if we selected a voice channel that i outside 20 MHz band */
+	if (chan_type == CHAN_TYPE_VC && channel > 666) {
+		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s' on channel #%d. Older phones do not support channels above #666.\n", chan_type_long_name(chan_type), channel);
+	}
+
 	amps = calloc(1, sizeof(amps_t));
 	if (!amps) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %d (sample rate %d).\n", channel, samplerate);
+	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %d of band %s (sample rate %d).\n", channel, band, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&amps->sender, channel, amps_channel2freq(channel, 0), amps_channel2freq(channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PAGING_SIGNAL_NONE);
@@ -480,7 +508,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	amps_new_state(amps, STATE_BUSY);
 #endif
 
-	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%d (System %s) of type '%s' = %s\n", channel, band, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -671,7 +699,7 @@ static void timeout_sat(amps_t *amps, double duration)
 }
 
 /* receive message from phone on RECC */
-void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, const char *dialing)
+void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, const char *dialing)
 {
 	amps_t *vc;
 	transaction_t *trans;
@@ -684,7 +712,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 	}
 
 	if (order == 13 && (ordq == 0 || ordq == 1 || ordq == 2 || ordq == 3) && msg_type == 0) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
 		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
 		if (!trans) {
 			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -692,7 +720,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 		}
 	} else
 	if (order == 13 && ordq == 3 && msg_type == 1) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
 		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
 		if (!trans) {
 			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -701,9 +729,9 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint32_t esn, uint32_t min1, uint16
 	} else
 	if (order == 0 && ordq == 0 && msg_type == 0) {
 		if (!dialing)
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %08x, %s)\n", callerid, esn, amps_scm(scm));
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
 		else
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s)\n", callerid, dialing, esn, amps_scm(scm));
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s, %s)\n", callerid, dialing, esn, amps_scm(scm), amps_mpci(mpci));
 		trans = search_transaction_number(amps, min1, min2);
 		if (!trans && !dialing) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging reply, but call is already gone, rejecting call\n");

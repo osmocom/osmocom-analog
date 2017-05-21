@@ -70,7 +70,7 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, 
 	si->word2.e = 1;
 	si->word2.regh = regh;
 	si->word2.regr = regr;
-	si->word2.dtx = 0;
+	si->word2.dtx = 0; /* DTX seems not to work with Dynatac 8000 */
 	si->word2.n_1 = 20;
 	si->word2.rcf = (bis) ? 0 : 1; /* must be set to ignore B/I bit */
 	si->word2.cpa = 1; /* must be set for combined CC+PC */
