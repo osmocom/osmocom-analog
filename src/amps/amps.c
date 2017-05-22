@@ -61,7 +61,9 @@
 #define PAGE_TRIES	2	/* how many times to page the phone */
 #define PAGE_TO1	8.0	/* max time to wait for paging reply */
 #define PAGE_TO2	4.0	/* max time to wait for last paging reply */
-#define ALERT_TO	60.0	/* max time to wait for answer */
+#define ALERT_TRIES	3	/* how many times to alert the phone */
+#define ALERT_TO	0.3	/* max time to wait for alert confirm */
+#define ANSWER_TO	60.0	/* max time to wait for answer */
 #define RELEASE_TIMER	5.0	/* max time to send release messages */
 
 /* Convert channel number to frequency number of base station.
@@ -502,7 +504,7 @@ static amps_t *search_pc(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
+int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int send_callerid, int tolerant, int loopback)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -582,12 +584,12 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 	amps->chan_type = chan_type;
 	memcpy(&amps->si, si, sizeof(amps->si));
 	amps->sat = sat;
-
+	amps->send_callerid = send_callerid;
 	if (polarity < 0)
 		amps->flip_polarity = 1;
-
 	amps->pre_emphasis = pre_emphasis;
 	amps->de_emphasis = de_emphasis;
+
 	/* the AMPS uses a frequency rage of 300..3000 Hz, but we still use the default low pass filter, which is not too far above */
 	rc = init_emphasis(&amps->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
@@ -688,14 +690,13 @@ static void amps_release(transaction_t *trans, uint8_t cause)
 		trans->callref = 0;
 	}
 	/* change DSP mode to transmit release */
-	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX || amps->dsp_mode == DSP_MODE_OFF)
+	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX || amps->dsp_mode == DSP_MODE_AUDIO_RX_SILENCE_TX || amps->dsp_mode == DSP_MODE_OFF)
 		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
 }
 
 /*
  * receive signaling
  */
-
 void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 {
 	transaction_t *trans = amps->trans_list;
@@ -710,6 +711,7 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Lost Signaling Tone signal\n");
 
 	switch (trans->state) {
+	case TRANS_CALL_MO_ASSIGN_CONFIRM: // should not happen
 	case TRANS_CALL:
 		if (!tone)
 			break;
@@ -723,16 +725,19 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		break;
-	case TRANS_CALL_MT_ALERT:
+	case TRANS_CALL_MT_ASSIGN_CONFIRM: // should not happen
+	case TRANS_CALL_MT_ALERT: // should not happen
+	case TRANS_CALL_MT_ALERT_SEND: // should not happen
+	case TRANS_CALL_MT_ALERT_CONFIRM:
 		if (tone) {
 			timer_stop(&trans->timer);
 			call_up_alerting(trans->callref);
 			amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
-			trans_new_state(trans, TRANS_CALL_MT_ALERT_SEND);
-			timer_start(&trans->timer, ALERT_TO);
+			trans_new_state(trans, TRANS_CALL_MT_ANSWER_WAIT);
+			timer_start(&trans->timer, ANSWER_TO);
 		}
 		break;
-	case TRANS_CALL_MT_ALERT_SEND:
+	case TRANS_CALL_MT_ANSWER_WAIT:
 		if (!tone) {
 			timer_stop(&trans->timer);
 			if (!trans->sat_detected)
@@ -753,13 +758,20 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT signal without transaction, please fix!\n");
 		return;
 	}
+
 	/* irgnoring SAT loss on release */
 	if (trans->state == TRANS_CALL_RELEASE
 	 || trans->state == TRANS_CALL_RELEASE_SEND)
 		return;
-	if (trans->state != TRANS_CALL
+
+	/* only SAT with these states */
+	if (trans->state != TRANS_CALL_MO_ASSIGN_CONFIRM
+	 && trans->state != TRANS_CALL_MT_ASSIGN_CONFIRM
 	 && trans->state != TRANS_CALL_MT_ALERT
-	 && trans->state != TRANS_CALL_MT_ALERT_SEND) {
+	 && trans->state != TRANS_CALL_MT_ALERT_SEND
+	 && trans->state != TRANS_CALL_MT_ALERT_CONFIRM
+	 && trans->state != TRANS_CALL_MT_ANSWER_WAIT
+	 && trans->state != TRANS_CALL) {
 		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT signal without active call, please fix!\n");
 		return;
 	}
@@ -772,9 +784,26 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 		trans->sat_detected = 0;
 	}
 
-	/* no SAT during alerting */
+	/* initial SAT received */
+	if (tone && trans->state == TRANS_CALL_MO_ASSIGN_CONFIRM) {
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Confirm from mobile (SAT) received\n");
+		timer_stop(&trans->timer);
+		trans_new_state(trans, TRANS_CALL);
+		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
+	}
+	if (tone && trans->state == TRANS_CALL_MT_ASSIGN_CONFIRM) {
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Confirm from mobile (SAT) received\n");
+		timer_stop(&trans->timer);
+		trans->alert_retry = 1;
+		trans_new_state(trans, TRANS_CALL_MT_ALERT);
+		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
+	}
+
+	/* no SAT timeout handling during alerting */
 	if (trans->state == TRANS_CALL_MT_ALERT
-	 || trans->state == TRANS_CALL_MT_ALERT_SEND)
+	 || trans->state == TRANS_CALL_MT_ALERT_SEND
+	 || trans->state == TRANS_CALL_MT_ALERT_CONFIRM
+	 || trans->state == TRANS_CALL_MT_ANSWER_WAIT)
 		return;
 
 	if (tone) {
@@ -788,20 +817,6 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 
 	if (amps->sender.loopback)
 		return;
-}
-
-static void timeout_sat(amps_t *amps, double duration)
-{
-	if (!amps->trans_list) {
-		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT timeout, but no transaction, please fix!\n");
-		return;
-	}
-	if (duration == SAT_TO1)
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving SAT signal.\n", duration);
-	else
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", duration);
-	PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
-	amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 }
 
 /* receive message from phone on RECC */
@@ -950,6 +965,11 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	}
 	trans->callref = callref;
 	trans->page_retry = 1;
+	if (caller_type == TYPE_INTERNATIONAL) {
+		trans->caller_id[0] = '+';
+		strncpy(trans->caller_id + 1, caller_id, sizeof(trans->caller_id) - 2);
+	} else
+		strncpy(trans->caller_id, caller_id, sizeof(trans->caller_id) - 1);
 
 	return 0;
 }
@@ -988,8 +1008,11 @@ void call_down_disconnect(int callref, int cause)
 	switch (amps->dsp_mode) {
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
-		if (trans->state == TRANS_CALL_MT_ALERT
-		 || trans->state == TRANS_CALL_MT_ALERT_SEND) {
+		if (trans->state == TRANS_CALL_MT_ASSIGN_CONFIRM
+		 || trans->state == TRANS_CALL_MT_ALERT
+		 || trans->state == TRANS_CALL_MT_ALERT_SEND
+		 || trans->state == TRANS_CALL_MT_ALERT_CONFIRM
+		 || trans->state == TRANS_CALL_MT_ANSWER_WAIT) {
 			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control disconnect on voice channel while alerting, releasing towards mobile station.\n");
 			amps_release(trans, cause);
 		}
@@ -1028,6 +1051,7 @@ void call_down_release(int callref, int cause)
 	trans->callref = 0;
 
 	switch (amps->dsp_mode) {
+	case DSP_MODE_AUDIO_RX_SILENCE_TX:
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control releases on voice channel, releasing towards mobile station.\n");
@@ -1071,8 +1095,16 @@ void transaction_timeout(struct timer *timer)
 	amps_t *amps = trans->amps;
 
 	switch (trans->state) {
+	case TRANS_CALL_MO_ASSIGN_CONFIRM:
+	case TRANS_CALL_MT_ASSIGN_CONFIRM:
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving initial SAT signal.\n", timer->duration);
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
+		amps_release(amps->trans_list, CAUSE_TEMPFAIL);
+		break;
 	case TRANS_CALL:
-		timeout_sat(amps, timer->duration);
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", timer->duration);
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
+		amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 		break;
 	case TRANS_CALL_RELEASE:
 	case TRANS_CALL_RELEASE_SEND:
@@ -1080,10 +1112,18 @@ void transaction_timeout(struct timer *timer)
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		break;
-	case TRANS_CALL_MT_ALERT:
-		amps_release(trans, CAUSE_TEMPFAIL);
-		break;
 	case TRANS_CALL_MT_ALERT_SEND:
+	case TRANS_CALL_MT_ALERT_CONFIRM:
+		if (trans->alert_retry++ == ALERT_TRIES) {
+			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Phone does not respond to alert order, destroying transaction\n");
+			amps_release(trans, CAUSE_TEMPFAIL);
+		} else {
+			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Phone does not respond to alert order, retrying\n");
+			trans_new_state(trans, TRANS_CALL_MT_ALERT);
+			amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
+		}
+		break;
+	case TRANS_CALL_MT_ANSWER_WAIT:
 		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Alerting timeout, destroying transaction\n");
 		amps_release(trans, CAUSE_NOANSWER);
 		break;
@@ -1173,8 +1213,9 @@ again:
 		vc = assign_voice_channel(trans);
 		if (vc) {
 			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, voice connected\n");
-			trans_new_state(trans, TRANS_CALL);
-			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
+			/* timer and other things are processed at assign_voice_channel() */
+			trans_new_state(trans, TRANS_CALL_MO_ASSIGN_CONFIRM);
+			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_SILENCE_TX, 0);
 		}
 		return NULL;
 	case TRANS_CALL_MT_ASSIGN:
@@ -1184,13 +1225,10 @@ again:
 	case TRANS_CALL_MT_ASSIGN_SEND:
 		vc = assign_voice_channel(trans);
 		if (vc) {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, next: sending alerting on VC\n");
-			trans->chan = 0;
-			trans->msg_type = 0;
-			trans->ordq = 0;
-			trans->order = 1;
-			trans_new_state(trans, TRANS_CALL_MT_ALERT);
-			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, waiting for SAT on VC\n");
+			/* timer and other things are processed at assign_voice_channel() */
+			trans_new_state(trans, TRANS_CALL_MT_ASSIGN_CONFIRM);
+			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_SILENCE_TX, 0);
 		}
 		return NULL;
 	case TRANS_PAGE:
@@ -1223,8 +1261,25 @@ transaction_t *amps_tx_frame_fvc(amps_t *amps)
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call was sent, continue sending release\n");
 		return trans;
 	case TRANS_CALL_MT_ALERT:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting\n");
+		trans->chan = 0;
+		trans->msg_type = 0;
+		trans->ordq = 0;
+		// "Alert with caller ID" causes older phones to interrupt the connection for some reason, therefore we don't use order 17 when no caller ID is set
+		if (amps->send_callerid && trans->alert_retry == 1 && !trans->caller_id) {
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting with caller ID\n");
+			trans->order = 17;
+		} else {
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting\n");
+			trans->order = 1;
+		}
+		trans_new_state(trans, TRANS_CALL_MT_ALERT_SEND);
 		return trans;
+	case TRANS_CALL_MT_ALERT_SEND:
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Alerting was sent, continue waiting for ST or timeout\n");
+		timer_start(&trans->timer, ALERT_TO);
+		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_SILENCE_TX, 0);
+		trans_new_state(trans, TRANS_CALL_MT_ALERT_CONFIRM);
+		return NULL;
 	default:
 		return NULL;
 	}

@@ -10,6 +10,7 @@ enum dsp_mode {
 	DSP_MODE_OFF,			/* channel not active (VC) */
 	DSP_MODE_AUDIO_RX_AUDIO_TX,	/* stream audio */
 	DSP_MODE_AUDIO_RX_FRAME_TX,	/* stream audio, send frames */
+	DSP_MODE_AUDIO_RX_SILENCE_TX,	/* stream audio, send silence */
 	DSP_MODE_FRAME_RX_FRAME_TX,	/* send and decode frames */
 };
 
@@ -56,6 +57,7 @@ struct amps {
 
 	/* system info */
 	amps_si			si;
+	int			send_callerid;		/* if set, caller ID is transmitted */
 
 	/* cell nr selection */
 	int			cell_auto;		/* if set, cell_nr is selected automatically */
@@ -140,6 +142,12 @@ struct amps {
 	uint8_t			tx_fvc_msg_type;	/* message (3 values) */
 	uint8_t			tx_fvc_ordq;
 	uint8_t			tx_fvc_order;
+	char			tx_fvc_callerid[34];	/* caller ID */
+	int			tx_fvc_callerid_present;/* presentation of caller ID */
+	int			tx_fvc_callerid_screen;	/* screening of caller ID */
+	int			tx_fvc_callerid_signal;	/* signal to send in conjunction with caller ID */
+	int			tx_fvc_word_count;	/* counts transmitted words in a muli word message */
+	int			tx_fvc_word_repeat;	/* counts repeats of mulit word message */
 	/* SAT tone */
 	int			sat;			/* use SAT tone 0..2 */
 	int			sat_samples;		/* number of samples in buffer for supervisory detection */
@@ -175,7 +183,7 @@ const char *amps_min12number(uint32_t min1);
 void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2);
 const char *amps_min2number(uint32_t min1, uint16_t min2);
 const char *amps_scm(uint8_t scm);
-int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback);
+int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int send_callerid, int tolerant, int loopback);
 void amps_destroy(sender_t *sender);
 void amps_go_idle(amps_t *amps);
 void amps_rx_signaling_tone(amps_t *amps, int tone, double quality);

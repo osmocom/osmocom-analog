@@ -5,10 +5,14 @@ enum amps_trans_state {
 	TRANS_REGISTER_ACK_SEND,	/* attach request received, sending ack */
 	TRANS_CALL_MO_ASSIGN,		/* assigning channel, waiting to send */
 	TRANS_CALL_MO_ASSIGN_SEND,	/* assigning channel, sending assignment */
+	TRANS_CALL_MO_ASSIGN_CONFIRM,	/* assignment sent, waiting for confirm (SAT) */
 	TRANS_CALL_MT_ASSIGN,		/* assigning channel, waiting to send */
 	TRANS_CALL_MT_ASSIGN_SEND,	/* assigning channel, sending assignment */
-	TRANS_CALL_MT_ALERT,		/* ringing the phone, sending alert order until signaling tone is received */
-	TRANS_CALL_MT_ALERT_SEND,	/* ringing the phone, signaling tone is received */
+	TRANS_CALL_MT_ASSIGN_CONFIRM,	/* assignment sent, waiting for confirm (SAT) */
+	TRANS_CALL_MT_ALERT,		/* ringing the phone, waiting to send alert */
+	TRANS_CALL_MT_ALERT_SEND,	/* ringing the phone, sending alert */
+	TRANS_CALL_MT_ALERT_CONFIRM,	/* ringing the phone, signaling tone is received */
+	TRANS_CALL_MT_ANSWER_WAIT,	/* ringing the phone, waiting for the phone to answer */
 	TRANS_CALL_REJECT,		/* rejecting channel, waiting to send */
 	TRANS_CALL_REJECT_SEND,		/* rejecting channel, sending reject */
 	TRANS_CALL,			/* active call */
@@ -31,6 +35,8 @@ typedef struct transaction {
 	uint8_t			ordq;
 	uint8_t			order;
 	uint16_t		chan;			/* channel to assign */
+	int			alert_retry;		/* current number of alter order (re)try */
+	char			caller_id[33];		/* id of calling phone */
 	char			dialing[33];		/* number dialed by the phone */
 	enum amps_trans_state	state;			/* state of transaction */
 	struct timer		timer;			/* for varous timeouts */

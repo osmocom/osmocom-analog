@@ -3020,6 +3020,37 @@ static uint64_t amps_encode_mobile_station_control_message_word1_b(uint8_t scc, 
 	return amps_encode_word(&frame, &mobile_station_control_message_word1_b, 1);
 }
 
+static uint64_t amps_encode_word2_first_alert_with_info_word(uint8_t rl_w, uint8_t signal, uint8_t cpn_rl, uint8_t pi, uint8_t si)
+{
+	frame_t frame;
+
+	memset(&frame, 0, sizeof(frame));
+	frame.ie[AMPS_IE_T1T2] = 1;
+	frame.ie[AMPS_IE_RL_W] = rl_w;
+	frame.ie[AMPS_IE_SIGNAL] = signal;
+	frame.ie[AMPS_IE_CPN_RL] = cpn_rl;
+	frame.ie[AMPS_IE_PI] = pi;
+	frame.ie[AMPS_IE_SI] = si;
+	return amps_encode_word(&frame, &word2_first_alert_with_info_word, 1);
+}
+
+static uint64_t amps_encode_wordn_n_minus_1th_alert_with_info_word(const char *character)
+{
+	frame_t frame;
+
+	memset(&frame, 0, sizeof(frame));
+	frame.ie[AMPS_IE_T1T2] = 1;
+	if (character[0]) {
+		frame.ie[AMPS_IE_CHARACTER_1] = character[0];
+		if (character[1]) {
+			frame.ie[AMPS_IE_CHARACTER_2] = character[1];
+			if (character[2])
+				frame.ie[AMPS_IE_CHARACTER_3] = character[2];
+		}
+	}
+	return amps_encode_word(&frame, &wordn_n_minus_1th_alert_with_info_word, 1);
+}
+
 /* decoder function of a word */
 static frame_t *amps_decode_word(uint64_t word, struct def_word *w)
 {
@@ -3346,7 +3377,7 @@ static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 
 	memcpy(bits + 0, dotting, 10);
 	bits[10] = 'i';
-	strcpy(bits + 11, sync_word);
+	memcpy(bits + 11, sync_word, 11);
 	bits[22] = 'i';
 	k = 23;
 	for (i = 0; i < 5; i++) {
@@ -3366,22 +3397,22 @@ static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 
 	if (k != 463)
 		abort();
-	bits[463] = '\0';
+	bits[k] = '\0';
 
+#ifdef BIT_DEBUGGING
 	if (debuglevel == DEBUG_DEBUG) {
 		char text[64];
 
 		strncpy(text, bits, 23);
 		text[23] = '\0';
-#ifdef BIT_DEBUGGING
 		PDEBUG(DFRAME, DEBUG_INFO, "TX FOCC: %s\n", text);
 		for (i = 0; i < 10; i++) {
 			strncpy(text, bits + 23 + i * 44, 44);
 			text[44] = '\0';
 			PDEBUG(DFRAME, DEBUG_DEBUG, "  word %c - %s\n", (i & 1) ? 'b' : 'a', text);
 		}
-#endif
 	}
+#endif
 }
 
 static void amps_encode_fvc_bits(uint64_t word_a, char *bits)
@@ -3398,15 +3429,15 @@ static void amps_encode_fvc_bits(uint64_t word_a, char *bits)
 			memcpy(bits + k, dotting, 37);
 			k += 37;
 		}
-		strcpy(bits + k, sync_word);
+		memcpy(bits + k, sync_word, 11);
 		k += 11;
 		for (j = 39; j >= 0; j--)
 			bits[k++] = ((word_a >> j) & 1) + '0';
 	}
+
 	if (k != 1032)
 		abort();
-
-	bits[1032] = '\0';
+	bits[k] = '\0';
 
 #ifdef BIT_DEBUGGING
 	if (debuglevel == DEBUG_DEBUG) {
@@ -3502,7 +3533,16 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 			amps->tx_fvc_ordq = trans->ordq;
 			amps->tx_fvc_order = trans->order;
 			amps->tx_fvc_chan = trans->chan;
+			strncpy(amps->tx_fvc_callerid, trans->caller_id, sizeof(amps->tx_fvc_callerid) - 1);
+			amps->tx_fvc_callerid_signal = 1;
+			amps->tx_fvc_callerid_screen = 3;
+			if (trans->caller_id[0])
+				amps->tx_fvc_callerid_present = 0;
+			else
+				amps->tx_fvc_callerid_signal = 1;
 			amps->tx_fvc_send = 1;
+			amps->tx_fvc_word_count = 0;
+			amps->tx_fvc_word_repeat = 0;
 		}
 		/* on change of dsp mode */
 		if (amps->dsp_mode != DSP_MODE_AUDIO_RX_FRAME_TX)
@@ -3511,11 +3551,32 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 
 	/* send scheduled mobile control message */
 	if (amps->tx_fvc_send) {
-		amps->tx_fvc_send = 0;
-		if (amps->tx_fvc_chan)
-			word = amps_encode_mobile_station_control_message_word1_b(amps->sat, amps->sat, (amps->si.word2.dtx) ? 1 : 0, 0, 0, amps->si.vmac, amps->tx_fvc_chan);
-		else
-			word = amps_encode_mobile_station_control_message_word1_a(amps->sat, amps->tx_fvc_msg_type, amps->tx_fvc_ordq, amps->tx_fvc_order);
+		if (amps->tx_fvc_word_count == 0) {
+			if (amps->tx_fvc_chan)
+				word = amps_encode_mobile_station_control_message_word1_b(amps->sat, amps->sat, (amps->si.word2.dtx) ? 1 : 0, 0, 0, amps->si.vmac, amps->tx_fvc_chan);
+			else
+				word = amps_encode_mobile_station_control_message_word1_a(amps->sat, amps->tx_fvc_msg_type, amps->tx_fvc_ordq, amps->tx_fvc_order);
+			/* done, if we don't have ALERTING with info */
+			if (amps->tx_fvc_order != 17)
+				amps->tx_fvc_send = 0;
+		} else if (amps->tx_fvc_word_count == 1) {
+			int cpn_rl, rl_w;
+			/* number of characters */
+			cpn_rl = strlen(amps->tx_fvc_callerid);
+			/* number of frames that are required to hold number of characters */
+			rl_w = (cpn_rl + 2) / 3;
+			word = amps_encode_word2_first_alert_with_info_word(rl_w, amps->tx_fvc_callerid_signal, cpn_rl, amps->tx_fvc_callerid_present, amps->tx_fvc_callerid_screen);
+			if (cpn_rl == 0)
+				amps->tx_fvc_send = 0;
+		} else {
+			const char *callerid;
+			/* chunk of caller ID */
+			callerid = amps->tx_fvc_callerid + (amps->tx_fvc_word_count - 2) * 3;
+			word = amps_encode_wordn_n_minus_1th_alert_with_info_word(callerid);
+			if (strlen(callerid) <= 3)
+				amps->tx_fvc_send = 0;
+		}
+		amps->tx_fvc_word_count++;
 	} else
 		return 1;
 

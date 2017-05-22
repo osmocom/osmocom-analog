@@ -399,8 +399,8 @@ again:
 				rc = amps_encode_frame_fvc(amps, amps->fsk_tx_frame);
 			else
 				rc = amps_encode_frame_focc(amps, amps->fsk_tx_frame);
-			/* check if we have not bit string (change to tx audio)
-			 * we may not store fsk_tx_buffer_pos, because is was reset on a mode achange */
+			/* check if we have no bit string (change to tx audio / silence)
+			 * we may not store fsk_tx_buffer_pos, because is was reset on a mode change */
 			if (rc)
 				return count;
 			amps->fsk_tx_frame_pos = 0;
@@ -487,7 +487,13 @@ again:
 		/* pre-emphasis */
 		if (amps->pre_emphasis)
 			pre_emphasis(&amps->estate, samples, length);
-		/* encode sat */
+		/* encode SAT during call */
+		sat_encode(amps, samples, length);
+		break;
+	case DSP_MODE_AUDIO_RX_SILENCE_TX:
+		memset(power, 1, length);
+		memset(samples, 0, sizeof(*samples) * length);
+		/* encode SAT while waiting for alert response or answer */
 		sat_encode(amps, samples, length);
 		break;
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
@@ -496,6 +502,7 @@ again:
 		 * stopped, process again for rest of stream. */
 		count = fsk_frame(amps, samples, length);
 		memset(power, 1, count);
+		// no SAT during frame transmission, according to specs
 		samples += count;
 		power += count;
 		length -= count;
@@ -894,6 +901,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 		break;
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
+	case DSP_MODE_AUDIO_RX_SILENCE_TX:
 		sender_receive_audio(amps, samples, length);
 		break;
 	}
@@ -923,13 +931,13 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 		amps->tx_focc_debugged = 0;
 	}
 	if (amps->dsp_mode == DSP_MODE_FRAME_RX_FRAME_TX
-	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX)) {
+	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX || mode == DSP_MODE_AUDIO_RX_SILENCE_TX)) {
 		/* reset SAT detection */
 		sat_reset(amps, "Change from FOCC to FVC");
 		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from FOCC to FVC\n");
 	}
 	if (amps->dsp_mode == DSP_MODE_OFF
-	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX)) {
+	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX || mode == DSP_MODE_AUDIO_RX_SILENCE_TX)) {
 		/* reset SAT detection */
 		sat_reset(amps, "Enable FVC");
 		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from OFF to FVC\n");
@@ -939,6 +947,8 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 		sat_reset(amps, "Disable FVC");
 		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from FVC to OFF\n");
 	}
+
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Reset FSK frame transmitter, due to setting dsp mode.\n");
 
 	amps->dsp_mode = mode;
 	if (frame_length)
