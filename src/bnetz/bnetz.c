@@ -45,9 +45,6 @@ static int new_callref = 0x40000000;
 #define DIALING_TO	3.8	/* timeout after channel allocation "Kanalbelegung" */
 #define DIALING_TO2	0.5	/* timeout while receiving digits */
 
-/* radio loss condition */
-#define LOSS_OF_SIGNAL	12.5	/* duration of carrier loss until release */
-
 /* mobile terminating call */
 #define ALERTING_TO	60	/* timeout after 60 seconds alerting the MS */
 #define PAGING_TO	2.1	/* 700..2100 ms timeout after paging "Selektivruf" */

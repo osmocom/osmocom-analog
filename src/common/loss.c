@@ -51,7 +51,7 @@ void audio_reset_loss(loss_t *loss)
 	loss->level_count = 0;
 }
 
-#define LOSS_MAX_DIFF 	1.1	/* 10 % difference */
+#define LOSS_MAX_DIFF 	1.2	/* 20 % difference */
 
 /* call this for every interval */
 int audio_detect_loss(loss_t *loss, double level)
