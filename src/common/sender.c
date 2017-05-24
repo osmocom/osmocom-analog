@@ -70,6 +70,12 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 			rc = -EIO;
 			goto error;
 		}
+		if (abs(master->kanal - kanal) == 1) {
+			PDEBUG(DSENDER, DEBUG_NOTICE, "------------------------------------------------------------------------\n");
+			PDEBUG(DSENDER, DEBUG_NOTICE, "NOTE: Channel %d is next to channel %d. This will cause interferences.\n", kanal, master->kanal);
+			PDEBUG(DSENDER, DEBUG_NOTICE, "Please use at least one channel distance to avoid that.\n");
+			PDEBUG(DSENDER, DEBUG_NOTICE, "------------------------------------------------------------------------\n");
+		}
 		if (!strcmp(master->audiodev, audiodev))
 			break;
 	}
