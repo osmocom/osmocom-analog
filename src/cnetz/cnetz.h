@@ -138,4 +138,5 @@ const struct telegramm *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz);
 void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, struct telegramm *telegramm);
 const struct telegramm *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz);
 void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, struct telegramm *telegramm);
+void cnetz_display_status(void);
 

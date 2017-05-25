@@ -182,12 +182,29 @@ const char *cnetz_state_name(enum cnetz_state state)
 	return invalid;
 }
 
+void cnetz_display_status(void)
+{
+	sender_t *sender;
+	cnetz_t *cnetz;
+	transaction_t *trans;
+
+	display_status_start();
+	for (sender = sender_head; sender; sender = sender->next) {
+		cnetz = (cnetz_t *) sender;
+		display_status_channel(cnetz->sender.kanal, chan_type_short_name(cnetz->chan_type), cnetz_state_name(cnetz->state));
+		for (trans = cnetz->trans_list; trans; trans = trans->next)
+			display_status_subscriber(transaction2rufnummer(trans), trans_short_state_name(trans->state));
+	}
+	display_status_end();
+}
+
 static void cnetz_new_state(cnetz_t *cnetz, enum cnetz_state new_state)
 {
 	if (cnetz->state == new_state)
 		return;
 	PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "State change: %s -> %s\n", cnetz_state_name(cnetz->state), cnetz_state_name(new_state));
 	cnetz->state = new_state;
+	cnetz_display_status();
 }
 
 /* Convert ISDN cause to 'Ausloesegrund' of C-Netz mobile station */

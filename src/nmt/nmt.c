@@ -110,12 +110,28 @@ const char *nmt_state_name(enum nmt_state state)
 	return invalid;
 }
 
+void nmt_display_status(void)
+{
+	sender_t *sender;
+	nmt_t *nmt;
+
+	display_status_start();
+	for (sender = sender_head; sender; sender = sender->next) {
+		nmt = (nmt_t *) sender;
+		display_status_channel(nmt->sender.kanal, chan_type_short_name(nmt->sysinfo.chan_type), nmt_state_name(nmt->state));
+		if (nmt->trans)
+			display_status_subscriber(nmt->trans->subscriber.number, NULL);
+	}
+	display_status_end();
+}
+
 static void nmt_new_state(nmt_t *nmt, enum nmt_state new_state)
 {
 	if (nmt->state == new_state)
 		return;
 	PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "State change: %s -> %s\n", nmt_state_name(nmt->state), nmt_state_name(new_state));
 	nmt->state = new_state;
+	nmt_display_status();
 }
 
 static struct nmt_channels {
@@ -438,8 +454,8 @@ void nmt_go_idle(nmt_t *nmt)
 	sms_reset(nmt);
 
 	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.chan_type));
+	nmt->trans = NULL; /* remove transaction before state change, so status is shown correctly */
 	nmt_new_state(nmt, STATE_IDLE);
-	nmt->trans = NULL;
 	nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
 	memset(&nmt->dialing, 0, sizeof(nmt->dialing));
 
@@ -488,8 +504,8 @@ static void nmt_page(transaction_t *trans, int try)
 		if (nmt->state != STATE_IDLE && nmt->trans != trans)
 			continue;
 		PDEBUG(DNMT, DEBUG_INFO, "Paging on channel %d.\n", sender->kanal);
+		nmt->trans = trans; /* add transaction before state change, so status is shown correctly */
 		nmt_new_state(nmt, STATE_MT_PAGING);
-		nmt->trans = trans;
 		nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
 		nmt->tx_frame_count = 0;
 	}
@@ -711,8 +727,8 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received roaming seizure from subscriber %c,%s\n", subscr.country, subscr.number);
 		/* change state */
+		nmt->trans = trans; /* add transaction before state change, so status is shown correctly */
 		nmt_new_state(nmt, STATE_ROAMING_IDENT);
-		nmt->trans = trans;
 		trans->nmt = nmt;
 		nmt->rx_frame_count = 0;
 		nmt->tx_frame_count = 0;
@@ -737,8 +753,8 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received call from subscriber %c,%s%s\n", subscr.country, subscr.number, (subscr.coinbox) ? " (coinbox)" : "");
 		/* change state */
+		nmt->trans = trans; /* add transaction before state change, so status is shown correctly */
 		nmt_new_state(nmt, STATE_MO_IDENT);
-		nmt->trans = trans;
 		trans->nmt = nmt;
 		nmt->rx_frame_count = 0;
 		nmt->tx_frame_count = 0;

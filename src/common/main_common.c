@@ -166,7 +166,12 @@ void print_hotkeys_common(void)
 	printf("\n");
 	printf("Press digits '0'..'9' and then 'd' key to dial towards mobile station\n");
 	printf("Press 'h' key to hangup.\n");
-	printf("Press 'w' key to toggle display of wave form of RX signal.\n");
+	printf("Press 'w' key to toggle display of RX wave form.\n");
+	printf("Press 'c' key to toggle display of channel status.\n");
+#ifdef HAVE_SDR
+	printf("Press 'i' key to toggle display of RX I/Q vector.\n");
+	printf("Press 's' key to toggle display of RX spectrum.\n");
+#endif
 }
 
 #define	OPT_CHANNEL		1000
@@ -567,18 +572,30 @@ next_char:
 			display_iq_on(0);
 			display_spectrum_on(0);
 #endif
+			display_status_on(0);
 			display_wave_on(-1);
+			goto next_char;
+		case 'c':
+			/* toggle display */
+#ifdef HAVE_SDR
+			display_iq_on(0);
+			display_spectrum_on(0);
+#endif
+			display_wave_on(0);
+			display_status_on(-1);
 			goto next_char;
 #ifdef HAVE_SDR
 		case 'q':
 			/* toggle display */
 			display_wave_on(0);
+			display_status_on(0);
 			display_spectrum_on(0);
 			display_iq_on(-1);
 			goto next_char;
 		case 's':
 			/* toggle spectrum */
 			display_wave_on(0);
+			display_status_on(0);
 			display_iq_on(0);
 			display_spectrum_on(-1);
 			goto next_char;

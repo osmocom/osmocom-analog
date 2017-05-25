@@ -68,6 +68,39 @@ static const char *trans_state_name(int state)
 	}
 }
 
+const char *trans_short_state_name(int state)
+{
+	switch (state) {
+	case 0:
+		return "IDLE";
+	case TRANS_REGISTER_ACK:
+	case TRANS_REGISTER_ACK_SEND:
+		return "REGISTER";
+	case TRANS_CALL_MO_ASSIGN:
+	case TRANS_CALL_MO_ASSIGN_SEND:
+	case TRANS_CALL_MT_ASSIGN:
+	case TRANS_CALL_MT_ASSIGN_SEND:
+		return "ASSIGN";
+	case TRANS_CALL_MT_ALERT:
+	case TRANS_CALL_MT_ALERT_SEND:
+		return "ALERT";
+	case TRANS_CALL_REJECT:
+	case TRANS_CALL_REJECT_SEND:
+		return "REJECT";
+	case TRANS_CALL:
+		return "CALL";
+	case TRANS_CALL_RELEASE:
+	case TRANS_CALL_RELEASE_SEND:
+		return "RELEASE";
+	case TRANS_PAGE:
+	case TRANS_PAGE_SEND:
+	case TRANS_PAGE_REPLY:
+		return "PAGE";
+	default:
+		return "<invald transaction state>";
+	}
+}
+
 /* create transaction */
 transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan)
 {
@@ -139,6 +172,7 @@ void link_transaction(transaction_t *trans, amps_t *amps)
 	while (*transp)
 		transp = &((*transp)->next);
 	*transp = trans;
+	amps_display_status();
 }
 
 /* unlink transaction from list */
@@ -157,6 +191,7 @@ void unlink_transaction(transaction_t *trans)
 	}
 	*transp = trans->next;
 	trans->amps = NULL;
+	amps_display_status();
 }
 
 transaction_t *search_transaction_number(amps_t *amps, uint32_t min1, uint16_t min2)
@@ -199,6 +234,7 @@ void trans_new_state(transaction_t *trans, int state)
 {
 	PDEBUG(DTRANS, DEBUG_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));
 	trans->state = state;
+	amps_display_status();
 }
 
 void amps_flush_other_transactions(amps_t *amps, transaction_t *trans)

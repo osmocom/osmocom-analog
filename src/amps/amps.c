@@ -272,12 +272,29 @@ const char *amps_state_name(enum amps_state state)
 	return invalid;
 }
 
+void amps_display_status(void)
+{
+	sender_t *sender;
+	amps_t *amps;
+	transaction_t *trans;
+
+	display_status_start();
+	for (sender = sender_head; sender; sender = sender->next) {
+		amps = (amps_t *) sender;
+		display_status_channel(amps->sender.kanal, chan_type_short_name(amps->chan_type), amps_state_name(amps->state));
+		for (trans = amps->trans_list; trans; trans = trans->next)
+			display_status_subscriber(amps_min2number(trans->min1, trans->min2), trans_short_state_name(trans->state));
+	}
+	display_status_end();
+}
+
 static void amps_new_state(amps_t *amps, enum amps_state new_state)
 {
 	if (amps->state == new_state)
 		return;
 	PDEBUG_CHAN(DAMPS, DEBUG_DEBUG, "State change: %s -> %s\n", amps_state_name(amps->state), amps_state_name(new_state));
 	amps->state = new_state;
+	amps_display_status();
 }
 
 static struct amps_channels {

@@ -174,4 +174,5 @@ void amps_rx_sat(amps_t *amps, int tone, double quality);
 void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, const char *dialing);
 transaction_t *amps_tx_frame_focc(amps_t *amps);
 transaction_t *amps_tx_frame_fvc(amps_t *amps);
+void amps_display_status();
 

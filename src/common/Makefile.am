@@ -27,6 +27,7 @@ libcommon_a_SOURCES = \
 	../common/fm_modulation.c \
 	../common/sender.c \
 	../common/display_wave.c \
+	../common/display_status.c \
 	../common/main_common.c
 
 if HAVE_SDR

@@ -109,6 +109,7 @@ void link_transaction(transaction_t *trans, cnetz_t *cnetz)
 	while (*transp)
 		transp = &((*transp)->next);
 	*transp = trans;
+	cnetz_display_status();
 }
 
 /* unlink transaction from list */
@@ -127,6 +128,7 @@ void unlink_transaction(transaction_t *trans)
 	}
 	*transp = trans->next;
 	trans->cnetz = NULL;
+	cnetz_display_status();
 }
 
 transaction_t *search_transaction(cnetz_t *cnetz, uint32_t state_mask)
@@ -226,10 +228,46 @@ static const char *trans_state_name(int state)
 	}
 }
 
+const char *trans_short_state_name(int state)
+{
+	switch (state) {
+	case 0:
+		return "IDLE";
+	case TRANS_EM:
+	case TRANS_UM:
+		return "REGISTER";
+	case TRANS_MA:
+	case TRANS_MFT:
+		return "PING";
+	case TRANS_VWG:
+	case TRANS_WAF:
+	case TRANS_WBP:
+	case TRANS_WBN:
+		return "DIALING";
+	case TRANS_VAG:
+	case TRANS_VAK:
+	case TRANS_BQ:
+	case TRANS_VHQ:
+		return "ASSIGN";
+	case TRANS_RTA:
+		return "ALERT";
+	case TRANS_DS:
+		return "DS";
+	case TRANS_AHQ:
+		return "AHQ";
+	case TRANS_AF:
+	case TRANS_AT:
+		return "RELEASE";
+	default:
+		return "<invald transaction state>";
+	}
+}
+
 void trans_new_state(transaction_t *trans, int state)
 {
 	PDEBUG(DTRANS, DEBUG_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));
 	trans->state = state;
+	cnetz_display_status();
 }
 
 void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans)

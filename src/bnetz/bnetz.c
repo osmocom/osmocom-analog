@@ -84,12 +84,29 @@ const char *bnetz_state_name(enum bnetz_state state)
 	return invalid;
 }
 
+void bnetz_display_status(void)
+{
+	sender_t *sender;
+	bnetz_t *bnetz;
+
+	display_status_start();
+	for (sender = sender_head; sender; sender = sender->next) {
+		bnetz = (bnetz_t *) sender;
+		display_status_channel(bnetz->sender.kanal, NULL, bnetz_state_name(bnetz->state));
+		if (bnetz->station_id[0])
+			display_status_subscriber(bnetz->station_id, NULL);
+	}
+	display_status_end();
+}
+
+
 static void bnetz_new_state(bnetz_t *bnetz, enum bnetz_state new_state)
 {
 	if (bnetz->state == new_state)
 		return;
 	PDEBUG_CHAN(DBNETZ, DEBUG_DEBUG, "State change: %s -> %s\n", bnetz_state_name(bnetz->state), bnetz_state_name(new_state));
 	bnetz->state = new_state;
+	bnetz_display_status();
 }
 
 /* Convert channel number to frequency number of base station.
@@ -253,10 +270,10 @@ static void bnetz_go_idle(bnetz_t *bnetz)
 	timer_stop(&bnetz->timer);
 
 	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %d, sending 'Gruppenfreisignal' %d.\n", bnetz->sender.kanal, bnetz->gfs);
+	bnetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	bnetz_new_state(bnetz, BNETZ_FREI);
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 	switch_channel_19(bnetz, 0);
-	bnetz->station_id[0] = '\0';
 #ifdef GEN_DIALSEQUENCE
 	if (bnetz->sender.loopback) {
 		bnetz_set_dsp_mode(bnetz, DSP_MODE_0);
@@ -271,23 +288,23 @@ static void bnetz_release(bnetz_t *bnetz, int trenn_count)
 	timer_stop(&bnetz->timer);
 
 	PDEBUG_CHAN(DBNETZ, DEBUG_INFO, "Entering release state, sending 'Trennsignal' (%d times).\n", trenn_count);
+	bnetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	bnetz_new_state(bnetz, BNETZ_TRENNEN);
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 	switch_channel_19(bnetz, 0);
 	bnetz->trenn_count = trenn_count;
-	bnetz->station_id[0] = '\0';
 }
 
 /* Enter paging state and transmit station ID. */
 static void bnetz_page(bnetz_t *bnetz, const char *dial_string, int try)
 {
 	PDEBUG_CHAN(DBNETZ, DEBUG_INFO, "Entering paging state (try %d), sending 'Selektivruf' to '%s'.\n", try, dial_string);
+	strcpy(bnetz->station_id, dial_string); /* set station ID before state change, so status is shown correctly */
+	bnetz->station_id_pos = 0;
 	bnetz_new_state(bnetz, BNETZ_SELEKTIVRUF_EIN);
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_0);
 	bnetz->page_mode = PAGE_MODE_NUMBER;
 	bnetz->page_try = try;
-	strcpy(bnetz->station_id, dial_string);
-	bnetz->station_id_pos = 0;
 	timer_start(&bnetz->timer, SWITCH19_TIME);
 	switch_channel_19(bnetz, 1);
 }
@@ -477,6 +494,8 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				return;
 			}
 			bnetz->station_id[bnetz->dial_pos++] = digit;
+			/* update status while receiving station ID */
+			bnetz_display_status();
 			if (bnetz->dial_pos == 5) {
 				PDEBUG(DBNETZ, DEBUG_INFO, "Received station id from mobile phone: %s\n", bnetz->station_id);
 				bnetz->dial_mode = DIAL_MODE_NUMBER;

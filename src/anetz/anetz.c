@@ -63,12 +63,28 @@ const char *anetz_state_name(enum anetz_state state)
 	return invalid;
 }
 
+void anetz_display_status(void)
+{
+	sender_t *sender;
+	anetz_t *anetz;
+
+	display_status_start();
+	for (sender = sender_head; sender; sender = sender->next) {
+		anetz = (anetz_t *) sender;
+		display_status_channel(anetz->sender.kanal, NULL, anetz_state_name(anetz->state));
+		if (anetz->station_id[0])
+			display_status_subscriber(anetz->station_id, NULL);
+	}
+	display_status_end();
+}
+
 static void anetz_new_state(anetz_t *anetz, enum anetz_state new_state)
 {
 	if (anetz->state == new_state)
 		return;
 	PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "State change: %s -> %s\n", anetz_state_name(anetz->state), anetz_state_name(new_state));
 	anetz->state = new_state;
+	anetz_display_status();
 }
 
 /* Convert channel number to frequency number of base station.
@@ -235,10 +251,10 @@ static void anetz_go_idle(anetz_t *anetz)
 	timer_stop(&anetz->timer);
 
 	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state on channel %d, sending 2280 Hz tone.\n", anetz->sender.kanal);
+	anetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_FREI);
 	/* also reset detector, so if there is a new call it is answered */
 	anetz_set_dsp_mode(anetz, DSP_MODE_TONE, 1);
-	anetz->station_id[0] = '\0';
 }
 
 /* Release connection towards mobile station by sending idle tone for a while. */
@@ -247,9 +263,9 @@ static void anetz_release(anetz_t *anetz)
 	timer_stop(&anetz->timer);
 
 	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Sending 2280 Hz release tone.\n");
+	anetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_AUSLOESEN);
 	anetz_set_dsp_mode(anetz, DSP_MODE_TONE, 0);
-	anetz->station_id[0] = '\0';
 	timer_start(&anetz->timer, RELEASE_TO);
 }
 
@@ -257,10 +273,10 @@ static void anetz_release(anetz_t *anetz)
 static void anetz_page(anetz_t *anetz, const char *dial_string, double *freq)
 {
 	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Entering paging state, sending 'Selektivruf' to '%s'.\n", dial_string);
+	strcpy(anetz->station_id, dial_string); /* set station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_ANRUF);
 	anetz_set_dsp_mode(anetz, DSP_MODE_PAGING, 0);
 	dsp_set_paging(anetz, freq);
-	strcpy(anetz->station_id, dial_string);
 	timer_start(&anetz->timer, PAGING_TO);
 }
 
@@ -296,6 +312,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		/* initiate call on calling tone */
 		if (tone == 1) {
 			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz calling signal from mobile station, removing idle signal.\n");
+			strcpy(anetz->station_id, "unknown"); /* set station ID before state change, so status is shown correctly */
+
 			anetz_new_state(anetz, ANETZ_GESPRAECH);
 			anetz_set_dsp_mode(anetz, DSP_MODE_SILENCE, 0);
 			break;
