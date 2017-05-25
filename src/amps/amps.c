@@ -680,7 +680,10 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 	if (tone) {
 		timer_stop(&trans->timer);
 	} else {
-		timer_start(&trans->timer, SAT_TO2);
+		if (!trans->dtx)
+			timer_start(&trans->timer, SAT_TO2);
+		else
+			timer_stop(&trans->timer);
 	}
 }
 
@@ -768,6 +771,14 @@ reject:
 		} else {
 			trans_new_state(trans, TRANS_CALL_MT_ASSIGN);
 			trans->chan = vc->sender.kanal;
+		}
+		/* if we support DTX and also the phone does, we set DTX state of transaction */
+		if (amps->si.word2.dtx) {
+			if ((scm & 4)) {
+				PDEBUG(DAMPS, DEBUG_INFO, " -> Use DTX for this call\n");
+				trans->dtx = 1;
+			} else
+				PDEBUG(DAMPS, DEBUG_INFO, " -> Requested DTX, but not supported by phone\n");
 		}
 	} else
 		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Unsupported RECC messages: ORDER: %d ORDQ: %d MSG TYPE: %d (See Table 4 of specs.)\n", order, ordq, msg_type);

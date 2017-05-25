@@ -107,17 +107,17 @@
 #define SAT_DEVIATION		(2000.0 / DBM0_DEVIATION)	/* no emphasis */
 #define MAX_DISPLAY		(8000.0 / DBM0_DEVIATION)	/* no emphasis */
 #define BITRATE			10000
-#define SIG_TONE_CROSSINGS	2000	/* 2000 crossings are 100ms @ 10 KHz */
-#define SIG_TONE_MINBITS	950	/* minimum bit durations to detect signaling tone (1000 is perfect for 100 ms) */
-#define SIG_TONE_MAXBITS	1050	/* as above, maximum bits */
-#define SAT_DURATION		0.100	/* duration of SAT signal measurement */
-#define SAT_QUALITY		0.85	/* quality needed to detect sat */
-#define SAT_DETECT_COUNT	3	/* number of measures to detect SAT signal (specs say 250ms) */
-#define SAT_LOST_COUNT		3	/* number of measures to loose SAT signal (specs say 250ms) */
-#define SIG_DETECT_COUNT	3	/* number of measures to detect Signaling Tone */
-#define SIG_LOST_COUNT		2	/* number of measures to loose Signaling Tone */
+#define SAT_DURATION		0.05	/* duration of SAT signal measurement */
+#define SAT_QUALITY		0.85	/* quality needed to detect SAT signal */
+#define DTX_LEVEL		0.50	/* SAT level needed to mute/unmute */
+#define SIG_QUALITY		0.80	/* quality needed to detect Signaling Tone */
+#define SAT_DETECT_COUNT	5	/* number of measures to detect SAT signal (specs say 250ms) */
+#define SAT_LOST_COUNT		5	/* number of measures to loose SAT signal (specs say 250ms) */
+#define SIG_DETECT_COUNT	6	/* number of measures to detect Signaling Tone */
+#define SIG_LOST_COUNT		4	/* number of measures to loose Signaling Tone */
 #define CUT_OFF_HIGHPASS	300.0   /* cut off frequency for high pass filter to remove dc level from sound card / sample */
 #define BEST_QUALITY		0.68	/* Best possible RX quality */
+#define COMFORT_NOISE		0.02	/* audio level of comfort noise (relative to ISDN level) */
 
 static sample_t ramp_up[256], ramp_down[256];
 
@@ -423,6 +423,18 @@ done:
 	return count;
 }
 
+/* send comfort noise */
+static void comfort_noise(sample_t *samples, int length)
+{
+	int i;
+	int16_t r;
+
+	for (i = 0; i < length; i++) {
+		r = random();
+		samples[i] = (double)r / 32768.0 * COMFORT_NOISE;
+	}
+}
+
 /* Generate audio stream with SAT signal. Keep phase for next call of function. */
 static void sat_encode(amps_t *amps, sample_t *samples, int length)
 {
@@ -716,7 +728,7 @@ static void sender_receive_frame(amps_t *amps, sample_t *samples, int length)
 }
 
 
-/* decode signaling tone */
+/* decode SAT and signaling tone */
 /* compare supervisory signal against noise floor on 5800 Hz */
 static void sat_decode(amps_t *amps, sample_t *samples, int length)
 {
@@ -737,6 +749,10 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
 		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
 	}
+	if (quality[0] > SAT_QUALITY && result[0] / SAT_DEVIATION / 0.63662 > DTX_LEVEL)
+		amps->dtx_state = 1;
+	else
+		amps->dtx_state = 0;
 	if (quality[0] > SAT_QUALITY) {
 		if (amps->sat_detected == 0) {
 			amps->sat_detect_count++;
@@ -760,7 +776,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 		} else
 			amps->sat_detect_count = 0;
 	}
-	if (quality[1] > 0.8) {
+	if (quality[1] > SIG_QUALITY) {
 		if (amps->sig_detected == 0) {
 			amps->sig_detect_count++;
 			if (amps->sig_detect_count == SIG_DETECT_COUNT) {
@@ -785,11 +801,6 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 	}
 }
 
-/* decode signaling/audio */
-/* Count SIG_TONE_CROSSINGS of zero crossings, then check if the elapsed bit
- * time is between SIG_TONE_MINBITS and SIG_TONE_MAXBITS. If it is, the
- * frequency is close to the singalling tone, so it is detected
- */
 static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 {
 	transaction_t *trans = amps->trans_list;
@@ -813,7 +824,7 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 	/* receive audio, but only if call established and SAT detected */
 
 	if ((amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX || amps->dsp_mode == DSP_MODE_AUDIO_RX_FRAME_TX)
-	 && trans && trans->callref && trans->sat_detected) {
+	 && trans && trans->callref) {
 		int pos, count;
 		int i;
 
@@ -828,6 +839,8 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 		for (i = 0; i < count; i++) {
 			spl[pos++] = samples[i];
 			if (pos == 160) {
+				if (amps->dtx_state == 0)
+					comfort_noise(spl, 160);
 				call_tx_audio(trans->callref, spl, 160);
 				pos = 0;
 			}

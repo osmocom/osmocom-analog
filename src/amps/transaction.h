@@ -36,6 +36,7 @@ typedef struct transaction {
 	enum amps_trans_state	state;			/* state of transaction */
 	struct timer		timer;			/* for varous timeouts */
 	int			sat_detected;		/* state if we detected SAT */
+	int			dtx;			/* if set, DTX is used with this call */
 } transaction_t;
 
 transaction_t *create_transaction(amps_t *amps, enum amps_trans_state trans_state, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan);

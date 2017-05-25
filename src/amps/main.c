@@ -43,7 +43,7 @@
 int num_chan_type = 0;
 enum amps_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_PC_VC };
 const char *flip_polarity = "";
-int ms_power = 4, dcc = 0, scc = 0, sid = 40, regh = 1, regr = 1, pureg = 1, pdreg = 1, locaid = -1, regincr = 300, bis = 0;
+int ms_power = 4, dtx = 0, dcc = 0, scc = 0, sid = 40, regh = 1, regr = 1, pureg = 1, pdreg = 1, locaid = -1, regincr = 300, bis = 0;
 int tolerant = 0;
 
 void print_help(const char *arg0)
@@ -61,6 +61,10 @@ void print_help(const char *arg0)
 	printf("        Give power level of the mobile station 0..7. (default = '%d')\n", ms_power);
 	printf("        0 = 4 W;     1 = 1.6 W;  2 = 630 mW;  3 = 250 mW;\n");
 	printf("	4 = 100 mW;  5 = 40 mW;  6 = 16 mW;   7 = 6.3 mW\n");
+	printf(" -D --dtx <parameter>\n");
+	printf("        Give DTX parameter for Discontinuous Transmission. (default = '%d')\n", dtx);
+	printf("        0 = disable DTX;                     1 = reserved;\n");
+	printf("	2 = 8 dB attenuation in low state;   3 = transmitter off\n");
 	printf(" -S --sysinfo sid=<System ID> | sid=list\n");
 	printf("        Give system ID of cell broadcast (default = '%d')\n", sid);
 	printf("        If it changes, phone re-registers. Use 'sid=list' to get a full list.\n");
@@ -106,12 +110,13 @@ static int handle_options(int argc, char **argv)
 		{"channel-type", 1, 0, 'T'},
 		{"flip-polarity", 1, 0, 'F'},
 		{"ms-power", 1, 0, 'P'},
+		{"dtx", 1, 0, 'D'},
 		{"sysinfo", 1, 0, 'S'},
 		{"tolerant", 0, 0, 'O'},
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("T:F:P:S:O", long_options_special);
+	set_options_common("T:F:P:D:S:O", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -152,6 +157,14 @@ static int handle_options(int argc, char **argv)
 				ms_power = 3;
 			if (ms_power < 0)
 				ms_power = 0;
+			skip_args += 2;
+			break;
+		case 'D':
+			dtx = atoi(optarg);
+			if (dtx > 3)
+				dtx = 3;
+			if (dtx < 0)
+				dtx = 0;
 			skip_args += 2;
 			break;
 		case 'S':
@@ -360,7 +373,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < num_kanal; i++) {
 		amps_si si;
 
-		init_sysinfo(&si, ms_power, ms_power, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
+		init_sysinfo(&si, ms_power, ms_power, dtx, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
 		rc = amps_create(kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, &si, sid, scc, polarity, tolerant, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");

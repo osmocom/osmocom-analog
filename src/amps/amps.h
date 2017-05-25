@@ -139,9 +139,10 @@ typedef struct amps {
 	int			sat_filter_pos;		/* current sample position in filter_spl */
 	double			sat_phaseshift65536[3];	/* how much the phase of sine wave changes per sample */
 	double			sat_phase65536;		/* current phase */
-	int			sat_detected;		/* current detection state flag */
+	int			dtx_state;		/* 1 = high (fast sat detection) */
+	int			sat_detected;		/* current detection state flag (delayed detection) */
 	int			sat_detect_count;	/* current number of consecutive detections/losses */
-	int			sig_detected;		/* current detection state flag */
+	int			sig_detected;		/* current detection state flag (delayed detection) */
 	int			sig_detect_count;	/* current number of consecutive detections/losses */
 	double			test_phaseshift65536;	/* how much the phase of sine wave changes per sample */
 	double			test_phase65536;	/* current phase */

@@ -108,7 +108,7 @@ typedef struct system_information {
 	int				count;		/* count message train */
 } amps_si;
 
-void init_sysinfo(amps_si *si, int cmac, int vmac, int dcc, int sid1, int regh, int regr, int pureg, int pdreg, int locaid, int regincr, int bis);
+void init_sysinfo(amps_si *si, int cmac, int vmac, int dtx, int dcc, int sid1, int regh, int regr, int pureg, int pdreg, int locaid, int regincr, int bis);
 void prepare_sysinfo(amps_si *si);
 uint64_t get_sysinfo(amps_si *si);
 
