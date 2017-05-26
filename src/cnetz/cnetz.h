@@ -129,6 +129,7 @@ const char *chan_type_long_name(enum cnetz_chan_type chan_type);
 int cnetz_init(void);
 int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
+void cnetz_go_idle(cnetz_t *cnetz);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
 int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
 const struct telegramm *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz);

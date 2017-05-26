@@ -23,6 +23,8 @@
 #include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
+#include "../common/call.h"
+#include "../common/cause.h"
 #include "amps.h"
 //#include "database.h"
 
@@ -104,14 +106,28 @@ const char *trans_short_state_name(int state)
 /* create transaction */
 transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan)
 {
-	transaction_t *trans;
+	sender_t *sender;
+	transaction_t *trans = NULL;
+	amps_t *search_amps;
 
 	/* search transaction for this subsriber */
-	trans = search_transaction_number(amps, min1, min2);
+	for (sender = sender_head; sender; sender = sender->next) {
+		search_amps = (amps_t *) sender;
+		/* search transaction for this callref */
+		trans = search_transaction_number(search_amps, min1, min2);
+		if (trans)
+			break;
+	}
 	if (trans) {
 		const char *number = amps_min2number(trans->min1, trans->min2);
+		int old_callref = trans->callref;
+		amps_t *old_amps = trans->amps;
 		PDEBUG(DTRANS, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', deleting!\n", number);
 		destroy_transaction(trans);
+		if (old_amps) /* should be... */
+			amps_go_idle(old_amps);
+		if (old_callref)
+			call_in_release(old_callref, CAUSE_NORMAL);
 	}
 
 	trans = calloc(1, sizeof(*trans));
@@ -131,12 +147,9 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 	trans->chan = chan;
 
 	const char *number = amps_min2number(trans->min1, trans->min2);
-	PDEBUG(DTRANS, DEBUG_INFO, "Created transaction '%s' for subscriber '%s'\n", number, trans_state_name(state));
+	PDEBUG(DTRANS, DEBUG_INFO, "Created transaction for subscriber '%s'\n", number);
 
 	link_transaction(trans, amps);
-
-	/* update database: now busy */
-//	update_db(amps, min1, min2, 1, 0);
 
 	return trans;
 }
@@ -144,9 +157,6 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 /* destroy transaction */
 void destroy_transaction(transaction_t *trans)
 {
-	/* update database: now idle */
-//	update_db(trans->amps, trans->min1, trans->min2, 0, trans->ma_failed);
-
 	unlink_transaction(trans);
 	
 	const char *number = amps_min2number(trans->min1, trans->min2);

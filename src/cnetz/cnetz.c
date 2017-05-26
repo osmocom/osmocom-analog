@@ -230,8 +230,6 @@ int cnetz_init(void)
 	return 0;
 }
 
-static void cnetz_go_idle(cnetz_t *cnetz);
-
 /* Create transceiver instance and link to a list. */
 int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback)
 {
@@ -412,7 +410,7 @@ void cnetz_destroy(sender_t *sender)
 }
 
 /* Abort connection, if any and send idle broadcast */
-static void cnetz_go_idle(cnetz_t *cnetz)
+void cnetz_go_idle(cnetz_t *cnetz)
 {
 	if (cnetz->state == CNETZ_IDLE)
 		return;

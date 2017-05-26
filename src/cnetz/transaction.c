@@ -23,6 +23,8 @@
 #include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
+#include "../common/call.h"
+#include "../common/cause.h"
 #include "cnetz.h"
 #include "telegramm.h"
 #include "database.h"
@@ -39,14 +41,28 @@ const char *transaction2rufnummer(transaction_t *trans)
 /* create transaction */
 transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended)
 {
-	transaction_t *trans;
+	sender_t *sender;
+	transaction_t *trans = NULL;
+	cnetz_t *search_cnetz;
 
 	/* search transaction for this subsriber */
-	trans = search_transaction_number(cnetz, futln_nat, futln_fuvst, futln_rest);
+	for (sender = sender_head; sender; sender = sender->next) {
+		search_cnetz = (cnetz_t *) sender;
+		/* search transaction for this callref */
+		trans = search_transaction_number(search_cnetz, futln_nat, futln_fuvst, futln_rest);
+		if (trans)
+			break;
+	}
 	if (trans) {
 		const char *rufnummer = transaction2rufnummer(trans);
+		int old_callref = trans->callref;
+		cnetz_t *old_cnetz = trans->cnetz;
 		PDEBUG(DTRANS, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', deleting!\n", rufnummer);
 		destroy_transaction(trans);
+		if (old_cnetz) /* should be... */
+			cnetz_go_idle(old_cnetz);
+		if (old_callref)
+			call_in_release(old_callref, CAUSE_NORMAL);
 	}
 
 	trans = calloc(1, sizeof(*trans));

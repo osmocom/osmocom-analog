@@ -414,8 +414,6 @@ static amps_t *search_pc(void)
 	return NULL;
 }
 
-static void amps_go_idle(amps_t *amps);
-
 /* Create transceiver instance and link to a list. */
 int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
 {
@@ -555,7 +553,7 @@ void amps_destroy(sender_t *sender)
 }
 
 /* Abort connection towards mobile station by sending FOCC/FVC pattern. */
-static void amps_go_idle(amps_t *amps)
+void amps_go_idle(amps_t *amps)
 {
 	int frame_length;
 

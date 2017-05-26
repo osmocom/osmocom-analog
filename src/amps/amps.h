@@ -169,6 +169,7 @@ const char *amps_min2number(uint32_t min1, uint16_t min2);
 const char *amps_scm(uint8_t scm);
 int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback);
 void amps_destroy(sender_t *sender);
+void amps_go_idle(amps_t *amps);
 void amps_rx_signaling_tone(amps_t *amps, int tone, double quality);
 void amps_rx_sat(amps_t *amps, int tone, double quality);
 void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, const char *dialing);
