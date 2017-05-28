@@ -168,7 +168,10 @@ error_ta:
 					goto error_ta;
 				if (*p < '0' || *p > '9')
 					goto error_ta;
-				traffic_area[0] = rc + '0';
+				if (rc == -1) 
+					traffic_area[0] = 'N';
+				else
+					traffic_area[0] = rc + '0';
 				traffic_area[1] = *p;
 				traffic_area[2] = '\0';
 			}

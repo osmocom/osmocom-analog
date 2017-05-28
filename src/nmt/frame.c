@@ -71,7 +71,9 @@ void nmt_value2digits(uint64_t value, char *digits, int num)
 		digit = (value >> ((num - 1 - i) << 2)) & 0xf;
 		if (digit == 10)
 			digits[i] = '0';
-		else if (digit == 0 || digit > 10)
+		else if (digit == 0)
+			digits[i] = 'N';
+		else if (digit > 10)
 			digits[i] = '?';
 		else
 			digits[i] = digit + '0';
@@ -88,8 +90,10 @@ uint64_t nmt_digits2value(const char *digits, int num)
 		digit = *digits++;
 		if (digit >= '1' && digit <= '9')
 			value |= digit - '0';
-		else
+		else if (digit == '0')
 			value |= 10;
+		else
+			value |= 0;
 	}
 
 	return value;

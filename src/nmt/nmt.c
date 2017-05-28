@@ -284,6 +284,8 @@ static struct nmt_country {
 	{ 2, "RU2",	"",			"" },
 	{ 3, "RU3",	"",			"" },
 	{ 4, "RU4",	"",			"" },
+	{ 4, "RU4",	"",			"" },
+	{ -1, "NULL",	"",			"" },
 	{ 0, NULL, NULL, NULL }
 };
 
