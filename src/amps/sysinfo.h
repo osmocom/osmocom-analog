@@ -86,6 +86,8 @@ struct sysinfo_reg_id {
 };
 
 typedef struct system_information {
+	/* how ofter repeat overhead train (in frames) */
+	int				overhead_repeat;
 	/* all words */
 	uint8_t				dcc;
 	/* VC assginment */

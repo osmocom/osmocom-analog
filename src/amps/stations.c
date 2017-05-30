@@ -1,5 +1,16 @@
 #include <stdio.h>
+#include <string.h>
 #include "stations.h"
+
+void numbering(const char *number, const char __attribute__((unused)) **carrier, const char **country, const char **national_number)
+{
+	static char digits[64];
+
+	*country = "USA";
+	strcpy(digits, "1");
+	strcat(digits, number);
+	*national_number = number;
+}
 
 /*
 	1: the SID, system Identification number

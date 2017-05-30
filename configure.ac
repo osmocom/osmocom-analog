@@ -47,6 +47,7 @@ AC_OUTPUT(
     src/cnetz/Makefile
     src/nmt/Makefile
     src/amps/Makefile
+    src/tacs/Makefile
     src/test/Makefile
     src/Makefile
     sim/Makefile

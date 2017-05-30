@@ -50,6 +50,8 @@
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
+#include "stations.h"
+#include "main.h"
 
 /* Uncomment this to test SAT via loopback */
 //#define DEBUG_VC
@@ -72,14 +74,22 @@ double amps_channel2freq(int channel, int uplink)
 {
 	double freq;
 
-	/* 832 channels, 990 not used, see TIA/EIA-136-110 */
-	if (channel < 1 || channel > 1023 || (channel > 799 && channel < 991))
-		return 0;
+	if (!tacs) {
+		/* 832 channels, 990 not used, see TIA/EIA-136-110 */
+		if (channel < 1 || channel > 1023 || (channel > 799 && channel < 991))
+			return 0;
 
-	if (channel >= 990) // 990 is not used
-		channel -= 1023;
+		if (channel >= 990) // 990 is not used
+			channel -= 1023;
 
-	freq = 870.030 + (channel - 1) * 0.030;
+		freq = 870.030 + (channel - 1) * 0.030;
+	} else {
+		/* 600 channels */
+		if (channel < 1 || channel > 600)
+			return 0;
+
+		freq = 935.0125 + (channel - 1) * 0.025;
+	}
 
 	if (uplink)
 		freq -= 45.000;
@@ -89,24 +99,38 @@ double amps_channel2freq(int channel, int uplink)
 
 enum amps_chan_type amps_channel2type(int channel)
 {
-	if (channel >= 313 && channel <= 354)
-		return CHAN_TYPE_CC;
+	if (!tacs) {
+		if (channel >= 313 && channel <= 354)
+			return CHAN_TYPE_CC;
+	} else {
+		if (channel >= 23 && channel <= 43)
+			return CHAN_TYPE_CC;
+		if (channel >= 323 && channel <= 343)
+			return CHAN_TYPE_CC;
+	}
 
 	return CHAN_TYPE_VC;
 }
 
 const char *amps_channel2band(int channel)
 {
-	if (channel >= 991 && channel <= 1023)
-		return "A''";
-	if (channel >= 1 && channel <= 333)
-		return "A";
-	if (channel >= 334 && channel <= 666)
-		return "B";
-	if (channel >= 667 && channel <= 716)
-		return "A'";
-	if (channel >= 717 && channel <= 799)
-		return "B'";
+	if (!tacs) {
+		if (channel >= 991 && channel <= 1023)
+			return "A''";
+		if (channel >= 1 && channel <= 333)
+			return "A";
+		if (channel >= 334 && channel <= 666)
+			return "B";
+		if (channel >= 667 && channel <= 716)
+			return "A'";
+		if (channel >= 717 && channel <= 799)
+			return "B'";
+	} else {
+		if (channel >= 1 && channel <= 300)
+			return "A";
+		if (channel >= 301 && channel <= 600)
+			return "B";
+	}
 
 	return "<invalid>";
 }
@@ -125,10 +149,14 @@ static inline int binary2digit(int binary)
 	return binary + '0';
 }
 
-/* convert NPA-NXX-XXXX to MIN1 and MIN2
+/* AMPS: convert NPA-NXX-XXXX to MIN1 and MIN2
  * NPA = numbering plan area (MIN2)
  * NXX = mobile exchange code
  * XXXX = telephone number within the exchange
+ */
+/* TACS: convert AREA-XXXXXX to MIN1 and MIN2
+ * AREA = 3 + 1 Digits
+ * XXXXXX = telephone number
  */
 void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2)
 {
@@ -154,13 +182,22 @@ void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2)
 		nlen -= 3;
 	}
 
-	/* MIN1 */
-	*min1 = ((uint32_t)(digit2binary(number[0]) * 100 + digit2binary(number[1]) * 10 + digit2binary(number[2]) - 111)) << 14;
-	*min1 |= digit2binary(number[3]) << 10;
-	*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
+	if (!tacs) {
+		/* MIN1 */
+		*min1 = ((uint32_t)(digit2binary(number[0]) * 100 + digit2binary(number[1]) * 10 + digit2binary(number[2]) - 111)) << 14;
+		*min1 |= digit2binary(number[3]) << 10;
+		*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
+	} else {
+		/* MIN1 */
+		*min1 = (number[0] - '0') << 20;
+		*min1 |= (digit2binary(number[1]) * 100 + digit2binary(number[2]) * 10 + digit2binary(number[3]) - 111) << 10;
+		*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
+	}
 }
 
-/* convert MIN1 and MIN2 to NPA-NXX-XXXX
+/* AMPS: convert MIN1 and MIN2 to NPA-NXX-XXXX
+ */
+/* TACS: convert MIN1 and MIN2 to AREA-XXXXXXX
  */
 const char *amps_min22number(uint16_t min2)
 {
@@ -183,24 +220,46 @@ const char *amps_min12number(uint32_t min1)
 {
 	static char number[8];
 
-	/* MIN1 */
-	if ((min1 >> 14) > 999)
-		strcpy(number, "???");
-	else {
-		number[0] = binary2digit(((min1 >> 14) / 100) + 1);
-		number[1] = binary2digit((((min1 >> 14) / 10) % 10) + 1);
-		number[2] = binary2digit(((min1 >> 14) % 10) + 1);
-	}
-	if (((min1 >> 10) & 0xf) < 1 || ((min1 >> 10) & 0xf) > 10)
-		number[3] = '?';
-	else
-		number[3] = binary2digit((min1 >> 10) & 0xf);
-	if ((min1 & 0x3ff) > 999)
-		strcpy(number + 4, "???");
-	else {
-		number[4] = binary2digit(((min1 & 0x3ff) / 100) + 1);
-		number[5] = binary2digit((((min1 & 0x3ff) / 10) % 10) + 1);
-		number[6] = binary2digit(((min1 & 0x3ff) % 10) + 1);
+	if (!tacs) {
+		/* MIN1 */
+		if ((min1 >> 14) > 999)
+			strcpy(number, "???");
+		else {
+			number[0] = binary2digit(((min1 >> 14) / 100) + 1);
+			number[1] = binary2digit((((min1 >> 14) / 10) % 10) + 1);
+			number[2] = binary2digit(((min1 >> 14) % 10) + 1);
+		}
+		if (((min1 >> 10) & 0xf) < 1 || ((min1 >> 10) & 0xf) > 10)
+			number[3] = '?';
+		else
+			number[3] = binary2digit((min1 >> 10) & 0xf);
+		if ((min1 & 0x3ff) > 999)
+			strcpy(number + 4, "???");
+		else {
+			number[4] = binary2digit(((min1 & 0x3ff) / 100) + 1);
+			number[5] = binary2digit((((min1 & 0x3ff) / 10) % 10) + 1);
+			number[6] = binary2digit(((min1 & 0x3ff) % 10) + 1);
+		}
+	} else {
+		/* MIN1 */
+		if ((min1 >> 20) > 9)
+			number[0] = '?';
+		else
+			number[0] = '0' + (min1 >> 20);
+		if (((min1 >> 10) & 0x3ff) > 999)
+			strcpy(number +  1, "???");
+		else {
+			number[1] = binary2digit((((min1 >> 10) & 0x3ff) / 100) + 1);
+			number[2] = binary2digit(((((min1 >> 10) & 0x3ff) / 10) % 10) + 1);
+			number[3] = binary2digit((((min1 >> 10) & 0x3ff) % 10) + 1);
+		}
+		if ((min1 & 0x3ff) > 999)
+			strcpy(number + 4, "???");
+		else {
+			number[4] = binary2digit(((min1 & 0x3ff) / 100) + 1);
+			number[5] = binary2digit((((min1 & 0x3ff) / 10) % 10) + 1);
+			number[6] = binary2digit(((min1 & 0x3ff) % 10) + 1);
+		}
 	}
 	number[7] = '\0';
 
@@ -424,7 +483,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	const char *band;
 
 	/* check for channel number */
-	if (channel < 1 || (channel > 799 && channel < 991) || channel > 1023) {
+	if (amps_channel2freq(channel, 0) == 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d invalid.\n", channel);
 		return -EINVAL;
 	}
@@ -459,11 +518,11 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	/* check if sid machtes channel band */
 	band = amps_channel2band(channel);
 	if (band[0] == 'A' && (sid & 1) == 0 && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system A, but your SID %d is even and belongs to system B. Please give odd SID.\n", channel, sid);
+		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system A, but your %s %d is even and belongs to system B. Please give odd %s.\n", channel, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
 		return -EINVAL;
 	}
 	if (band[0] == 'B' && (sid & 1) == 1 && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system B, but your SID %d is odd and belongs to system A. Please give even SID.\n", channel, sid);
+		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system B, but your %s %d is odd and belongs to system A. Please give even %s.\n", channel, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
 		return -EINVAL;
 	}
 
@@ -722,6 +781,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_
 	amps_t *vc;
 	transaction_t *trans;
 	const char *callerid = amps_min2number(min1, min2);
+	const char *carrier = NULL, *country = NULL, *national_number = NULL;
 
 	/* check if we are busy, so we ignore all signaling */
 	if (amps->state == STATE_BUSY) {
@@ -731,6 +791,14 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_
 
 	if (order == 13 && (ordq == 0 || ordq == 1 || ordq == 2 || ordq == 3) && msg_type == 0) {
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
+_register:
+		numbering(callerid, &carrier, &country, &national_number);
+		if (carrier)
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home carrier: %s\n", carrier);
+		if (country)
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home country: %s\n", country);
+		if (national_number)
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home number: %s\n", national_number);
 		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
 		if (!trans) {
 			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -739,11 +807,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_
 	} else
 	if (order == 13 && ordq == 3 && msg_type == 1) {
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
-		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
-		if (!trans) {
-			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
-			return;
-		}
+		goto _register;
 	} else
 	if (order == 0 && ordq == 0 && msg_type == 0) {
 		if (!dialing)

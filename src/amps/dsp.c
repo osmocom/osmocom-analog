@@ -88,6 +88,7 @@
 #include "amps.h"
 #include "frame.h"
 #include "dsp.h"
+#include "main.h"
 
 #define CHAN amps->sender.kanal
 
@@ -99,14 +100,22 @@
 
 #define PI			M_PI
 
-#define MAX_DEVIATION		8000.0
-#define MAX_MODULATION		10000.0
-#define DBM0_DEVIATION		2900.0  /* deviation of dBm0 at 1 kHz */
 #define COMPANDOR_0DB		1.0     /* A level of 0dBm (1.0) shall be unaccected */
-#define FSK_DEVIATION		(8000.0 / DBM0_DEVIATION)	/* no emphasis */
-#define SAT_DEVIATION		(2000.0 / DBM0_DEVIATION)	/* no emphasis */
-#define MAX_DISPLAY		(8000.0 / DBM0_DEVIATION)	/* no emphasis */
-#define BITRATE			10000
+#define AMPS_MAX_DEVIATION	8000.0
+#define AMPS_MAX_MODULATION	10000.0
+#define AMPS_DBM0_DEVIATION	2900.0  /* deviation of dBm0 at 1 kHz */
+#define AMPS_FSK_DEVIATION	(8000.0 / AMPS_DBM0_DEVIATION)	/* no emphasis */
+#define AMPS_SAT_DEVIATION	(2000.0 / AMPS_DBM0_DEVIATION)	/* no emphasis */
+#define AMPS_MAX_DISPLAY	(8000.0 / AMPS_DBM0_DEVIATION)	/* no emphasis */
+#define AMPS_BITRATE		10000
+/* for some reason, 4000 Hz deviation works better */
+#define TACS_DBM0_DEVIATION	4000.0  /* 2300 Hz deviation at 1 kHz (according to panasonic manual) */
+#define TACS_MAX_DEVIATION	6400.0	/* (according to texas intruments and other sources) */
+#define TACS_MAX_MODULATION	9500.0	/* (according to panasonic manual) */
+#define TACS_FSK_DEVIATION	(6400.0 / TACS_DBM0_DEVIATION)	/* no emphasis */
+#define TACS_SAT_DEVIATION	(1700.0 / TACS_DBM0_DEVIATION)	/* no emphasis (panasonic / TI) */
+#define TACS_MAX_DISPLAY	(6400.0 / TACS_DBM0_DEVIATION)	/* no emphasis */
+#define TACS_BITRATE		8000
 #define SAT_DURATION		0.05	/* duration of SAT signal measurement */
 #define SAT_QUALITY		0.85	/* quality needed to detect SAT signal */
 #define DTX_LEVEL		0.50	/* SAT level needed to mute/unmute */
@@ -121,12 +130,11 @@
 
 static sample_t ramp_up[256], ramp_down[256];
 
-static double sat_freq[5] = {
+static double sat_freq[4] = {
 	5970.0,
 	6000.0,
 	6030.0,
 	5800.0, /* noise level to check against */
-	10000.0, /* signaling tone */
 };
 
 static sample_t dsp_sine_sat[65536];
@@ -143,8 +151,8 @@ void dsp_init(void)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for SAT signal.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
-		dsp_sine_sat[i] = s * SAT_DEVIATION;
-		dsp_sine_test[i] = s * FSK_DEVIATION;
+		dsp_sine_sat[i] = s * ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION);
+		dsp_sine_test[i] = s * ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION);
 	}
 
 	/* sync checker */
@@ -194,14 +202,18 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
 
 	/* set modulation parameters */
-	sender_set_fm(&amps->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
+	sender_set_fm(&amps->sender,
+		(!tacs) ? AMPS_MAX_DEVIATION : TACS_MAX_DEVIATION,
+		(!tacs) ? AMPS_MAX_MODULATION : TACS_MAX_MODULATION,
+		(!tacs) ? AMPS_DBM0_DEVIATION : TACS_DBM0_DEVIATION,
+		(!tacs) ? AMPS_MAX_DISPLAY : TACS_MAX_DISPLAY);
 
 	if (amps->sender.samplerate < 96000) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 96000 Hz to process FSK and SAT signals.\n");
 		return -EINVAL;
 	}
 
-	amps->fsk_bitduration = (double)amps->sender.samplerate / (double)BITRATE;
+	amps->fsk_bitduration = (double)amps->sender.samplerate / (double)((!tacs) ? AMPS_BITRATE : TACS_BITRATE);
 	amps->fsk_bitstep = 1.0 / amps->fsk_bitduration;
 	PDEBUG(DDSP, DEBUG_DEBUG, "Use %.4f samples for full bit duration @ %d.\n", amps->fsk_bitduration, amps->sender.samplerate);
 
@@ -231,7 +243,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->fsk_rx_window = spl;
 
 	/* create devation and ramp */
-	amps->fsk_deviation = FSK_DEVIATION;
+	amps->fsk_deviation = (!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION;
 	dsp_init_ramp(amps);
 
 	/* allocate ring buffer for SAT signal detection */
@@ -244,13 +256,15 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->sat_filter_spl = spl;
 
 	/* count SAT tones */
-	for (i = 0; i < 5; i++) {
+	for (i = 0; i < 4; i++) {
 		audio_goertzel_init(&amps->sat_goertzel[i], sat_freq[i], amps->sender.samplerate);
 		if (i < 3) {
 			amps->sat_phaseshift65536[i] = 65536.0 / ((double)amps->sender.samplerate / sat_freq[i]);
 			PDEBUG(DDSP, DEBUG_DEBUG, "sat_phaseshift65536[%d] = %.4f\n", i, amps->sat_phaseshift65536[i]);
 		}
 	}
+	/* signaling tone */
+	audio_goertzel_init(&amps->sat_goertzel[4], (!tacs) ? 10000.0 : 8000.0, amps->sender.samplerate);
 	sat_reset(amps, "Initial state");
 
 	/* test tone */
@@ -568,7 +582,7 @@ prepare_frame:
 			amps->fsk_rx_frame_quality = 0.0;
 			amps->fsk_rx_frame_level = 0.0;
 			amps->fsk_rx_sync_register = 0x555;
-			amps->when_received = get_time() - (21.0 / (double)BITRATE);
+			amps->when_received = get_time() - (21.0 / (double)((!tacs) ? AMPS_BITRATE : TACS_BITRATE));
 			return;
 		case 0x81:
 			if (!amps->fsk_rx_sync_tolerant)
@@ -594,11 +608,11 @@ prepare_frame:
 	}
 
 	/* count level and quality */
-	amps->fsk_rx_frame_level += (double)(max - min) / (double)FSK_DEVIATION / 2.0;
+	amps->fsk_rx_frame_level += (double)(max - min) / (double)((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 2.0;
 	if (bit)
-		amps->fsk_rx_frame_quality += (double)(second - first) / (double)FSK_DEVIATION / 2.0 / BEST_QUALITY;
+		amps->fsk_rx_frame_quality += (double)(second - first) / (double)((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 2.0 / BEST_QUALITY;
 	else
-		amps->fsk_rx_frame_quality += (double)(first - second) / (double)FSK_DEVIATION / 2.0 / BEST_QUALITY;
+		amps->fsk_rx_frame_quality += (double)(first - second) / (double)((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 2.0 / BEST_QUALITY;
 
 	/* invert bit if negative sync was detected */
 	if (amps->fsk_rx_sync == FSK_SYNC_NEGATIVE)
@@ -745,11 +759,11 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 	if (quality[1] < 0)
 		quality[1] = 0;
 
-	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] / SAT_DEVIATION / 0.63662 * 100.0, quality[0] * 100.0);
+	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION) / 0.63662 * 100.0, quality[0] * 100.0);
 	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
-		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] / FSK_DEVIATION / 0.63662 * 100.0, quality[1] * 100.0);
+		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] / ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 0.63662 * 100.0, quality[1] * 100.0);
 	}
-	if (quality[0] > SAT_QUALITY && result[0] / SAT_DEVIATION / 0.63662 > DTX_LEVEL)
+	if (quality[0] > SAT_QUALITY && result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION) / 0.63662 > DTX_LEVEL)
 		amps->dtx_state = 1;
 	else
 		amps->dtx_state = 0;

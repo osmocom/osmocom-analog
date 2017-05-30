@@ -7,6 +7,7 @@
 #include "../common/timer.h"
 #include "amps.h"
 #include "frame.h"
+#include "main.h"
 
 static struct sysinfo_reg_incr default_reg_incr = {
 	450,
@@ -47,6 +48,12 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dtx, int dcc, int sid1, i
 	int i;
 
 	memset(si, 0, sizeof(*si));
+
+	/* how oftern to repeat the overhead train */
+	if (!tacs)
+		si->overhead_repeat = 17;
+	else
+		si->overhead_repeat = 14;
 
 	/* all words */
 	si->dcc = dcc;
@@ -159,7 +166,10 @@ uint64_t get_sysinfo(amps_si *si)
 	switch (si->type[count]) {
 	case SYSINFO_WORD1:
 		nawc = si->num - 1;
-		return amps_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc);
+		if (!tacs)
+			return amps_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc);
+		else
+			return tacs_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc);
 	case SYSINFO_WORD2:
 		return amps_encode_word2_system(si->dcc, si->word2.s, si->word2.e, si->word2.regh, si->word2.regr, si->word2.dtx, si->word2.n_1, si->word2.rcf, si->word2.cpa, si->word2.cmax_1, end);
 	case SYSINFO_REG_ID:

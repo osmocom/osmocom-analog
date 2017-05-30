@@ -32,6 +32,7 @@
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
+#include "main.h"
 
 /* uncomment this to debug bits */
 //#define BIT_DEBUGGING
@@ -317,7 +318,7 @@ static struct def_word word5_third_ssd_update_order_word = {
 
 /* FOCC - System Parameter Overhead Message */
 
-static struct def_word word1_system_parameter_overhead = {
+static struct def_word amps_word1_system_parameter_overhead = {
 	"Word 1 - System Parameter Overhead",
 	{
 		{ "T1T2",			2,	0 },
@@ -333,6 +334,21 @@ static struct def_word word1_system_parameter_overhead = {
 	}
 };
 
+static struct def_word tacs_word1_system_parameter_overhead = {
+	"Word 1 - System Parameter Overhead",
+	{
+		{ "T1T2",			2,	0 },
+		{ "DCC",			2,	0 },
+		{ "AID1",			14,	0 },
+		{ "EP",				1,	0 },
+		{ "AUTH",			1,	0 },
+		{ "PCI",			1,	0 },
+		{ "NAWC",			4,	0 },
+		{ "OHD",			3,	0 },
+		{ "P",				12,	0 },
+		{ NULL, 0, 0 }
+	}
+};
 
 static struct def_word word2_system_parameter_overhead = {
 	"Word 2 - System Parameter Overhead",
@@ -612,7 +628,8 @@ static struct def_message_set focc_words = {
 		&word4_second_ssd_update_order_word,
 		&word5_third_ssd_update_order_word,
 
-		&word1_system_parameter_overhead,
+		&amps_word1_system_parameter_overhead,
+		&tacs_word1_system_parameter_overhead,
 		&word2_system_parameter_overhead,
 		&rescan_global_action,
 		&registration_increment_global_action,
@@ -1711,23 +1728,43 @@ static const char *ie_chan(uint64_t value)
 
 static const char *ie_cmac(uint64_t value)
 {
-	switch (value) {
-	case 0:
-		return "6 dbW (4 Watts)";
-	case 1:
-		return "2 dbW (1.6 Watts)";
-	case 2:
-		return "-2 dbW (630 Milliwatts)";
-	case 3:
-		return "-6 dbW (250 Milliwatts)";
-	case 4:
-		return "-10 dbW (100 Milliwatts)";
-	case 5:
-		return "-14 dbW (40 Milliwatts)";
-	case 6:
-		return "-18 dbW (16 Milliwatts)";
+	if (!tacs) {
+		switch (value) {
+		case 0:
+			return "6 dbW (4 Watts)";
+		case 1:
+			return "2 dbW (1.6 Watts)";
+		case 2:
+			return "-2 dbW (630 Milliwatts)";
+		case 3:
+			return "-6 dbW (250 Milliwatts)";
+		case 4:
+			return "-10 dbW (100 Milliwatts)";
+		case 5:
+			return "-14 dbW (40 Milliwatts)";
+		case 6:
+			return "-18 dbW (16 Milliwatts)";
+		}
+		return "-22 dbW (6.3 Milliwatts)";
+	} else {
+		switch (value) {
+		case 0:
+			return "4.5 dbW (2.82 Watts)";
+		case 1:
+			return "0.5 dbW (1.12 Watts)";
+		case 2:
+			return "-3.5 dbW (447 Milliwatts)";
+		case 3:
+			return "-7.5 dbW (178 Milliwatts)";
+		case 4:
+			return "-11.5 dbW (70.8 Milliwatts)";
+		case 5:
+			return "-15.5 dbW (28.2 Milliwatts)";
+		case 6:
+			return "-19.5 dbW (11.2 Milliwatts)";
+		}
+		return "-23.5 dbW (4.5 Milliwatts)";
 	}
-	return "-22 dbW (6.3 Milliwatts)";
 }
 
 static const char *ie_cmax(uint64_t value)
@@ -2113,6 +2150,7 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_11,			"11",			"bit combination 3", NULL },
 	{ AMPS_IE_1111,			"1111",			"bit combination 15", NULL },
 	{ AMPS_IE_ACT,			"ACT",			"Global action field", ie_act },
+	{ AMPS_IE_AID1,			"AID1",			"First part of the area identification field", NULL },
 	{ AMPS_IE_AUTH,			"AUTH",			"Support of authentication procedures described in TIA/EIA-136-510", ie_yes },
 	{ AMPS_IE_AUTHBS,		"AUTHBS",		"Output response of the authentication algorithm initiated by the Base Station Challenge Order", ie_hex },
 	{ AMPS_IE_AUTHR,		"AUTHR",		"Output response of the authentication algorithm", ie_hex },
@@ -2763,7 +2801,23 @@ uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_
 	frame.ie[AMPS_IE_PCI] = pci;
 	frame.ie[AMPS_IE_NAWC] = nawc;
 	frame.ie[AMPS_IE_OHD] = 6;
-	return amps_encode_word(&frame, &word1_system_parameter_overhead, -1);
+	return amps_encode_word(&frame, &amps_word1_system_parameter_overhead, -1);
+}
+
+uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc)
+{
+	frame_t frame;
+
+	memset(&frame, 0, sizeof(frame));
+	frame.ie[AMPS_IE_T1T2] = 3;
+	frame.ie[AMPS_IE_DCC] = dcc;
+	frame.ie[AMPS_IE_AID1] = aid1;
+	frame.ie[AMPS_IE_EP] = ep;
+	frame.ie[AMPS_IE_AUTH] = auth;
+	frame.ie[AMPS_IE_PCI] = pci;
+	frame.ie[AMPS_IE_NAWC] = nawc;
+	frame.ie[AMPS_IE_OHD] = 6;
+	return amps_encode_word(&frame, &tacs_word1_system_parameter_overhead, -1);
 }
 
 uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end)
@@ -3061,7 +3115,10 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 	ohd = (word >> 12) & 7;
 	switch (ohd) {
 	case 6:
-		w = &word1_system_parameter_overhead;
+		if (!tacs)
+			w = &amps_word1_system_parameter_overhead;
+		else
+			w = &tacs_word1_system_parameter_overhead;
 		break;
 	case 7:
 		w = &word2_system_parameter_overhead;
@@ -3385,7 +3442,7 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 	/* send overhead train */
 	if (amps->si.num) {
 		word = get_sysinfo(&amps->si);
-		if (++amps->tx_focc_frame_count >= 17)
+		if (++amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 			amps->tx_focc_frame_count = 0;
 		goto send;
 	}
@@ -3427,7 +3484,7 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 				amps->tx_focc_word_repeat = 0;
 				amps->tx_focc_send = 0;
 				/* now we may wrap */
-				if (amps->tx_focc_frame_count >= 17)
+				if (amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 					amps->tx_focc_frame_count = 0;
 			}
 		}
@@ -3436,7 +3493,7 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 
 	/* send filler */
 	word = amps_encode_control_filler(amps, amps->si.dcc, amps->si.filler.cmac, amps->si.filler.sdcc1, amps->si.filler.sdcc2, amps->si.filler.wfom);
-	if (++amps->tx_focc_frame_count >= 17)
+	if (++amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 		amps->tx_focc_frame_count = 0;
 
 send:

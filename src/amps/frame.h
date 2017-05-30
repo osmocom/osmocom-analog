@@ -5,6 +5,7 @@ enum amps_ie {
 	AMPS_IE_11,
 	AMPS_IE_1111,
 	AMPS_IE_ACT,
+	AMPS_IE_AID1,
 	AMPS_IE_AUTH,
 	AMPS_IE_AUTHBS,
 	AMPS_IE_AUTHR,
@@ -211,6 +212,7 @@ typedef struct amps_frame {
 
 void init_frame(void);
 uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc);
+uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc);
 uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end);
 uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end);
 uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8_t end);
