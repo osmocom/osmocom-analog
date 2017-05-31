@@ -185,17 +185,17 @@ void display_spectrum(float *samples, int length)
 					screen_color[s >> 1][j + o] = 13;
 				} else {
 					if ((s & 1) == 0)
-						screen[s >> 1][j + o] = ':';
+						screen[s >> 1][j + o] = '|';
 					else
 						screen[s >> 1][j + o] = '.';
 					screen_color[s >> 1][j + o] = 13;
 					if ((e & 1) == 0)
 						screen[e >> 1][j + o] = '\'';
 					else
-						screen[e >> 1][j + o] = ':';
+						screen[e >> 1][j + o] = '|';
 					screen_color[e >> 1][j + o] = 13;
 					for (k = (s >> 1) + 1; k < (e >> 1); k++) {
-						screen[k][j + o] = ':';
+						screen[k][j + o] = '|';
 						screen_color[k][j + o] = 13;
 					}
 				}
@@ -203,12 +203,12 @@ void display_spectrum(float *samples, int length)
 				e = low[j];
 				if ((s >> 1) < (e >> 1)) {
 					if ((s & 1) == 0)
-						screen[s >> 1][j + o] = ':';
+						screen[s >> 1][j + o] = '|';
 					else
 						screen[s >> 1][j + o] = '.';
 					screen_color[s >> 1][j + o] = 4;
 					for (k = (s >> 1) + 1; k < (e >> 1); k++) {
-						screen[k][j + o] = ':';
+						screen[k][j + o] = '|';
 						screen_color[k][j + o] = 4;
 					}
 				}
