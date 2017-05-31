@@ -35,10 +35,9 @@ static double			samplerate;
 static uint64_t			rx_count = 0;
 static uint64_t			tx_count = 0;
 
-int soapy_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth)
+int soapy_open(size_t channel, const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth)
 {
 	double got_frequency, got_rate, got_gain, got_bandwidth;
-	size_t channel = 0;
 	char *arg_string = strdup(device_args), *key, *val;
 	SoapySDRKwargs args;
 

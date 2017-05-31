@@ -45,11 +45,10 @@ static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
 static int			rx_gap = 0; /* if we missed samples, we fill our rx data with zeroes */
 
-int uhd_open(const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth)
+int uhd_open(size_t channel, const char *device_args, double tx_frequency, double rx_frequency, double rate, double rx_gain, double tx_gain, double bandwidth)
 {
 	uhd_error error;
 	double got_frequency, got_rate, got_gain, got_bandwidth;
-	size_t channel = 0;
 
 	samplerate = rate;
 	check_rate = 1;

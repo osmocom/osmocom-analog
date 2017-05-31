@@ -56,15 +56,17 @@ typedef struct sdr {
 } sdr_t;
 
 static int sdr_use_uhd, sdr_use_soapy;
+static int sdr_channel;
 static const char *sdr_device_args;
 static double sdr_rx_gain, sdr_tx_gain;
 const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave, *sdr_read_iq_tx_wave;
 static double sdr_bandwidth;
 
-int sdr_init(int sdr_uhd, int sdr_soapy, const char *device_args, double rx_gain, double tx_gain, double bandwidth, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave, const char *read_iq_tx_wave)
+int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, double rx_gain, double tx_gain, double bandwidth, const char *write_iq_rx_wave, const char *write_iq_tx_wave, const char *read_iq_rx_wave, const char *read_iq_tx_wave)
 {
 	sdr_use_uhd = sdr_uhd;
 	sdr_use_soapy = sdr_soapy;
+	sdr_channel = channel;
 	sdr_device_args = strdup(device_args);
 	sdr_rx_gain = rx_gain;
 	sdr_tx_gain = tx_gain;
@@ -240,7 +242,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd) {
-		rc = uhd_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth);
+		rc = uhd_open(sdr_channel, sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth);
 		if (rc)
 			goto error;
 	}
@@ -248,7 +250,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_SOAPY
 	if (sdr_use_soapy) {
-		rc = soapy_open(sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth);
+		rc = soapy_open(sdr_channel, sdr_device_args, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth);
 		if (rc)
 			goto error;
 	}
