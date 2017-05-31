@@ -105,11 +105,11 @@ void display_wave_limit_scroll(int on)
  *
  * theoretical example: HEIGHT = 3 allows 5 steps
  *
- * Line 0: -_
- * Line 1:   -_
- * Line 2:     -
+ * Line 0: '.
+ * Line 1:   '.
+ * Line 2:     '
  *
- * HEIGHT is odd, so the center line's char is '-' (otherwise '_')
+ * HEIGHT is odd, so the center line's char is ''' (otherwise '.')
  * (HEIGHT - 1) / 2 = 1, so the center line is drawn in line 1
  *
  * y is in range of 0..4, so these are 5 steps, where 2 is the
@@ -120,7 +120,8 @@ void display_wave(sender_t *sender, sample_t *samples, int length, double range)
 	dispwav_t *disp = &sender->dispwav;
 	int pos, max;
 	sample_t *buffer;
-	int i, j, k, y;
+	int i, j, k, s, e;
+	double last, current, next;
 	int color = 9; /* default color */
 	int center_line;
 	char center_char;
@@ -133,20 +134,20 @@ void display_wave(sender_t *sender, sample_t *samples, int length, double range)
 
 	/* at what line we draw our zero-line and what character we use */
 	center_line = (HEIGHT - 1) >> 1;
-	center_char = (HEIGHT & 1) ? '-' : '_';
+	center_char = (HEIGHT & 1) ? '\'' : '.';
 
 	pos = disp->interval_pos;
 	max = disp->interval_max;
 	buffer = disp->buffer;
 
 	for (i = 0; i < length; i++) {
-		if (pos >= width) {
+		if (pos >= width + 2) {
 			if (++pos == max)
 				pos = 0;
 			continue;
 		}
 		buffer[pos++] = samples[i];
-		if (pos == width) {
+		if (pos == width + 2) {
 			memset(&screen, ' ', sizeof(screen));
 			for (j = 0; j < width; j++) {
 				/* Input value is scaled to range -1 .. 1 and then substracted from 1,
@@ -156,10 +157,76 @@ void display_wave(sender_t *sender, sample_t *samples, int length, double range)
 				 * We always use odd number of steps, so there will be a center between
 				 * values.
 				 */
-				y = round((1.0 - buffer[j] / range) * (double)(HEIGHT - 1));
-				/* only display level, if it is in range */
-				if (y >= 0 && y < HEIGHT * 2 - 1)
-					screen[y >> 1][j] = (y & 1) ? '_' : '-';
+				last = (1.0 - buffer[j] / range) * (double)(HEIGHT - 1);
+				current = (1.0 - buffer[j + 1] / range) * (double)(HEIGHT - 1);
+				next = (1.0 - buffer[j + 2] / range) * (double)(HEIGHT - 1);
+				/* calculate start and end for vertical line
+				 * if the current value is a peak (above or below last AND next point),
+				 * round this peak point to become one end of the vertical line.
+				 * the other end is rounded up or down, so the end of the line will
+				 * not overlap with the ends of the surrounding lines.
+				 */
+				if (last > current) {
+					if (next > current) {
+						/* current point is a peak up */
+						s = round(current);
+						/* use lowest neighbor point and end is half way */
+						if (last > next)
+							e = floor((last + current) / 2.0);
+						else
+							e = floor((next + current) / 2.0);
+						/* end point must not be above start point */
+						if (e < s)
+							e = s;
+					} else {
+						/* current point is a transition upwards */
+						s = ceil((next + current) / 2.0);
+						e = floor((last + current) / 2.0);
+						/* end point must not be above start point */
+						if (e < s)
+							s = e = round(current);
+					}
+				} else {
+					if (next <= current) {
+						/* current point is a peak down */
+						e = round(current);
+						/* use heighes neighbor point and start is half way */
+						if (last <= next)
+							s = ceil((last + current) / 2.0);
+						else
+							s = ceil((next + current) / 2.0);
+						/* start point must not be below end point */
+						if (s > e)
+							s = e;
+					} else {
+						/* current point is a transition downwards */
+						s = ceil((last + current) / 2.0);
+						e = floor((next + current) / 2.0);
+						/* start point must not be below end point */
+						if (s > e)
+							s = e = round(current);
+					}
+				}
+				/* only draw line, if it is in range */
+				if (e >= 0 && s < HEIGHT * 2 - 1) {
+					/* clip */
+					if (s < 0)
+						s = 0;
+					if (e >= HEIGHT * 2 - 1)
+						e = HEIGHT * 2 - 1;
+					/* plot start and end point */
+					if ((s & 1))
+						screen[s >> 1][j] = '.';
+					else if (e != s)
+						screen[s >> 1][j] = '|';
+					if (!(e & 1))
+						screen[e >> 1][j] = '\'';
+					else if (e != s)
+						screen[e >> 1][j] = '|';
+					/* plot line between start and end point */
+					for (k = (s >> 1) + 1; k < (e >> 1); k++)
+						screen[k][j] = '|';
+				}
 			}
 			sprintf(screen[0], "(chan %d", sender->kanal);
 			*strchr(screen[0], '\0') = ')';
@@ -175,7 +242,7 @@ void display_wave(sender_t *sender, sample_t *samples, int length, double range)
 							printf("\033[0;34m");
 						}
 						putchar(center_char);
-					} else if (screen[j][k] == '-' || screen[j][k] == '_') {
+					} else if (screen[j][k] == '\'' || screen[j][k] == '.' || screen[j][k] == '|') {
 						/* green scope curve */
 						if (color != 2) {
 							color = 2;
