@@ -3506,12 +3506,12 @@ static void amps_decode_bits_focc(amps_t *amps, const char *bits)
 			crc_ok = 1;
 		else
 			crc_ok = 0;
-		if (i < 5) {
-			word_a[i % 5] = word;
-			crc_a_ok[i % 5] = crc_ok;
+		if ((i & 1) == 0) {
+			word_a[i >> 1] = word;
+			crc_a_ok[i >> 1] = crc_ok;
 		} else {
-			word_b[i % 5] = word;
-			crc_b_ok[i % 5] = crc_ok;
+			word_b[i >> 1] = word;
+			crc_b_ok[i >> 1] = crc_ok;
 		}
 	}
 	bits -= 440;
@@ -3528,7 +3528,10 @@ static void amps_decode_bits_focc(amps_t *amps, const char *bits)
 		for (i = 0; i < 10; i++) {
 			strncpy(text, bits + i * 44, 44);
 			text[44] = '\0';
-			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word %c - %s%s\n", (i & 1) ? 'b' : 'a', text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
+			if ((i & 1) == 0)
+				PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word a - %s%s\n", text, (crc_a_ok[i >> 1]) ? " ok" : " BAD CRC!");
+			else
+				PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word b - %s%s\n", text, (crc_b_ok[i >> 1]) ? " ok" : " BAD CRC!");
 		}
 	}
 
@@ -3580,8 +3583,8 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 			crc_ok_count++;
 		} else
 			crc_ok = 0;
-		word_a[i % 5] = word;
-		crc_a_ok[i % 5] = crc_ok;
+		word_a[i] = word;
+		crc_a_ok[i] = crc_ok;
 	}
 	bits -= 240;
 
@@ -3633,7 +3636,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 		for (i = 0; i < 5; i++) {
 			strncpy(text, bits + i * 48, 48);
 			text[48] = '\0';
-			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word - %s%s\n", text, (crc_a_ok[i % 5]) ? " ok" : " BAD CRC!");
+			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word - %s%s\n", text, (crc_a_ok[i]) ? " ok" : " BAD CRC!");
 		}
 	}
 
