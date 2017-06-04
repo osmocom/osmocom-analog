@@ -54,6 +54,7 @@ int do_pre_emphasis = 0;
 int do_de_emphasis = 0;
 double rx_gain = 1.0;
 int use_mncc_sock = 0;
+const char *mncc_name = "";
 int send_patterns = 1;
 int release_on_disconnect = 1;
 int loopback = 0;
@@ -114,6 +115,9 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        with the mixer settings. (Works with sound card only.)\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
+	printf(" --mncc-name <name>\n");
+	printf("        '/tmp/bsc_mncc' is used by default, give name to change socket to\n");
+	printf("        '/tmp/bsc_mncc_<name>'. (Useful to run multiple networks.)\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
 	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
 	printf("    --call-samplerate <rate>\n");
@@ -182,6 +186,7 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_TX_WAVE	1002
 #define	OPT_READ_RX_WAVE	1003
 #define	OPT_CALL_SAMPLERATE	1004
+#define	OPT_MNCC_NAME		1005
 
 #define	OPT_SDR_UHD		1100
 #define	OPT_SDR_SOAPY		1101
@@ -208,6 +213,7 @@ static struct option long_options_common[] = {
 	{"de-emphasis", 0, 0, 'd'},
 	{"rx-gain", 1, 0, 'g'},
 	{"mncc-sock", 0, 0, 'm'},
+	{"mncc-name", 1, 0, OPT_MNCC_NAME},
 	{"call-device", 1, 0, 'c'},
 	{"call-samplerate", 1, 0, OPT_CALL_SAMPLERATE},
 	{"tones", 0, 0, 't'},
@@ -337,6 +343,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 	case 'm':
 		use_mncc_sock = 1;
 		*skip_args += 1;
+		break;
+	case OPT_MNCC_NAME:
+		mncc_name = strdup(optarg);
+		*skip_args += 2;
 		break;
 	case 'c':
 		call_audiodev = strdup(optarg);
@@ -476,7 +486,13 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 
 	/* init mncc */
 	if (use_mncc_sock) {
-		rc = mncc_init("/tmp/bsc_mncc");
+		char mncc_sock_name[64];
+		if (mncc_name[0]) {
+			snprintf(mncc_sock_name, sizeof(mncc_sock_name), "/tmp/bsc_mncc_%s", mncc_name);
+			mncc_sock_name[sizeof(mncc_sock_name) - 1] = '\0';
+		} else
+			strcpy(mncc_sock_name, "/tmp/bsc_mncc");
+		rc = mncc_init(mncc_sock_name);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
 			return;
