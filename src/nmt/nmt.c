@@ -33,6 +33,7 @@
 #include "transaction.h"
 #include "dsp.h"
 #include "frame.h"
+#include "countries.h"
 
 /* How does paging on all channels work:
  *
@@ -211,31 +212,6 @@ const char *nmt_dir_name(enum nmt_direction dir)
 	return "invalid";
 }
 
-/* Convert channel number to frequency number of base station.
-   Set 'uplink' to 1 to get frequency of mobile station. */
-double nmt_channel2freq(int channel, int uplink)
-{
-	double freq;
-
-	if (channel < 1)
-		return 0;
-	else if (channel <= 180)
-		freq = 463.000 + (channel - 1) * 0.025;
-	else if (channel <= 200)
-		freq = 462.500 + (channel - 181) * 0.025;
-	else if (channel <= 380)
-		freq = 463.000 + (channel - 201) * 0.025 + 0.0125;
-	else if (channel <= 399) /* no channel 400, caused by interleaving and coding */
-		freq = 462.500 + (channel - 381) * 0.025 + 0.0125;
-	else
-		return 0;
-
-	if (uplink)
-		freq -= 10.000;
-
-	return freq * 1e6;
-}
-
 /* convert 7-digits dial string to NMT number */
 static int dialstring2number(const char *dialstring, char *ms_country, char *ms_number)
 {
@@ -252,87 +228,32 @@ static int dialstring2number(const char *dialstring, char *ms_country, char *ms_
 	return 0;
 }
 
-/* country selector */
-static struct nmt_country {
-	int y;
-	const char *short_name;
-	const char *long_name;
-	const char *provider_name;
-} nmt_country[] = {
-	{ 5, "DK",	"Denmark",		"Tele Danmark Mobile" },
-	{ 6, "SE",	"Sweden",		"Telia Mobitel" },
-	{ 7, "NO",	"Norway",		"Telenor Mobil" },
-	{ 8, "FI",	"Finland",		"Telecom Finland" },
-	{ 8, "IS",	"Iceland",		"Post & Telecom" },
-	{ 5, "FO",	"Faroe Island",		"Faroese Telecom" },
-	{ 7, "EE",	"Estonia",		"Eesti Mobiiltelefon" },
-	{ 5, "LV",	"Latvia",		"Latvian Mobile Telephone" },
-	{ 8, "LT",	"Lithuania",		"COMLIET" },
-	{ 6, "BY",	"Belarus",		"Belcel" },
-	{ 5, "MO",	"OSS/Moscow",		"Moscow Cellular Comm." },
-	{ 6, "STP",	"OSS/St Petersburg",	"Delta Telecom" },
-	{ 6, "STP",	"OSS/Leningrads Dist.",	"Delta Telecom" },
-	{ 7, "CAR",	"OSS/Carelian Rep.",	"Telecom Finland" },
-	{ 5, "MUR",	"OSS/Murmansk",		"Telecom Finland" },
-	{ 5, "LED",	"OSS/Leningrads Dist.",	"Telecom Finland" },
-	{ 5, "KAL",	"Kaliningrad",		"Telecom Finland" },
-	{ 7, "PL",	"Poland",		"CENTERTEL" },
-	{ 6, "BG",	"Bulgaria",		"MOBIFON" },
-	{ 5, "RO",	"Romania",		"Telefonica Romania" },
-	{ 6, "UA",	"Ukraine",		"Ukraine Mobile Comm." },
-	{ 1, "RU1",	"",			"" },
-	{ 2, "RU2",	"",			"" },
-	{ 3, "RU3",	"",			"" },
-	{ 4, "RU4",	"",			"" },
-	{ 4, "RU4",	"",			"" },
-	{ -1, "NULL",	"",			"" },
-	{ 0, NULL, NULL, NULL }
-};
-
-void nmt_country_list(void)
-{
-	int i;
-
-	printf("TA\tShort\tCountry (Provider)\n");
-	printf("------------------------------------------------------------------------\n");
-	for (i = 0; nmt_country[i].short_name; i++) {
-		if (nmt_country[i].long_name[0])
-			printf("%d\t%s\t%s (%s)\n", nmt_country[i].y, nmt_country[i].short_name, nmt_country[i].long_name, nmt_country[i].provider_name);
-		else
-			printf("%d\t%s\n", nmt_country[i].y, nmt_country[i].short_name);
-	}
-}
-
-uint8_t nmt_country_by_short_name(const char *short_name)
-{
-	int i;
-
-	for (i = 0; nmt_country[i].short_name; i++) {
-		if (!strcasecmp(nmt_country[i].short_name, short_name))
-			return nmt_country[i].y;
-	}
-
-	return 0;
-}
-
 static void nmt_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
+int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
+	double deviation_factor;
+	int scandinavia;
+	int tested;
 
-	if (channel < 1 || channel > 399) {
-		PDEBUG(DNMT, DEBUG_ERROR, "Channel number %d invalid.\n", channel);
+	/* check channel matching and set deviation factor */
+	if (nmt_channel2freq(country, channel, 0, &deviation_factor, &scandinavia, &tested) == 0.0) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "Channel number %d invalid, use '-Y list' to get a list of available channels.\n", channel);
 		return -EINVAL;
 	}
 
-	if (channel >= 201) {
+	if (!tested) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** The given NMT country has not been tested yet. Please tell the Author, if it works.\n");
+	}
+
+	if (scandinavia && channel >= 201) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Channels numbers above 200 have been specified, but never used. These 'interleaved channels are probably not supports by the phone.\n");
 	}
 
-	if (channel >= 181 && channel <= 200) {
+	if (scandinavia && channel >= 181 && channel <= 200) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "Extended channel numbers (181..200) have been specified, but never been supported for sure. There is no phone to test with, so don't use it!\n");
 	}
 
@@ -349,7 +270,7 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, 
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, channel, nmt_channel2freq(channel, 0), nmt_channel2freq(channel, 1), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PAGING_SIGNAL_NONE);
+	rc = sender_create(&nmt->sender, channel, nmt_channel2freq(country, channel, 0, NULL, NULL, NULL), nmt_channel2freq(country, channel, 1, NULL, NULL, NULL), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -366,7 +287,7 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, 
 	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
 
 	/* init audio processing */
-	rc = dsp_init_sender(nmt);
+	rc = dsp_init_sender(nmt, deviation_factor);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init audio processing!\n");
 		goto error;
@@ -390,7 +311,9 @@ int nmt_create(int channel, enum nmt_chan_type chan_type, const char *audiodev, 
 	nmt_go_idle(nmt);
 
 	PDEBUG(DNMT, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
-	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, (traffic_area & 0xf) % 10, area_no);
+	if (nmt_long_name_by_short_name(country))
+	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using country '%s'\n", nmt_long_name_by_short_name(country));
+	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, traffic_area & 0xf, area_no);
 	if (nmt->supervisory)
 		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using supervisory signal %d\n", supervisory);
 	else
@@ -721,13 +644,16 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 		memset(&subscr, 0, sizeof(subscr));
 		nmt_value2digits(frame->ms_country, &subscr.country, 1);
 		nmt_value2digits(frame->ms_number, subscr.number, 6);
+
+		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received roaming seizure from subscriber %c,%s\n", subscr.country, subscr.number);
+
+		/* create transaction */
 		trans = create_transaction(&subscr);
 		if (!trans) {
 			PDEBUG(DNMT, DEBUG_NOTICE, "Failed to create transaction!\n");
 			break;
 		}
 
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received roaming seizure from subscriber %c,%s\n", subscr.country, subscr.number);
 		/* change state */
 		nmt->trans = trans; /* add transaction before state change, so status is shown correctly */
 		nmt_new_state(nmt, STATE_ROAMING_IDENT);
@@ -747,13 +673,16 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 		nmt_value2digits(frame->ms_number, subscr.number, 6);
 		if (frame->mt == NMT_MESSAGE_12)
 			subscr.coinbox = 1;
+
+		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received call from subscriber %c,%s%s\n", subscr.country, subscr.number, (subscr.coinbox) ? " (coinbox)" : "");
+
+		/* create transaction */
 		trans = create_transaction(&subscr);
 		if (!trans) {
 			PDEBUG(DNMT, DEBUG_NOTICE, "Failed to create transaction!\n");
 			break;
 		}
 
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received call from subscriber %c,%s%s\n", subscr.country, subscr.number, (subscr.coinbox) ? " (coinbox)" : "");
 		/* change state */
 		nmt->trans = trans; /* add transaction before state change, so status is shown correctly */
 		nmt_new_state(nmt, STATE_MO_IDENT);

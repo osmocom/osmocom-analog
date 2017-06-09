@@ -37,6 +37,7 @@
 #include "image.h"
 #include "tones.h"
 #include "announcement.h"
+#include "countries.h"
 
 #define SMS_DELIVER "/tmp/nmt_sms_deliver"
 #define SMS_SUBMIT "/tmp/nmt_sms_submit"
@@ -46,6 +47,7 @@ static int sms_deliver_fd = -1;
 int num_chan_type = 0;
 enum nmt_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
 int ms_power = 1; /* 1..3 */
+char country[16] = "";
 char traffic_area[3] = "";
 char area_no = 0;
 int compandor = 1;
@@ -66,10 +68,8 @@ void print_help(const char *arg0)
 	printf(" -Y --traffic-area <traffic area> | list\n");
 	printf("        NOTE: MUST MATCH WITH YOUR ROAMING SETTINGS IN THE PHONE!\n");
 	printf("              Your phone will not connect, if country code is different!\n");
-	printf("        Give two digits of traffic area, the first digit defines the country\n");
-	printf("        code, the second defines the cell area. (Example: 61 = Sweden, cell 1)\n");
-	printf("        Alternatively you can give the short code for country and the cell\n");
-	printf("        area seperated by comma. (Example: SE,1 = Sweden, cell 1)\n");
+	printf("        Give short country code and cell area seperated by comma.\n");
+	printf("        (Example: SE,1 = Sweden, cell 1)\n");
 	printf("        Use 'list' to get a list of available short country code names\n");
 	printf(" -A --area-number <area no> | 0\n");
 	printf("        Give area number 1..4 or 0 for no area number. (default = '%d')\n", area_no);
@@ -90,7 +90,7 @@ void print_help(const char *arg0)
 
 static int handle_options(int argc, char **argv)
 {
-	char country[32], *p;
+	char *p;
 	int super;
 	int skip_args = 0;
 
@@ -145,36 +145,26 @@ static int handle_options(int argc, char **argv)
 				exit(0);
 			}
 			/* digits */
-			if (optarg[0] >= '0' && optarg[0] <= '9') {
-				traffic_area[0] = optarg[0];
-				if (optarg[1] < '0' || optarg[1] > '9') {
-error_ta:
-					fprintf(stderr, "Illegal traffic area '%s', see '-h' for help\n", optarg);
-					exit(0);
-				}
-				traffic_area[1] = optarg[1];
-				if (optarg[2] != '\0')
-					goto error_ta;
-				traffic_area[2] = '\0';
-			} else {
-				strncpy(country, optarg, sizeof(country) - 1);
-				country[sizeof(country) - 1] = '\0';
-				p = strchr(country, ',');
-				if (!p)
-					goto error_ta;
-				*p++ = '\0';
-				rc = nmt_country_by_short_name(country);
-				if (!rc)
-					goto error_ta;
-				if (*p < '0' || *p > '9')
-					goto error_ta;
-				if (rc == -1) 
-					traffic_area[0] = 'N';
-				else
-					traffic_area[0] = rc + '0';
-				traffic_area[1] = *p;
-				traffic_area[2] = '\0';
+			strncpy(country, optarg, sizeof(country) - 1);
+			country[sizeof(country) - 1] = '\0';
+			p = strchr(country, ',');
+			if (!p) {
+				fprintf(stderr, "Illegal traffic area '%s', see '-h' for help\n", optarg);
+				exit(0);
 			}
+			*p++ = '\0';
+			rc = nmt_country_by_short_name(country);
+			if (rc < 0) {
+error_ta:
+				fprintf(stderr, "Invalid traffic area '%s', use '-Y list' for a list of valid areas\n", optarg);
+				exit(0);
+			}
+			traffic_area[0] = rc + '0';
+			rc = nmt_ta_by_short_name(country, atoi(p));
+			if (rc < 0)	
+				goto error_ta;
+			nmt_value2digits(atoi(p), traffic_area + 1, 1);
+			traffic_area[2] = '\0';
 			skip_args += 2;
 			break;
 		case 'A':
@@ -382,16 +372,12 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
+		rc = nmt_create(country, kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
 		}
-		if (kanal[i] > 200) {
-			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0) / 1e6, nmt_channel2freq(kanal[i], 1) / 1e6);
-		} else {
-			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], nmt_channel2freq(kanal[i], 0) / 1e6, nmt_channel2freq(kanal[i], 1) / 1e6);
-		}
+		printf("base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], nmt_channel2freq(country, kanal[i], 0, NULL, NULL, NULL) / 1e6, nmt_channel2freq(country, kanal[i], 1, NULL, NULL, NULL) / 1e6);
 	}
 
 	nmt_check_channels();

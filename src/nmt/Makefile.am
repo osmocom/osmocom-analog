@@ -5,6 +5,7 @@ bin_PROGRAMS = \
 
 nmt_SOURCES = \
 	nmt.c \
+	countries.c \
 	transaction.c \
 	dsp.c \
 	frame.c \

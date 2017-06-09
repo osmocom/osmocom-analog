@@ -74,7 +74,7 @@ void nmt_value2digits(uint64_t value, char *digits, int num)
 		else if (digit == 0)
 			digits[i] = 'N';
 		else if (digit > 10)
-			digits[i] = '?';
+			digits[i] = digit - 10 + 'a';
 		else
 			digits[i] = digit + '0';
 	}
@@ -92,6 +92,10 @@ uint64_t nmt_digits2value(const char *digits, int num)
 			value |= digit - '0';
 		else if (digit == '0')
 			value |= 10;
+		else if (digit >= 'a' || digit == 'f')
+			value |= digit - 'a' + 10;
+		else if (digit >= 'A' || digit == 'F')
+			value |= digit - 'A' + 10;
 		else
 			value |= 0;
 	}
@@ -304,18 +308,24 @@ static const char *param_country(uint64_t value, int __attribute__((unused)) ndi
 	switch (value) {
 	case 0:
 		return "no additional info";
+	case 1:
+		return "Netherlands / Luxemburg / Malaysia";
+	case 2:
+		return "Belgium";
 	case 4:
-		return "Iceland";
+		return "Iceland / Thailand";
 	case 5:
 		return "Denmark";
 	case 6:
-		return "Sweden";
+		return "Sweden / Slovakia";
 	case 7:
-		return "Norway";
+		return "Norway / Czech";
 	case 8:
-		return "Finland";
+		return "Finland / Spain / Indonesia";
 	case 9:
-		return "nordic country";
+		return "nordic country / Austraia";
+	case 10:
+		return "Austria";
 	case 14:
 		return "additional info";
 	case 15:
@@ -348,7 +358,8 @@ static const char *param_ta(uint64_t value, int ndigits, enum nmt_direction __at
 
 static const char *param_line_signal(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction direction)
 {
-	static char result[64], *desc = "Spare";
+	char *desc = "Spare";
+	static char result[64];
 
 	if (direction == MTX_TO_MS) {
 		switch (value & 0xf) {
