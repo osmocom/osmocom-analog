@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!num_kanal) {
-		printf("No channel (\"Kanal\") is specified, I suggest channel 1.\n\n");
+		printf("No channel (\"Kanal\") is specified, I suggest channel 1 (sound card) or 17 (SDR).\n\n");
 		print_help(argv[-skip_args]);
 		return 0;
 	}
