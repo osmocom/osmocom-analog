@@ -6,9 +6,10 @@ and from mobile phone. Currently supported networks:
  * A-Netz
  * B-Netz (ATF-1)
  * C-Netz
- * NMT 450 (Nordic Mobile Telephone)
+ * NMT 450 / 900 (Nordic Mobile Telephone)
  * AMPS (Advanced Mobile Phone System)
  * TACS (Total Access Communication System)
+ * Radiocom 2000 (French network)
 
 
 USE AT YOUR OWN RISK!
@@ -46,5 +47,8 @@ Association."
 Eric from Smart Card World and Karsten Niehusen from cardomatic.de for
 providing memory cards to be programmed for older C-Netz phone.
 
-Dieter Spaar prividing TACS recordings to verify and debug TACS support.
+Dieter Spaar providing TACS recordings to verify and debug TACS support.
+
+Hans Wigger providing Radiocom 2000 recordings to reverse-enigeer the signalling
+system.
 
