@@ -289,10 +289,12 @@ int main(int argc, char *argv[])
 				chan_type[i] = CHAN_TYPE_CC_TC;
 			num_chan_type = num_kanal;
 		}
-		/* set supervisory signal */
-		for (i = 0; i < num_kanal; i++)
-			supervisory[i] = 0;
-		num_supervisory = num_kanal;
+		if (num_supervisory == 0) {
+			/* set supervisory signal */
+			for (i = 0; i < num_kanal; i++)
+				supervisory[i] = (i % 4) + 1;
+			num_supervisory = num_kanal;
+		}
 	}
 	if (num_kanal == 1 && num_audiodev == 0)
 		num_audiodev = 1; /* use default */

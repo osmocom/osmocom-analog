@@ -65,7 +65,8 @@
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
 #define TX_PEAK_DIALTONE	0.5	/* dial tone peak FIXME */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
-#define SUPER_DETECT_COUNT	4	/* number of measures to detect supervisory signal */
+#define SUPER_LOST_COUNT	4	/* number of measures to loose supervisory signal */
+#define SUPER_DETECT_COUNT	6	/* number of measures to detect supervisory signal */
 #define MUTE_DURATION		0.280	/* a tiny bit more than two frames */
 
 /* two signaling tones */
@@ -385,7 +386,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 
 	if (nmt->state == STATE_ACTIVE)
 		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", result[0] / 0.63662 / TX_PEAK_SUPER * 100.0, quality * 100.0);
-	if (quality > 0.5) {
+	if (quality > 0.7) {
 		if (nmt->super_detected == 0) {
 			nmt->super_detect_count++;
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
@@ -399,7 +400,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 	} else {
 		if (nmt->super_detected == 1) {
 			nmt->super_detect_count++;
-			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
+			if (nmt->super_detect_count == SUPER_LOST_COUNT) {
 				nmt->super_detected = 0;
 				nmt->super_detect_count = 0;
 				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal lost.\n");
