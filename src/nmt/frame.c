@@ -388,7 +388,10 @@ static const char *param_line_signal(uint64_t value, int __attribute__((unused))
 			desc = "Acknowledge MFT converter out";
 			break;
 		case 11:
-			desc = "Proceed to send enctrypted digits";
+			desc = "Proceed to send encrypted digits";
+			break;
+		case 12:
+			desc = "Request to receive short message";
 			break;
 		case 13:
 			desc = "Clearing, call transfer activated";
@@ -413,6 +416,9 @@ static const char *param_line_signal(uint64_t value, int __attribute__((unused))
 			break;
 		case 8:
 			desc = "MFT converter in";
+			break;
+		case 12:
+			desc = "Acknowledge SMS request";
 			break;
 		case 14:
 			desc = "Answer";
