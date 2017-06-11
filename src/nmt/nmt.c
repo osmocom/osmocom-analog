@@ -924,7 +924,7 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 			nmt_new_state(nmt, STATE_ACTIVE);
 			nmt->active_state = ACTIVE_STATE_VOICE;
 			nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
-			if (nmt->supervisory) {
+			if (nmt->supervisory && !nmt->dms_call) {
 				super_reset(nmt);
 				timer_start(&nmt->timer, SUPERVISORY_TO1);
 			}
@@ -1179,7 +1179,7 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 		nmt_new_state(nmt, STATE_ACTIVE);
 		nmt->active_state = ACTIVE_STATE_VOICE;
 		nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
-		if (nmt->supervisory) {
+		if (nmt->supervisory && !nmt->dms_call) {
 			super_reset(nmt);
 			timer_start(&nmt->timer, SUPERVISORY_TO1);
 		}

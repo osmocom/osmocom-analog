@@ -28,6 +28,7 @@
 #include "../common/timer.h"
 #include "nmt.h"
 
+#define SMS_RECEIVE_TO		5.0
 #define SMS_RELEASE_TO		2.0
 
 /* TP-Message-Type-Indicator (TP-MTI) */
@@ -331,6 +332,9 @@ int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_
 	nmt->sms.mt = 1;
 	dms_send(nmt, data, length, 1);
 
+	/* start timer */
+	timer_start(&nmt->sms_timer, SMS_RECEIVE_TO);
+
 	return 0;
 }
 
@@ -595,6 +599,9 @@ void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int __attribute__(
 	for (i = 0; i < length; i++)
 		sprintf(debug_text + i * 5, " 0x%02x", data[i]);
 	debug_text[length * 5] = '\0';
+
+	/* restart timer */
+	timer_start(&nmt->sms_timer, SMS_RECEIVE_TO);
 
 	PDEBUG(DSMS, DEBUG_DEBUG, "Received %d bytes from DMS layer:%s\n", length, debug_text);
 
