@@ -111,17 +111,18 @@ static struct nmt_country {
 	{ 1, 2, 1,9,	"RU2",	"",			"",				frq_scandinavia },
 	{ 1, 3, 1,9,	"RU3",	"",			"",				frq_scandinavia },
 	{ 1, 4, 1,9,	"RU4",	"",			"",				frq_scandinavia },
-	{ 0, 1, 1,9,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_nl_l_b },
-	{ 0, 1, 15,15,	"L",	"Luxemburg",		"Enterprise des P&T Luxembourg",frq_nl_l_b },
-	{ 0, 8, 8,8,	"MAL",	"Malaysia",		"Jabatan Telekom Malaysia",	frq_mal },
+	{ 1, 1, 1,9,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_nl_l_b },
+	{ 1, 1, 15,15,	"L",	"Luxemburg",		"Enterprise des P&T Luxembourg",frq_nl_l_b },
 	{ 1, 2, 1,9,	"B",	"Belgium",		"Belgacom Mobile",		frq_nl_l_b },
+	{ 1, 7, 1,9,	"CZ",	"Czech Republic",	"Eurotel Prague",		frq_cz_sk },
+	{ 1, 6, 1,9,	"SK",	"Slovakia",		"Eurotel Bratislava",		frq_cz_sk },
+	/* untested... */
+	{ 0, 8, 8,8,	"MAL",	"Malaysia",		"Jabatan Telekom Malaysia",	frq_mal },
 	{ 0, 4, 1,9,	"T",	"Thailand",		"Telephone Organization of Thailand",frq_t_ri },
 	{ 0, 8, 1,9,	"E",	"Spain",		"Telefonica Servicios Moviles",	frq_e },
 	{ 0, 8, 1,1,	"RI",	"Indonesia",		"PT Mobisel",			frq_t_ri },
 	{ 0, 0, 1,3,	"A",	"Austria",		"PTV",				frq_a },
 	{ 0, 9, 1,3,	"A2",	"Austria 2",		"PTV",				frq_a },
-	{ 1, 7, 1,9,	"CZ",	"Czech Republic",	"Eurotel Prague",		frq_cz_sk },
-	{ 1, 6, 1,9,	"SK",	"Slovakia",		"Eurotel Bratislava",		frq_cz_sk },
 	{ 0, 0, 0,0,	NULL,	NULL,			NULL,				NULL }
 };
 
