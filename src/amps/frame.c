@@ -1832,8 +1832,8 @@ static const char *ie_ohd(uint64_t value)
 
 static const char *amps_t1t2[4] = {
 	"Only Word 1",
-	"First Word",
-	"Next Word",
+	"First Word (FOCC) Next Word (FVC)",
+	"Next Word (FOCC) First Word (FVC)",
 	"Overhead Message",
 };
 
@@ -1913,7 +1913,7 @@ static const char *amps_scc[4] = {
 	"5970 Hz",
 	"6000 Hz",
 	"6030 Hz",
-	"Word 2 includes message",
+	"This word includes message",
 };
 
 static const char *ie_scc(uint64_t value)
@@ -2248,7 +2248,7 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_END,			"END",			"End indication field", ie_yes },
 	{ AMPS_IE_EP,			"EP",			"Extended Protocol Capability Indicator", ie_yes },
 	{ AMPS_IE_ER,			"ER",			"Extended Protocol Reverse Channel", ie_yes },
-	{ AMPS_IE_ESN,			"ESN",			"Electronic Serial Number field", NULL },
+	{ AMPS_IE_ESN,			"ESN",			"Electronic Serial Number field", ie_hex },
 	{ AMPS_IE_F,			"F",			"First word indication Field", ie_yes },
 	{ AMPS_IE_G3_Fax,		"G3 Fax",		"This field indicates whether or not G3 Fax is supported", ie_yes },
 	{ AMPS_IE_HDVCC,		"HDVCC",		"Half Digital Verification Color Code", NULL },
@@ -2977,7 +2977,7 @@ static uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t
 	return amps_encode_word(&frame, &word1_abbreviated_address_word, DEBUG_INFO);
 }
 
-static uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order)
+static uint64_t amps_encode_word2_extended_address_word_a(uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order)
 {
 	frame_t frame;
 
@@ -2992,7 +2992,7 @@ static uint64_t amps_encode_word1_extended_address_word_a(uint16_t min2, uint8_t
 	return amps_encode_word(&frame, &word2_extended_address_word_a, DEBUG_INFO);
 }
 
-static uint64_t amps_encode_word1_extended_address_word_b(uint8_t scc, uint16_t min2, uint8_t vmac, uint16_t chan)
+static uint64_t amps_encode_word2_extended_address_word_b(uint8_t scc, uint16_t min2, uint8_t vmac, uint16_t chan)
 {
 	frame_t frame;
 
@@ -3472,9 +3472,9 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 			word = amps_encode_word1_abbreviated_address_word(amps->si.dcc, amps->tx_focc_min1, 1);
 		else {
 			if (amps->tx_focc_chan)
-				word = amps_encode_word1_extended_address_word_b(amps->sat, amps->tx_focc_min2, amps->si.vmac, amps->tx_focc_chan);
+				word = amps_encode_word2_extended_address_word_b(amps->sat, amps->tx_focc_min2, amps->si.vmac, amps->tx_focc_chan);
 			else
-				word = amps_encode_word1_extended_address_word_a(amps->tx_focc_min2, amps->tx_focc_msg_type, amps->tx_focc_ordq, amps->tx_focc_order);
+				word = amps_encode_word2_extended_address_word_a(amps->tx_focc_min2, amps->tx_focc_msg_type, amps->tx_focc_ordq, amps->tx_focc_order);
 		}
 		/* dont wrap frame count until we are done */
 		++amps->tx_focc_frame_count;
