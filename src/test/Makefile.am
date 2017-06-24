@@ -19,11 +19,16 @@ test_filter_LDADD = \
 	$(SOAPY_LIBS) \
 	-lm
 
-test_compandor_SOURCES = test_compandor.c
+test_compandor_SOURCES = \
+	test_compandor.c \
+	dummy.c
 
 test_compandor_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libcommon.a \
+	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
 	-lm
 
 test_emphasis_SOURCES = test_emphasis.c dummy.c

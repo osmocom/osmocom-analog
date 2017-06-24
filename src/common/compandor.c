@@ -1,4 +1,4 @@
-/* Compandor to use various networks like C-Netz / NMT / AMPS
+/* Compandor to use various networks like C-Netz / NMT / AMPS / TACS
  *
  * (C) 2016 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -46,7 +46,7 @@ static double sqrt_tab[10000];
  * Hopefully this is correct
  *
  */
-void init_compandor(compandor_t *state, int samplerate, double attack_ms, double recovery_ms, double unaffected_level)
+void init_compandor(compandor_t *state, double samplerate, double attack_ms, double recovery_ms, double unaffected_level)
 {
 	int i;
 
@@ -56,10 +56,10 @@ void init_compandor(compandor_t *state, int samplerate, double attack_ms, double
 	state->c.envelope = 1.0;
 	state->e.peak = 1.0;
 	state->e.envelope = 1.0;
-	state->c.step_up = pow(COMPRESS_ATTACK_FACTOR, 1000.0 / attack_ms / (double)samplerate);
-	state->c.step_down = pow(COMPRESS_RECOVERY_FACTOR, 1000.0 / recovery_ms / (double)samplerate);
-	state->e.step_up = pow(EXPAND_ATTACK_FACTOR, 1000.0 / attack_ms / (double)samplerate);
-	state->e.step_down = pow(EXPAND_RECOVERY_FACTOR, 1000.0 / recovery_ms / (double)samplerate);
+	state->c.step_up = pow(COMPRESS_ATTACK_FACTOR, 1000.0 / attack_ms / samplerate);
+	state->c.step_down = pow(COMPRESS_RECOVERY_FACTOR, 1000.0 / recovery_ms / samplerate);
+	state->e.step_up = pow(EXPAND_ATTACK_FACTOR, 1000.0 / attack_ms / samplerate);
+	state->e.step_down = pow(EXPAND_RECOVERY_FACTOR, 1000.0 / recovery_ms / samplerate);
 	state->c.unaffected = unaffected_level;
 	state->e.unaffected = unaffected_level;
 
