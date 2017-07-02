@@ -68,9 +68,11 @@ void print_help(const char *arg0)
 	printf(" -Y --traffic-area <traffic area> | list\n");
 	printf("        NOTE: MUST MATCH WITH YOUR ROAMING SETTINGS IN THE PHONE!\n");
 	printf("              Your phone will not connect, if country code is different!\n");
-	printf("        Give short country code and cell area seperated by comma.\n");
-	printf("        (Example: SE,1 = Sweden, cell 1)\n");
-	printf("        Use 'list' to get a list of available short country code names\n");
+	printf("        Give short country code and traffic area seperated by comma.\n");
+	printf("        (Example: Give 'SE,1' for Sweden, traffic area 1)\n");
+	printf("        Add '!' to force traffic area that is not supported by country.\n");
+	printf("        (Example: Give 'B,12!' for Belgium, traffic area 12)\n");
+	printf("        Use 'list' to get a list of available country code names\n");
 	printf(" -A --area-number <area no> | 0\n");
 	printf("        Give area number 1..4 or 0 for no area number. (default = '%d')\n", area_no);
 	printf(" -C --compandor 1 | 0\n");
@@ -160,9 +162,11 @@ error_ta:
 				exit(0);
 			}
 			traffic_area[0] = rc + '0';
-			rc = nmt_ta_by_short_name(country, atoi(p));
-			if (rc < 0)	
-				goto error_ta;
+			if (p[strlen(p) - 1] != '!') {
+				rc = nmt_ta_by_short_name(country, atoi(p));
+				if (rc < 0)
+					goto error_ta;
+			}
 			nmt_value2digits(atoi(p), traffic_area + 1, 1);
 			traffic_area[2] = '\0';
 			skip_args += 2;

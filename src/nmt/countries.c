@@ -132,12 +132,13 @@ void nmt_country_list(void)
 	int ch_from = 0, ch_to = 0;
 	char ch_string[32];
 
-	printf("TA from\tTA to\tChannels\tShort\tCountry (Provider)\n");
-	printf("------------------------------------------------------------------------\n");
+	printf("TA from\tTA to\tYY Code\tChannels\tShort\tCountry (Provider)\n");
+	printf("--------------------------------------------------------------------------------\n");
 	for (i = 0; nmt_country[i].short_name; i++) {
 		printf("%s,%d\t", nmt_country[i].short_name, nmt_country[i].first_ta);
 		if (nmt_country[i].first_ta != nmt_country[i].last_ta)
 			printf("%s,%d", nmt_country[i].short_name, nmt_country[i].last_ta);
+		printf("\t%02x..%02x", (nmt_country[i].y << 4) | nmt_country[i].first_ta, (nmt_country[i].y << 4) | nmt_country[i].last_ta);
 		for (j = 0; nmt_country[i].nmt_frequency[j].first_frequency; j++) {
 			if (j == 0 || nmt_country[i].nmt_frequency[j].first_channel < ch_from)
 				ch_from = nmt_country[i].nmt_frequency[j].first_channel;
