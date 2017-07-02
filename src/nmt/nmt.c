@@ -706,10 +706,11 @@ static void tx_roaming_ident(nmt_t *nmt, frame_t *frame)
 {
 	if (++nmt->tx_frame_count == 1)
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Sending identity request.\n");
+	tx_ident(nmt, frame);
 	if (nmt->tx_frame_count == 8) {
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
 		nmt_release(nmt);
 	}
-	tx_ident(nmt, frame);
 }
 
 static void rx_roaming_ident(nmt_t *nmt, frame_t *frame)
@@ -763,10 +764,11 @@ static void tx_mo_ident(nmt_t *nmt, frame_t *frame)
 {
 	if (++nmt->tx_frame_count == 1)
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Sending identity request.\n");
+	tx_ident(nmt, frame);
 	if (nmt->tx_frame_count == 8) {
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
 		nmt_release(nmt);
 	}
-	tx_ident(nmt, frame);
 }
 
 static void rx_mo_ident(nmt_t *nmt, frame_t *frame)
@@ -1023,12 +1025,13 @@ static void tx_mt_ident(nmt_t *nmt, frame_t *frame)
 
 	if (++nmt->tx_frame_count == 1)
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Sending identity request.\n");
+	tx_ident(nmt, frame);
 	if (nmt->tx_frame_count == 8) {
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Release call towards network.\n");
 		call_in_release(trans->callref, CAUSE_TEMPFAIL);
 		destroy_transaction(trans);
 	}
-	tx_ident(nmt, frame);
 }
 
 static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
