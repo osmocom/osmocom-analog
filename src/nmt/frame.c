@@ -92,9 +92,9 @@ uint64_t nmt_digits2value(const char *digits, int num)
 			value |= digit - '0';
 		else if (digit == '0')
 			value |= 10;
-		else if (digit >= 'a' || digit == 'f')
+		else if (digit >= 'a' && digit <= 'f')
 			value |= digit - 'a' + 10;
-		else if (digit >= 'A' || digit == 'F')
+		else if (digit >= 'A' && digit <= 'F')
 			value |= digit - 'A' + 10;
 		else
 			value |= 0;
