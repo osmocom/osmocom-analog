@@ -62,6 +62,7 @@ int rt_prio = 0;
 const char *write_rx_wave = NULL;
 const char *write_tx_wave = NULL;
 const char *read_rx_wave = NULL;
+const char *read_tx_wave = NULL;
 int use_sdr = 0;
 int sdr_channel = 0;
 static const char *sdr_args = "";
@@ -135,6 +136,8 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Write transmitted audio to given wave file.\n");
 	printf("    --read-rx-wave <file>\n");
 	printf("        Replace received audio by given wave file.\n");
+	printf("    --read-tx-wave <file>\n");
+	printf("        Replace transmitted audio by given wave file.\n");
 #ifdef HAVE_SDR
 	printf("\nSDR options:\n");
 #ifdef HAVE_UHD
@@ -185,8 +188,9 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_RX_WAVE	1001
 #define	OPT_WRITE_TX_WAVE	1002
 #define	OPT_READ_RX_WAVE	1003
-#define	OPT_CALL_SAMPLERATE	1004
-#define	OPT_MNCC_NAME		1005
+#define	OPT_READ_TX_WAVE	1004
+#define	OPT_CALL_SAMPLERATE	1005
+#define	OPT_MNCC_NAME		1006
 
 #define	OPT_SDR_UHD		1100
 #define	OPT_SDR_SOAPY		1101
@@ -222,6 +226,7 @@ static struct option long_options_common[] = {
 	{"write-rx-wave", 1, 0, OPT_WRITE_RX_WAVE},
 	{"write-tx-wave", 1, 0, OPT_WRITE_TX_WAVE},
 	{"read-rx-wave", 1, 0, OPT_READ_RX_WAVE},
+	{"read-tx-wave", 1, 0, OPT_READ_TX_WAVE},
 	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
 	{"sdr-soapy", 0, 0, OPT_SDR_SOAPY},
 	{"sdr-channel", 1, 0, OPT_SDR_CHANNEL},
@@ -378,6 +383,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		break;
 	case OPT_READ_RX_WAVE:
 		read_rx_wave = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_READ_TX_WAVE:
+		read_tx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
 	case OPT_SDR_UHD:

@@ -19,6 +19,7 @@ extern int rt_prio;
 extern const char *write_rx_wave;
 extern const char *write_tx_wave;
 extern const char *read_rx_wave;
+extern const char *read_tx_wave;
 
 void print_help(const char *arg0);
 void print_help_common(const char *arg0, const char *ext_usage);

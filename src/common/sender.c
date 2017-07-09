@@ -33,7 +33,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback, double loss_volume, enum paging_signal paging_signal)
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_volume, enum paging_signal paging_signal)
 {
 	sender_t *master, *slave;
 	int rc = 0;
@@ -52,6 +52,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->write_rx_wave = write_rx_wave;
 	sender->write_tx_wave = write_tx_wave;
 	sender->read_rx_wave = read_rx_wave;
+	sender->read_tx_wave = read_tx_wave;
 
 	/* no gain with SDR */
 	if (use_sdr)
@@ -198,6 +199,13 @@ int sender_open_audio(void)
 				return rc;
 			}
 		}
+		if (master->read_tx_wave) {
+			rc = wave_create_playback(&master->wave_tx_play, master->read_tx_wave, master->samplerate, channels, master->max_deviation);
+			if (rc < 0) {
+				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				return rc;
+			}
+		}
 
 		/* open device */
 		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, master->max_deviation, master->max_modulation);
@@ -249,6 +257,7 @@ void sender_destroy(sender_t *sender)
 	wave_destroy_record(&sender->wave_rx_rec);
 	wave_destroy_record(&sender->wave_tx_rec);
 	wave_destroy_playback(&sender->wave_rx_play);
+	wave_destroy_playback(&sender->wave_tx_play);
 
 	jitter_destroy(&sender->dejitter);
 }
@@ -330,6 +339,8 @@ cant_recover:
 
 		if (sender->wave_tx_rec.fp)
 			wave_write(&sender->wave_tx_rec, samples, count);
+		if (sender->wave_tx_play.fp)
+			wave_read(&sender->wave_tx_play, samples, count);
 
 		rc = sender->audio_write(sender->audio, samples, count, paging_signal, on, num_chan);
 		if (rc < 0) {

@@ -231,7 +231,7 @@ static int dialstring2number(const char *dialstring, char *ms_country, char *ms_
 static void nmt_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
+int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -270,7 +270,7 @@ int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, c
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, channel, nmt_channel2freq(country, channel, 0, NULL, NULL, NULL), nmt_channel2freq(country, channel, 1, NULL, NULL, NULL), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PAGING_SIGNAL_NONE);
+	rc = sender_create(&nmt->sender, channel, nmt_channel2freq(country, channel, 0, NULL, NULL, NULL), nmt_channel2freq(country, channel, 1, NULL, NULL, NULL), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, 0, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

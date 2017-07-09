@@ -231,7 +231,7 @@ int cnetz_init(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, int loopback)
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -290,7 +290,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by cnetz code, not by common sender code */
-	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(kanal, 0), cnetz_kanal2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PAGING_SIGNAL_NONE);
+	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(kanal, 0), cnetz_kanal2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, 0, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

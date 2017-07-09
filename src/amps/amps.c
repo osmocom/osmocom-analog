@@ -474,7 +474,7 @@ static amps_t *search_pc(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
+int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -545,7 +545,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %d of band %s (sample rate %d).\n", channel, band, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&amps->sender, channel, amps_channel2freq(channel, 0), amps_channel2freq(channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, loopback, 0, PAGING_SIGNAL_NONE);
+	rc = sender_create(&amps->sender, channel, amps_channel2freq(channel, 0), amps_channel2freq(channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, 0, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
