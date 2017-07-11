@@ -59,23 +59,24 @@ int send_patterns = 1;
 int release_on_disconnect = 1;
 int loopback = 0;
 int rt_prio = 0;
-const char *write_rx_wave = NULL;
 const char *write_tx_wave = NULL;
-const char *read_rx_wave = NULL;
+const char *write_rx_wave = NULL;
 const char *read_tx_wave = NULL;
+const char *read_rx_wave = NULL;
 int use_sdr = 0;
 int sdr_channel = 0;
-static const char *sdr_args = "";
+static const char *sdr_device_args = "",  *sdr_stream_args = "",  *sdr_tune_args = "";
 static double sdr_bandwidth = 0.0;
 #ifdef HAVE_SDR
 static int sdr_uhd = 0;
 static int sdr_soapy = 0;
 #endif
-double sdr_rx_gain = 0, sdr_tx_gain = 0;
-const char *write_iq_rx_wave = NULL;
+double sdr_tx_gain = 0, sdr_rx_gain = 0;
+const char *sdr_tx_antenna = "", *sdr_rx_antenna = "";
 const char *write_iq_tx_wave = NULL;
-const char *read_iq_rx_wave = NULL;
+const char *write_iq_rx_wave = NULL;
 const char *read_iq_tx_wave = NULL;
+const char *read_iq_rx_wave = NULL;
 void print_help_common(const char *arg0, const char *ext_usage)
 {
 	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
@@ -150,11 +151,17 @@ void print_help_common(const char *arg0, const char *ext_usage)
 #endif
 	printf("    --sdr-channel <channel #>\n");
 	printf("        Give channel number for multi channel SDR device (default = %d)\n", sdr_channel);
-	printf("    --sdr-args <args>\n");
+	printf("    --sdr-device-args <args>\n");
+	printf("    --sdr-stream-args <args>\n");
+	printf("    --sdr-tune-args <args>\n");
 	printf("        Optional SDR device arguments, seperated by comma\n");
-	printf("        e.g. --sdr-args <key>=<value>[,<key>=<value>[,...]]\n");
+	printf("        e.g. --sdr-device-args <key>=<value>[,<key>=<value>[,...]]\n");
 	printf("    --sdr-bandwidth <bandwidth>\n");
 	printf("        Give IF filter bandwidth to use. If not, sample rate is used.\n");
+	printf("    --sdr-rx-antenna <name>\n");
+	printf("        SDR device's RX antenna name, use 'list' to get a list\n");
+	printf("    --sdr-tx-antenna <name>\n");
+	printf("        SDR device's TX antenna name, use 'list' to get a list\n");
 	printf("    --sdr-rx-gain <gain>\n");
 	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_rx_gain);
 	printf("    --sdr-tx-gain <gain>\n");
@@ -195,14 +202,18 @@ void print_hotkeys_common(void)
 #define	OPT_SDR_UHD		1100
 #define	OPT_SDR_SOAPY		1101
 #define	OPT_SDR_CHANNEL		1102
-#define	OPT_SDR_ARGS		1103
-#define	OPT_SDR_RX_GAIN		1104
-#define	OPT_SDR_TX_GAIN		1105
-#define	OPT_SDR_BANDWIDTH	1106
-#define	OPT_WRITE_IQ_RX_WAVE	1107
-#define	OPT_WRITE_IQ_TX_WAVE	1108
-#define	OPT_READ_IQ_RX_WAVE	1109
-#define	OPT_READ_IQ_TX_WAVE	1110
+#define	OPT_SDR_DEVICE_ARGS	1103
+#define	OPT_SDR_STREAM_ARGS	1104
+#define	OPT_SDR_TUNE_ARGS	1105
+#define	OPT_SDR_RX_ANTENNA	1106
+#define	OPT_SDR_TX_ANTENNA	1107
+#define	OPT_SDR_RX_GAIN		1108
+#define	OPT_SDR_TX_GAIN		1109
+#define	OPT_SDR_BANDWIDTH	1110
+#define	OPT_WRITE_IQ_RX_WAVE	1111
+#define	OPT_WRITE_IQ_TX_WAVE	1112
+#define	OPT_READ_IQ_RX_WAVE	1113
+#define	OPT_READ_IQ_TX_WAVE	1114
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -230,8 +241,12 @@ static struct option long_options_common[] = {
 	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
 	{"sdr-soapy", 0, 0, OPT_SDR_SOAPY},
 	{"sdr-channel", 1, 0, OPT_SDR_CHANNEL},
-	{"sdr-args", 1, 0, OPT_SDR_ARGS},
+	{"sdr-device-args", 1, 0, OPT_SDR_DEVICE_ARGS},
+	{"sdr-stream-args", 1, 0, OPT_SDR_STREAM_ARGS},
+	{"sdr-tune-args", 1, 0, OPT_SDR_TUNE_ARGS},
 	{"sdr-bandwidth", 1, 0, OPT_SDR_BANDWIDTH},
+	{"sdr-rx-antenna", 1, 0, OPT_SDR_RX_ANTENNA},
+	{"sdr-tx-antenna", 1, 0, OPT_SDR_TX_ANTENNA},
 	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
 	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
 	{"write-iq-rx-wave", 1, 0, OPT_WRITE_IQ_RX_WAVE},
@@ -413,12 +428,28 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		sdr_channel = atoi(optarg);
 		*skip_args += 2;
 		break;
-	case OPT_SDR_ARGS:
-		sdr_args = strdup(optarg);
+	case OPT_SDR_DEVICE_ARGS:
+		sdr_device_args = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_STREAM_ARGS:
+		sdr_stream_args = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_TUNE_ARGS:
+		sdr_tune_args = strdup(optarg);
 		*skip_args += 2;
 		break;
 	case OPT_SDR_BANDWIDTH:
 		sdr_bandwidth = atof(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_RX_ANTENNA:
+		sdr_rx_antenna = strdup(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_TX_ANTENNA:
+		sdr_tx_antenna = strdup(optarg);
 		*skip_args += 2;
 		break;
 	case OPT_SDR_RX_GAIN:
@@ -523,7 +554,7 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 
 	if (sdr_bandwidth == 0.0)
 		sdr_bandwidth = samplerate;
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_args, sdr_rx_gain, sdr_tx_gain, sdr_bandwidth, write_iq_rx_wave, write_iq_tx_wave, read_iq_rx_wave, read_iq_tx_wave);
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave);
 	if (rc < 0)
 		return;
 #endif

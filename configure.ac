@@ -37,8 +37,8 @@ AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.6.0,
 AM_CONDITIONAL(HAVE_UHD, test "x$with_uhd" == "xyes" )
 AM_CONDITIONAL(HAVE_SOAPY, test "x$with_soapy" == "xyes" )
 AM_CONDITIONAL(HAVE_SDR, test "x$with_sdr" == "xyes" )
-AS_IF([test "x$with_uhd" == "xyes"],[AC_MSG_NOTICE( Compiling with UHD SDR support )], [])
-AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR support )], [])
+AS_IF([test "x$with_uhd" == "xyes"],[AC_MSG_NOTICE( Compiling with UHD SDR support )], [AC_MSG_NOTICE( UHD SDR not support )])
+AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR support )], [AC_MSG_NOTICE( SoapySDR not support )])
 
 AC_OUTPUT(
     src/common/Makefile

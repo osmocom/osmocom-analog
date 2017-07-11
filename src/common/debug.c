@@ -58,6 +58,7 @@ struct debug_cat {
 	{ "sms", "\033[1;37m" },
 	{ "sdr", "\033[1;31m" },
 	{ "uhd", "\033[1;35m" },
+	{ "soapy", "\033[1;35m" },
 	{ NULL, NULL }
 };
 
