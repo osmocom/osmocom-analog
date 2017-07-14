@@ -132,8 +132,8 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	/* set modulation parameters */
 	sender_set_fm(&nmt->sender, MAX_DEVIATION * deviation_factor, MAX_MODULATION * deviation_factor, DBM0_DEVIATION * deviation_factor, MAX_DISPLAY);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.0f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.0f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
 
 	nmt->fsk_samples_per_bit = (double)nmt->sender.samplerate / (double)BIT_RATE;
 	nmt->fsk_bits_per_sample = 1.0 / nmt->fsk_samples_per_bit;
