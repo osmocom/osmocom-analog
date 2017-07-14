@@ -207,8 +207,12 @@ void display_iq(float *samples, int length)
 								putchar('+');
 							else
 								putchar('-');
-						} else
-							putchar('|');
+						} else {
+							if (j == 0 || j == SIZE - 1)
+								putchar('+');
+							else
+								putchar('|');
+						}
 					} else if (screen[j][k] == ':' || screen[j][k] == '.' || screen[j][k] == '\'') {
 						/* red / green plot */
 						if (overdrive[j][k]) {
