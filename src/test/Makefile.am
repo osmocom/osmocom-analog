@@ -7,7 +7,8 @@ noinst_PROGRAMS = \
 	test_emphasis \
 	test_dms \
 	test_sms \
-	test_performance
+	test_performance \
+	test_hagelbarger
 
 test_filter_SOURCES = test_filter.c dummy.c
 
@@ -76,4 +77,11 @@ test_performance_LDADD = \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
 	-lm
+
+test_hagelbarger_SOURCES = \
+	$(top_builddir)/src/nmt/hagelbarger.c \
+	test_hagelbarger.c
+
+test_hagelbarger_LDADD = \
+	$(COMMON_LA)
 

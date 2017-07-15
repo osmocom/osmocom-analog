@@ -27,6 +27,7 @@
 #include "../common/timer.h"
 #include "nmt.h"
 #include "frame.h"
+#include "hagelbarger.h"
 
 uint64_t nmt_encode_channel(int channel, int power)
 {
@@ -969,161 +970,25 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 	}
 }
 
-/* encode digits of a frame to 166 bits */
-static void encode_digits(const uint8_t *digits, char *bits)
-{
-	uint8_t x[64];
-	int i;
-	uint8_t digit;
-
-	/* copy bit sync and frame sync */
-	memcpy(bits, "10101010101010111100010010", 26);
-	bits += 26;
-
-	for (i = 0; i < 16; i++) {
-		digit = *digits++;
-		x[(i << 2) + 0] = (digit >> 3) & 1;
-		x[(i << 2) + 1] = (digit >> 2) & 1;
-		x[(i << 2) + 2] = (digit >> 1) & 1;
-		x[(i << 2) + 3] = digit & 1;
-	}
-
-	/* parity check bits */
-	for (i = 0; i < 3; i++)
-		bits[(i << 1)] = '1' - x[i];
-	for (i = 3; i < 64; i++)
-		bits[(i << 1)] = '1' - (x[i] ^ x[i - 3]);
-	for (i = 64; i < 67; i++)
-		bits[(i << 1)] = '1' - x[i - 3];
-	for (i = 67; i < 70; i++)
-		bits[(i << 1)] = '1';
-
-	/* information bits */
-	for (i = 0; i < 6; i++)
-		bits[(i << 1) + 1] = '0';
-	for (i = 6; i < 70; i++)
-		bits[(i << 1) + 1] = x[i - 6] + '0';
-}
-
-/* debug parity check */
-//#define DEBUG_DECODE
-
-/* decode digits from 140 bits (not including sync) */
-// FIXME: do real convolutional decoding
-static int decode_digits(uint8_t *digits, const char *bits, int callack)
-{
-	uint8_t x[64];
-	int i, short_frame = 0;
-
-	/* information bits */
-	for (i = 0; i < 6; i++) {
-		if (bits[(i << 1) + 1] != '0') {
-#ifdef DEBUG_DECODE
-			PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad at information bit #%d.\n", i);
-#endif
-			return -1;
-		}
-	}
-	for (i = 6; i < 70; i++)
-		x[i - 6] = bits[(i << 1) + 1] - '0';
-
-	/* create digits */
-	for (i = 0; i < 16; i++) {
-		digits[i] = ((x[(i << 2) + 0] & 1) << 3)
-			  | ((x[(i << 2) + 1] & 1) << 2)
-			  | ((x[(i << 2) + 2] & 1) << 1)
-			  | (x[(i << 2) + 3] & 1);
-	}
-
-	/* check for short frame */
-	if (callack && (digits[3] == 1 || digits[3] == 15)) {
-		digits[13] = 0;
-		digits[14] = 0;
-		digits[15] = 0;
-		short_frame = 1;
-#ifdef DEBUG_DECODE
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Received shortened frame\n");
-#endif
-	}
-
-	/* parity check bits */
-	for (i = 0; i < 3; i++) {
-		if (bits[(i << 1)] != '1' - x[i]) {
-#ifdef DEBUG_DECODE
-			PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad at parity bit #%d.\n", i);
-#endif
-			return -1;
-		}
-	}
-#if 0
-#warning this check does not work, since we get error even at bit 50
-	for (i = 3; i < ((short_frame) ? 52 : 64); i++) {
-		if (bits[(i << 1)] != '1' - (x[i] ^ x[i - 3])) {
-			/* According to NMT Doc 450-3, bits after Y(114) shall
-			 * be omitted for short frame. It would make more sense
-			 * to stop after Y(116), so only the last three digits
-			 * are omitted and not the last bit of digit13 also.
-			 * Tests have showed that it we receive correctly up to
-			 * Y(116), but we ignore an error, if only up to Y(114) 
-			 * is received.
-			 */
-			if (short_frame && i == 51) {
-				PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad after bit Y(114), ignoring.\n");
-				digits[13] = 0;
-				break;
-			}
-#ifdef DEBUG_DECODE
-			PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad at parity bit #%d.\n", i);
-#endif
-			return -1;
-		}
-	}
-#endif
-	/* Tests showed corrupt frame at parity #50 (i == 50)
-	 * We just ignore whatever we receive after 48 bits of checksum.
-	 * This is not the correct approach, but in case of a corrupt
-	 * frame 10.a, we would drop it, if it failes later checks.
-	 */
-	for (i = 3; i < ((short_frame) ? 48 : 64); i++) {
-		if (bits[(i << 1)] != '1' - (x[i] ^ x[i - 3])) {
-#ifdef DEBUG_DECODE
-			PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad at parity bit #%d.\n", i);
-#endif
-			return -1;
-		}
-	}
-	if (short_frame)
-		return 0;
-	for (i = 64; i < 67; i++) {
-		if (bits[(i << 1)] != '1' - x[i - 3]) {
-#ifdef DEBUG_DECODE
-			PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad at parity bit #%d.\n", i);
-#endif
-			return -1;
-		}
-	}
-	for (i = 67; i < 70; i++) {
-		if (bits[(i << 1)] != '1') {
-#ifdef DEBUG_DECODE
-			PDEBUG(DFRAME, DEBUG_DEBUG, "Frame bad at parity bit #%d.\n", i);
-#endif
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
 /* encode frame to bits
  * debug can be turned on or off
  */
 const char *encode_frame(frame_t *frame, int debug)
 {
-	uint8_t digits[16];
+	uint8_t digits[16], message[9], code[18];
 	static char bits[166];
+	int i;
 
 	assemble_frame(frame, digits, debug);
-	encode_digits(digits, bits);
+
+	/* hagelbarger code */
+	message[8] = 0x00;
+	for (i = 0; i < 8; i++)
+		message[i] = (digits[i * 2] << 4) | digits[i * 2 + 1];
+	hagelbarger_encode(message, code, 72);
+	memcpy(bits, "10101010101010111100010010", 26);
+	for (i = 0; i < 140; i++)
+		bits[i + 26] = ((code[i / 8] >> (7 - (i & 7))) & 1) + '0';
 
 	return bits;
 }
@@ -1131,12 +996,19 @@ const char *encode_frame(frame_t *frame, int debug)
 /* decode bits to frame */
 int decode_frame(frame_t *frame, const char *bits, enum nmt_direction direction, int callack)
 {
-	uint8_t digits[16];
-	int rc;
+	uint8_t digits[16], message[8], code[19];
+	int i;
 
-	rc = decode_digits(digits, bits, callack);
-	if (rc < 0)
-		return rc;
+	/* hagelbarger code */
+	memset(code, 0x00, sizeof(code));
+	for (i = 0; i < 140; i++)
+		code[i / 8] |= (bits[i] & 1) << (7 - (i & 7));
+	hagelbarger_decode(code, message, 64);
+	for (i = 0; i < 8; i++) {
+		digits[i * 2] = message[i] >> 4;
+		digits[i * 2 + 1] = message[i] & 0x0f;
+	}
+
 	disassemble_frame(frame, digits, direction, callack);
 
 	return 0;

@@ -829,15 +829,21 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 		/* max digits received */
 		if (len + 1 == sizeof(nmt->dialing))
 			break;
-		/* received odd digit, but be already have odd number of digits */
 		if ((len & 1)) {
-			if (nmt->rx_frame_count > 1)
+			/* received odd digit, but be already have odd number of digits */
+			if (nmt->rx_frame_count > 1) /* we lost even digit */
 				goto missing_digit;
 			break;
-		} else if (len) {
-			if (nmt->rx_frame_count > 3)
+		} else if (len) { /* complain only after first digit */
+			/* received odd digit, and we have even number of digits */
+			if (nmt->rx_frame_count > 3) /* we lost even digit */
 				goto missing_digit;
 		}
+		if ((frame->digit >> 12) != 0x00) /* digit 0x0 0x0, x, x, x */
+			goto not_right_position;
+		if (((frame->digit >> 8) & 0xf) != ((frame->digit >> 4) & 0xf)
+		 || ((frame->digit >> 4) & 0xf) != (frame->digit & 0xf))
+			goto not_consistent_digit;
 		nmt->dialing[len] = nmt_value2digit(frame->digit);
 		nmt->dialing[len + 1] = '\0';
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (odd)  digit %c.\n", nmt->dialing[len]);
@@ -857,15 +863,24 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 		/* max digits received */
 		if (len + 1 == sizeof(nmt->dialing))
 			break;
-		/* received odd digit, but be already have odd number of digits */
+		/* received even digit, but no digit yet, so we lost first odd digit */
+		if (!len)
+			goto missing_digit;
 		if (!(len & 1)) {
-			if (len && nmt->rx_frame_count > 1)
+			/* received even digit, but be already have even number of digits */
+			if (nmt->rx_frame_count > 1) /* we lost odd digit */
 				goto missing_digit;
 			break;
 		} else {
-			if (nmt->rx_frame_count > 3)
+			/* received even digit, and we have odd number of digits */
+			if (nmt->rx_frame_count > 3) /* we lost odd digit */
 				goto missing_digit;
 		}
+		if ((frame->digit >> 12) != 0xff) /* digit 0xf 0xf, x, x, x */
+			goto not_right_position;
+		if (((frame->digit >> 8) & 0xf) != ((frame->digit >> 4) & 0xf)
+		 || ((frame->digit >> 4) & 0xf) != (frame->digit & 0xf))
+			goto not_consistent_digit;
 		nmt->dialing[len] = nmt_value2digit(frame->digit);
 		nmt->dialing[len + 1] = '\0';
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (even) digit %c.\n", nmt->dialing[len]);
@@ -906,6 +921,15 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 missing_digit:
 	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Missing digit, aborting.\n");
 	nmt_release(nmt);
+	return;
+
+not_right_position:
+	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
+	return;
+
+not_consistent_digit:
+	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
+	return;
 }
 
 static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
@@ -1102,6 +1126,13 @@ static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
+		if (((frame->line_signal >> 16) & 0xf) != ((frame->line_signal >> 12) & 0xf)
+		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
+		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
+		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
 		if ((frame->line_signal & 0xf) != 12)
 			break;
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received acknowledge to autoanswer.\n");
@@ -1153,6 +1184,13 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
+		if (((frame->line_signal >> 16) & 0xf) != ((frame->line_signal >> 12) & 0xf)
+		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
+		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
+		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
 		if ((frame->line_signal & 0xf) != 14)
 			break;
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received 'answer' from phone.\n");
@@ -1240,6 +1278,13 @@ static void rx_mt_release(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
+		if (((frame->line_signal >> 16) & 0xf) != ((frame->line_signal >> 12) & 0xf)
+		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
+		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
+		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
 		if ((frame->line_signal & 0xf) != 1)
 			break;
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received release guard.\n");
@@ -1312,6 +1357,13 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
+		if (((frame->line_signal >> 16) & 0xf) != ((frame->line_signal >> 12) & 0xf)
+		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
+		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
+		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
 		switch ((frame->line_signal & 0xf)) {
 		case 5:
 			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Register Recall is not supported.\n");
@@ -1344,6 +1396,15 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		if ((nmt->mft_num & 1))
 			break;
+		if ((frame->digit >> 12) != 0x00) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
+		if (((frame->digit >> 8) & 0xf) != ((frame->digit >> 4) & 0xf)
+		 || ((frame->digit >> 4) & 0xf) != (frame->digit & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
 		digit = nmt_value2digit(frame->digit);
 		dtmf_set_tone(&nmt->dtmf, digit);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (odd)  digit %c.\n", digit);
@@ -1358,6 +1419,15 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!(nmt->mft_num & 1))
 			break;
+		if ((frame->digit >> 12) != 0xff) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
+		if (((frame->digit >> 8) & 0xf) != ((frame->digit >> 4) & 0xf)
+		 || ((frame->digit >> 4) & 0xf) != (frame->digit & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
+			break;
+		}
 		digit = nmt_value2digit(frame->digit);
 		dtmf_set_tone(&nmt->dtmf, digit);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (even) digit %c.\n", digit);
@@ -1431,6 +1501,13 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 			return;
 		if (!match_subscriber(nmt->trans, &frame))
 			return;
+		if (((frame.line_signal >> 16) & 0xf) != ((frame.line_signal >> 12) & 0xf)
+		 || ((frame.line_signal >> 12) & 0xf) != ((frame.line_signal >> 8) & 0xf)
+		 || ((frame.line_signal >> 8) & 0xf) != ((frame.line_signal >> 4) & 0xf)
+		 || ((frame.line_signal >> 4) & 0xf) != (frame.line_signal & 0xf)) {
+			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			return;
+		}
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received clearing by mobile phone in state %s.\n", nmt_state_name(nmt->state));
 		nmt_new_state(nmt, STATE_MO_RELEASE);
 		nmt->tx_frame_count = 0;
