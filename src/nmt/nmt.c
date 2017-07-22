@@ -119,7 +119,7 @@ void nmt_display_status(void)
 	display_status_start();
 	for (sender = sender_head; sender; sender = sender->next) {
 		nmt = (nmt_t *) sender;
-		display_status_channel(nmt->sender.kanal, chan_type_short_name(nmt->sysinfo.chan_type), nmt_state_name(nmt->state));
+		display_status_channel(nmt->sender.kanal, chan_type_short_name(nmt->sysinfo.system, nmt->sysinfo.chan_type), nmt_state_name(nmt->state));
 		if (nmt->trans)
 			display_status_subscriber(nmt->trans->subscriber.number, NULL);
 	}
@@ -136,32 +136,41 @@ static void nmt_new_state(nmt_t *nmt, enum nmt_state new_state)
 }
 
 static struct nmt_channels {
+	int system;
 	enum nmt_chan_type chan_type;
 	const char *short_name;
 	const char *long_name;
 } nmt_channels[] = {
-	{ CHAN_TYPE_CC,		"CC",	"calling channel (incomming calls)" },
-	{ CHAN_TYPE_TC,		"TC",	"traffic channel (outgoing calls)" },
-	{ CHAN_TYPE_CC_TC,	"CC/TC","combined calling & traffic channel (both way calls)" },
-	{ CHAN_TYPE_TEST,	"TEST",	"test channel" },
-	{ 0, NULL, NULL }
+	{ 0,	CHAN_TYPE_CC,		"CC",	"calling channel (incomming calls)" },
+	{ 900,	CHAN_TYPE_CCA,		"CCA",	"calling channel for group A mobiles with odd secret key (incomming calls)" },
+	{ 900,	CHAN_TYPE_CCB,		"CCB",	"calling channel for group B mobiles with even secret key (incomming calls)" },
+	{ 0,	CHAN_TYPE_TC,		"TC",	"traffic channel (outgoing calls)" },
+	{ 900,	CHAN_TYPE_AC_TC,	"AC/TC","combined access & traffic channel (outgoing calls)" },
+	{ 0,	CHAN_TYPE_CC_TC,	"CC/TC","combined calling & traffic channel (both way calls)" },
+	{ 0,	CHAN_TYPE_TEST,	"TEST",	"test channel" },
+	{ 0,	0, NULL, NULL }
 };
 
-void nmt_channel_list(void)
+void nmt_channel_list(int nmt_system)
 {
 	int i;
 
 	printf("Type\tDescription\n");
 	printf("------------------------------------------------------------------------\n");
-	for (i = 0; nmt_channels[i].long_name; i++)
+	for (i = 0; nmt_channels[i].long_name; i++) {
+		if (nmt_channels[i].system != 0 && nmt_channels[i].system != nmt_system)
+			continue;
 		printf("%s\t%s\n", nmt_channels[i].short_name, nmt_channels[i].long_name);
+	}
 }
 
-int nmt_channel_by_short_name(const char *short_name)
+int nmt_channel_by_short_name(int nmt_system, const char *short_name)
 {
 	int i;
 
 	for (i = 0; nmt_channels[i].short_name; i++) {
+		if (nmt_channels[i].system != 0 && nmt_channels[i].system != nmt_system)
+			continue;
 		if (!strcasecmp(nmt_channels[i].short_name, short_name))
 			return nmt_channels[i].chan_type;
 	}
@@ -169,11 +178,13 @@ int nmt_channel_by_short_name(const char *short_name)
 	return -1;
 }
 
-const char *chan_type_short_name(enum nmt_chan_type chan_type)
+const char *chan_type_short_name(int nmt_system, enum nmt_chan_type chan_type)
 {
 	int i;
 
 	for (i = 0; nmt_channels[i].short_name; i++) {
+		if (nmt_channels[i].system != 0 && nmt_channels[i].system != nmt_system)
+			continue;
 		if (nmt_channels[i].chan_type == chan_type)
 			return nmt_channels[i].short_name;
 	}
@@ -181,11 +192,13 @@ const char *chan_type_short_name(enum nmt_chan_type chan_type)
 	return "invalid";
 }
 
-const char *chan_type_long_name(enum nmt_chan_type chan_type)
+const char *chan_type_long_name(int nmt_system, enum nmt_chan_type chan_type)
 {
 	int i;
 
 	for (i = 0; nmt_channels[i].long_name; i++) {
+		if (nmt_channels[i].system != 0 && nmt_channels[i].system != nmt_system)
+			continue;
 		if (nmt_channels[i].chan_type == chan_type)
 			return nmt_channels[i].long_name;
 	}
@@ -231,7 +244,7 @@ static int dialstring2number(const char *dialstring, char *ms_country, char *ms_
 static void nmt_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
+int nmt_create(int nmt_system, const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -240,7 +253,7 @@ int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, c
 	int tested;
 
 	/* check channel matching and set deviation factor */
-	if (nmt_channel2freq(country, channel, 0, &deviation_factor, &scandinavia, &tested) == 0.0) {
+	if (nmt_channel2freq(nmt_system, country, channel, 0, &deviation_factor, &scandinavia, &tested) == 0.0) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "Channel number %d invalid, use '-Y list' to get a list of available channels.\n", channel);
 		return -EINVAL;
 	}
@@ -270,13 +283,14 @@ int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, c
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, channel, nmt_channel2freq(country, channel, 0, NULL, NULL, NULL), nmt_channel2freq(country, channel, 1, NULL, NULL, NULL), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, 0, PAGING_SIGNAL_NONE);
+	rc = sender_create(&nmt->sender, channel, nmt_channel2freq(nmt_system, country, channel, 0, NULL, NULL, NULL), nmt_channel2freq(nmt_system, country, channel, 1, NULL, NULL, NULL), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, 0, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
 	timer_init(&nmt->timer, nmt_timeout, nmt);
+	nmt->sysinfo.system = nmt_system;
 	nmt->sysinfo.chan_type = chan_type;
 	nmt->sysinfo.ms_power = ms_power;
 	nmt->sysinfo.traffic_area = traffic_area;
@@ -310,9 +324,9 @@ int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, c
 	/* go into idle state */
 	nmt_go_idle(nmt);
 
-	PDEBUG(DNMT, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
-	if (nmt_long_name_by_short_name(country))
-	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using country '%s'\n", nmt_long_name_by_short_name(country));
+	PDEBUG(DNMT, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(nmt_system, chan_type), chan_type_long_name(nmt_system, chan_type));
+	if (nmt_long_name_by_short_name(nmt_system, country))
+	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using country '%s'\n", nmt_long_name_by_short_name(nmt_system, country));
 	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, traffic_area & 0xf, area_no);
 	if (nmt->supervisory)
 		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using supervisory signal %d\n", supervisory);
@@ -327,32 +341,64 @@ error:
 	return rc;
 }
 
-void nmt_check_channels(void)
+void nmt_check_channels(int __attribute__((unused)) nmt_system)
 {
 	sender_t *sender;
 	nmt_t *nmt;
-	int cc = 0, tc = 0;
+	int cca = 0, ccb = 0, tc = 0;
+	int note = 0;
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		nmt = (nmt_t *) sender;
-		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC)
-			cc = 1;
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC) {
+			cca = 1;
+			ccb = 1;
+		}
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_CCA)
+			cca = 1;
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_CCB)
+			ccb = 1;
 		if (nmt->sysinfo.chan_type == CHAN_TYPE_TC)
 			tc = 1;
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_AC_TC)
+			tc = 1;
 		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC_TC) {
-			cc = 1;
+			cca = 1;
+			ccb = 1;
 			tc = 1;
 		}
 	}
-	if (cc && !tc) {
+	if ((cca || ccb) && !tc) {
+		if (note)
+			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling only.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+		note = 1;
 	}
-	if (tc && !cc) {
+	if (tc && !(cca || ccb)) {
+		if (note)
+			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible on this channel.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+		note = 1;
+	}
+	if (cca && !ccb) {
+		if (note)
+			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling of MS type A only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the MS type B phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC' or 'CC/TC' instead!\n");
+		note = 1;
+	}
+	if (!cca && ccb) {
+		if (note)
+			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling of MS type B only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the MS type A phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC' or 'CC/TC' instead!\n");
+		note = 1;
 	}
 }
 
@@ -378,7 +424,7 @@ void nmt_go_idle(nmt_t *nmt)
 	dms_reset(nmt);
 	sms_reset(nmt);
 
-	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.chan_type));
+	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.system, nmt->sysinfo.chan_type));
 	nmt->trans = NULL; /* remove transaction before state change, so status is shown correctly */
 	nmt_new_state(nmt, STATE_IDLE);
 	nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
@@ -446,8 +492,8 @@ static int match_channel(nmt_t *nmt, frame_t *frame)
 	int channel, power;
 
 	/* check channel match */
-	nmt_decode_channel(frame->channel_no, &channel, &power);
-	if (channel != nmt->sender.kanal) {
+	nmt_decode_channel(nmt->sysinfo.system, frame->channel_no, &channel, &power);
+	if ((channel & 0x3ff) != (nmt->sender.kanal & 0x3ff)) {
 		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Frame for different channel %d received, ignoring.\n", channel);
 		return 0;
 	}
@@ -505,8 +551,8 @@ static void tx_ident(nmt_t *nmt, frame_t *frame)
 	transaction_t *trans = nmt->trans;
 
 	frame->mt = NMT_MESSAGE_3b;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->ms_country = nmt_digits2value(&trans->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
 	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
@@ -517,8 +563,8 @@ static void set_line_signal(nmt_t *nmt, frame_t *frame, uint8_t signal)
 	transaction_t *trans = nmt->trans;
 
 	frame->mt = NMT_MESSAGE_5a;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->ms_country = nmt_digits2value(&trans->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
 	frame->line_signal = (signal << 8) | (signal << 4) | signal;
@@ -547,8 +593,8 @@ static int encode_a_number(nmt_t *nmt, frame_t *frame, int index, enum number_ty
 
 	/* encode */
 	frame->mt = NMT_MESSAGE_8;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->seq_number = index;
 	if (index == 0) {
 		/* number type */
@@ -614,8 +660,17 @@ static void tx_idle(nmt_t *nmt, frame_t *frame)
 	case CHAN_TYPE_CC:
 		frame->mt = NMT_MESSAGE_1a;
 		break;
+	case CHAN_TYPE_CCA:
+		frame->mt = NMT_MESSAGE_1a_a;
+		break;
+	case CHAN_TYPE_CCB:
+		frame->mt = NMT_MESSAGE_1a_b;
+		break;
 	case CHAN_TYPE_TC:
 		frame->mt = NMT_MESSAGE_4;
+		break;
+	case CHAN_TYPE_AC_TC:
+		frame->mt = NMT_MESSAGE_4b;
 		break;
 	case CHAN_TYPE_CC_TC:
 		frame->mt = NMT_MESSAGE_1b;
@@ -624,8 +679,8 @@ static void tx_idle(nmt_t *nmt, frame_t *frame)
 		frame->mt = NMT_MESSAGE_30;
 		break;
 	}
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
 }
 
@@ -663,6 +718,7 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 		break;
 	case NMT_MESSAGE_10b: /* seizure from ordinary MS */
 	case NMT_MESSAGE_12: /* seizure from coinbox MS */
+	case NMT_MESSAGE_10a: /* access signal */
 		if (!match_channel(nmt, frame))
 			break;
 		if (!match_area(nmt, frame))
@@ -973,8 +1029,8 @@ static void tx_mt_paging(nmt_t *nmt, frame_t *frame)
 	transaction_t *trans = nmt->trans;
 
 	frame->mt = NMT_MESSAGE_2a;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->ms_country = nmt_digits2value(&trans->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
 	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
@@ -1004,6 +1060,7 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 
 	switch (frame->mt) {
 	case NMT_MESSAGE_10a: /* call acknowledgment */
+	case NMT_MESSAGE_10d: /* call ack on alternate type */
 		if (!match_channel(nmt, frame))
 			break;
 		if (!match_subscriber(trans, frame))
@@ -1034,11 +1091,11 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 	transaction_t *trans = nmt->trans;
 
 	frame->mt = NMT_MESSAGE_2b;
-	frame->channel_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt->sysinfo.traffic_area;
+	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->ms_country = nmt_digits2value(&trans->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
-	frame->tc_no = nmt_encode_channel(nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->tc_no = nmt_encode_tc(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
 	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send channel activation to mobile.\n");
 	nmt_new_state(nmt, STATE_MT_IDENT);
 }
@@ -1477,7 +1534,7 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 
 	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0, quality * 100.0);
 
-	rc = decode_frame(&frame, bits, (nmt->sender.loopback) ? MTX_TO_XX : XX_TO_MTX, (nmt->state == STATE_MT_PAGING));
+	rc = decode_frame(nmt->sysinfo.system, &frame, bits, (nmt->sender.loopback) ? MTX_TO_XX : XX_TO_MTX, (nmt->state == STATE_MT_PAGING));
 	if (rc < 0) {
 		PDEBUG_CHAN(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received invalid frame.\n");
 		return;
@@ -1661,7 +1718,7 @@ const char *nmt_get_frame(nmt_t *nmt)
 	if (nmt->dsp_mode != DSP_MODE_FRAME)
 		return NULL;
 
-	bits = encode_frame(&frame, debug);
+	bits = encode_frame(nmt->sysinfo.system, &frame, debug);
 
 	PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
 	return bits;

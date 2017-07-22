@@ -29,39 +29,114 @@
 #include "frame.h"
 #include "hagelbarger.h"
 
-uint64_t nmt_encode_channel(int channel, int power)
+uint64_t nmt_encode_channel(int nmt_system, int channel, int power)
 {
 	uint64_t value = 0;
 
-	if (channel >= 200) {
-		value |= 0x800;
-		channel -= 200;
+	if (nmt_system == 450) {
+		if (channel >= 200) {
+			value |= 0x800;
+			channel -= 200;
+		}
+		if (channel >= 100) {
+			value |= 0x100;
+			channel -= 100;
+		}
+		value |= channel % 10;
+		value |= (channel / 10) << 4;
+		value |= power << 9;
+	} else {
+		/* interleaved channels are indicated in traffic area */
+		if (value > 1000)
+			value -= 1000;
+		value |= channel;
+		/* if channel >= 512, set upper bit */
+		if (value & 0x200)
+			value = value - 0x200 + 0x800;
+		value |= power << 9;
 	}
-	if (channel >= 100) {
-		value |= 0x100;
-		channel -= 100;
-	}
-	value |= channel % 10;
-	value |= (channel / 10) << 4;
-	value |= power << 9;
 
 	return value;
 }
 
-int nmt_decode_channel(uint64_t value, int *channel, int *power)
+int nmt_decode_channel(int nmt_system, uint64_t value, int *channel, int *power)
 {
-	if ((value & 0x00f) > 0x009)
-		return -1;
-	if ((value & 0x0f0) > 0x090)
-		return -1;
+	if (nmt_system == 450) {
+		if ((value & 0x00f) > 0x009)
+			return -1;
+		if ((value & 0x0f0) > 0x090)
+			return -1;
 
-	*channel = (value & 0x00f) +
-		((value & 0x0f0) >> 4) * 10 +
-		((value & 0x100) >> 8) * 100 +
-		((value & 0x800) >> 11) * 200;
+		*channel = (value & 0x00f) +
+			((value & 0x0f0) >> 4) * 10 +
+			((value & 0x100) >> 8) * 100 +
+			((value & 0x800) >> 11) * 200;
+	} else {
+		*channel = (value & 0x1ff) +
+			((value & 0x800) >> 2);
+	}
 	*power = (value & 0x600) >> 9;
 
 	return 0;
+}
+
+uint64_t nmt_encode_tc(int nmt_system, int channel, int power)
+{
+	uint64_t value = 0;
+
+	if (nmt_system == 450) {
+		if (channel >= 200) {
+			value |= 0x800;
+			channel -= 200;
+		}
+		if (channel >= 100) {
+			value |= 0x100;
+			channel -= 100;
+		}
+		value |= channel % 10;
+		value |= (channel / 10) << 4;
+		value |= power << 9;
+	} else {
+		value = channel;
+	}
+
+	return value;
+}
+
+static int nmt_decode_tc(int nmt_system, uint64_t value, int *channel, int *power)
+{
+	if (nmt_system == 450) {
+		if ((value & 0x00f) > 0x009)
+			return -1;
+		if ((value & 0x0f0) > 0x090)
+			return -1;
+
+		*channel = (value & 0x00f) +
+			((value & 0x0f0) >> 4) * 10 +
+			((value & 0x100) >> 8) * 100 +
+			((value & 0x800) >> 11) * 200;
+		*power = (value & 0x600) >> 9;
+	} else {
+		*channel = value & 0x3ff;
+	}
+
+	return 0;
+}
+
+uint64_t nmt_encode_traffic_area(int nmt_system, int channel, uint8_t traffic_area)
+{
+	uint64_t value = 0;
+
+	if (nmt_system == 450) {
+		value = traffic_area;
+	} else {
+		/* upper bit is used for indication of interleaved channel */
+		value = traffic_area & 0x7f;
+		if (channel > 1000)
+			value |= 0x80;
+	}
+
+	return value;
 }
 
 void nmt_value2digits(uint64_t value, char *digits, int num)
@@ -214,24 +289,30 @@ static struct nmt_frame {
 } nmt_frame[] = {
 /*	  Define		Digits              Dir.       Prefix	Nr.	Description */
 	{ NMT_MESSAGE_1a,	"NNNPYYHHHHHHHHHH", MTX_TO_MS, 12,	"1a",	"Calling channel indication" },
+	{ NMT_MESSAGE_1a_a,	"NNNPYYHHHHHHHHHH", MTX_TO_MS, 11,	"1a'",	"Calling channel indication (for MS group A)" },
+	{ NMT_MESSAGE_1a_b,	"NNNPYYHHHHHHHHHH", MTX_TO_MS, 13,	"1a''",	"Calling channel indication (for MS group B)" },
 	{ NMT_MESSAGE_1b,	"NNNPYYHHHHHHHHHH", MTX_TO_MS, 4,	"1b",	"Combined calling and traffic channel indication" },
 	{ NMT_MESSAGE_2a,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2a",	"Call to mobile subscriber on calling channel" },
 	{ NMT_MESSAGE_2b,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 12,	"2b",	"Traffic channel allocation on calling channel" },
 	{ NMT_MESSAGE_2c,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2c",	"Queueing information to MS with priority on calling channel" },
 	{ NMT_MESSAGE_2d,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2d",	"Traffic channel scanning order on calling channel" },
+	{ NMT_MESSAGE_2e,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 4,	"2e",	"Alternative type of call to MS on combinded CC/TC" },
 	{ NMT_MESSAGE_2f,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2f",	"Queuing information to ordinary MS" },
 	{ NMT_MESSAGE_3a,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 5,	"3a",	"Traffic channel allocation on traffic channel" },
 	{ NMT_MESSAGE_3b,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 5,	"3b",	"Identity request on traffic channel" },
 	{ NMT_MESSAGE_3c,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 9,	"3c",	"Traffic channel allocation on traffic channel, short procedure" },
+	{ NMT_MESSAGE_3d,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 7,	"3d",	"Traffic channel allocation on access channel" },
 	{ NMT_MESSAGE_4,	"NNNPYYJJJJJJJHHH", MTX_TO_MS, 3,	"4",	"Free traffic channel indication" },
+	{ NMT_MESSAGE_4b,	"NNNPYYJJJJJJJHHH", MTX_TO_MS, 7,	"4b",	"Access channel indication" },
 	{ NMT_MESSAGE_5a,	"NNNPYYZXXXXXXLLL", MTX_TO_MS, 6,	"5a",	"Line signal" },
 	{ NMT_MESSAGE_5b,	"NNNPYYZXXXXXXLQQ", MTX_TO_MS, 6,	"5b",	"Line signal: Answer to coin-box" },
 	{ NMT_MESSAGE_6,	"JJJPJJJJJJJJJJJJ", MTX_TO_XX, 0,	"6",	"Idle frame" },
 	{ NMT_MESSAGE_7,	"NNNPYYCCCCCCCJJJ", MTX_TO_MS, 8,	"7",	"Authentication request" },
 	{ NMT_MESSAGE_8,	"NNNPYYMHHHHHHHWW", MTX_TO_MS, 1,	"8",	"A-subscriber number" },
-	{ NMT_MESSAGE_10a,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgment from MS on calling channel (shortened frame)" },
+	{ NMT_MESSAGE_10a,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgment from MS on calling channel and access on access channel (shortened frame)" },
 	{ NMT_MESSAGE_10b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 1,	"10b",	"Seizure from ordinary MS and identity on traffic channel" },
 	{ NMT_MESSAGE_10c,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 6,	"10c",	"Seizure and identity from called MS on traffic channel" },
+	{ NMT_MESSAGE_10d,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 6,	"10c",	"Call acknowledgement from MS on the alternative type of call on combined CC/TC (shortened frame)" },
 	{ NMT_MESSAGE_11a,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 14,	"11a",	"Roaming updating seizure and identity on traffic channel" },
 	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgment on calling channel from MS with priority (shortened frame)" },
 	{ NMT_MESSAGE_12,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 11,	"12",	"Seizure from coin-box on traffic channel" },
@@ -288,16 +369,58 @@ static const char *param_hex(uint64_t value, int __attribute__((unused)) ndigits
 	return result;
 }
 
-static const char *param_channel_no(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+static const char *param_channel_no_450(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 	int rc, channel, power;
 
-	rc = nmt_decode_channel(value, &channel, &power);
+	rc = nmt_decode_channel(450, value, &channel, &power);
 	if (rc < 0)
 		sprintf(result, "invalid(%" PRIu64 ")", value);
 	else
 		sprintf(result, "channel=%d power=%d", channel, power);
+
+	return result;
+}
+
+static const char *param_channel_no_900(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+{
+	static char result[32];
+	int rc, channel, power;
+
+	rc = nmt_decode_channel(900, value, &channel, &power);
+	if (rc < 0)
+		sprintf(result, "invalid(%" PRIu64 ")", value);
+	else
+		sprintf(result, "channel=%d power=%d", channel, power);
+
+	return result;
+}
+
+static const char *param_tc_no_450(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+{
+	static char result[32];
+	int rc, channel, power;
+
+	rc = nmt_decode_tc(450, value, &channel, &power);
+	if (rc < 0)
+		sprintf(result, "invalid(%" PRIu64 ")", value);
+	else
+		sprintf(result, "channel=%d power=%d", channel, power);
+
+	return result;
+}
+
+static const char *param_tc_no_900(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+{
+	static char result[32];
+	int rc, channel;
+
+	rc = nmt_decode_tc(900, value, &channel, NULL);
+	if (rc < 0)
+		sprintf(result, "invalid(%" PRIu64 ")", value);
+	else
+		sprintf(result, "channel=%d", channel);
 
 	return result;
 }
@@ -310,7 +433,7 @@ static const char *param_country(uint64_t value, int __attribute__((unused)) ndi
 	case 0:
 		return "no additional info";
 	case 1:
-		return "Netherlands / Luxemburg / Malaysia";
+		return "Netherlands / Luxemburg / Malaysia / Switzerland";
 	case 2:
 		return "Belgium";
 	case 4:
@@ -347,12 +470,24 @@ static const char *param_number(uint64_t value, int ndigits, enum nmt_direction 
 	return result;
 }
 
-static const char *param_ta(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
+static const char *param_ta_450(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[32];
 
 	nmt_value2digits(value, result, ndigits);
 	result[ndigits] = '\0';
+
+	return result;
+}
+
+static const char *param_ta_900(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+{
+	static char result[32];
+
+	if ((value & 0x80))
+		sprintf(result, "%" PRIu64 " (Channel No. + 1000)", value & 0x7f);
+	else
+		sprintf(result, "%" PRIu64, value);
 
 	return result;
 }
@@ -477,34 +612,38 @@ static const char *param_password(uint64_t value, int ndigits, enum nmt_directio
 }
 
 static struct nmt_parameter {
+	int system;
 	char digit;
 	const char *description;
 	const char *(*decoder)(uint64_t value, int ndigits, enum nmt_direction direction);
 } nmt_parameter[] = {
-	{ 'N',	"Channel No.",			param_channel_no },
-	{ 'n',	"TC No.",			param_channel_no },
-	{ 'Y',	"Traffic area",			param_ta },
-	{ 'Z',	"Mobile subscriber country",	param_country },
-	{ 'X',	"Mobile subscriber No.",	param_number },
-	{ 'Q',	"Tariff class",			param_integer },
-	{ 'L',	"Line signal",			param_line_signal },
-	{ 'S',	"Digit signals",		param_digit },
-	{ 'J',	"Idle information",		param_hex },
-	{ 'A',	"Channel activation",		param_hex },
-	{ 'V',	"Management order",		param_hex },
-	{ 'r',	"Measurement results",		param_hex },
-	{ 'P',	"Prefix",			param_integer },
-	{ 'f',	"Supervisory signal",		param_supervisory },
-	{ 'K',	"Mobile subscriber password",	param_password },
-	{ 'T',	"Area info",			param_hex },
-	{ 'H',	"Additional info",		param_hex },
-	{ 'C',	"Random challenge",		param_hex },
-	{ 'R',	"Signed response",		param_hex },
-	{ 'l',	"Limit strength evaluation",	param_hex },
-	{ 'c',	"c",				param_hex },
-	{ 'M',	"Sequence Number",		param_integer },
-	{ 'W',	"Checksum",			param_hex },
-	{ 0,	NULL,				NULL }
+	{ 450,	'N',	"Channel No.",			param_channel_no_450 },
+	{ 900,	'N',	"Channel No.",			param_channel_no_900 },
+	{ 450,	'n',	"TC No.",			param_tc_no_450 },
+	{ 900,	'n',	"TC No.",			param_tc_no_900 },
+	{ 450,	'Y',	"Traffic area",			param_ta_450 },
+	{ 900,	'Y',	"Traffic area",			param_ta_900 },
+	{ 0,	'Z',	"Mobile subscriber country",	param_country },
+	{ 0,	'X',	"Mobile subscriber No.",	param_number },
+	{ 0,	'Q',	"Tariff class",			param_integer },
+	{ 0,	'L',	"Line signal",			param_line_signal },
+	{ 0,	'S',	"Digit signals",		param_digit },
+	{ 0,	'J',	"Idle information",		param_hex },
+	{ 0,	'A',	"Channel activation",		param_hex },
+	{ 0,	'V',	"Management order",		param_hex },
+	{ 0,	'r',	"Measurement results",		param_hex },
+	{ 0,	'P',	"Prefix",			param_integer },
+	{ 0,	'f',	"Supervisory signal",		param_supervisory },
+	{ 0,	'K',	"Mobile subscriber password",	param_password },
+	{ 0,	'T',	"Area info",			param_hex },
+	{ 0,	'H',	"Additional info",		param_hex },
+	{ 0,	'C',	"Random challenge",		param_hex },
+	{ 0,	'R',	"Signed response",		param_hex },
+	{ 0,	'l',	"Limit strength evaluation",	param_hex },
+	{ 0,	'c',	"c",				param_hex },
+	{ 0,	'M',	"Sequence Number",		param_integer },
+	{ 0,	'W',	"Checksum",			param_hex },
+	{ 0,	0,	NULL,				NULL }
 };
 
 /* Depending on P-value, direction and additional info, frame index (used for
@@ -582,7 +721,16 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 				return NMT_MESSAGE_21b;
 			return NMT_MESSAGE_4;
 		case 4:
-			return NMT_MESSAGE_1b;
+			switch((digits[13] << 8) + (digits[14] << 4) + digits[15]) {
+			case 0x3f3:
+			case 0x3f4:
+			case 0x3f5:
+			case 0x3f6:
+			case 0x000:
+				return NMT_MESSAGE_2e;
+			default:
+				return NMT_MESSAGE_1b;
+			}
 		case 5:
 			if (digits[6] == 15)
 				return NMT_MESSAGE_21c;
@@ -601,7 +749,16 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 				return NMT_MESSAGE_5b;
 			return NMT_MESSAGE_5a;
 		case 7:
-			break;
+			switch((digits[13] << 8) + (digits[14] << 4) + digits[15]) {
+			case 0x3f3:
+			case 0x3f4:
+			case 0x3f5:
+			case 0x3f6:
+			case 0x000:
+				return NMT_MESSAGE_4b;
+			default:
+				return NMT_MESSAGE_3d;
+			}
 		case 8:
 			return NMT_MESSAGE_7;
 		case 9:
@@ -609,7 +766,7 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 		case 10:
 			return NMT_MESSAGE_30;
 		case 11:
-			break;
+			return NMT_MESSAGE_1a_a;
 		case 12:
 			/* no subscriber */
 			if (digits[6] == 0)
@@ -637,7 +794,7 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 				return NMT_MESSAGE_2b;
 			}
 		case 13:
-			break;
+			return NMT_MESSAGE_1a_b;
 		case 14:
 			if (digits[13] != 15)
 				break;
@@ -697,7 +854,7 @@ int init_frame(void)
 }
 
 /* decode 16 digits frame */
-static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_direction direction, int callack)
+static void disassemble_frame(int nmt_system, frame_t *frame, const uint8_t *digits, enum nmt_direction direction, int callack)
 {
 	enum nmt_mt mt;
 	int i, j, ndigits;
@@ -804,6 +961,8 @@ static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_di
 		}
 		if (debuglevel <= DEBUG_DEBUG) {
 			for (j = 0; nmt_parameter[j].digit; j++) {
+				if (nmt_parameter[j].system != 0 && nmt_parameter[j].system != nmt_system)
+					continue;
 				if (nmt_parameter[j].digit == digit) {
 					PDEBUG(DFRAME, DEBUG_DEBUG, " %c: %s\n", digit, nmt_parameter[j].decoder(value, ndigits, direction));
 				}
@@ -823,7 +982,7 @@ static void disassemble_frame(frame_t *frame, const uint8_t *digits, enum nmt_di
 }
 
 /* encode 16 digits frame */
-static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
+static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int debug)
 {
 	enum nmt_mt mt;
 	int i, j;
@@ -956,6 +1115,8 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 				i++;
 			}
 			for (j = 0; nmt_parameter[j].digit; j++) {
+				if (nmt_parameter[j].system != 0 && nmt_parameter[j].system != nmt_system)
+					continue;
 				if (nmt_parameter[j].digit == digit) {
 					PDEBUG(DFRAME, DEBUG_DEBUG, " %c: %s\n", digit, nmt_parameter[j].decoder(value, ndigits, direction));
 				}
@@ -973,13 +1134,13 @@ static void assemble_frame(frame_t *frame, uint8_t *digits, int debug)
 /* encode frame to bits
  * debug can be turned on or off
  */
-const char *encode_frame(frame_t *frame, int debug)
+const char *encode_frame(int nmt_system, frame_t *frame, int debug)
 {
 	uint8_t digits[16], message[9], code[18];
 	static char bits[166];
 	int i;
 
-	assemble_frame(frame, digits, debug);
+	assemble_frame(nmt_system, frame, digits, debug);
 
 	/* hagelbarger code */
 	message[8] = 0x00;
@@ -994,7 +1155,7 @@ const char *encode_frame(frame_t *frame, int debug)
 }
 
 /* decode bits to frame */
-int decode_frame(frame_t *frame, const char *bits, enum nmt_direction direction, int callack)
+int decode_frame(int nmt_system, frame_t *frame, const char *bits, enum nmt_direction direction, int callack)
 {
 	uint8_t digits[16], message[8], code[19];
 	int i;
@@ -1009,7 +1170,7 @@ int decode_frame(frame_t *frame, const char *bits, enum nmt_direction direction,
 		digits[i * 2 + 1] = message[i] & 0x0f;
 	}
 
-	disassemble_frame(frame, digits, direction, callack);
+	disassemble_frame(nmt_system, frame, digits, direction, callack);
 
 	return 0;
 }

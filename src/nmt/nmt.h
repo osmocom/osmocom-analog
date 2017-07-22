@@ -17,7 +17,10 @@ enum dsp_mode {
 
 enum nmt_chan_type {
 	CHAN_TYPE_CC,		/* calling channel */
+	CHAN_TYPE_CCA,		/* calling channel type A mobiles */
+	CHAN_TYPE_CCB,		/* calling channel type B mobiles */
 	CHAN_TYPE_TC,		/* traffic channel */
+	CHAN_TYPE_AC_TC,	/* combined AC + TC */
 	CHAN_TYPE_CC_TC,	/* combined CC + TC */
 	CHAN_TYPE_TEST,		/* test channel */
 };
@@ -59,6 +62,7 @@ enum nmt_direction {
 };
 
 typedef struct nmt_sysinfo {
+	int			system;			/* 450 or 900 */
 	enum nmt_chan_type	chan_type;		/* channel type */
 	int			ms_power;		/* ms power level 3 = full */
 	uint8_t			traffic_area;		/* two digits traffic area, encoded as YY */
@@ -137,12 +141,12 @@ typedef struct nmt {
 	struct timer		sms_timer;
 } nmt_t;
 
-void nmt_channel_list(void);
-int nmt_channel_by_short_name(const char *short_name);
-const char *chan_type_short_name(enum nmt_chan_type chan_type);
-const char *chan_type_long_name(enum nmt_chan_type chan_type);
-int nmt_create(const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
-void nmt_check_channels(void);
+void nmt_channel_list(int nmt_system);
+int nmt_channel_by_short_name(int nmt_system, const char *short_name);
+const char *chan_type_short_name(int nmt_system, enum nmt_chan_type chan_type);
+const char *chan_type_long_name(int nmt_system, enum nmt_chan_type chan_type);
+int nmt_create(int nmt_system, const char *country, int channel, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
+void nmt_check_channels(int nmt_system);
 void nmt_destroy(sender_t *sender);
 void nmt_go_idle(nmt_t *nmt);
 void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);

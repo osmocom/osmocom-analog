@@ -32,7 +32,7 @@ struct nmt_frequency {
 };
 
 /* channel allocation used in scandinavian countries */
-static struct nmt_frequency frq_scandinavia[] = {
+static struct nmt_frequency frq_450_scandinavia[] = {
 	{   1,	180,	463.000,	0.025,	1.0,	10.0,	1 },
 	{   181,200,	462.500,	0.025,	1.0,	10.0,	1 },
 	{   201,380,	463.0125,	0.025,	1.0,	10.0,	1 },
@@ -40,45 +40,69 @@ static struct nmt_frequency frq_scandinavia[] = {
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
+static struct nmt_frequency frq_900_scandinavia[] = {
+	{   1,	1000,	935.0125,	0.025,	1.0,	45.0,	0 },
+	{   1025,2023,	935.025,	0.025,	1.0,	45.0,	0 },
+	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
+};
+
 /* channel allocation used in Netherlands, Luxemburg, Belgium */
-static struct nmt_frequency frq_nl_l_b[] = {
+static struct nmt_frequency frq_450_nl_l_b[] = {
 	{   1,	222,	461.310,	0.020,	0.8,	10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
+static struct nmt_frequency frq_900_nl[] = {
+	{   1,	1000,	935.0125,	0.025,	1.0,	45.0,	0 },
+	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
+};
+
 /* channel allocation used in Malaysia */
-static struct nmt_frequency frq_mal[] = {
+static struct nmt_frequency frq_450_mal[] = {
 	{   1,	180,	462.000,	0.025,	1.0,	10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
 /* channel allocation used in Thailand, Indonesia */
-static struct nmt_frequency frq_t_ri[] = {
+static struct nmt_frequency frq_450_t_ri[] = {
 	{   1,	224,	489.000,	0.020,	0.8,	10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
 /* channel allocation used in Spain */
-static struct nmt_frequency frq_e[] = {
+static struct nmt_frequency frq_450_e[] = {
 	{   1,	180,	464.325,	0.025,	1.0,	10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
 /* channel allocation used in Austria */
-static struct nmt_frequency frq_a[] = {
+static struct nmt_frequency frq_450_a[] = {
 	{   1,	180,	465.730,	-0.020,	0.8,	10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
 /* channel allocation used in Czech Republic and Slovakia */
-static struct nmt_frequency frq_cz_sk[] = {
+static struct nmt_frequency frq_450_cz_sk[] = {
 	{   1,	222,	465.730,	-0.020,	0.8,	10.0,	0 },
+	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
+};
+
+/* channel allocation used in Turkey */
+static struct nmt_frequency frq_900_tr[] = {
+	{   1,	180,	461.500,	0.025,	1.0,	10.0,	0 },
+	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
+};
+
+/* channel allocation used in France */
+static struct nmt_frequency frq_900_f[] = {
+	{   1,	540,	430.050,	0.025,	1.0,	-10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
 /* country selector */
 static struct nmt_country {
-	int tested;
+	int system;				/* 450 or 900 */
+	int tested;				/* tested with a real phone */
 	int y;					/* country code of traffic area */
 	int first_ta, last_ta;			/* range of used traffic areas */
 	const char *short_name;
@@ -86,47 +110,64 @@ static struct nmt_country {
 	const char *provider_name;
 	struct nmt_frequency *nmt_frequency;	/* list of frequency allocations */
 } nmt_country[] = {
-	{ 1, 5, 1,9,	"DK",	"Denmark",		"Tele Danmark Mobile",		frq_scandinavia },
-	{ 1, 6, 1,9,	"SE",	"Sweden",		"Telia Mobitel",		frq_scandinavia },
-	{ 1, 7, 1,9,	"NO",	"Norway",		"Telenor Mobil",		frq_scandinavia },
-	{ 1, 8, 1,9,	"FI",	"Finland",		"Telecom Finland",		frq_scandinavia },
-	{ 1, 8, 1,9,	"IS",	"Iceland",		"Post & Telecom",		frq_scandinavia },
-	{ 1, 5, 1,9,	"FO",	"Faroe Island",		"Faroese Telecom",		frq_scandinavia },
-	{ 1, 7, 1,9,	"EE",	"Estonia",		"Eesti Mobiiltelefon",		frq_scandinavia },
-	{ 1, 5, 1,9,	"LV",	"Latvia",		"Latvian Mobile Telephone",	frq_scandinavia },
-	{ 1, 8, 1,9,	"LT",	"Lithuania",		"COMLIET",			frq_scandinavia },
-	{ 1, 6, 1,9,	"BY",	"Belarus",		"Belcel",			frq_scandinavia },
-	{ 1, 5, 1,9,	"MO",	"OSS/Moscow",		"Moscow Cellular Comm.",	frq_scandinavia },
-	{ 1, 6, 1,9,	"STP",	"OSS/St Petersburg",	"Delta Telecom",		frq_scandinavia },
-	{ 1, 6, 1,9,	"STP",	"OSS/Leningrads Dist.",	"Delta Telecom",		frq_scandinavia },
-	{ 1, 7, 1,9,	"CAR",	"OSS/Carelian Rep.",	"Telecom Finland",		frq_scandinavia },
-	{ 1, 5, 1,9,	"MUR",	"OSS/Murmansk",		"Telecom Finland",		frq_scandinavia },
-	{ 1, 5, 1,9,	"LED",	"OSS/Leningrads Dist.",	"Telecom Finland",		frq_scandinavia },
-	{ 1, 5, 1,9,	"KAL",	"Kaliningrad",		"Telecom Finland",		frq_scandinavia },
-	{ 1, 7, 1,9,	"PL",	"Poland",		"CENTERTEL",			frq_scandinavia },
-	{ 1, 6, 1,9,	"BG",	"Bulgaria",		"MOBIFON",			frq_scandinavia },
-	{ 1, 5, 1,9,	"RO",	"Romania",		"Telefonica Romania",		frq_scandinavia },
-	{ 1, 6, 1,9,	"UA",	"Ukraine",		"Ukraine Mobile Comm.",		frq_scandinavia },
-	{ 1, 1, 1,9,	"RU1",	"",			"",				frq_scandinavia },
-	{ 1, 2, 1,9,	"RU2",	"",			"",				frq_scandinavia },
-	{ 1, 3, 1,9,	"RU3",	"",			"",				frq_scandinavia },
-	{ 1, 4, 1,9,	"RU4",	"",			"",				frq_scandinavia },
-	{ 1, 1, 1,9,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_nl_l_b },
-	{ 1, 1, 15,15,	"L",	"Luxemburg",		"Enterprise des P&T Luxembourg",frq_nl_l_b },
-	{ 1, 2, 1,9,	"B",	"Belgium",		"Belgacom Mobile",		frq_nl_l_b },
-	{ 1, 7, 1,9,	"CZ",	"Czech Republic",	"Eurotel Prague",		frq_cz_sk },
-	{ 1, 6, 1,9,	"SK",	"Slovakia",		"Eurotel Bratislava",		frq_cz_sk },
+	/* 450 */
+	{ 450, 1, 5, 1,9,	"DK",	"Denmark",		"Tele Danmark Mobile",		frq_450_scandinavia },
+	{ 450, 1, 6, 1,9,	"SE",	"Sweden",		"Telia Mobitel",		frq_450_scandinavia },
+	{ 450, 1, 7, 1,9,	"NO",	"Norway",		"Telenor Mobil",		frq_450_scandinavia },
+	{ 450, 1, 8, 1,9,	"FI",	"Finland",		"Telecom Finland",		frq_450_scandinavia },
+	{ 450, 1, 8, 1,9,	"IS",	"Iceland",		"Post & Telecom",		frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"FO",	"Faroe Island",		"Faroese Telecom",		frq_450_scandinavia },
+	{ 450, 1, 7, 1,9,	"EE",	"Estonia",		"Eesti Mobiiltelefon",		frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"LV",	"Latvia",		"Latvian Mobile Telephone",	frq_450_scandinavia },
+	{ 450, 1, 8, 1,9,	"LT",	"Lithuania",		"COMLIET",			frq_450_scandinavia },
+	{ 450, 1, 6, 1,9,	"BY",	"Belarus",		"Belcel",			frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"MO",	"OSS/Moscow",		"Moscow Cellular Comm.",	frq_450_scandinavia },
+	{ 450, 1, 6, 1,9,	"STP",	"OSS/St Petersburg",	"Delta Telecom",		frq_450_scandinavia },
+	{ 450, 1, 6, 1,9,	"STP",	"OSS/Leningrads Dist.",	"Delta Telecom",		frq_450_scandinavia },
+	{ 450, 1, 7, 1,9,	"CAR",	"OSS/Carelian Rep.",	"Telecom Finland",		frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"MUR",	"OSS/Murmansk",		"Telecom Finland",		frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"LED",	"OSS/Leningrads Dist.",	"Telecom Finland",		frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"KAL",	"Kaliningrad",		"Telecom Finland",		frq_450_scandinavia },
+	{ 450, 1, 7, 1,9,	"PL",	"Poland",		"CENTERTEL",			frq_450_scandinavia },
+	{ 450, 1, 6, 1,9,	"BG",	"Bulgaria",		"MOBIFON",			frq_450_scandinavia },
+	{ 450, 1, 5, 1,9,	"RO",	"Romania",		"Telefonica Romania",		frq_450_scandinavia },
+	{ 450, 1, 6, 1,9,	"UA",	"Ukraine",		"Ukraine Mobile Comm.",		frq_450_scandinavia },
+	{ 450, 1, 1, 1,9,	"RU1",	"",			"",				frq_450_scandinavia },
+	{ 450, 1, 2, 1,9,	"RU2",	"",			"",				frq_450_scandinavia },
+	{ 450, 1, 3, 1,9,	"RU3",	"",			"",				frq_450_scandinavia },
+	{ 450, 1, 4, 1,9,	"RU4",	"",			"",				frq_450_scandinavia },
+	{ 450, 1, 1, 1,9,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_450_nl_l_b },
+	{ 450, 1, 1, 15,15,	"L",	"Luxemburg",		"Enterprise des P&T Luxembourg",frq_450_nl_l_b },
+	{ 450, 1, 2, 1,9,	"B",	"Belgium",		"Belgacom Mobile",		frq_450_nl_l_b },
+	{ 450, 1, 7, 1,9,	"CZ",	"Czech Republic",	"Eurotel Prague",		frq_450_cz_sk },
+	{ 450, 1, 6, 1,9,	"SK",	"Slovakia",		"Eurotel Bratislava",		frq_450_cz_sk },
+	/* 900 */
+	{ 900, 1, 1, 1,9,	"DK",	"Denmark",		"Tele Danmark Mobile",		frq_900_scandinavia },
+	{ 900, 1, 2, 1,9,	"SE",	"Sweden",		"Telia Mobitel",		frq_900_scandinavia },
+	{ 900, 1, 3, 1,9,	"NO",	"Norway",		"Telenor Mobil",		frq_900_scandinavia },
+	{ 900, 1, 4, 1,9,	"FI",	"Finland",		"Telecom Finland",		frq_900_scandinavia },
 	/* untested... */
-	{ 0, 8, 8,8,	"MAL",	"Malaysia",		"Jabatan Telekom Malaysia",	frq_mal },
-	{ 0, 4, 1,9,	"T",	"Thailand",		"Telephone Organization of Thailand",frq_t_ri },
-	{ 0, 8, 1,9,	"E",	"Spain",		"Telefonica Servicios Moviles",	frq_e },
-	{ 0, 8, 1,1,	"RI",	"Indonesia",		"PT Mobisel",			frq_t_ri },
-	{ 0, 0, 1,3,	"A",	"Austria",		"PTV",				frq_a },
-	{ 0, 9, 1,3,	"A2",	"Austria 2",		"PTV",				frq_a },
-	{ 0, 0, 0,0,	NULL,	NULL,			NULL,				NULL }
+	{ 450, 0, 8, 8,8,	"MAL",	"Malaysia",		"Jabatan Telekom Malaysia",	frq_450_mal },
+	{ 450, 0, 4, 1,9,	"T",	"Thailand",		"Telephone Organization of Thailand",frq_450_t_ri },
+	{ 450, 0, 8, 1,9,	"E",	"Spain",		"Telefonica Servicios Moviles",	frq_450_e },
+	{ 450, 0, 8, 1,1,	"RI",	"Indonesia",		"PT Mobisel",			frq_450_t_ri },
+	{ 450, 0, 0, 1,3,	"A",	"Austria",		"PTV",				frq_450_a },
+	{ 450, 0, 9, 1,3,	"A2",	"Austria 2",		"PTV",				frq_450_a },
+	{ 900, 0, 5, 1,9,	"CH",	"Switzerland",		"PTT",				frq_900_scandinavia },
+	{ 900, 0, 6, 1,15,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_900_nl },
+	{ 900, 0, 1, 1,9,	"TR",	"Turkey",		"Turkcell",			frq_900_tr },
+	{ 900, 0, 0, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 1, 1,9,	"F1",	"France (Group 1)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 2, 1,9,	"F2",	"France (Group 2)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 3, 1,9,	"F3",	"France (Group 3)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 4, 1,9,	"F4",	"France (Group 4)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 5, 1,9,	"F5",	"France (Group 5)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 6, 1,9,	"F6",	"France (Group 6)",	"France Telecom",		frq_900_f },
+	{ 900, 0, 7, 1,9,	"F7",	"France (Group 7)",	"France Telecom",		frq_900_f },
+	{ 0,0, 0, 0,0,		NULL,	NULL,			NULL,				NULL }
 };
 
-void nmt_country_list(void)
+void nmt_country_list(int nmt_system)
 {
 	int i, j;
 	int ch_from = 0, ch_to = 0;
@@ -135,6 +176,8 @@ void nmt_country_list(void)
 	printf("TA from\tTA to\tYY Code\tChannels\tShort\tCountry (Provider)\n");
 	printf("--------------------------------------------------------------------------------\n");
 	for (i = 0; nmt_country[i].short_name; i++) {
+		if (nmt_system != nmt_country[i].system)
+			continue;
 		printf("%s,%d\t", nmt_country[i].short_name, nmt_country[i].first_ta);
 		if (nmt_country[i].first_ta != nmt_country[i].last_ta)
 			printf("%s,%d", nmt_country[i].short_name, nmt_country[i].last_ta);
@@ -155,11 +198,13 @@ void nmt_country_list(void)
 	}
 }
 
-int nmt_country_by_short_name(const char *short_name)
+int nmt_country_by_short_name(int nmt_system, const char *short_name)
 {
 	int i;
 
 	for (i = 0; nmt_country[i].short_name; i++) {
+		if (nmt_system != nmt_country[i].system)
+			continue;
 		if (!strcasecmp(nmt_country[i].short_name, short_name))
 			return nmt_country[i].y;
 	}
@@ -167,11 +212,13 @@ int nmt_country_by_short_name(const char *short_name)
 	return -1;
 }
 
-const char *nmt_long_name_by_short_name(const char *short_name)
+const char *nmt_long_name_by_short_name(int nmt_system, const char *short_name)
 {
 	int i;
 
 	for (i = 0; nmt_country[i].short_name; i++) {
+		if (nmt_system != nmt_country[i].system)
+			continue;
 		if (!strcasecmp(nmt_country[i].short_name, short_name))
 			return nmt_country[i].long_name;
 	}
@@ -179,11 +226,13 @@ const char *nmt_long_name_by_short_name(const char *short_name)
 	return NULL;
 }
 
-int nmt_ta_by_short_name(const char *short_name, int ta)
+int nmt_ta_by_short_name(int nmt_system, const char *short_name, int ta)
 {
 	int i;
 
 	for (i = 0; nmt_country[i].short_name; i++) {
+		if (nmt_system != nmt_country[i].system)
+			continue;
 		if (!strcasecmp(nmt_country[i].short_name, short_name) && ta >= nmt_country[i].first_ta && ta <= nmt_country[i].last_ta)
 			return ta;
 	}
@@ -193,12 +242,14 @@ int nmt_ta_by_short_name(const char *short_name, int ta)
 
 /* Convert channel number to frequency number of base station.
    Set 'uplink' to 1 to get frequency of mobile station. */
-double nmt_channel2freq(const char *short_name, int channel, int uplink, double *deviation_factor, int *scandinavia, int *tested)
+double nmt_channel2freq(int nmt_system, const char *short_name, int channel, int uplink, double *deviation_factor, int *scandinavia, int *tested)
 {
 	int i, j;
 	double freq;
 
 	for (i = 0; nmt_country[i].short_name; i++) {
+		if (nmt_system != nmt_country[i].system)
+			continue;
 		if (!strcasecmp(nmt_country[i].short_name, short_name)) {
 			for (j = 0; nmt_country[i].nmt_frequency[j].first_frequency; j++) {
 				if (channel >= nmt_country[i].nmt_frequency[j].first_channel

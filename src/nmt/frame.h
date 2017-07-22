@@ -1,16 +1,21 @@
 
 enum nmt_mt {
 	NMT_MESSAGE_1a = 0,
+	NMT_MESSAGE_1a_a,
+	NMT_MESSAGE_1a_b,
 	NMT_MESSAGE_1b,
 	NMT_MESSAGE_2a,
 	NMT_MESSAGE_2b,
 	NMT_MESSAGE_2c,
 	NMT_MESSAGE_2d,
+	NMT_MESSAGE_2e,
 	NMT_MESSAGE_2f,
 	NMT_MESSAGE_3a,
 	NMT_MESSAGE_3b,
 	NMT_MESSAGE_3c,
+	NMT_MESSAGE_3d,
 	NMT_MESSAGE_4,
+	NMT_MESSAGE_4b,
 	NMT_MESSAGE_5a,
 	NMT_MESSAGE_5b,
 	NMT_MESSAGE_6,
@@ -19,6 +24,7 @@ enum nmt_mt {
 	NMT_MESSAGE_10a,
 	NMT_MESSAGE_10b,
 	NMT_MESSAGE_10c,
+	NMT_MESSAGE_10d,
 	NMT_MESSAGE_11a,
 	NMT_MESSAGE_11b,
 	NMT_MESSAGE_12,
@@ -77,8 +83,10 @@ typedef struct frame {
 
 int init_frame(void);
 
-uint64_t nmt_encode_channel(int channel, int power);
-int nmt_decode_channel(uint64_t value, int *channel, int *power);
+uint64_t nmt_encode_channel(int nmt_system, int channel, int power);
+int nmt_decode_channel(int nmt_system, uint64_t value, int *channel, int *power);
+uint64_t nmt_encode_tc(int nmt_system, int channel, int power);
+uint64_t nmt_encode_traffic_area(int nmt_system, int channel, uint8_t traffic_area);
 void nmt_value2digits(uint64_t value, char *digits, int num);
 uint64_t nmt_digits2value(const char *digits, int num);
 char nmt_value2digit(uint64_t value);
@@ -86,6 +94,6 @@ uint16_t nmt_encode_area_no(uint8_t area_no);
 
 const char *nmt_frame_name(enum nmt_mt mt);
 
-const char *encode_frame(frame_t *frame, int debug);
-int decode_frame(frame_t *frame, const char *bits, enum nmt_direction direction, int callack);
+const char *encode_frame(int nmt_system, frame_t *frame, int debug);
+int decode_frame(int nmt_system, frame_t *frame, const char *bits, enum nmt_direction direction, int callack);
 

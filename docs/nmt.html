@@ -541,22 +541,21 @@ Setup of a base station
 
 <p>
 Before running the base station, you need to select a network.
+The network is defined by the system (NMT-450 or NMT-900) and the Traffic Area (TA).
+The NMT-450 is default.
 To make the phone access the network, it needs to have the same network selected.
 Check out what networks are available:
 </p>
 
 <pre>
 
-# nmt -Y list
-TA      Short   Country (Provider)
-------------------------------------------------------------------------
-5       DK      Denmark (Tele Danmark Mobile)
-6       SE      Sweden (Telia Mobitel)
-7       NO      Norway (Telenor Mobil)
-8       FI      Finland (Telecom Finland)
-8       IS      Iceland (Post &amp; Telecom)
-5       FO      Faroe Island (Faroese Telecom)
-7       EE      Estonia (Eesti Mobiiltelefon)
+# nmt -N 450 -Y list
+TA from TA to   YY Code Channels        Short   Country (Provider)
+--------------------------------------------------------------------------------
+DK,1    DK,9    51..59  1-399           Denmark (Tele Danmark Mobile)
+SE,1    SE,9    61..69  1-399           Sweden (Telia Mobitel)
+NO,1    NO,9    71..79  1-399           Norway (Telenor Mobil)
+FI,1    FI,9    81..89  1-399           Finland (Telecom Finland)
 ...
 
 </pre>
