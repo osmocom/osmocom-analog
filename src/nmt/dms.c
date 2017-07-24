@@ -25,7 +25,6 @@
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "nmt.h"
-#include "dsp.h"
 
 #define MUTE_DURATION		0.300	/* 200ms, and about 95ms for the frame itself */
 
@@ -288,7 +287,8 @@ static void dms_encode_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *
 #endif
 
 	/* render wave form */
-	dms->frame_length = fsk_render_frame(nmt, frame, 127, dms->frame_spl);
+	test_dms_frame(frame, 127); // used by test program
+	dms->frame_length = ffsk_render_frame(&nmt->ffsk, frame, 127, dms->frame_spl);
 	dms->frame_valid = 1;
 	dms->frame_pos = 0;
 	if (dms->frame_length > dms->frame_size) {
@@ -335,7 +335,8 @@ static void dms_encode_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 #endif
 
 	/* render wave form */
-	dms->frame_length = fsk_render_frame(nmt, frame, 77, dms->frame_spl);
+	test_dms_frame(frame, 77); // used by test program
+	dms->frame_length = ffsk_render_frame(&nmt->ffsk, frame, 77, dms->frame_spl);
 	dms->frame_valid = 1;
 	dms->frame_pos = 0;
 	if (dms->frame_length > dms->frame_size) {
@@ -662,7 +663,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 		memset(dms->rx_frame_quality, 0, sizeof(dms->rx_frame_quality));
 
 		/* set muting of receive path */
-		nmt->fsk_filter_mute = (int)((double)nmt->sender.samplerate * MUTE_DURATION);
+		nmt->rx_mute = (int)((double)nmt->sender.samplerate * MUTE_DURATION);
 		return;
 	}
 

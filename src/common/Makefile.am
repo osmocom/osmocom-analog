@@ -24,6 +24,7 @@ libcommon_a_SOURCES = \
 	compandor.c \
 	fft.c \
 	fm_modulation.c \
+	ffsk.c \
 	sender.c \
 	display_wave.c \
 	display_status.c \

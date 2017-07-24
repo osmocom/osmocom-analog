@@ -59,21 +59,14 @@
 #define COMPANDOR_0DB		1.0	/* A level of 0dBm (1.0) shall be unaccected */
 #define TX_PEAK_FSK		(4200.0 / 1800.0 * 1000.0 / DBM0_DEVIATION)
 #define TX_PEAK_SUPER		(300.0 / 4015.0 * 1000.0 / DBM0_DEVIATION)
+#define BIT_RATE		1200
 #define MAX_DISPLAY		1.4	/* something above dBm0 */
-#define BIT_RATE		1200	/* baud rate */
-#define FILTER_STEPS		0.1	/* step every 1/12000 sec */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
 #define TX_PEAK_DIALTONE	0.5	/* dial tone peak FIXME */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
 #define SUPER_LOST_COUNT	4	/* number of measures to loose supervisory signal */
 #define SUPER_DETECT_COUNT	6	/* number of measures to detect supervisory signal */
 #define MUTE_DURATION		0.280	/* a tiny bit more than two frames */
-
-/* two signaling tones */
-static double fsk_freq[2] = {
-	1800.0,
-	1200.0,
-};
 
 /* two supervisory tones */
 static double super_freq[5] = {
@@ -85,47 +78,38 @@ static double super_freq[5] = {
 };
 
 /* table for fast sine generation */
-static sample_t dsp_tone_bit[2][2][65536]; /* polarity, bit, phase */
 static sample_t dsp_sine_super[65536];
 static sample_t dsp_sine_dialtone[65536];
 
-/* global init for FSK */
+/* global init for FFSK */
 void dsp_init(void)
 {
 	int i;
 	double s;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for supervisory signal.\n");
+	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for supervisory signal and dial tone.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
 		/* supervisor sine */
 		dsp_sine_super[i] = s * TX_PEAK_SUPER;
 		/* dialtone sine */
 		dsp_sine_dialtone[i] = s * TX_PEAK_DIALTONE;
-		/* bit(1) 1 cycle */
-		dsp_tone_bit[0][1][i] = s * TX_PEAK_FSK;
-		dsp_tone_bit[1][1][i] = -s * TX_PEAK_FSK;
-		/* bit(0) 1.5 cycles */
-		s = sin((double)i / 65536.0 * 3.0 * PI);
-		dsp_tone_bit[0][0][i] = s * TX_PEAK_FSK;
-		dsp_tone_bit[1][0][i] = -s * TX_PEAK_FSK;
 	}
+
+	ffsk_global_init(TX_PEAK_FSK);
 }
+
+static void fsk_receive_bit(void *inst, int bit, double quality, double level);
 
 /* Init FSK of transceiver */
 int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 {
 	sample_t *spl;
+	double samples_per_bit;
 	int i;
 
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
 	init_compandor(&nmt->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
-
-	/* a symbol rate of 1200 Hz, times check interval of FILTER_STEPS */
-	if (nmt->sender.samplerate < (double)BIT_RATE / (double)FILTER_STEPS) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 12000 Hz to process FSK+supervisory signal.\n");
-		return -EINVAL;
-	}
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
@@ -135,22 +119,16 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
 
-	nmt->fsk_samples_per_bit = (double)nmt->sender.samplerate / (double)BIT_RATE;
-	nmt->fsk_bits_per_sample = 1.0 / nmt->fsk_samples_per_bit;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Use %.4f samples for full bit duration @ %d.\n", nmt->fsk_samples_per_bit, nmt->sender.samplerate);
-
-	/* allocate ring buffers, one bit duration */
-	nmt->fsk_filter_size = floor(nmt->fsk_samples_per_bit); /* buffer holds one bit (rounded down) */
-	spl = calloc(1, nmt->fsk_filter_size * sizeof(*spl));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
+	/* init ffsk */
+	if (ffsk_init(&nmt->ffsk, nmt, fsk_receive_bit, nmt->sender.kanal, nmt->sender.samplerate) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FFSK init failed!\n");
+		return -EINVAL;
 	}
-	nmt->fsk_filter_spl = spl;
-	nmt->fsk_filter_bit = -1;
 
 	/* allocate transmit buffer for a complete frame, add 10 to be safe */
-	nmt->frame_size = 166.0 * (double)nmt->fsk_samples_per_bit + 10;
+
+	samples_per_bit = (double)nmt->sender.samplerate / (double)BIT_RATE;
+	nmt->frame_size = 166.0 * samples_per_bit + 10;
 	spl = calloc(nmt->frame_size, sizeof(*spl));
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
@@ -159,7 +137,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	nmt->frame_spl = spl;
 
 	/* allocate DMS transmit buffer for a complete frame, add 10 to be safe */
-	nmt->dms.frame_size = 127.0 * (double)nmt->fsk_samples_per_bit + 10;
+	nmt->dms.frame_size = 127.0 * samples_per_bit + 10;
 	spl = calloc(nmt->dms.frame_size, sizeof(*spl));
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
@@ -175,12 +153,6 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 		return -ENOMEM;
 	}
 	nmt->super_filter_spl = spl;
-
-	/* count symbols */
-	for (i = 0; i < 2; i++)
-		audio_goertzel_init(&nmt->fsk_goertzel[i], fsk_freq[i], nmt->sender.samplerate);
-	nmt->fsk_phaseshift65536 = 65536.0 / nmt->fsk_samples_per_bit;
-	PDEBUG(DDSP, DEBUG_DEBUG, "fsk_phaseshift = %.4f\n", nmt->fsk_phaseshift65536);
 
 	/* count supervidory tones */
 	for (i = 0; i < 5; i++) {
@@ -207,6 +179,8 @@ void dsp_cleanup_sender(nmt_t *nmt)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
 
+	ffsk_cleanup(&nmt->ffsk);
+
 	if (nmt->frame_spl) {
 		free(nmt->frame_spl);
 		nmt->frame_spl = NULL;
@@ -215,10 +189,6 @@ void dsp_cleanup_sender(nmt_t *nmt)
 		free(nmt->dms.frame_spl);
 		nmt->dms.frame_spl = NULL;
 	}
-	if (nmt->fsk_filter_spl) {
-		free(nmt->fsk_filter_spl);
-		nmt->fsk_filter_spl = NULL;
-	}
 	if (nmt->super_filter_spl) {
 		free(nmt->super_filter_spl);
 		nmt->super_filter_spl = NULL;
@@ -226,29 +196,38 @@ void dsp_cleanup_sender(nmt_t *nmt)
 }
 
 /* Check for SYNC bits, then collect data bits */
-static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
+static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 {
-	double frames_elapsed;
+	nmt_t *nmt = (nmt_t *)inst;
+	uint64_t frames_elapsed;
 	int i;
 
+	/* normalize FSK level */
+	level /= TX_PEAK_FSK;
+
+	nmt->rx_bits_count++;
+
+	if (nmt->dms_call)
+		fsk_receive_bit_dms(nmt, bit, quality, level);
+
 //	printf("bit=%d quality=%.4f\n", bit, quality);
-	if (!nmt->fsk_filter_in_sync) {
-		nmt->fsk_filter_sync = (nmt->fsk_filter_sync << 1) | bit;
+	if (!nmt->rx_in_sync) {
+		nmt->rx_sync = (nmt->rx_sync << 1) | bit;
 
 		/* level and quality */
-		nmt->fsk_filter_level[nmt->fsk_filter_count & 0xff] = level;
-		nmt->fsk_filter_quality[nmt->fsk_filter_count & 0xff] = quality;
-		nmt->fsk_filter_count++;
+		nmt->rx_level[nmt->rx_count & 0xff] = level;
+		nmt->rx_quality[nmt->rx_count & 0xff] = quality;
+		nmt->rx_count++;
 
 		/* check if pattern 1010111100010010 matches */
-		if (nmt->fsk_filter_sync != 0xaf12)
+		if (nmt->rx_sync != 0xaf12)
 			return;
 
 		/* average level and quality */
 		level = quality = 0;
 		for (i = 0; i < 16; i++) {
-			level += nmt->fsk_filter_level[(nmt->fsk_filter_count - 1 - i) & 0xff];
-			quality += nmt->fsk_filter_quality[(nmt->fsk_filter_count - 1 - i) & 0xff];
+			level += nmt->rx_level[(nmt->rx_count - 1 - i) & 0xff];
+			quality += nmt->rx_quality[(nmt->rx_count - 1 - i) & 0xff];
 		}
 		level /= 16.0; quality /= 16.0;
 //		printf("sync (level = %.2f, quality = %.2f\n", level, quality);
@@ -262,114 +241,38 @@ static void fsk_receive_bit(nmt_t *nmt, int bit, double quality, double level)
 		nmt->rx_bits_count_current = nmt->rx_bits_count - 26.0;
 
 		/* rest sync register */
-		nmt->fsk_filter_sync = 0;
-		nmt->fsk_filter_in_sync = 1;
-		nmt->fsk_filter_count = 0;
+		nmt->rx_sync = 0;
+		nmt->rx_in_sync = 1;
+		nmt->rx_count = 0;
 
 		/* set muting of receive path */
-		nmt->fsk_filter_mute = (int)((double)nmt->sender.samplerate * MUTE_DURATION);
+		nmt->rx_mute = (int)((double)nmt->sender.samplerate * MUTE_DURATION);
 		return;
 	}
 
 	/* read bits */
-	nmt->fsk_filter_frame[nmt->fsk_filter_count] = bit + '0';
-	nmt->fsk_filter_level[nmt->fsk_filter_count] = level;
-	nmt->fsk_filter_quality[nmt->fsk_filter_count] = quality;
-	if (++nmt->fsk_filter_count != 140)
+	nmt->rx_frame[nmt->rx_count] = bit + '0';
+	nmt->rx_level[nmt->rx_count] = level;
+	nmt->rx_quality[nmt->rx_count] = quality;
+	if (++nmt->rx_count != 140)
 		return;
 
 	/* end of frame */
-	nmt->fsk_filter_frame[140] = '\0';
-	nmt->fsk_filter_in_sync = 0;
+	nmt->rx_frame[140] = '\0';
+	nmt->rx_in_sync = 0;
 
 	/* average level and quality */
 	level = quality = 0;
 	for (i = 0; i < 140; i++) {
-		level += nmt->fsk_filter_level[i];
-		quality += nmt->fsk_filter_quality[i];
+		level += nmt->rx_level[i];
+		quality += nmt->rx_quality[i];
 	}
 	level /= 140.0; quality /= 140.0;
 
 	/* send telegramm */
-	frames_elapsed = (nmt->rx_bits_count_current - nmt->rx_bits_count_last) / 166.0;
+	frames_elapsed = (nmt->rx_bits_count_current - nmt->rx_bits_count_last + 83) / 166; /* round to nearest frame */
 	/* convert level so that received level at TX_PEAK_FSK results in 1.0 (100%) */
-	nmt_receive_frame(nmt, nmt->fsk_filter_frame, quality, level, frames_elapsed);
-}
-
-//#define DEBUG_MODULATOR
-//#define DEBUG_FILTER
-//#define DEBUG_QUALITY
-
-/* Filter one chunk of audio an detect tone, quality and loss of signal.
- * The chunk is a window of 1/1200s. This window slides over audio stream
- * and is processed every 1/12000s. (one step) */
-static inline void fsk_decode_step(nmt_t *nmt, int pos)
-{
-	double level, result[2], softbit, quality;
-	int max;
-	sample_t *spl;
-	int bit;
-	
-	max = nmt->fsk_filter_size;
-	spl = nmt->fsk_filter_spl;
-
-	/* count time in bits */
-	nmt->rx_bits_count += FILTER_STEPS;
-
-	level = audio_level(spl, max);
-	/* limit level to prevent division by zero */
-	if (level < 0.001)
-		level = 0.001;
-
-	audio_goertzel(nmt->fsk_goertzel, spl, max, pos, result, 2);
-
-	/* calculate soft bit from both frequencies */
-	softbit = (result[1] / level - result[0] / level + 1.0) / 2.0;
-//printf("%.3f: %.3f\n", level, softbit);
-	/* scale it, since both filters overlap by some percent */
-#define MIN_QUALITY 0.33
-	softbit = (softbit - MIN_QUALITY) / (1.0 - MIN_QUALITY - MIN_QUALITY);
-#ifdef DEBUG_FILTER
-//	printf("|%s", debug_amplitude(result[0]/level));
-//	printf("|%s| low=%.3f high=%.3f level=%d\n", debug_amplitude(result[1]/level), result[0]/level, result[1]/level, (int)level);
-	printf("|%s| softbit=%.3f\n", debug_amplitude(softbit), softbit);
-#endif
-	if (softbit > 1)
-		softbit = 1;
-	if (softbit < 0)
-		softbit = 0;
-	if (softbit > 0.5)
-		bit = 1;
-	else
-		bit = 0;
-
-	if (nmt->fsk_filter_bit != bit) {
-		/* if we have a bit change, reset sample counter to one half bit duration */
-#ifdef DEBUG_FILTER
-		puts("bit change");
-#endif
-		nmt->fsk_filter_bit = bit;
-		nmt->fsk_filter_sample = 5;
-	} else if (--nmt->fsk_filter_sample == 0) {
-		/* if sample counter bit reaches 0, we reset sample counter to one bit duration */
-#ifdef DEBUG_FILTER
-		puts("sample");
-#endif
-//		quality = result[bit] / level;
-		if (softbit > 0.5)
-			quality = softbit * 2.0 - 1.0;
-		else
-			quality = 1.0 - softbit * 2.0;
-#ifdef DEBUG_QUALITY
-		printf("|%s| quality=%.2f ", debug_amplitude(softbit), quality);
-		printf("|%s|\n", debug_amplitude(quality));
-#endif
-		/* adjust level, so a peak level becomes 100% */
-		fsk_receive_bit(nmt, bit, quality, level / 0.63662 / TX_PEAK_FSK);
-		if (nmt->dms_call)
-			fsk_receive_bit_dms(nmt, bit, quality, level / 0.63662 / TX_PEAK_FSK);
-		nmt->fsk_filter_sample = 10;
-	}
+	nmt_receive_frame(nmt, nmt->rx_frame, quality, level, frames_elapsed);
 }
 
 /* compare supervisory signal against noise floor on 3900 Hz */
@@ -425,7 +328,6 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	nmt_t *nmt = (nmt_t *) sender;
 	sample_t *spl;
 	int max, pos;
-	double step, bps;
 	int i;
 
 	/* write received samples to decode buffer */
@@ -442,34 +344,15 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	}
 	nmt->super_filter_pos = pos;
 
-	/* write received samples to decode buffer */
-	max = nmt->fsk_filter_size;
-	pos = nmt->fsk_filter_pos;
-	step = nmt->fsk_filter_step;
-	bps = nmt->fsk_bits_per_sample;
-	spl = nmt->fsk_filter_spl;
+	ffsk_receive(&nmt->ffsk, samples, length);
+
+	/* muting audio while receiving frame */
 	for (i = 0; i < length; i++) {
-#ifdef DEBUG_MODULATOR
-		printf("|%s|\n", debug_amplitude((double)samples[i] / TX_PEAK_FSK / 2.0));
-#endif
-		/* write into ring buffer */
-		spl[pos++] = samples[i];
-		if (pos == max)
-			pos = 0;
-		/* muting audio while receiving frame */
-		if (nmt->fsk_filter_mute && !nmt->sender.loopback) {
+		if (nmt->rx_mute && !nmt->sender.loopback) {
 			samples[i] = 0;
-			nmt->fsk_filter_mute--;
-		}
-		/* if 1/10th of a bit duration is reached, decode buffer */
-		step += bps;
-		if (step >= FILTER_STEPS) {
-			step -= FILTER_STEPS;
-			fsk_decode_step(nmt, pos);
+			nmt->rx_mute--;
 		}
 	}
-	nmt->fsk_filter_step = step;
-	nmt->fsk_filter_pos = pos;
 
 	if ((nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF)
 	 && nmt->trans && nmt->trans->callref) {
@@ -494,35 +377,6 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 		nmt->sender.rxbuf_pos = 0;
 }
 
-/* render frame */
-int fsk_render_frame(nmt_t *nmt, const char *frame, int length, sample_t *sample)
-{
-	int bit, polarity;
-        double phaseshift, phase;
-	int count = 0, i;
-
-	polarity = nmt->fsk_polarity;
-	phaseshift = nmt->fsk_phaseshift65536;
-	phase = nmt->fsk_phase65536;
-	for (i = 0; i < length; i++) {
-		bit = (frame[i] == '1');
-		do {
-			*sample++ = dsp_tone_bit[polarity][bit][(uint16_t)phase];
-			count++;
-			phase += phaseshift;
-		} while (phase < 65536.0);
-		phase -= 65536.0;
-		/* flip polarity when we have 1.5 sine waves */
-		if (bit == 0)
-			polarity = 1 - polarity;
-	}
-	nmt->fsk_phase65536 = phase;
-	nmt->fsk_polarity = polarity;
-
-	/* return number of samples created for frame */
-	return count;
-}
-
 static int fsk_frame(nmt_t *nmt, sample_t *samples, int length)
 {
 	const char *frame;
@@ -539,7 +393,7 @@ next_frame:
 			return length;
 		}
 		/* render frame */
-		nmt->frame_length = fsk_render_frame(nmt, frame, 166, nmt->frame_spl);
+		nmt->frame_length = ffsk_render_frame(&nmt->ffsk, frame, 166, nmt->frame_spl);
 		nmt->frame_pos = 0;
 		if (nmt->frame_length > nmt->frame_size) {
 			PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");

@@ -60,3 +60,5 @@ void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits);
 void dms_all_sent(nmt_t *nmt);
 void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int eight_bits);
 
+void test_dms_frame(const char *frame, int length);
+

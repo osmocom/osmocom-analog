@@ -1,8 +1,8 @@
-#include "../common/goertzel.h"
 #include "../common/sender.h"
 #include "../common/compandor.h"
 #include "../common/dtmf.h"
 #include "../common/call.h"
+#include "../common/ffsk.h"
 #include "dms.h"
 #include "sms.h"
 
@@ -96,40 +96,29 @@ typedef struct nmt {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
-	double			fsk_samples_per_bit;	/* number of samples for one bit (1200 Baud) */
-	double			fsk_bits_per_sample;	/* fraction of a bit per sample */
+	ffsk_t			ffsk;			/* ffsk processing */
 	int			super_samples;		/* number of samples in buffer for supervisory detection */
-	goertzel_t		fsk_goertzel[2];	/* filter for fsk decoding */
 	goertzel_t		super_goertzel[5];	/* filter for supervisory decoding */
-	int			fsk_polarity;		/* current polarity state of bit */
-	sample_t		*fsk_filter_spl;	/* array to hold ring buffer for bit decoding */
-	int			fsk_filter_size;	/* size of ring buffer */
-	int			fsk_filter_pos;		/* position to write next sample */
-	double			fsk_filter_step;	/* counts bit duration, to trigger decoding every 10th bit */
-	int			fsk_filter_bit;		/* last bit state, so we detect a bit change */
-	int			fsk_filter_sample;	/* count until it is time to sample bit */
-	uint16_t		fsk_filter_sync;	/* shift register to detect sync */
-	int			fsk_filter_in_sync;	/* if we are in sync and receive bits */
-	int			fsk_filter_mute;	/* mute count down after sync */
-	char			fsk_filter_frame[141];	/* receive frame (one extra byte to terminate string) */
-	int			fsk_filter_count;	/* next bit to receive */
-	double			fsk_filter_level[256];	/* level infos */
-	double			fsk_filter_quality[256];/* quality infos */
 	sample_t		*super_filter_spl;	/* array with sample buffer for supervisory detection */
 	int			super_filter_pos;	/* current sample position in filter_spl */
 	double			super_phaseshift65536[4];/* how much the phase of sine wave changes per sample */
 	double			super_phase65536;	/* current phase */
 	double			dial_phaseshift65536;	/* how much the phase of sine wave changes per sample */
 	double			dial_phase65536;	/* current phase */
-	double			fsk_phaseshift65536;	/* how much the phase of fsk synbol changes per sample */
-	double			fsk_phase65536;		/* current phase */
+	uint16_t		rx_sync;		/* shift register to detect sync */
+	int			rx_in_sync;		/* if we are in sync and receive bits */
+	int			rx_mute;		/* mute count down after sync */
+	char			rx_frame[141];		/* receive frame (one extra byte to terminate string) */
+	int			rx_count;		/* next bit to receive */
+	double			rx_level[256];		/* level infos */
+	double			rx_quality[256];	/* quality infos */
 	sample_t		*frame_spl;		/* samples to store a complete rendered frame */
 	int			frame_size;		/* total size of sample buffer */
 	int			frame_length;		/* current length of data in sample buffer */
 	int			frame_pos;		/* current sample position in frame_spl */
-	double			rx_bits_count;		/* sample counter */
-	double			rx_bits_count_current;	/* sample counter of current frame */
-	double			rx_bits_count_last;	/* sample counter of last frame */
+	uint64_t		rx_bits_count;		/* sample counter */
+	uint64_t		rx_bits_count_current;	/* sample counter of current frame */
+	uint64_t		rx_bits_count_last;	/* sample counter of last frame */
 	int			super_detected;		/* current detection state flag */
 	int			super_detect_count;	/* current number of consecutive detections/losses */
 
@@ -149,7 +138,7 @@ int nmt_create(int nmt_system, const char *country, int channel, enum nmt_chan_t
 void nmt_check_channels(int nmt_system);
 void nmt_destroy(sender_t *sender);
 void nmt_go_idle(nmt_t *nmt);
-void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed);
+void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, int frames_elapsed);
 const char *nmt_get_frame(nmt_t *nmt);
 void nmt_rx_super(nmt_t *nmt, int tone, double quality);
 void timeout_mt_paging(struct transaction *trans);

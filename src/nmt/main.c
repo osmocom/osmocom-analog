@@ -427,3 +427,6 @@ fail:
 	return 0;
 }
 
+// dummy, will be replaced by DMS test program
+void test_dms_frame(const char __attribute__((unused)) *frame, int __attribute__((unused)) length) {}
+

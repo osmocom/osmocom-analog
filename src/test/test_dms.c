@@ -56,14 +56,12 @@ void dms_all_sent(nmt_t *nmt)
 }
 
 /* receive bits from DMS */
-int fsk_render_frame(nmt_t *nmt, const char *frame, int length, sample_t *sample)
+void test_dms_frame(const char *frame, int length)
 {
 	printf("(getting %d bits from DMS layer)\n", length);
 
 	memcpy(current_bits, frame, length);
 	current_bit_count = length;
-
-	return nmt->fsk_samples_per_bit * length;
 }
 
 nmt_t *alloc_nmt(void)
@@ -71,9 +69,11 @@ nmt_t *alloc_nmt(void)
 	nmt_t *nmt;
 
 	nmt = calloc(sizeof(*nmt), 1);
+	nmt->sender.samplerate = 40 * 1200;
 	dms_init_sender(nmt);
-	nmt->fsk_samples_per_bit = 40;
-	nmt->dms.frame_size = nmt->fsk_samples_per_bit * 127 + 10;
+	ffsk_global_init(1.0);
+	ffsk_init(&nmt->ffsk, nmt, NULL, 1, nmt->sender.samplerate);
+	nmt->dms.frame_size = nmt->ffsk.samples_per_bit * 127 + 10;
 	nmt->dms.frame_spl = calloc(nmt->dms.frame_size, sizeof(nmt->dms.frame_spl[0]));
 
 	dms_reset(nmt);

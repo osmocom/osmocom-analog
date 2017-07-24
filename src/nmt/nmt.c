@@ -1527,7 +1527,7 @@ static void tx_active(nmt_t *nmt, frame_t *frame)
  * general handlers to call sub handling
  */
 
-void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, double frames_elapsed)
+void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double level, int frames_elapsed)
 {
 	frame_t frame;
 	int rc;
@@ -1541,7 +1541,7 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	}
 
 	/* frame counter */
-	nmt->rx_frame_count += (int)(frames_elapsed + 0.5);
+	nmt->rx_frame_count += frames_elapsed;
 
 	PDEBUG_CHAN(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received frame %s\n", nmt_frame_name(frame.mt));
 
