@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -145,7 +146,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 		/* see what rate actually is */
 		got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_TX, channel);
-		if (fabs(got_rate - rate) > 0.01) {
+		if (fabs(got_rate - rate) > 1.0) {
 			PDEBUG(DSOAPY, DEBUG_ERROR, "Given TX rate %.3f Hz is not supported, try %.3f Hz\n", rate, got_rate);
 			soapy_close();
 			return -EINVAL;
@@ -265,7 +266,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 		/* see what rate actually is */
 		got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_RX, channel);
-		if (fabs(got_rate - rate) > 0.01) {
+		if (fabs(got_rate - rate) > 1.0) {
 			PDEBUG(DSOAPY, DEBUG_ERROR, "Given RX rate %.3f Hz is not supported, try %.3f Hz\n", rate, got_rate);
 			soapy_close();
 			return -EINVAL;
@@ -385,17 +386,18 @@ int soapy_send(float *buff, int num)
 			chunk = tx_samps_per_buff;
 		/* create tx metadata */
 		buffs_ptr[0] = buff;
-		count = SoapySDRDevice_writeStream(sdr, txStream, buffs_ptr, chunk, &flags, 0, 0);
-		if (count <= 0)
+		count = SoapySDRDevice_writeStream(sdr, txStream, buffs_ptr, chunk, &flags, 0, 1000000);
+		if (count <= 0) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamr (error=%d)\n", count);
 			break;
-
-		/* increment tx counter */
-		tx_count += count;
+		}
 
 		sent += count;
 		buff += count * 2;
 		num -= count;
 	}
+	/* increment tx counter */
+	tx_count += sent;
 
 	return sent;
 }
@@ -418,8 +420,6 @@ int soapy_receive(float *buff, int max)
 		buffs_ptr[0] = buff;
 		count = SoapySDRDevice_readStream(sdr, rxStream, buffs_ptr, rx_samps_per_buff, &flags, &timeNs, 0);
 		if (count > 0) {
-			/* update current rx time */
-			rx_count += count;
 			/* commit received data to buffer */
 			got += count;
 			buff += count * 2;
@@ -429,6 +429,8 @@ int soapy_receive(float *buff, int max)
 			break;
 		}
 	}
+	/* update current rx time */
+	rx_count += got;
 
 	return got;
 }
@@ -449,12 +451,16 @@ int soapy_get_tosend(int latspl)
 	/* we check how advance our transmitted time stamp is */
 	tosend = latspl - (tx_count - rx_count);
 	/* in case of underrun: */
-	if (tosend < 0) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun!\n");
+	if (tosend > latspl) {
+// It is normal that we have underruns, prior inital filling of buffer.
+// FIXME: better solution to detect underrun
+//		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun!\n");
 		tosend = 0;
+		tx_count = rx_count;
 	}
+	if (tosend < 0)
+		tosend = 0;
 
 	return tosend;
 }
-
 

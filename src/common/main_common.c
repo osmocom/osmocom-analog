@@ -66,6 +66,7 @@ const char *read_rx_wave = NULL;
 int use_sdr = 0;
 int sdr_channel = 0;
 static const char *sdr_device_args = "",  *sdr_stream_args = "",  *sdr_tune_args = "";
+static int sdr_samplerate = 0;
 static double sdr_bandwidth = 0.0;
 #ifdef HAVE_SDR
 static int sdr_uhd = 0;
@@ -141,6 +142,7 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Replace transmitted audio by given wave file.\n");
 #ifdef HAVE_SDR
 	printf("\nSDR options:\n");
+	/*      -                                                                             - */
 #ifdef HAVE_UHD
 	printf("    --sdr-uhd\n");
 	printf("        Force UHD driver\n");
@@ -156,6 +158,9 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("    --sdr-tune-args <args>\n");
 	printf("        Optional SDR device arguments, seperated by comma\n");
 	printf("        e.g. --sdr-device-args <key>=<value>[,<key>=<value>[,...]]\n");
+	printf("    --sdr-samplerate <samplerate>\n");
+	printf("        Sample rate to use with SDR. By default it equals the regular sample\n");
+	printf("        rate.\n");
 	printf("    --sdr-bandwidth <bandwidth>\n");
 	printf("        Give IF filter bandwidth to use. If not, sample rate is used.\n");
 	printf("    --sdr-rx-antenna <name>\n");
@@ -209,11 +214,12 @@ void print_hotkeys_common(void)
 #define	OPT_SDR_TX_ANTENNA	1107
 #define	OPT_SDR_RX_GAIN		1108
 #define	OPT_SDR_TX_GAIN		1109
-#define	OPT_SDR_BANDWIDTH	1110
-#define	OPT_WRITE_IQ_RX_WAVE	1111
-#define	OPT_WRITE_IQ_TX_WAVE	1112
-#define	OPT_READ_IQ_RX_WAVE	1113
-#define	OPT_READ_IQ_TX_WAVE	1114
+#define	OPT_SDR_SAMPLERATE	1110
+#define	OPT_SDR_BANDWIDTH	1111
+#define	OPT_WRITE_IQ_RX_WAVE	1112
+#define	OPT_WRITE_IQ_TX_WAVE	1113
+#define	OPT_READ_IQ_RX_WAVE	1114
+#define	OPT_READ_IQ_TX_WAVE	1115
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -244,6 +250,7 @@ static struct option long_options_common[] = {
 	{"sdr-device-args", 1, 0, OPT_SDR_DEVICE_ARGS},
 	{"sdr-stream-args", 1, 0, OPT_SDR_STREAM_ARGS},
 	{"sdr-tune-args", 1, 0, OPT_SDR_TUNE_ARGS},
+	{"sdr-samplerate", 1, 0, OPT_SDR_SAMPLERATE},
 	{"sdr-bandwidth", 1, 0, OPT_SDR_BANDWIDTH},
 	{"sdr-rx-antenna", 1, 0, OPT_SDR_RX_ANTENNA},
 	{"sdr-tx-antenna", 1, 0, OPT_SDR_TX_ANTENNA},
@@ -440,6 +447,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		sdr_tune_args = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_SDR_SAMPLERATE:
+		sdr_samplerate = atoi(optarg);
+		*skip_args += 2;
+		break;
 	case OPT_SDR_BANDWIDTH:
 		sdr_bandwidth = atof(optarg);
 		*skip_args += 2;
@@ -524,6 +535,9 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 	int c;
 	int rc;
 
+	/* latency of send buffer in samples */
+	latspl = samplerate * latency / 1000;
+
 	/* init mncc */
 	if (use_mncc_sock) {
 		char mncc_sock_name[64];
@@ -552,9 +566,11 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 		return;
 	}
 
+	if (sdr_samplerate == 0.0)
+		sdr_samplerate = samplerate;
 	if (sdr_bandwidth == 0.0)
-		sdr_bandwidth = samplerate;
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave);
+		sdr_bandwidth = sdr_samplerate;
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_samplerate, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave, latspl);
 	if (rc < 0)
 		return;
 #endif
@@ -605,7 +621,6 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 			/* do not process audio for an audio slave, since it is done by audio master */
 			if (sender->master) /* if master is set, we are an audio slave */
 				continue;
-			latspl = sender->samplerate * latency / 1000;
 			process_sender_audio(sender, quit, latspl);
 		}
 

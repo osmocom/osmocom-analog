@@ -480,7 +480,7 @@ int uhd_send(float *buff, int num)
 			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create TX metadata\n");
 		buffs_ptr[0] = buff;
 		count = 0;
-		error = uhd_tx_streamer_send(tx_streamer, buffs_ptr, chunk, &tx_metadata, 0.0, &count);
+		error = uhd_tx_streamer_send(tx_streamer, buffs_ptr, chunk, &tx_metadata, 1.0, &count);
 		if (error) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamer\n");
 			break;

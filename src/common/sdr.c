@@ -23,10 +23,13 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <pthread.h>
+#include <unistd.h>
 #include "sample.h"
 #include "iir_filter.h"
 #include "fm_modulation.h"
 #include "sender.h"
+#include "timer.h"
 #ifdef HAVE_UHD
 #include "uhd.h"
 #endif
@@ -34,6 +37,9 @@
 #include "soapy.h"
 #endif
 #include "debug.h"
+
+/* enable to debug buffer handling */
+//#define DEBUG_BUFFER
 
 typedef struct sdr_chan {
 	double		tx_frequency;	/* frequency used */
@@ -47,24 +53,42 @@ typedef struct sdr {
 	int		paging_channel;	/* if set, points to paging channel */
 	sdr_chan_t	paging_chan;	/* settings for extra paging channel */
 	int		channels;	/* number of frequencies */
-	double		samplerate;	/* IQ rate */
 	double		amplitude;	/* amplitude of each carrier */
+	int		samplerate;	/* sample rate of audio data */
 	wave_rec_t	wave_rx_rec;
 	wave_rec_t	wave_tx_rec;
 	wave_play_t	wave_rx_play;
 	wave_play_t	wave_tx_play;
 } sdr_t;
 
+typedef struct sdr_thread {
+	int use;
+	volatile int running, exit;	/* flags to control exit of threads */
+	int buffer_size;
+	volatile float *buffer;
+	volatile int in, out;		/* in and out pointers (atomic, so no locking required) */
+	int max_fill;			/* measure maximum buffer fill */
+	double max_fill_timer;		/* timer to display/reset maximum fill */
+} sdr_thread_t;
+
 static int sdr_use_uhd, sdr_use_soapy;
 static int sdr_channel;
 static const char *sdr_device_args, *sdr_stream_args, *sdr_tune_args;
 static const char *sdr_rx_antenna, *sdr_tx_antenna;
 static double sdr_rx_gain, sdr_tx_gain;
-const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave, *sdr_read_iq_tx_wave;
+static const char *sdr_write_iq_rx_wave, *sdr_write_iq_tx_wave, *sdr_read_iq_rx_wave, *sdr_read_iq_tx_wave;
+static int sdr_samplerate;		/* sample rate of IQ data */
 static double sdr_bandwidth;
+static int sdr_oversample;
+static int sdr_latspl;
+static int sdr_threads;
+static sdr_thread_t sdr_thread_read, sdr_thread_write;
 
-int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, const char *stream_args, const char *tune_args, const char *tx_antenna, const char *rx_antenna, double tx_gain, double rx_gain, double bandwidth, const char *write_iq_tx_wave, const char *write_iq_rx_wave, const char *read_iq_tx_wave, const char *read_iq_rx_wave)
+int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, const char *stream_args, const char *tune_args, const char *tx_antenna, const char *rx_antenna, double tx_gain, double rx_gain, int samplerate, double bandwidth, const char *write_iq_tx_wave, const char *write_iq_rx_wave, const char *read_iq_tx_wave, const char *read_iq_rx_wave, int latspl)
 {
+	PDEBUG(DSDR, DEBUG_DEBUG, "Init SDR\n");
+
+	sdr_threads = 0; /* only requried for oversampling */
 	sdr_use_uhd = sdr_uhd;
 	sdr_use_soapy = sdr_soapy;
 	sdr_channel = channel;
@@ -80,6 +104,9 @@ int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, c
 	sdr_write_iq_rx_wave = write_iq_rx_wave;
 	sdr_read_iq_tx_wave = read_iq_tx_wave;
 	sdr_read_iq_rx_wave = read_iq_rx_wave;
+	sdr_samplerate = samplerate;
+	sdr_oversample = 1;
+	sdr_latspl = latspl;
 
 	return 0;
 }
@@ -91,6 +118,41 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	double tx_center_frequency = 0.0, rx_center_frequency = 0.0;
 	int rc;
 	int c;
+
+	PDEBUG(DSDR, DEBUG_DEBUG, "Open SDR device\n");
+
+	if (sdr_samplerate != samplerate) {
+		if (samplerate > sdr_samplerate) {
+			PDEBUG(DSDR, DEBUG_ERROR, "SDR sample rate must be greater than audio sample rate!\n");
+			PDEBUG(DSDR, DEBUG_ERROR, "You selected an SDR rate of %d and an audio rate of %d.\n", sdr_samplerate, samplerate);
+			return NULL;
+		}
+		if ((sdr_samplerate % samplerate)) {
+			PDEBUG(DSDR, DEBUG_ERROR, "SDR sample rate must be a multiple of audio sample rate!\n");
+			PDEBUG(DSDR, DEBUG_ERROR, "You selected an SDR rate of %d and an audio rate of %d.\n", sdr_samplerate, samplerate);
+			return NULL;
+		}
+		sdr_oversample = sdr_samplerate / samplerate;
+		sdr_threads = 1;
+	}
+	if (sdr_threads) {
+		memset(&sdr_thread_read, 0, sizeof(sdr_thread_read));
+		sdr_thread_read.buffer_size = sdr_latspl * 2 * sdr_oversample + 2;
+		sdr_thread_read.buffer = calloc(sdr_thread_read.buffer_size, sizeof(*sdr_thread_read.buffer));
+		if (!sdr_thread_read.buffer) {
+			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			return NULL;
+		}
+		sdr_thread_read.in = sdr_thread_read.out = 0;
+		memset(&sdr_thread_write, 0, sizeof(sdr_thread_write));
+		sdr_thread_write.buffer_size = sdr_latspl * 2 + 2;
+		sdr_thread_write.buffer = calloc(sdr_thread_write.buffer_size, sizeof(*sdr_thread_write.buffer));
+		if (!sdr_thread_write.buffer) {
+			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			return NULL;
+		}
+		sdr_thread_write.in = sdr_thread_write.out = 0;
+	}
 
 	display_iq_init(samplerate);
 	display_spectrum_init(samplerate);
@@ -109,8 +171,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		goto error;
 	}
 	sdr->channels = channels;
-	sdr->samplerate = samplerate;
 	sdr->amplitude = 1.0 / (double)channels;
+	sdr->samplerate = samplerate;
 
 	/* special case where we use a paging frequency */
 	if (paging_frequency) {
@@ -153,10 +215,10 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		double range = tx_high_frequency - tx_low_frequency;
 		if (range)
 			PDEBUG(DSDR, DEBUG_DEBUG, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
-		if (range * 2 > sdr->samplerate) {
+		if (range * 2 > samplerate) {
 			// why that? actually i don't know. i just want to be safe....
 			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies.\n");
-			PDEBUG(DSDR, DEBUG_NOTICE, "The given rate is %.6f MHz, but required rate must be >= %.6f MHz\n", sdr->samplerate / 1e6, range * 2.0 / 1e6);
+			PDEBUG(DSDR, DEBUG_NOTICE, "The given rate is %.6f MHz, but required rate must be >= %.6f MHz\n", samplerate / 1e6, range * 2.0 / 1e6);
 			PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
 			goto error;
 		}
@@ -167,26 +229,26 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double tx_offset;
 			tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz\n", c, tx_offset / 1e6);
-			fm_mod_init(&sdr->chan[c].mod, sdr->samplerate, tx_offset, sdr->amplitude);
+			fm_mod_init(&sdr->chan[c].mod, samplerate, tx_offset, sdr->amplitude);
 		}
 		if (sdr->paging_channel) {
 			double tx_offset;
 			tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
-			fm_mod_init(&sdr->chan[sdr->paging_channel].mod, sdr->samplerate, tx_offset, sdr->amplitude);
+			fm_mod_init(&sdr->chan[sdr->paging_channel].mod, samplerate, tx_offset, sdr->amplitude);
 		}
 		/* show gain */
 		PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB\n", sdr_tx_gain);
 		/* open wave */
 		if (sdr_write_iq_tx_wave) {
-			rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, sdr->samplerate, 2, 1.0);
+			rc = wave_create_record(&sdr->wave_tx_rec, sdr_write_iq_tx_wave, samplerate, 2, 1.0);
 			if (rc < 0) {
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 				goto error;
 			}
 		}
 		if (sdr_read_iq_tx_wave) {
-			rc = wave_create_playback(&sdr->wave_tx_play, sdr_read_iq_tx_wave, sdr->samplerate, 2, 1.0);
+			rc = wave_create_playback(&sdr->wave_tx_play, sdr_read_iq_tx_wave, samplerate, 2, 1.0);
 			if (rc < 0) {
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;
@@ -212,7 +274,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		double range = rx_high_frequency - rx_low_frequency;
 		if (range)
 			PDEBUG(DSDR, DEBUG_DEBUG, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
-		if (range * 2.0 > sdr->samplerate) {
+		if (range * 2.0 > samplerate) {
 			// why that? actually i don't know. i just want to be safe....
 			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
 			goto error;
@@ -224,20 +286,20 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double rx_offset;
 			rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
-			fm_demod_init(&sdr->chan[c].demod, sdr->samplerate, rx_offset, bandwidth);
+			fm_demod_init(&sdr->chan[c].demod, samplerate, rx_offset, bandwidth);
 		}
 		/* show gain */
 		PDEBUG(DSDR, DEBUG_INFO, "Using gain: RX %.1f dB\n", sdr_rx_gain);
 		/* open wave */
 		if (sdr_write_iq_rx_wave) {
-			rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, sdr->samplerate, 2, 1.0);
+			rc = wave_create_record(&sdr->wave_rx_rec, sdr_write_iq_rx_wave, samplerate, 2, 1.0);
 			if (rc < 0) {
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 				goto error;
 			}
 		}
 		if (sdr_read_iq_rx_wave) {
-			rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, sdr->samplerate, 2, 1.0);
+			rc = wave_create_playback(&sdr->wave_rx_play, sdr_read_iq_rx_wave, samplerate, 2, 1.0);
 			if (rc < 0) {
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;
@@ -247,7 +309,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd) {
-		rc = uhd_open(sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth);
+		rc = uhd_open(sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, tx_center_frequency, rx_center_frequency, sdr_samplerate, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth);
 		if (rc)
 			goto error;
 	}
@@ -255,7 +317,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_SOAPY
 	if (sdr_use_soapy) {
-		rc = soapy_open(sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, tx_center_frequency, rx_center_frequency, sdr->samplerate, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth);
+		rc = soapy_open(sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, tx_center_frequency, rx_center_frequency, sdr_samplerate, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth);
 		if (rc)
 			goto error;
 	}
@@ -268,25 +330,173 @@ error:
 	return NULL;
 }
 
+static void *sdr_write_child(void __attribute__((__unused__)) *arg)
+{
+	sdr_t *sdr = (sdr_t *)arg;
+	int num;
+	int fill, out;
+	int s, ss, o;
+
+	while (sdr_thread_write.running) {
+		/* write to SDR */
+		fill = (sdr_thread_write.in - sdr_thread_write.out + sdr_thread_write.buffer_size) % sdr_thread_write.buffer_size;
+		if (fill > sdr_thread_write.max_fill)
+			sdr_thread_write.max_fill = fill;
+		if (sdr_thread_write.max_fill_timer == 0.0)
+			sdr_thread_write.max_fill_timer = get_time();
+		if (get_time() - sdr_thread_write.max_fill_timer > 1.0) {
+			double delay;
+			delay = (double)sdr_thread_write.max_fill / 2.0 / (double)sdr->samplerate;
+			sdr_thread_write.max_fill = 0;
+			sdr_thread_write.max_fill_timer += 1.0;
+			PDEBUG(DSDR, DEBUG_DEBUG, "write delay = %.3f ms\n", delay * 1000.0);
+		}
+		num = fill / 2;
+		if (num) {
+			float buff[num * 2 * sdr_oversample];
+#ifdef DEBUG_BUFFER
+			printf("Thread found %d samples in write buffer and forwards them to SDR.\n", num);
+#endif
+			out = sdr_thread_write.out;
+			for (s = 0, ss = 0; s < num; s++) {
+				for (o = 0; o < sdr_oversample; o++) {
+					buff[ss++] = sdr_thread_write.buffer[out];
+					buff[ss++] = sdr_thread_write.buffer[out + 1];
+				}
+				out = (out + 2) % sdr_thread_write.buffer_size;
+			}
+#ifdef HAVE_UHD
+			if (sdr_use_uhd)
+				uhd_send(buff, num * sdr_oversample);
+#endif
+#ifdef HAVE_SOAPY
+			if (sdr_use_soapy)
+				soapy_send(buff, num * sdr_oversample);
+#endif
+			sdr_thread_write.out = out;
+		}
+
+		/* delay some time */
+		usleep(1000);
+	}
+
+	PDEBUG(DSDR, DEBUG_DEBUG, "Thread received exit!\n");
+	sdr_thread_write.exit = 1;
+	return NULL;
+}
+
+static void *sdr_read_child(void __attribute__((__unused__)) *arg)
+{
+//	sdr_t *sdr = (sdr_t *)arg;
+	int num, count = 0;
+	int space, in;
+	int s, ss;
+
+	while (sdr_thread_read.running) {
+		/* read from SDR */
+		space = (sdr_thread_read.out - sdr_thread_read.in - 2 + sdr_thread_read.buffer_size) % sdr_thread_read.buffer_size;
+		num = space / 2;
+		if (num) {
+			float buff[num * 2];
+#ifdef HAVE_UHD
+			if (sdr_use_uhd)
+				count = uhd_receive(buff, num);
+#endif
+#ifdef HAVE_SOAPY
+			if (sdr_use_soapy)
+				count = soapy_receive(buff, num);
+#endif
+			if (count > 0) {
+#ifdef DEBUG_BUFFER
+				printf("Thread read %d samples from SDR and writes them to read buffer.\n", count);
+#endif
+				in = sdr_thread_read.in;
+				for (s = 0, ss = 0; s < count; s++) {
+					sdr_thread_read.buffer[in++] = buff[ss++];
+					sdr_thread_read.buffer[in++] = buff[ss++];
+					in %= sdr_thread_read.buffer_size;
+				}
+				sdr_thread_read.in = in;
+			}
+		}
+
+		/* delay some time */
+		usleep(1000);
+	}
+
+	PDEBUG(DSDR, DEBUG_DEBUG, "Thread received exit!\n");
+	sdr_thread_read.exit = 1;
+	return NULL;
+}
+
 /* start streaming */
 int sdr_start(void __attribute__((__unused__)) *inst)
 {
 //	sdr_t *sdr = (sdr_t *)inst;
+	int rc = -EINVAL;
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd)
-		return uhd_start();
+		rc = uhd_start();
 #endif
 #ifdef HAVE_SOAPY
 	if (sdr_use_soapy)
-		return soapy_start();
+		rc = soapy_start();
 #endif
-	return -EINVAL;
+	if (rc < 0)
+		return rc;
+
+	if (sdr_threads) {
+		int rc;
+		pthread_t tid;
+
+		PDEBUG(DSDR, DEBUG_DEBUG, "Create threads!\n");
+		sdr_thread_write.running = 1;
+		sdr_thread_write.exit = 0;
+		rc = pthread_create(&tid, NULL, sdr_write_child, inst);
+		if (rc < 0) {
+			sdr_thread_write.running = 0;
+			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create thread!\n");
+			return rc;
+		}
+		sdr_thread_read.running = 1;
+		sdr_thread_read.exit = 0;
+		rc = pthread_create(&tid, NULL, sdr_read_child, inst);
+		if (rc < 0) {
+			sdr_thread_read.running = 0;
+			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create thread!\n");
+			return rc;
+		}
+	}
+
+	return 0;
 }
 
 void sdr_close(void *inst)
 {
 	sdr_t *sdr = (sdr_t *)inst;
+
+	PDEBUG(DSDR, DEBUG_DEBUG, "Close SDR device\n");
+
+	if (sdr_threads) {
+		if (sdr_thread_write.running) {
+			PDEBUG(DSDR, DEBUG_DEBUG, "Thread sending exit!\n");
+			sdr_thread_write.running = 0;
+			while (sdr_thread_write.exit == 0)
+				usleep(1000);
+		}
+		if (sdr_thread_read.running) {
+			PDEBUG(DSDR, DEBUG_DEBUG, "Thread sending exit!\n");
+			sdr_thread_read.running = 0;
+			while (sdr_thread_read.exit == 0)
+				usleep(1000);
+		}
+	}
+
+	if (sdr_thread_read.buffer)
+		free((void *)sdr_thread_read.buffer);
+	if (sdr_thread_write.buffer)
+		free((void *)sdr_thread_write.buffer);
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd)
@@ -353,16 +563,38 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 		}
 	}
 
+	if (sdr_threads) {
+		/* store data towards SDR in ring buffer */
+		int space, in;
+
+		space = (sdr_thread_write.out - sdr_thread_write.in - 2 + sdr_thread_write.buffer_size) % sdr_thread_write.buffer_size;
+		if (space < num * 2) {
+			PDEBUG(DSDR, DEBUG_ERROR, "Write SDR buffer overflow!\n");
+			num = space / 2;
+		}
+#ifdef DEBUG_BUFFER
+		printf("Writing %d samples to write buffer.\n", num);
+#endif
+		in = sdr_thread_write.in;
+		for (s = 0, ss = 0; s < num; s++) {
+			sdr_thread_write.buffer[in++] = buff[ss++];
+			sdr_thread_write.buffer[in++] = buff[ss++];
+			in %= sdr_thread_write.buffer_size;
+		}
+		sdr_thread_write.in = in;
+		sent = num;
+	} else {
 #ifdef HAVE_UHD
-	if (sdr_use_uhd)
-		sent = uhd_send(buff, num);
+		if (sdr_use_uhd)
+			sent = uhd_send(buff, num);
 #endif
 #ifdef HAVE_SOAPY
-	if (sdr_use_soapy)
-		sent = soapy_send(buff, num);
+		if (sdr_use_soapy)
+			sent = soapy_send(buff, num);
 #endif
-	if (sent < 0)
-		return sent;
+		if (sent < 0)
+			return sent;
+	}
 	
 	return sent;
 }
@@ -380,16 +612,47 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 		buff = (float *)samples;
 	}
 
+	if (sdr_threads) {
+		/* load data from SDR out of ring buffer */
+		int fill, out;
+
+		fill = (sdr_thread_read.in - sdr_thread_read.out + sdr_thread_read.buffer_size) % sdr_thread_read.buffer_size;
+		if (fill > sdr_thread_read.max_fill)
+			sdr_thread_read.max_fill = fill;
+		if (sdr_thread_read.max_fill_timer == 0.0)
+			sdr_thread_read.max_fill_timer = get_time();
+		if (get_time() - sdr_thread_read.max_fill_timer > 1.0) {
+			double delay;
+			delay = (double)sdr_thread_read.max_fill / 2.0 / (double)sdr_samplerate;
+			sdr_thread_read.max_fill = 0;
+			sdr_thread_read.max_fill_timer += 1.0;
+			PDEBUG(DSDR, DEBUG_DEBUG, "read delay = %.3f ms\n", delay * 1000.0);
+		}
+		if (fill / 2 / sdr_oversample < num)
+			num = fill / 2 / sdr_oversample;
+#ifdef DEBUG_BUFFER
+		printf("Reading %d samples from read buffer.\n", num);
+#endif
+		out = sdr_thread_read.out;
+		for (s = 0, ss = 0; s < num; s++) {
+			buff[ss++] = sdr_thread_read.buffer[out];
+			buff[ss++] = sdr_thread_read.buffer[out + 1];
+			out = (out + 2 * sdr_oversample) % sdr_thread_read.buffer_size;
+		}
+		sdr_thread_read.out = out;
+		count = num;
+	} else {
 #ifdef HAVE_UHD
-	if (sdr_use_uhd)
-		count = uhd_receive(buff, num);
+		if (sdr_use_uhd)
+			count = uhd_receive(buff, num);
 #endif
 #ifdef HAVE_SOAPY
-	if (sdr_use_soapy)
-		count = soapy_receive(buff, num);
+		if (sdr_use_soapy)
+			count = soapy_receive(buff, num);
 #endif
-	if (count <= 0)
-		return count;
+		if (count <= 0)
+			return count;
+}
 
 	if (sdr->wave_rx_rec.fp) {
 		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
@@ -418,7 +681,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 	return count;
 }
 
-/* how many delay (in audio sample duration) do we have in the buffer */
+/* how much do we need to send (in audio sample duration) to get the target delay (latspl) */
 int sdr_get_tosend(void __attribute__((__unused__)) *inst, int latspl)
 {
 //	sdr_t *sdr = (sdr_t *)inst;
@@ -426,14 +689,25 @@ int sdr_get_tosend(void __attribute__((__unused__)) *inst, int latspl)
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd)
-		count = uhd_get_tosend(latspl);
+		count = uhd_get_tosend(latspl * sdr_oversample);
 #endif
 #ifdef HAVE_SOAPY
 	if (sdr_use_soapy)
-		count = soapy_get_tosend(latspl);
+		count = soapy_get_tosend(latspl * sdr_oversample);
 #endif
 	if (count < 0)
 		return count;
+	count /= sdr_oversample;
+
+	if (sdr_threads) {
+		/* substract what we have in write buffer, because this is not jent sent to the SDR */
+		int fill;
+
+		fill = (sdr_thread_write.in - sdr_thread_write.out + sdr_thread_write.buffer_size) % sdr_thread_write.buffer_size;
+		count -= fill / 2;
+		if (count < 0)
+			count = 0;
+	}
 
 	return count;
 }
