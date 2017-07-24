@@ -8,7 +8,6 @@ nmt_SOURCES = \
 	countries.c \
 	transaction.c \
 	dsp.c \
-	hagelbarger.c \
 	frame.c \
 	dms.c \
 	sms.c \

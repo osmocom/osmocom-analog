@@ -25,9 +25,9 @@
 #include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
+#include "../common/hagelbarger.h"
 #include "nmt.h"
 #include "frame.h"
-#include "hagelbarger.h"
 
 uint64_t nmt_encode_channel(int nmt_system, int channel, int power)
 {
@@ -1146,7 +1146,7 @@ const char *encode_frame(int nmt_system, frame_t *frame, int debug)
 	message[8] = 0x00;
 	for (i = 0; i < 8; i++)
 		message[i] = (digits[i * 2] << 4) | digits[i * 2 + 1];
-	hagelbarger_encode(message, code, 72);
+	hagelbarger_encode(message, code, 70);
 	memcpy(bits, "10101010101010111100010010", 26);
 	for (i = 0; i < 140; i++)
 		bits[i + 26] = ((code[i / 8] >> (7 - (i & 7))) & 1) + '0';

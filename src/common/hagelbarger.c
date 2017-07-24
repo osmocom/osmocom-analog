@@ -27,10 +27,13 @@
 
 #include "stdint.h"
 
+/* enable to debug the process of parity check */
+//#define DEBUG_HAGEL
+
 /* To encode NMT message: (MSB first)
  * Use input with 9 bytes, the last byte must be 0x00.
  * Use output with 18 bytes, ignore the last four (lower) bits of last byte.
- * Use length of 72.
+ * Use length of 70.
  */
 void hagelbarger_encode(const uint8_t *input, uint8_t *output, int length)
 {
@@ -49,6 +52,9 @@ void hagelbarger_encode(const uint8_t *input, uint8_t *output, int length)
 		/* put check bit and data bit to output (MSB first) */
 		output[i / 4] = (output[i / 4] << 2) | (check << 1) | data;
 	}
+	/* shift last output byte all the way to MSB */
+	while ((i % 4))
+		output[i++ / 4] <<= 2;
 }
 
 /* To decode NMT message: (MSB first)
@@ -58,12 +64,12 @@ void hagelbarger_encode(const uint8_t *input, uint8_t *output, int length)
  */
 void hagelbarger_decode(const uint8_t *input, uint8_t *output, int length)
 {
-	uint16_t reg_data = 0x00, reg_check = 0x00, data, check, r_parity, s_parity;
-	int i;
+	uint16_t reg_data = 0x00, reg_check = 0xff, data, check, r_parity, s_parity;
+	int i, o;
 
 	length += 10;
 
-	for (i = 0; i < length; i++) {
+	for (i = 0, o = 0; i < length; i++) {
 		/* get check bit from input (MSB first) */
 		check = (input[i / 4] >> (7 - (i & 3) * 2)) & 1;
 		/* get data bit from input (MSB first) */
@@ -75,13 +81,21 @@ void hagelbarger_decode(const uint8_t *input, uint8_t *output, int length)
 		/* calculate parity */
 		r_parity = (reg_data + (reg_data >> 3) + (reg_check >> 6) + 1) & 1;
 		s_parity = ((reg_data >> 3) + (reg_data >> 6) + (reg_check >> 9) + 1) & 1;
+#ifdef DEBUG_HAGEL
+		printf("#%d: r=%d s=%d\n", i - 10, r_parity, s_parity);
+#endif
 		/* flip message bit, if both parity checks fail */
 		/* use 4th bit that will be shifted to 5th bit next loop */
 		if (r_parity && s_parity)
 			reg_data ^= 0x0008;
 		/* put message bit to output (MSB first) */
-		if (i >= 10)
-			output[(i - 10) / 8] = (output[(i - 10) / 8] << 1) | ((reg_data >> 4) & 1);
+		if (i >= 10) {
+			output[o / 8] = (output[o / 8] << 1) | ((reg_data >> 4) & 1);
+			o++;
+		}
 	}
+	/* shift last output byte all the way to MSB */
+	while ((o % 8))
+		output[o++ / 8] <<= 1;
 }
 

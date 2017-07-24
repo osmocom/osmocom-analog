@@ -79,7 +79,7 @@ test_performance_LDADD = \
 	-lm
 
 test_hagelbarger_SOURCES = \
-	$(top_builddir)/src/nmt/hagelbarger.c \
+	$(top_builddir)/src/common/hagelbarger.c \
 	test_hagelbarger.c
 
 test_hagelbarger_LDADD = \

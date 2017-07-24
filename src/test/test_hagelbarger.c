@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "stdint.h"
 #include "string.h"
-#include "../nmt/hagelbarger.h"
+#include "../common/hagelbarger.h"
 
 int main(void)
 {
@@ -9,11 +9,15 @@ int main(void)
 
 	printf("Message: %s\n", message);
 
-	/* clean tail at code bit 72 and above */
+	/* clean tail at code bit 70 and above */
 	memset(code, 0, sizeof(code));
 
 	/* encode message */
-	hagelbarger_encode(message, code, 72);
+	hagelbarger_encode(message, code, 70);
+
+	/* decode */
+	hagelbarger_decode(code, message, 64);
+	printf("Decoded without corruption: %s (must be the same as above)\n", message);
 
 	/* corrupt data */
 	code[0] ^= 0xfc;
@@ -22,7 +26,7 @@ int main(void)
 
 	/* decode */
 	hagelbarger_decode(code, message, 64);
-	printf("Decoded: %s (must be the same as above)\n", message);
+	printf("Decoded with corruption: %s (must be the same as above)\n", message);
 
 	return 0;
 }
