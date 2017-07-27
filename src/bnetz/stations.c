@@ -189,15 +189,15 @@ double lat_from_coordinates(const char *string)
 {
 	if (strlen(string) != 11)
 		abort();
-	if (string[0] < '0' && string[0] > '9')
+	if (string[0] < '0' || string[0] > '9')
 		abort();
-	if (string[1] < '0' && string[1] > '9')
+	if (string[1] < '0' || string[1] > '9')
 		abort();
 	if (string[2] != 'o')
 		abort();
-	if (string[3] < '0' && string[3] > '9')
+	if (string[3] < '0' || string[3] > '9')
 		abort();
-	if (string[4] < '0' && string[4] > '9')
+	if (string[4] < '0' || string[4] > '9')
 		abort();
 
 	return	(double)(string[0] - '0') * 10.0 +
@@ -210,15 +210,15 @@ double lon_from_coordinates(const char *string)
 {
 	if (strlen(string) != 11)
 		abort();
-	if (string[6] < '0' && string[6] > '9')
+	if (string[6] < '0' || string[6] > '9')
 		abort();
-	if (string[7] < '0' && string[7] > '9')
+	if (string[7] < '0' || string[7] > '9')
 		abort();
 	if (string[8] != 'o')
 		abort();
-	if (string[9] < '0' && string[9] > '9')
+	if (string[9] < '0' || string[9] > '9')
 		abort();
-	if (string[10] < '0' && string[10] > '9')
+	if (string[10] < '0' || string[10] > '9')
 		abort();
 
 	return	(double)(string[6] - '0') * 10.0 +

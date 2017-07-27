@@ -232,7 +232,7 @@ static int dialstring2number(const char *dialstring, char *ms_country, char *ms_
 		PDEBUG(DNMT, DEBUG_NOTICE, "Wrong number of digits, use 7 digits: ZXXXXXX (Z=country, X=mobile number)\n");
 		return -1;
 	}
-	if (dialstring[0] < '0' && dialstring[0] > '9') {
+	if (dialstring[0] < '0' || dialstring[0] > '9') {
 		PDEBUG(DNMT, DEBUG_NOTICE, "Invalid country digit (first digit) of dial string\n");
 		return -1;
 	}
