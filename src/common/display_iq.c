@@ -181,7 +181,13 @@ void display_iq(float *samples, int length)
 					screen[y/2][x] = '\'';
 				else
 					screen[y/2][x] = '.';
-				if (L > 1.0)
+				/* overdrive:
+				 * 2 = close to -1..1 or above
+				 * 1 = close to -0.5..0.5 or above
+				 */
+				if (L > 0.9)
+					overdrive[y/2][x] = 2;
+				else if (L > 0.45 && overdrive[y/2][x] < 1)
 					overdrive[y/2][x] = 1;
 			}
 			if (iq_on == 1)
@@ -214,13 +220,24 @@ void display_iq(float *samples, int length)
 								putchar('|');
 						}
 					} else if (screen[j][k] == ':' || screen[j][k] == '.' || screen[j][k] == '\'') {
-						/* red / green plot */
-						if (overdrive[j][k]) {
+						/* red / yellow / green plot */
+						switch (overdrive[j][k]) {
+						case 2:
+							/* red  */
 							if (color != 1) {
 								color = 1;
 								printf("\033[1;31m");
 							}
-						} else {
+							break;
+						case 1:
+							/* yellow */
+							if (color != 3) {
+								color = 3;
+								printf("\033[1;33m");
+							}
+							break;
+						default:
+							/* green */
 							if (color != 2) {
 								color = 2;
 								printf("\033[1;32m");
