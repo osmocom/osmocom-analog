@@ -1,0 +1,168 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>SDR setup</center></h2>
+
+<center><img src="sdr.jpg"/></center>
+
+<ul>
+	<li><a href="#intro">Introduction</a>
+	<li><a href="#limesdr">LimeSDR</a>
+	<li><a href="#uhd">UHD</a>
+	<li><a href="#mchan">Multiple channels</a>
+</ul>
+
+<p class="toppic">
+<a name="intro"></a>
+Introduction
+</p>
+
+<p>
+A far more convenient way is to use an SDR.
+Why would you (not) want to do that?
+
+<ul>
+	<li>Not a bunch of cables and radios, just one device.
+	<li>Simulate multiple channels with a single SDR channel.
+	<br>Keep control channel while using voice channel(s).
+	<li>No audio level (deviation) calibration is required.
+	<li>The polarity of the frequency deviation (FFSK) is always correct.
+	<li>No radio mod for discriminator output required.
+	<li>No radio mod for modulator input required.
+	<li>Don't care about correct emphasis.
+	<li>Carrier FSK never returns to zero, no AC coupling.
+	<li>Switching to channel 19 (B-Netz) works without transmitter hack.
+	<li>More experience is required to run an SDR.
+	<li>The device must be full-duplex.
+	<li>In 2017, they are still more expensive than analog radios.
+</ul>
+</p>
+
+<p>
+It may sound weird, but you are able to simulate multiple channels with only one SDR.
+The I/Q data of an SDR allows to shift the frequency.
+By adding multiple frequencies, shifted by different offset, allows to transmit multiple down-link channels at a time.
+By using a filter, the mix of received up-link channels can be separated.
+Multiple channels require multiple CPU usage or even more.
+</p>
+
+<p>
+How to use an SDR and install the driver software and drivers is beyond the scope of this document.
+I assume that you successfully used your SDR with Gnu Radio,
+know how to select antenna connectors,
+know about DC calibration,
+know about clock settings,
+know about transmit and receive gains,
+and so on...
+</p>
+
+<p class="toppic">
+<a name="limesdr"></a>
+LimeSDR
+</p>
+
+<p>
+If you have this device, you need to install the SoapySDR, then the LimeSuit and finally run configure with Osmocom Analog, compile and install.
+Run Osmocom Analog with --help again, and you should see a bunch of option for SDR.
+In case of B-Netz, I use the following parameters:
+</p>
+
+<pre>
+
+# bnetz --sdr-soapy \
+        --sdr-tx-gain 50 \
+        --sdr-rx-gain 30 \
+        --sdr-bandwidth 5000000 \
+        --sdr-samplerate 5000000 \
+        --sdr-tune-args "OFFSET=1000000" \
+        -s 100000 \
+        -k 17
+
+</pre>
+
+<p>
+In order to change from analog sound card to SDR, you need <b>--sdr-soapy</b> option.
+In my setup I use antennas directly connected to the SDR.
+Being about 1-10 meters away, I use the <b>gain</b> as defined above.
+The IF filter requires a minimum <b>bandwidth</b> of 5 MHz.
+The <b>sample rate</b> must be 5 MHz minimum.
+Higher sample rate causes more CPU, RAM and USB load.
+The local oscillator frequency causes the transmitted signal to be noisy, so I shift it 1 MHz away, using an <b>offset</b>.
+The audio processing rate of 100 KHz (<b>-s 100000</b>) is used to generate two channels: <b>17</b> and 19.
+Note that channel 19 is not given here, but will be used automatically.
+With B-Netz, the transmitter switches from any voice channel to the paging channel (19) whenever the phone gets paged.
+</p>
+
+<center><img src="display-iq.png"/></center>
+
+<p>
+The RX gain is quite important.
+You can monitor it by pressing 'q' key.
+You will get an ASCII art plot of received IQ data.
+Press 'q' again and you will get a logarithmic view of IQ vectors.
+Press 'q' again to turn off this view.
+Please monitor this view when the phone tries to call or register.
+If the dots are yellow or red, the received signal overdrives the ADC.
+If the linear view shows not a nice, skinny circle, if the phone transmits, the input of your SDR might be saturated.
+</p>
+
+<center><img src="display-spectrum.png"/></center>
+
+<p>
+Press 's' to get an ASCII art graph of received frequency spectrum.
+The spectrum's bandwidth is defined by the sample rate (-s) and not by the SDR sample rate!
+If you don't get this nice peak, but maybe several peaks, you might have the input over-driven.
+Note that the peak will spread by the frequency deviation, so the peak might look noisy on the top.
+If the peak is quite low, check the input gain.
+</p>
+
+<p class="toppic">
+<a name="uhd"></a>
+UHD
+</p>
+
+<p>
+Most things apply to the things stated at the LimeSDR section.
+I have good experience, even without using IF offset or special resampling (--sdr-samplerate) or special bandwidth settings.
+</p>
+
+<p>
+You can run any UHD device using SoapySDR or UHD API.
+Use "--sdr-uhd" to use the UHD API.
+</p>
+
+<p>
+
+</p>
+
+<p class="toppic">
+<a name="mchan"></a>
+Multiple Channels
+</p>
+
+<p>
+One nice things about SDR is that a spectrum is transmitted and not just one modulated carrier.
+Because the carrier is actually generated in software, we can generate multiple carriers that fit in our bandwidth.
+I suggest to have at least one channel space between channels you want to generate.
+I suggest to use channel 1 and 3 or even channel 1 and 4 for NMT system.
+The software will notice you, if the channels wont fit into the bandwidth.
+In this case increase the sample rate (-s) to generate a wider spectrum. (--sdr-samplerate must not need to be changed)
+</p>
+
+<p>
+Note that the CPU usage increases for the main thread.
+I suggest to monitor the usage using "top -H".
+You will see each thread. Be sure not to get too close to 100 percent.
+I suggest to stay below 50%, at least for all threads.
+</p>
+
+<hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
+</td></tr></table></center>
+</body>
+</html>
+

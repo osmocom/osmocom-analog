@@ -24,18 +24,19 @@ History
 </p>
 
 <p>
-*TBD*
-
-
 The Advanced Mobile Phone Service (AMPS) was an analog cellular mobile phone system developed by Bell Labs.
 From 1968 to 1983 the Bell Labs worked out the system, while Motorola was developing the cellular phone.
 Dr. Martin Cooper produced the first handheld phone "DynaTAC8000x", the famous Brick Phone.
-
-
 </p>
 
 <center><img src="amps-dynatac.jpg"/></center>
 <center><a href="https://en.wikipedia.org/wiki/Motorola_DynaTAC">Image taken from Wikipedia</a></center>
+
+<p>
+AMPS was one of the first modern cellular phone systems, which remained in operation until 2008.
+Service started in Chicago on October 13, 1983 and in the Washington, DC area December 1983.
+After divestiture, AMPS was divided among the 7 newly created Regional Holding Companies, now known as RBOCs.
+</p>
 
 <p>
 <ul>
@@ -58,6 +59,7 @@ Dr. Martin Cooper produced the first handheld phone "DynaTAC8000x", the famous B
 
 <p class="toppic">
 <a name="howitworks"></a>
+How it works
 </p>
 
 <p>
@@ -68,7 +70,19 @@ Thanx to TIA for allowing me to add the standard document to this project's docu
 </p>
 
 <p>
-*TBD* SID and System A/B
+An AMPS network is divided into two systems, System A and System B.
+Both systems have different radio channels.
+System A was assigned to carriers that own no fixed network. (non-wireline)
+System B was assigned to carriers that are phone companies with a fixed network. (wireline)
+</p>
+
+<p>
+Each system has a system ID (SID).
+A SID defines the home network.
+If it does not match with the phone's SID, the phone will show 'ROAM', if not disabled.
+If the SID is odd (1, 3, 5, ...), it belongs to System A.
+If the SID is even (2, 4, 6, ...), it belongs to System B.
+The System A or B or both can be selected on the phone.
 </p>
 
 <p>
@@ -76,6 +90,40 @@ To reduce radio noise, a syllabic compandor is used on both ends.
 This compresses the audio level dynamics by 2.
 An audio level of 25% is raised to 50% by the compressor and lowered to 25% by the expander.
 A radio noise floor of 10% would be reduced to 1% by the expander.
+</p>
+
+<p>
+Amps system was the first cellular system.
+By reducing cell size, the frequencies can be reused in lower distances, so more calls can be made in an area with the same amount of channels.
+Different cell sizes require a control of the tranmission power of the phone and the base station.
+A system with small cells must handoff (handover) the call to another cell, if a subscriber moves outside the coverage area.
+In order to know where a phone can be reached, it must register to a new cell (area), if it moves.
+A database keeps track of the current location of the mobile phone.
+</p>
+
+<p>
+<font color="red">Registering, power control and handoff are the key features of a cellular network.</font>
+</p>
+
+<p>
+</p>
+
+<p>
+</p>
+
+<p>
+</p>
+
+<p>
+</p>
+
+<p>
+</p>
+
+<p>
+</p>
+
+<p>
 </p>
 
 <p class="toppic">
