@@ -2,7 +2,8 @@
 #include "../common/compandor.h"
 #include "../common/dtmf.h"
 #include "../common/call.h"
-#include "../common/ffsk.h"
+#include "../common/fsk.h"
+#include "../common/goertzel.h"
 #include "dms.h"
 #include "sms.h"
 
@@ -96,7 +97,7 @@ typedef struct nmt {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
-	ffsk_t			ffsk;			/* ffsk processing */
+	fsk_t			fsk;			/* fsk processing */
 	int			super_samples;		/* number of samples in buffer for supervisory detection */
 	goertzel_t		super_goertzel[5];	/* filter for supervisory decoding */
 	sample_t		*super_filter_spl;	/* array with sample buffer for supervisory detection */
@@ -112,15 +113,14 @@ typedef struct nmt {
 	int			rx_count;		/* next bit to receive */
 	double			rx_level[256];		/* level infos */
 	double			rx_quality[256];	/* quality infos */
-	sample_t		*frame_spl;		/* samples to store a complete rendered frame */
-	int			frame_size;		/* total size of sample buffer */
-	int			frame_length;		/* current length of data in sample buffer */
-	int			frame_pos;		/* current sample position in frame_spl */
 	uint64_t		rx_bits_count;		/* sample counter */
 	uint64_t		rx_bits_count_current;	/* sample counter of current frame */
 	uint64_t		rx_bits_count_last;	/* sample counter of last frame */
 	int			super_detected;		/* current detection state flag */
 	int			super_detect_count;	/* current number of consecutive detections/losses */
+	char			tx_frame[166];		/* carries bits of one frame to transmit */
+	int			tx_frame_length;
+	int			tx_frame_pos;
 
 	/* DMS/SMS states */
 	dms_t			dms;			/* DMS states */

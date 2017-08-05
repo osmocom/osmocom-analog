@@ -26,7 +26,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "sample.h"
-#include "iir_filter.h"
 #include "fm_modulation.h"
 #include "sender.h"
 #include "timer.h"
@@ -229,13 +228,17 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double tx_offset;
 			tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz\n", c, tx_offset / 1e6);
-			fm_mod_init(&sdr->chan[c].mod, samplerate, tx_offset, sdr->amplitude);
+			rc = fm_mod_init(&sdr->chan[c].mod, samplerate, tx_offset, sdr->amplitude);
+			if (rc < 0)
+				goto error;
 		}
 		if (sdr->paging_channel) {
 			double tx_offset;
 			tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
-			fm_mod_init(&sdr->chan[sdr->paging_channel].mod, samplerate, tx_offset, sdr->amplitude);
+			rc = fm_mod_init(&sdr->chan[sdr->paging_channel].mod, samplerate, tx_offset, sdr->amplitude);
+			if (rc < 0)
+				goto error;
 		}
 		/* show gain */
 		PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB\n", sdr_tx_gain);
@@ -286,7 +289,9 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double rx_offset;
 			rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
-			fm_demod_init(&sdr->chan[c].demod, samplerate, rx_offset, bandwidth);
+			rc = fm_demod_init(&sdr->chan[c].demod, samplerate, rx_offset, bandwidth);
+			if (rc < 0)
+				goto error;
 		}
 		/* show gain */
 		PDEBUG(DSDR, DEBUG_INFO, "Using gain: RX %.1f dB\n", sdr_rx_gain);
@@ -513,7 +518,17 @@ void sdr_close(void *inst)
 		wave_destroy_record(&sdr->wave_tx_rec);
 		wave_destroy_playback(&sdr->wave_rx_play);
 		wave_destroy_playback(&sdr->wave_tx_play);
-		free(sdr->chan);
+		if (sdr->chan) {
+			int c;
+
+			for (c = 0; c < sdr->channels; c++) {
+				fm_mod_exit(&sdr->chan[c].mod);
+				fm_demod_exit(&sdr->chan[c].demod);
+			}
+			if (sdr->paging_channel)
+				fm_mod_exit(&sdr->chan[sdr->paging_channel].mod);
+			free(sdr->chan);
+		}
 		free(sdr);
 		sdr = NULL;
 	}
@@ -538,9 +553,9 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 		for (c = 0; c < channels; c++) {
 			/* switch to paging channel, if requested */
 			if (on[c] && sdr->paging_channel)
-				fm_modulate(&sdr->chan[sdr->paging_channel].mod, samples[c], num, buff);
+				fm_modulate_complex(&sdr->chan[sdr->paging_channel].mod, samples[c], num, buff);
 			else
-				fm_modulate(&sdr->chan[c].mod, samples[c], num, buff);
+				fm_modulate_complex(&sdr->chan[c].mod, samples[c], num, buff);
 		}
 	} else {
 		buff = (float *)samples;
@@ -603,6 +618,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buffer[num * 2], *buff = NULL;
+	sample_t I[num], Q[num];
 	int count = 0;
 	int c, s, ss;
 
@@ -675,7 +691,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 
 	if (channels) {
 		for (c = 0; c < channels; c++)
-			fm_demodulate(&sdr->chan[c].demod, samples[c], count, buff);
+			fm_demodulate_complex(&sdr->chan[c].demod, samples[c], count, buff, I, Q);
 	}
 
 	return count;

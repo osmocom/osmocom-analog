@@ -37,7 +37,8 @@
  *
  * Applies similar to NMT, read it there!
  *
- * I assume that the deviation at 1800 Hz (Bit 0) is +-1700 Hz.
+ * I assume that the deviation at 1500 Hz is +-1425 Hz. (according to R&S)
+ * This would lead to a deviation at 1800 Hz (Bit 0) about +-1700 Hz. (emphasis)
  *
  * Notes on TX_PEAK_SUPER level:
  *
@@ -49,44 +50,32 @@
 #define MAX_MODULATION		2550.0
 #define DBM0_DEVIATION		1500.0	/* deviation of dBm0 at 1 kHz */
 #define COMPANDOR_0DB		1.0	/* A level of 0dBm (1.0) shall be unaccected */
-#define TX_PEAK_FSK		(1700.0 / 1800.0 * 1000.0 / DBM0_DEVIATION) /* with emphasis */
+#define TX_PEAK_FSK		(1425.0 / 1500.0 * 1000.0 / DBM0_DEVIATION) /* with emphasis */
 #define TX_PEAK_SUPER		(300.0 / DBM0_DEVIATION) /* no emphasis */
-#define BIT_RATE		1200.0
-#define SUPER_RATE		50.0
+#define FSK_BIT_RATE		1200.0
+#define FSK_BIT_ADJUST		0.1	/* how much do we adjust bit clock on frequency change */
+#define FSK_F0			1800.0
+#define FSK_F1			1200.0
+#define SUPER_BIT_RATE		50.0
+#define SUPER_BIT_ADJUST	0.5	/* how much do we adjust bit clock on frequency change */
+#define SUPER_F0		136.0
+#define SUPER_F1		164.0
 #define FILTER_STEP		0.002	/* step every 2 ms */
 #define MAX_DISPLAY		1.4	/* something above dBm0 */
 
-/* two signaling tones */
-static double super_bits[2] = {
-	136.0,
-	164.0,
-};
-
-/* table for fast sine generation */
-static sample_t super_sine[65536];
-
-/* global init for FFSK */
+/* global init for FSK */
 void dsp_init(void)
 {
-	int i;
-
-	ffsk_global_init(TX_PEAK_FSK);
-
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table.\n");
-	for (i = 0; i < 65536; i++) {
-		super_sine[i] = sin((double)i / 65536.0 * 2.0 * PI) * TX_PEAK_SUPER;
-	}
 }
 
+static int fsk_send_bit(void *inst);
 static void fsk_receive_bit(void *inst, int bit, double quality, double level);
+static int super_send_bit(void *inst);
+static void super_receive_bit(void *inst, int bit, double quality, double level);
 
 /* Init FSK of transceiver */
 int dsp_init_sender(r2000_t *r2000)
 {
-	sample_t *spl;
-	double fsk_samples_per_bit;
-	int i;
-
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
 	init_compandor(&r2000->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
 
@@ -97,9 +86,9 @@ int dsp_init_sender(r2000_t *r2000)
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f\n", TX_PEAK_FSK);
 
-	/* init ffsk */
-	if (ffsk_init(&r2000->ffsk, r2000, fsk_receive_bit, r2000->sender.kanal, r2000->sender.samplerate) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FFSK init failed!\n");
+	/* init fsk */
+	if (fsk_init(&r2000->fsk, r2000, fsk_send_bit, fsk_receive_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1, FSK_BIT_ADJUST) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (r2000->sender.loopback)
@@ -107,43 +96,11 @@ int dsp_init_sender(r2000_t *r2000)
 	else
 		r2000->rx_max = 144;
 
-	/* allocate transmit buffer for a complete frame, add 10 to be safe */
-
-	fsk_samples_per_bit = (double)r2000->sender.samplerate / BIT_RATE;
-	r2000->frame_size = 208.0 * fsk_samples_per_bit + 10;
-	spl = calloc(r2000->frame_size, sizeof(*spl));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
+	/* init supervisorty fsk */
+	if (fsk_init(&r2000->super_fsk, r2000, super_send_bit, super_receive_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0, SUPER_BIT_ADJUST) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
+		return -EINVAL;
 	}
-	r2000->frame_spl = spl;
-
-	/* strange: better quality with window size of two bits */
-	r2000->super_samples_per_window = (double)r2000->sender.samplerate / SUPER_RATE * 2.0;
-	r2000->super_filter_step = (double)r2000->sender.samplerate * FILTER_STEP;
-	r2000->super_size = 20.0 * r2000->super_samples_per_window + 10;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per filter step for supervisory signal.\n", r2000->super_filter_step);
-	spl = calloc(r2000->super_size, sizeof(*spl));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
-	}
-	r2000->super_spl = spl;
-	spl = calloc(1, r2000->super_samples_per_window * sizeof(*spl));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
-	}
-	r2000->super_filter_spl = spl;
-	r2000->super_filter_bit = -1;
-
-	/* count supervisory symbols */
-	for (i = 0; i < 2; i++) {
-		audio_goertzel_init(&r2000->super_goertzel[i], super_bits[i], r2000->sender.samplerate);
-		r2000->super_phaseshift65536[i] = 65536.0 / ((double)r2000->sender.samplerate / super_bits[i]);
-		PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift[%d] = %.4f\n", i, r2000->super_phaseshift65536[i]);
-	}
-	r2000->super_bittime = SUPER_RATE / (double)r2000->sender.samplerate;
 
 	return 0;
 }
@@ -153,20 +110,8 @@ void dsp_cleanup_sender(r2000_t *r2000)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
 
-	ffsk_cleanup(&r2000->ffsk);
-
-	if (r2000->frame_spl) {
-		free(r2000->frame_spl);
-		r2000->frame_spl = NULL;
-	}
-	if (r2000->super_spl) {
-		free(r2000->super_spl);
-		r2000->super_spl = NULL;
-	}
-	if (r2000->super_filter_spl) {
-		free(r2000->super_filter_spl);
-		r2000->super_filter_spl = NULL;
-	}
+	fsk_cleanup(&r2000->fsk);
+	fsk_cleanup(&r2000->super_fsk);
 }
 
 /* Check for SYNC bits, then collect data bits */
@@ -242,8 +187,9 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	r2000_receive_frame(r2000, r2000->rx_frame, quality, level);
 }
 
-static void super_receive_bit(r2000_t *r2000, int bit, double level, double quality)
+static void super_receive_bit(void *inst, int bit, double quality, double level)
 {
+	r2000_t *r2000 = (r2000_t *)inst;
 	int i;
 
 	/* normalize supervisory level */
@@ -272,108 +218,6 @@ static void super_receive_bit(r2000_t *r2000, int bit, double level, double qual
 	r2000_receive_super(r2000, (r2000->super_rx_word >> 1) & 0x7f, quality, level);
 }
 
-//#define DEBUG_FILTER
-//#define DEBUG_QUALITY
-
-/* demodulate supervisory signal
- * filter one chunk, that is 2ms long (1/10th of a bit) */
-static inline void super_decode_step(r2000_t *r2000, int pos)
-{
-	double level, result[2], softbit, quality;
-	int max;
-	sample_t *spl;
-	int bit;
-
-	max = r2000->super_samples_per_window;
-	spl = r2000->super_filter_spl;
-
-	level = audio_level(spl, max);
-
-	audio_goertzel(r2000->super_goertzel, spl, max, pos, result, 2);
-
-	/* calculate soft bit from both frequencies */
-	softbit = (result[1] / level - result[0] / level + 1.0) / 2.0;
-//	/* scale it, since both filters overlap by some percent */
-//#define MIN_QUALITY 0.08
-//	softbit = (softbit - MIN_QUALITY) / (0.850 - MIN_QUALITY - MIN_QUALITY);
-	if (softbit > 1)
-		softbit = 1;
-	if (softbit < 0)
-		softbit = 0;
-#ifdef DEBUG_FILTER
-	printf("|%s", debug_amplitude(result[0]/level));
-	printf("|%s| low=%.3f high=%.3f level=%d\n", debug_amplitude(result[1]/level), result[0]/level, result[1]/level, (int)level);
-#endif
-	if (softbit > 0.5)
-		bit = 1;
-	else
-		bit = 0;
-
-//	quality = result[bit] / level;
-	if (softbit > 0.5)
-		quality = softbit * 2.0 - 1.0;
-	else
-		quality = 1.0 - softbit * 2.0;
-
-	/* scale quality, because filters overlap */
-	quality /= 0.80;
-
-	if (r2000->super_filter_bit != bit) {
-#ifdef DEBUG_FILTER
-		puts("bit change");
-#endif
-		r2000->super_filter_bit = bit;
-#if 0
-		/* If we have a bit change, move sample counter towards one half bit duration.
-		 * We may have noise, so the bit change may be wrong or not at the correct place.
-		 * This can cause bit slips.
-		 * Therefore we change the sample counter only slightly, so bit slips may not
-		 * happen so quickly.
-		 */
-		if (r2000->super_filter_sample < 5)
-			r2000->super_filter_sample++;
-		if (r2000->super_filter_sample > 5)
-			r2000->super_filter_sample--;
-#else
-		/* directly center the sample position, because we don't have any sync sequence */ 
-		r2000->super_filter_sample = 5;
-#endif
-
-	} else if (--r2000->super_filter_sample == 0) {
-		/* if sample counter bit reaches 0, we reset sample counter to one bit duration */
-#ifdef DEBUG_QUALITY
-		printf("|%s| quality=%.2f ", debug_amplitude(softbit), quality);
-		printf("|%s|\n", debug_amplitude(quality);
-#endif
-		/* adjust level, so we get peak of sine curve */
-		super_receive_bit(r2000, bit, level / 0.63662, quality);
-		r2000->super_filter_sample = 10;
-	}
-}
-
-/* get audio chunk out of received stream */
-void super_receive(r2000_t *r2000, sample_t *samples, int length)
-{
-	sample_t *spl;
-	int max, pos, step;
-	int i;
-	/* write received samples to decode buffer */
-	max = r2000->super_samples_per_window;
-	pos = r2000->super_filter_pos;
-	step = r2000->super_filter_step;
-	spl = r2000->super_filter_spl;
-	for (i = 0; i < length; i++) {
-		spl[pos++] = samples[i];
-		if (pos == max)
-			pos = 0;
-		/* if filter step has been reched */
-		if (!(pos % step)) {
-			super_decode_step(r2000, pos);
-		}
-	}
-	r2000->super_filter_pos = pos;
-}
-
 /* Process received audio stream from radio unit. */
 void sender_receive(sender_t *sender, sample_t *samples, int length)
 {
@@ -390,14 +234,14 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	if (r2000->dsp_mode == DSP_MODE_AUDIO_TX
 	 || r2000->dsp_mode == DSP_MODE_AUDIO_TX_RX
 	 || r2000->sender.loopback)
-		super_receive(r2000, samples, length);
+		fsk_receive(&r2000->super_fsk, samples, length);
 
 	/* do de-emphasis */
 	if (r2000->de_emphasis)
 		de_emphasis(&r2000->estate, samples, length);
 
 	/* fsk signal */
-	ffsk_receive(&r2000->ffsk, samples, length);
+	fsk_receive(&r2000->fsk, samples, length);
 
 	/* we must have audio mode for both ways and a call */
 	if (r2000->dsp_mode == DSP_MODE_AUDIO_TX_RX
@@ -424,125 +268,43 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 		r2000->sender.rxbuf_pos = 0;
 }
 
-static int fsk_frame(r2000_t *r2000, sample_t *samples, int length)
+static int fsk_send_bit(void *inst)
 {
+	r2000_t *r2000 = (r2000_t *)inst;
 	const char *frame;
-	sample_t *spl;
-	int i;
-	int count, max;
 
-next_frame:
-	if (!r2000->frame_length) {
-		/* request frame */
+	if (!r2000->tx_frame_length || r2000->tx_frame_pos == r2000->tx_frame_length) {
 		frame = r2000_get_frame(r2000);
 		if (!frame) {
+			r2000->tx_frame_length = 0;
 			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
-			return length;
+			return -1;
 		}
-		/* render frame */
-		r2000->frame_length = ffsk_render_frame(&r2000->ffsk, frame, 208, r2000->frame_spl);
-		r2000->frame_pos = 0;
-		if (r2000->frame_length > r2000->frame_size) {
-			PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
-			abort();
-		}
+		memcpy(r2000->tx_frame, frame, 208);
+		r2000->tx_frame_length = 208;
+		r2000->tx_frame_pos = 0;
 	}
 
-	/* send audio from frame */
-	max = r2000->frame_length;
-	count = max - r2000->frame_pos;
-	if (count > length)
-		count = length;
-	spl = r2000->frame_spl + r2000->frame_pos;
-	for (i = 0; i < count; i++) {
-		*samples++ = *spl++;
-	}
-	length -= count;
-	r2000->frame_pos += count;
-	/* check for end of telegramm */
-	if (r2000->frame_pos == max) {
-		r2000->frame_length = 0;
-		/* we need more ? */
-		if (length)
-			goto next_frame;
-	}
-
-	return length;
+	return r2000->tx_frame[r2000->tx_frame_pos++];
 }
 
-static int super_render_frame(r2000_t *r2000, uint32_t word, sample_t *sample)
+static int super_send_bit(void *inst)
 {
-	double phaseshift, phase, bittime, bitpos;
-	int count = 0, i;
+	r2000_t *r2000 = (r2000_t *)inst;
 
-	phase = r2000->super_phase65536;
-	bittime = r2000->super_bittime;
-	bitpos = r2000->super_bitpos;
-	for (i = 0; i < 20; i++) {
-		phaseshift = r2000->super_phaseshift65536[(word >> 19) & 1];
-		do {
-			*sample++ = super_sine[(uint16_t)phase];
-			count++;
-			phase += phaseshift;
-			if (phase >= 65536.0)
-				phase -= 65536.0;
-			bitpos += bittime;
-		} while (bitpos < 1.0);
-		bitpos -= 1.0;
-		word <<= 1;
-	}
-	r2000->super_phase65536 = phase;
-	bitpos = r2000->super_bitpos;
-
-	/* return number of samples created for frame */
-	return count;
-}
-
-static int super_frame(r2000_t *r2000, sample_t *samples, int length)
-{
-	sample_t *spl;
-	int i;
-	int count, max;
-
-next_frame:
-	if (!r2000->super_length) {
-		/* render supervisory rame */
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "render word 0x%05x\n", r2000->super_tx_word);
-		r2000->super_length = super_render_frame(r2000, r2000->super_tx_word, r2000->super_spl);
-		r2000->super_pos = 0;
-		if (r2000->super_length > r2000->super_size) {
-			PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
-			abort();
-		}
+	if (!r2000->super_tx_word_length || r2000->super_tx_word_pos == r2000->super_tx_word_length) {
+		r2000->super_tx_word_length = 20;
+		r2000->super_tx_word_pos = 0;
 	}
 
-	/* send audio from frame */
-	max = r2000->super_length;
-	count = max - r2000->super_pos;
-	if (count > length)
-		count = length;
-	spl = r2000->super_spl + r2000->super_pos;
-	for (i = 0; i < count; i++) {
-		*samples++ += *spl++;
-	}
-	length -= count;
-	r2000->super_pos += count;
-	/* check for end of telegramm */
-	if (r2000->super_pos == max) {
-		r2000->super_length = 0;
-		/* we need more ? */
-		if (length)
-			goto next_frame;
-	}
-
-	return length;
+	return (r2000->super_tx_word >> (r2000->super_tx_word_length - (++r2000->super_tx_word_pos))) & 1;
 }
 
 /* Provide stream of audio toward radio unit */
 void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	r2000_t *r2000 = (r2000_t *) sender;
-	int len;
+	int count;
 
 again:
 	switch (r2000->dsp_mode) {
@@ -555,20 +317,25 @@ again:
 		/* do pre-emphasis */
 		if (r2000->pre_emphasis)
 			pre_emphasis(&r2000->estate, samples, length);
-		super_frame(r2000, samples, length);
+		/* add supervisory to sample buffer */
+		fsk_send(&r2000->super_fsk, samples, length, 1);
 		break;
 	case DSP_MODE_FRAME:
 		/* Encode frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
-		len = fsk_frame(r2000, samples, length);
+		count = fsk_send(&r2000->fsk, samples, length, 0);
 		/* do pre-emphasis */
 		if (r2000->pre_emphasis)
-			pre_emphasis(&r2000->estate, samples, length - len);
-		if (len) {
-			samples += length - len;
-			length = len;
-			goto again;
+			pre_emphasis(&r2000->estate, samples, count);
+		/* special case: add supervisory signal to frame at loop test */
+		if (r2000->sender.loopback) {
+			/* add supervisory to sample buffer */
+			fsk_send(&r2000->super_fsk, samples, count, 1);
 		}
+		samples += count;
+		length -= count;
+		if (length)
+			goto again;
 		break;
 	}
 }
@@ -596,11 +363,13 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 {
 	/* reset telegramm */
 	if (mode == DSP_MODE_FRAME && r2000->dsp_mode != mode) {
-		r2000->frame_length = 0;
+		r2000->tx_frame_length = 0;
+		fsk_tx_reset(&r2000->fsk);
 	}
 	if ((mode == DSP_MODE_AUDIO_TX || mode == DSP_MODE_AUDIO_TX_RX)
 	 && (r2000->dsp_mode != DSP_MODE_AUDIO_TX && r2000->dsp_mode != DSP_MODE_AUDIO_TX_RX)) {
-		r2000->super_length = 0;
+		r2000->super_tx_word_length = 0;
+		fsk_tx_reset(&r2000->super_fsk);
 	}
 
 	if (super >= 0) {
@@ -615,4 +384,3 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 	r2000->dsp_mode = mode;
 }
 
-#warning fixme: high pass filter on tx side to prevent desturbance of supervisory signal

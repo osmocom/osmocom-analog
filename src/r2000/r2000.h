@@ -1,7 +1,7 @@
 #include "../common/compandor.h"
 #include "../common/sender.h"
 #include "../common/call.h"
-#include "../common/ffsk.h"
+#include "../common/fsk.h"
 
 enum dsp_mode {
 	DSP_MODE_OFF,		/* no transmission */
@@ -78,7 +78,10 @@ typedef struct r2000 {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
-	ffsk_t			ffsk;			/* ffsk processing */
+	fsk_t			fsk;			/* fsk processing */
+	char			tx_frame[208];		/* carries bits of one frame to transmit */
+	int			tx_frame_length;
+	int			tx_frame_pos;
 	uint16_t		rx_sync;		/* shift register to detect sync */
 	int			rx_in_sync;		/* if we are in sync and receive bits */
 	int			rx_mute;		/* mute count down after sync */
@@ -87,33 +90,19 @@ typedef struct r2000 {
 	int			rx_count;		/* next bit to receive */
 	double			rx_level[256];		/* level infos */
 	double			rx_quality[256];	/* quality infos */
-	sample_t		*frame_spl;		/* samples to store a complete rendered frame */
-	int			frame_size;		/* total size of sample buffer */
-	int			frame_length;		/* current length of data in sample buffer */
-	int			frame_pos;		/* current sample position in frame_spl */
 	uint64_t		rx_bits_count;		/* sample counter */
 	uint64_t		rx_bits_count_current;	/* sample counter of current frame */
 	uint64_t		rx_bits_count_last;	/* sample counter of last frame */
 
 	/* supervisory dsp states */
-	goertzel_t		super_goertzel[2];	/* filter for fsk decoding */
-	int			super_samples_per_window;/* how many samples to analyze in one window */
-	sample_t		*super_filter_spl;	/* array with samples_per_bit */
-	int			super_filter_pos;	/* current sample position in filter_spl */
-	int			super_filter_step;	/* number of samples for each analyzation */
-	int			super_filter_bit;	/* last bit, so we detect a bit change */
-	int			super_filter_sample;	/* count until it is time to sample bit */
-	sample_t		*super_spl;		/* samples to store a complete rendered frame */
-	int			super_size;		/* total size of sample buffer */
-	int			super_length;		/* current length of data in sample buffer */
-	int			super_pos;		/* current sample position in frame_spl */
-	double			super_phaseshift65536[2];/* how much the phase of sine wave changes per sample */
-	double			super_phase65536;	/* current phase */
+	fsk_t			super_fsk;		/* fsk processing */
+	uint32_t		super_tx_word;		/* supervisory info to transmit */
+	int			super_tx_word_length;
+	int			super_tx_word_pos;
 	uint32_t		super_rx_word;		/* shift register for received supervisory info */
 	double			super_rx_level[20];	/* level infos */
 	double			super_rx_quality[20];	/* quality infos */
 	int			super_rx_index;		/* index for level and quality buffer */
-	uint32_t		super_tx_word;		/* supervisory info to transmit */
 double super_bittime;
 double super_bitpos;
 

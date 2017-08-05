@@ -286,15 +286,11 @@ static void dms_encode_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *
 	printf("\n");
 #endif
 
-	/* render wave form */
-	test_dms_frame(frame, 127); // used by test program
-	dms->frame_length = ffsk_render_frame(&nmt->ffsk, frame, 127, dms->frame_spl);
-	dms->frame_valid = 1;
-	dms->frame_pos = 0;
-	if (dms->frame_length > dms->frame_size) {
-		PDEBUG(DDMS, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
-		abort();
-	}
+	/* store frame */
+	memcpy(dms->tx_frame, frame, 127);
+	dms->tx_frame_length = 127;
+	dms->tx_frame_pos = 0;
+	dms->tx_frame_valid = 1;
 }
 
 /* encode RR frame and schedule for next transmission */
@@ -334,29 +330,27 @@ static void dms_encode_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 	printf("\n");
 #endif
 
-	/* render wave form */
-	test_dms_frame(frame, 77); // used by test program
-	dms->frame_length = ffsk_render_frame(&nmt->ffsk, frame, 77, dms->frame_spl);
-	dms->frame_valid = 1;
-	dms->frame_pos = 0;
-	if (dms->frame_length > dms->frame_size) {
-		PDEBUG(DDMS, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
-		abort();
-	}
+	/* store frame */
+	memcpy(dms->tx_frame, frame, 77);
+	dms->tx_frame_length = 77;
+	dms->tx_frame_pos = 0;
+	dms->tx_frame_valid = 1;
 }
 
 /* check if we have to transmit a frame and render it
  * also do nothing until a currently transmitted frame is completely
  * transmitted.
+ *
+ * this function is public, so it can be used by test routine.
  */
-static void trigger_frame_transmission(nmt_t *nmt)
+void trigger_frame_transmission(nmt_t *nmt)
 {
 	dms_t *dms = &nmt->dms;
 	struct dms_frame *dms_frame;
 	int i;
 
 	/* ongoing transmission, so we wait */
-	if (dms->frame_valid)
+	if (dms->tx_frame_valid)
 		return;
 
 	/* check for RR first, because high priority */
@@ -416,41 +410,21 @@ static void trigger_frame_transmission(nmt_t *nmt)
 }
 
 /* send data using FSK */
-int fsk_dms_frame(nmt_t *nmt, sample_t *samples, int length)
+int dms_send_bit(nmt_t *nmt)
 {
 	dms_t *dms = &nmt->dms;
-	sample_t *spl;
-	int i;
-	int count, max;
 
-next_frame:
-	/* check if no frame is currently transmitted */
-	if (dms->frame_length == 0) {
-		dms->frame_valid = 0;
+	if (!dms->tx_frame_valid)
+		return -1;
+
+	if (!dms->tx_frame_length || dms->tx_frame_pos == dms->tx_frame_length) {
+		dms->tx_frame_valid = 0;
 		trigger_frame_transmission(nmt);
-		if (!dms->frame_valid)
-			return length;
-	}
-	/* send audio from frame */
-	max = dms->frame_length;
-	count = max - dms->frame_pos;
-//printf("length = %d count=%d\n", length, count);
-	if (count > length)
-		count = length;
-	spl = dms->frame_spl + dms->frame_pos;
-	for (i = 0; i < count; i++) {
-		*samples++ = *spl++;
-	}
-	dms->frame_pos += count;
-	/* check for end of frame and stop */
-	if (dms->frame_pos == max) {
-		dms->frame_length = 0;
-		/* we need more ? */
-		if (length)
-			goto next_frame;
+		if (!dms->tx_frame_valid)
+			return -1;
 	}
 
-	return length;
+	return dms->tx_frame[dms->tx_frame_pos++];
 }
 
 /*
@@ -869,7 +843,7 @@ void dms_reset(nmt_t *nmt)
 	dms->rx_in_sync = 0;
 	memset(&dms->state, 0, sizeof(dms->state));
 
-	dms->frame_valid = 0;
+	dms->tx_frame_valid = 0;
 
 	while (dms->state.frame_list)
 		dms_frame_delete(nmt, dms->state.frame_list);

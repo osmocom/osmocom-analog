@@ -1,4 +1,4 @@
-#include "../common/goertzel.h"
+#include "../common/fsk.h"
 #include "../common/sender.h"
 
 /* fsk modes of transmission */
@@ -75,24 +75,20 @@ typedef struct bnetz {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, "Telegramm" */
-	goertzel_t		fsk_goertzel[2];	/* filter for fsk decoding */
-	int			samples_per_bit;	/* how many samples lasts one bit */
-	sample_t		*fsk_filter_spl;	/* array with samples_per_bit */
-	int			fsk_filter_pos;		/* current sample position in filter_spl */
-	int			fsk_filter_step;	/* number of samples for each analyzation */
-	int			fsk_filter_bit;		/* last bit, so we detect a bit change */
-	int			fsk_filter_sample;	/* count until it is time to sample bit */
-	uint16_t		fsk_filter_telegramm;	/* rx shift register for receiveing telegramm */
-	double			fsk_filter_quality[16];	/* quality of each bit in telegramm */
-	double			fsk_filter_level[16];	/* level of each bit in telegramm */
-	int			fsk_filter_qualidx;	/* index of quality array above */
+	fsk_t			fsk;			/* fsk modem instance */
+	uint16_t		rx_telegramm;		/* rx shift register for receiveing telegramm */
+	double			rx_telegramm_quality[16];/* quality of each bit in telegramm */
+	double			rx_telegramm_level[16];	/* level of each bit in telegramm */
+	int			rx_telegramm_qualidx;	/* index of quality array above */
 	int			tone_detected;		/* what tone has been detected */
 	int			tone_count;		/* how long has that tone been detected */
 	double			phaseshift65536[2];	/* how much the phase of sine wave changes per sample */
 	double			phase65536;		/* current phase */
-	int			telegramm;		/* set, if there is a valid telegram */
-	sample_t		*telegramm_spl;		/* 16 * samples_per_bit */
-	int			telegramm_pos;		/* current sample position in telegramm_spl */
+	const char		*tx_telegramm;		/* carries bits of one frame to transmit */
+	int			tx_telegramm_pos;
+	int			samples_per_chunk;	/* samples per loss detection interval */
+	sample_t		*chunk_spl;		/* chunk sample */
+	int			chunk_pos;		/* current received sample of chunk */
 
 	/* loopback test for latency */
 	int			loopback_count;		/* count digits from 0 to 9 */

@@ -59,7 +59,10 @@
 #define COMPANDOR_0DB		1.0	/* A level of 0dBm (1.0) shall be unaccected */
 #define TX_PEAK_FSK		(4200.0 / 1800.0 * 1000.0 / DBM0_DEVIATION)
 #define TX_PEAK_SUPER		(300.0 / 4015.0 * 1000.0 / DBM0_DEVIATION)
-#define BIT_RATE		1200
+#define BIT_RATE		1200.0
+#define BIT_ADJUST		0.1	/* how much do we adjust bit clock on frequency change */
+#define F0			1800.0
+#define F1			1200.0
 #define MAX_DISPLAY		1.4	/* something above dBm0 */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
 #define TX_PEAK_DIALTONE	0.5	/* dial tone peak FIXME */
@@ -81,7 +84,7 @@ static double super_freq[5] = {
 static sample_t dsp_sine_super[65536];
 static sample_t dsp_sine_dialtone[65536];
 
-/* global init for FFSK */
+/* global init for dsp */
 void dsp_init(void)
 {
 	int i;
@@ -95,17 +98,15 @@ void dsp_init(void)
 		/* dialtone sine */
 		dsp_sine_dialtone[i] = s * TX_PEAK_DIALTONE;
 	}
-
-	ffsk_global_init(TX_PEAK_FSK);
 }
 
+static int fsk_send_bit(void *inst);
 static void fsk_receive_bit(void *inst, int bit, double quality, double level);
 
 /* Init FSK of transceiver */
 int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 {
 	sample_t *spl;
-	double samples_per_bit;
 	int i;
 
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
@@ -119,31 +120,11 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
 
-	/* init ffsk */
-	if (ffsk_init(&nmt->ffsk, nmt, fsk_receive_bit, nmt->sender.kanal, nmt->sender.samplerate) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FFSK init failed!\n");
+	/* init fsk */
+	if (fsk_init(&nmt->fsk, nmt, fsk_send_bit, fsk_receive_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1, BIT_ADJUST) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
 		return -EINVAL;
 	}
-
-	/* allocate transmit buffer for a complete frame, add 10 to be safe */
-
-	samples_per_bit = (double)nmt->sender.samplerate / (double)BIT_RATE;
-	nmt->frame_size = 166.0 * samples_per_bit + 10;
-	spl = calloc(nmt->frame_size, sizeof(*spl));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
-	}
-	nmt->frame_spl = spl;
-
-	/* allocate DMS transmit buffer for a complete frame, add 10 to be safe */
-	nmt->dms.frame_size = 127.0 * samples_per_bit + 10;
-	spl = calloc(nmt->dms.frame_size, sizeof(*spl));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
-	}
-	nmt->dms.frame_spl = spl;
 
 	/* allocate ring buffer for supervisory signal detection */
 	nmt->super_samples = (int)((double)nmt->sender.samplerate * SUPER_DURATION + 0.5);
@@ -179,16 +160,8 @@ void dsp_cleanup_sender(nmt_t *nmt)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
 
-	ffsk_cleanup(&nmt->ffsk);
+	fsk_cleanup(&nmt->fsk);
 
-	if (nmt->frame_spl) {
-		free(nmt->frame_spl);
-		nmt->frame_spl = NULL;
-	}
-	if (nmt->dms.frame_spl) {
-		free(nmt->dms.frame_spl);
-		nmt->dms.frame_spl = NULL;
-	}
 	if (nmt->super_filter_spl) {
 		free(nmt->super_filter_spl);
 		nmt->super_filter_spl = NULL;
@@ -344,7 +317,8 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	}
 	nmt->super_filter_pos = pos;
 
-	ffsk_receive(&nmt->ffsk, samples, length);
+	/* fsk signal */
+	fsk_receive(&nmt->fsk, samples, length);
 
 	/* muting audio while receiving frame */
 	for (i = 0; i < length; i++) {
@@ -377,50 +351,31 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 		nmt->sender.rxbuf_pos = 0;
 }
 
-static int fsk_frame(nmt_t *nmt, sample_t *samples, int length)
+static int fsk_send_bit(void *inst)
 {
+	nmt_t *nmt = (nmt_t *)inst;
 	const char *frame;
-	sample_t *spl;
-	int i;
-	int count, max;
 
-next_frame:
-	if (!nmt->frame_length) {
-		/* request frame */
-		frame = nmt_get_frame(nmt);
-		if (!frame) {
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
-			return length;
+	/* send frame bit (prio) */
+	if (nmt->dsp_mode == DSP_MODE_FRAME) {
+		if (!nmt->tx_frame_length || nmt->tx_frame_pos == nmt->tx_frame_length) {
+			/* request frame */
+			frame = nmt_get_frame(nmt);
+			if (!frame) {
+				nmt->tx_frame_length = 0;
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
+				return -1;
+			}
+			memcpy(nmt->tx_frame, frame, 166);
+			nmt->tx_frame_length = 166;
+			nmt->tx_frame_pos = 0;
 		}
-		/* render frame */
-		nmt->frame_length = ffsk_render_frame(&nmt->ffsk, frame, 166, nmt->frame_spl);
-		nmt->frame_pos = 0;
-		if (nmt->frame_length > nmt->frame_size) {
-			PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Frame exceeds buffer, please fix!\n");
-			abort();
-		}
+
+		return nmt->tx_frame[nmt->tx_frame_pos++];
 	}
 
-	/* send audio from frame */
-	max = nmt->frame_length;
-	count = max - nmt->frame_pos;
-	if (count > length)
-		count = length;
-	spl = nmt->frame_spl + nmt->frame_pos;
-	for (i = 0; i < count; i++) {
-		*samples++ = *spl++;
-	}
-	length -= count;
-	nmt->frame_pos += count;
-	/* check for end of telegramm */
-	if (nmt->frame_pos == max) {
-		nmt->frame_length = 0;
-		/* we need more ? */
-		if (length)
-			goto next_frame;
-	}
-
-	return length;
+	/* send dms bit */
+	return dms_send_bit(nmt);
 }
 
 /* Generate audio stream with supervisory signal. Keep phase for next call of function. */
@@ -465,7 +420,7 @@ static void dial_tone(nmt_t *nmt, sample_t *samples, int length)
 void sender_send(sender_t *sender, sample_t *samples, int length)
 {
 	nmt_t *nmt = (nmt_t *) sender;
-	int len;
+	int count;
 
 again:
 	switch (nmt->dsp_mode) {
@@ -473,8 +428,8 @@ again:
 	case DSP_MODE_DTMF:
 		jitter_load(&nmt->sender.dejitter, samples, length);
 		/* send after dejitter, so audio is flushed */
-		if (nmt->dms.frame_valid) {
-			fsk_dms_frame(nmt, samples, length);
+		if (nmt->dms.tx_frame_valid) {
+			fsk_send(&nmt->fsk, samples, length, 0);
 			break;
 		}
 		if (nmt->supervisory)
@@ -489,15 +444,14 @@ again:
 	case DSP_MODE_FRAME:
 		/* Encode frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
-		len = fsk_frame(nmt, samples, length);
+		count = fsk_send(&nmt->fsk, samples, length, 0);
 		/* special case: add supervisory signal to frame at loop test */
 		if (nmt->sender.loopback && nmt->supervisory)
-			super_encode(nmt, samples, length);
-		if (len) {
-			samples += length - len;
-			length = len;
+			super_encode(nmt, samples, count);
+		samples += count;
+		length -= count;
+		if (length)
 			goto again;
-		}
 		break;
 	}
 }
@@ -525,9 +479,11 @@ const char *nmt_dsp_mode_name(enum dsp_mode mode)
 
 void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 {
-	/* reset telegramm */
-	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode)
-		nmt->frame_length = 0;
+	/* reset frame */
+	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode) {
+		fsk_tx_reset(&nmt->fsk);
+		nmt->tx_frame_length = 0;
+	}
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", nmt_dsp_mode_name(nmt->dsp_mode), nmt_dsp_mode_name(mode));
 	nmt->dsp_mode = mode;

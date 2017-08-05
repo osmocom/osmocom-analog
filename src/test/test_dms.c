@@ -38,8 +38,7 @@ static const uint8_t test_null[][8] = {
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 1 },
 };
 
-static char current_bits[1024], ack_bits[77];
-int current_bit_count;
+static char ack_bits[77];
 
 void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 {
@@ -55,15 +54,6 @@ void dms_all_sent(nmt_t *nmt)
 {
 }
 
-/* receive bits from DMS */
-void test_dms_frame(const char *frame, int length)
-{
-	printf("(getting %d bits from DMS layer)\n", length);
-
-	memcpy(current_bits, frame, length);
-	current_bit_count = length;
-}
-
 nmt_t *alloc_nmt(void)
 {
 	nmt_t *nmt;
@@ -71,11 +61,6 @@ nmt_t *alloc_nmt(void)
 	nmt = calloc(sizeof(*nmt), 1);
 	nmt->sender.samplerate = 40 * 1200;
 	dms_init_sender(nmt);
-	ffsk_global_init(1.0);
-	ffsk_init(&nmt->ffsk, nmt, NULL, 1, nmt->sender.samplerate);
-	nmt->dms.frame_size = nmt->ffsk.samples_per_bit * 127 + 10;
-	nmt->dms.frame_spl = calloc(nmt->dms.frame_size, sizeof(nmt->dms.frame_spl[0]));
-
 	dms_reset(nmt);
 
 	return nmt;
@@ -84,7 +69,6 @@ nmt_t *alloc_nmt(void)
 void free_nmt(nmt_t *nmt)
 {
 	dms_cleanup_sender(nmt);
-	free(nmt->dms.frame_spl);
 	free(nmt);
 }
 
@@ -93,7 +77,6 @@ int main(void)
 	nmt_t *nmt;
 	dms_t *dms;
 	int i, j;
-	sample_t sample = 0;
 
 	debuglevel = DEBUG_DEBUG;
 	dms_allow_loopback = 1;
@@ -105,96 +88,96 @@ int main(void)
 
 	check_sequence = testsequence;
 	dms_send(nmt, (uint8_t *)testsequence, strlen(testsequence) + 1, 1);
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 1, "Expecting next frame to have sequence number 1");
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 0, "Expecting next frame to have sequence number 0 (cycles due to unacked RAND)");
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 1, "Expecting next frame to have sequence number 1");
 
 	/* send back ID */
 
 	printf("Sending back ID\n");
-	for (i = 0; i < current_bit_count; i++)
-		fsk_receive_bit_dms(nmt, current_bits[i] & 1, 1.0, 1.0);
+	for (i = 0; i < dms->tx_frame_length; i++)
+		fsk_receive_bit_dms(nmt, dms->tx_frame[i] & 1, 1.0, 1.0);
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 77, "Expecting frame in queue with 77 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 77, "Expecting frame in queue with 77 bits");
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 0, "Expecting next frame to have sequence number 0");
 
 	/* send back RAND */
 	printf("Sending back RAND\n");
-	for (i = 0; i < current_bit_count; i++)
-		fsk_receive_bit_dms(nmt, current_bits[i] & 1, 1.0, 1.0);
+	for (i = 0; i < dms->tx_frame_length; i++)
+		fsk_receive_bit_dms(nmt, dms->tx_frame[i] & 1, 1.0, 1.0);
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 77, "Expecting frame in queue with 77 bits");
-	memcpy(ack_bits, current_bits, 77);
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 77, "Expecting frame in queue with 77 bits");
+	memcpy(ack_bits, dms->tx_frame, 77);
 
 	/* check if DT frame will be sent now */
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 1, "Expecting next frame to have sequence number 1");
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 2, "Expecting next frame to have sequence number 2");
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 3, "Expecting next frame to have sequence number 3");
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 0, "Expecting next frame to have sequence number 0");
 
 	/* send back ack bitss */
 	printf("Sending back RR(2)\n");
-	memcpy(current_bits, ack_bits, 77);
-	current_bit_count = 77;
-	for (i = 0; i < current_bit_count; i++)
-		fsk_receive_bit_dms(nmt, current_bits[i] & 1, 1.0, 1.0);
+	memcpy(dms->tx_frame, ack_bits, 77);
+	dms->tx_frame_length = 77;
+	for (i = 0; i < dms->tx_frame_length; i++)
+		fsk_receive_bit_dms(nmt, dms->tx_frame[i] & 1, 1.0, 1.0);
 
 	printf("Pretend that frame has been sent\n");
-	dms->frame_length = 0;
-	fsk_dms_frame(nmt, &sample, 1);
+	dms->tx_frame_valid = 0;
+	trigger_frame_transmission(nmt);
 
-	assert(dms->frame_valid && current_bit_count == 127, "Expecting frame in queue with 127 bits");
+	assert(dms->tx_frame_valid && dms->tx_frame_length == 127, "Expecting frame in queue with 127 bits");
 	assert(dms->state.n_s == 3, "Expecting next frame to have sequence number 0");
 
 	ok();
@@ -203,11 +186,11 @@ int main(void)
 	printf("pipe through all data\n");
 	while (check_sequence[0])  {
 		printf("Sending back last received frame\n");
-		for (i = 0; i < current_bit_count; i++)
-			fsk_receive_bit_dms(nmt, current_bits[i] & 1, 1.0, 1.0);
+		for (i = 0; i < dms->tx_frame_length; i++)
+			fsk_receive_bit_dms(nmt, dms->tx_frame[i] & 1, 1.0, 1.0);
 		printf("Pretend that frame has been sent\n");
-		dms->frame_length = 0;
-		fsk_dms_frame(nmt, &sample, 1);
+		dms->tx_frame_valid = 0;
+		trigger_frame_transmission(nmt);
 	}
 
 	ok();
@@ -228,12 +211,12 @@ int main(void)
 	while (check_sequence[0])  {
 		if ((random() & 1)) {
 			printf("Sending back last received frame\n");
-			for (i = 0; i < current_bit_count; i++)
-				fsk_receive_bit_dms(nmt, current_bits[i] & 1, 1.0, 1.0);
+			for (i = 0; i < dms->tx_frame_length; i++)
+				fsk_receive_bit_dms(nmt, dms->tx_frame[i] & 1, 1.0, 1.0);
 		}
 		printf("Pretend that frame has been sent\n");
-		dms->frame_length = 0;
-		fsk_dms_frame(nmt, &sample, 1);
+		dms->tx_frame_valid = 0;
+		trigger_frame_transmission(nmt);
 	}
 
 	ok();
@@ -244,19 +227,19 @@ int main(void)
 
 	/* test zero termination */
 	for (j = 0; j < 4; j++) {
-		current_bit_count = 0;
+		dms->tx_frame_length = 0;
 		printf("zero-termination test: %d bytes in frame\n", test_null[j][7]);
 		dms_send(nmt, test_null[j], test_null[j][7], 1);
 		check_sequence = (char *)test_null[j];
 
-		while (current_bit_count) {
+		while (dms->tx_frame_length) {
 			printf("Sending back last received frame\n");
-			for (i = 0; i < current_bit_count; i++)
-				fsk_receive_bit_dms(nmt, current_bits[i] & 1, 1.0, 1.0);
-			current_bit_count = 0;
+			for (i = 0; i < dms->tx_frame_length; i++)
+				fsk_receive_bit_dms(nmt, dms->tx_frame[i] & 1, 1.0, 1.0);
+			dms->tx_frame_length = 0;
 			printf("Pretend that frame has been sent\n");
-			dms->frame_length = 0;
-			fsk_dms_frame(nmt, &sample, 1);
+			dms->tx_frame_valid = 0;
+			trigger_frame_transmission(nmt);
 		}
 		assert(check_length == test_null[j][7], "Expecting received length to match transmitted length");
 	}
