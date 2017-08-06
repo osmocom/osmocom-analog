@@ -61,6 +61,7 @@ int16_t *noanswer_spl = NULL;
 int16_t *outoforder_spl = NULL;
 int16_t *invalidnumber_spl = NULL;
 int16_t *congestion_spl = NULL;
+int16_t *recall_spl = NULL;
 int test_size = 0;
 int ringback_size = 0;
 int hangup_size = 0;
@@ -69,6 +70,7 @@ int noanswer_size = 0;
 int outoforder_size = 0;
 int invalidnumber_size = 0;
 int congestion_size = 0;
+int recall_size = 0;
 int test_max = 0;
 int ringback_max = 0;
 int hangup_max = 0;
@@ -77,6 +79,7 @@ int noanswer_max = 0;
 int outoforder_max = 0;
 int invalidnumber_max = 0;
 int congestion_max = 0;
+int recall_max = 0;
 
 enum call_state {
 	CALL_IDLE = 0,
@@ -106,6 +109,7 @@ enum audio_pattern {
 	PATTERN_OUTOFORDER,
 	PATTERN_INVALIDNUMBER,
 	PATTERN_CONGESTION,
+	PATTERN_RECALL,
 };
 
 void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pattern)
@@ -121,6 +125,7 @@ void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pa
 		*max = test_max;
 		break;
 	case PATTERN_RINGBACK:
+no_recall:
 		*spl = ringback_spl;
 		*size = ringback_size;
 		*max = ringback_max;
@@ -166,6 +171,13 @@ no_invalidnumber:
 		*spl = congestion_spl;
 		*size = congestion_size;
 		*max = congestion_max;
+		break;
+	case PATTERN_RECALL:
+		if (!recall_spl)
+			goto no_recall;
+		*spl = recall_spl;
+		*size = recall_size;
+		*max = recall_max;
 		break;
 	default:
 		;
@@ -935,6 +947,14 @@ void call_in_release(int callref, int cause)
 	call.disc_cause = cause;
 }
 
+/* turn recall tone on or off */
+void call_tone_recall(int callref, int on)
+{
+	/* can do that only with MNCC socket */
+	if (call.use_mncc_sock)
+		set_pattern_process(callref, (on) ? PATTERN_RECALL : PATTERN_NONE);
+}
+
 /* forward audio to MNCC or call instance */
 void call_tx_audio(int callref, sample_t *samples, int count)
 {
@@ -1133,6 +1153,8 @@ void call_mncc_recv(uint8_t *buf, int length)
 	case MNCC_SETUP_RSP:
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC answer from Network\n");
 		set_state_process(callref, CALL_CONNECT);
+		PDEBUG(DCALL, DEBUG_INFO, "Call disconnected\n");
+		call_out_answer(callref);
 		break;
 	case MNCC_DISC_REQ:
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC disconnect from Network with cause %d\n", mncc->cause.value);

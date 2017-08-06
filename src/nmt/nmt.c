@@ -1802,6 +1802,10 @@ int sms_out_setup(char *dialing, const char *caller_id, enum number_type caller_
 	return _out_setup(0, caller_id, caller_type, dialing, sms);
 }
 
+void call_out_answer(int __attribute__((unused)) callref)
+{
+}
+
 /* Call control sends disconnect (with tones).
  * An active call stays active, so tones and annoucements can be received
  * by mobile station.

@@ -437,6 +437,10 @@ inval:
 	return 0;
 }
 
+void call_out_answer(int __attribute__((unused)) callref)
+{
+}
+
 /* Call control sends disconnect (with tones).
  * An active call stays active, so tones and annoucements can be received
  * by mobile station.

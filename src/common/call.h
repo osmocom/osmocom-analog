@@ -22,9 +22,11 @@ int call_in_setup(int callref, const char *callerid, const char *dialing);
 void call_in_alerting(int callref);
 void call_in_answer(int callref, const char *connect_id);
 void call_in_release(int callref, int cause);
+void call_tone_recall(int callref, int on);
 
 /* send messages */
 int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing);
+void call_out_answer(int callref);
 void call_out_disconnect(int callref, int cause);
 void call_out_release(int callref, int cause);
 
