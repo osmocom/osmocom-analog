@@ -226,7 +226,7 @@ static struct option long_options_common[] = {
 	{"debug", 1, 0, 'v'},
 	{"kanal", 1, 0, 'k'},
 	{"channel", 1, 0, OPT_CHANNEL},
-	{"call-device", 1, 0, 'a'},
+	{"audio-device", 1, 0, 'a'},
 	{"samplerate", 1, 0, 's'},
 	{"interval", 1, 0, 'i'},
 	{"buffer", 1, 0, 'b'},
