@@ -195,7 +195,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			uhd_close();
 			return -EIO;
 		}
-		if (fabs(got_frequency - tx_frequency) > 0.001) {
+		if (fabs(got_frequency - tx_frequency) > 100.0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %.0f Hz\n", tx_frequency, got_frequency);
 			uhd_close();
 			return -EINVAL;
@@ -379,7 +379,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			uhd_close();
 			return -EIO;
 		}
-		if (fabs(got_frequency - rx_frequency) > 0.001) {
+		if (fabs(got_frequency - rx_frequency) > 100.0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %.0f Hz\n", rx_frequency, got_frequency);
 			uhd_close();
 			return -EINVAL;
