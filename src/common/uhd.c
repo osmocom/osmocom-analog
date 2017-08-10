@@ -38,12 +38,10 @@ static uhd_stream_args_t	stream_args;
 static uhd_stream_cmd_t		stream_cmd;
 static size_t tx_samps_per_buff, rx_samps_per_buff;
 static double			samplerate;
-static int			check_rate; /* flag to check sample rate matches time stamp increment */
 static time_t			rx_time_secs = 0;
 static double			rx_time_fract_sec = 0.0;
 static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
-static int			rx_gap = 0; /* if we missed samples, we fill our rx data with zeroes */
 
 int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double rate, double tx_gain, double rx_gain, double bandwidth)
 {
@@ -52,7 +50,6 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 	char got_antenna[64];
 
 	samplerate = rate;
-	check_rate = 1;
 
 	PDEBUG(DUHD, DEBUG_INFO, "Using device args \"%s\"\n", _device_args);
 	PDEBUG(DUHD, DEBUG_INFO, "Using stream args \"%s\"\n", _stream_args);
@@ -510,18 +507,6 @@ int uhd_receive(float *buff, int max)
     	void *buffs_ptr[1];
 	size_t got = 0, count;
 	uhd_error error;
-	time_t last_secs = rx_time_secs;
-	double last_fract_sec = rx_time_fract_sec;
-
-	/* fill gap this time */
-	if (rx_gap) {
-		count = rx_gap;
-		if ((int)count > max)
-			count = max;
-		rx_gap -= count;
-		memset(buff, 0, count * sizeof(*buff) * 2);
-		return count;
-	}
 
 	while (1) {
 		if (max < (int)rx_samps_per_buff) {
@@ -546,25 +531,6 @@ int uhd_receive(float *buff, int max)
 			max -= count;
 		} else {
 			/* got nothing this time */
-			if (!got)
-				break;
-//			printf("s = %d time = %.12f last = %.12f samples = %.12f\n", got, ((double)rx_time_secs + rx_time_fract_sec), ((double)last_secs + last_fract_sec), (double)got / samplerate);
-			/* we received previous data, so we check if the elapsed time matches the duration of the received data */
-			if (last_secs || last_fract_sec) {
-				double got_time = ((double)rx_time_secs + rx_time_fract_sec) - ((double)last_secs + last_fract_sec);
-				double expect_time = (double)got / samplerate;
-				double diff_time = fabs(got_time - expect_time);
-				if (diff_time > 0.000000000001) {
-					/* if there is an inital slip between time and data, the clock settings in the UHD device seem to be bad */
-					if (check_rate) {
-						PDEBUG(DUHD, DEBUG_ERROR, "Received rate (%.0f) does not match defined rate (%.0f), use diffrent sample rate that UHD device can handle!\n", (double)got / got_time, samplerate);
-						return -EPERM;
-					}
-					rx_gap = diff_time * (double)samplerate + 0.5;
-					PDEBUG(DUHD, DEBUG_ERROR, "Lost rx frame(s): A gap of %.6f seconds (%d samples), \n", diff_time, rx_gap);
-				}
-				check_rate = 0;
-			}
 			break;
 		}
 	}
