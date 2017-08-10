@@ -1,6 +1,7 @@
 
 extern int num_kanal;
 extern int kanal[];
+extern int swap_links;
 extern int num_audiodev;
 extern const char *audiodev[];
 extern int use_sdr;

@@ -78,6 +78,8 @@ const char *write_iq_tx_wave = NULL;
 const char *write_iq_rx_wave = NULL;
 const char *read_iq_tx_wave = NULL;
 const char *read_iq_rx_wave = NULL;
+int sdr_swap_links = 0;
+
 void print_help_common(const char *arg0, const char *ext_usage)
 {
 	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
@@ -179,6 +181,8 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Replace received IQ data by given wave file.\n");
 	printf("    --read-iq-tx-wave <file>\n");
 	printf("        Replace transmitted IQ data by given wave file.\n");
+	printf("    --sdr-swap-links\n");
+	printf("        Swap RX and TX frequencies for loopback tests over the air.r\n");
 #endif
 	printf("\nNetwork specific options:\n");
 }
@@ -220,6 +224,7 @@ void print_hotkeys_common(void)
 #define	OPT_WRITE_IQ_TX_WAVE	1113
 #define	OPT_READ_IQ_RX_WAVE	1114
 #define	OPT_READ_IQ_TX_WAVE	1115
+#define	OPT_SDR_SWAP_LINKS	1116
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -260,6 +265,7 @@ static struct option long_options_common[] = {
 	{"write-iq-tx-wave", 1, 0, OPT_WRITE_IQ_TX_WAVE},
 	{"read-iq-rx-wave", 1, 0, OPT_READ_IQ_RX_WAVE},
 	{"read-iq-tx-wave", 1, 0, OPT_READ_IQ_TX_WAVE},
+	{"sdr-swap-links", 0, 0, OPT_SDR_SWAP_LINKS},
 	{0, 0, 0, 0}
 };
 
@@ -487,6 +493,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		read_iq_tx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
+	case OPT_SDR_SWAP_LINKS:
+		sdr_swap_links = 1;
+		*skip_args += 1;
+		break;
 	default:
 		exit (0);
 	}
@@ -570,7 +580,7 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 		sdr_samplerate = samplerate;
 	if (sdr_bandwidth == 0.0)
 		sdr_bandwidth = sdr_samplerate;
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_samplerate, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave, latspl);
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_samplerate, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave, latspl, sdr_swap_links);
 	if (rc < 0)
 		return;
 #endif
