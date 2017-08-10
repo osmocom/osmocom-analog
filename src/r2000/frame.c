@@ -176,7 +176,7 @@ static struct r2000_element {
 	{ 'r', "SM Relais",		NULL,		NULL },
 	{ 'f', "SM Flotte",		NULL,		NULL },
 	{ 'm', "SM ID",			NULL,		NULL },
-	{ 'd', "Called ID",		NULL,		NULL },
+	{ 'd', "Called Flotte",		NULL,		NULL },
 	{ 'c', "CRINS",			param_crins,	param_crins },
 	{ 'a', "Assign Channel",	NULL,		NULL },
 	{ 's', "Sequence Number",	param_hex,	param_hex },
@@ -347,13 +347,13 @@ static struct r2000_frame {
 	const char *def;
 	const char *name;
 } r2000_frame_def[] = {
-	/*                V Channel-Relais---Msg--t--HomeRel--MobieID---------            Supervisory----- */
+	/*                V Channel-Relais---Msg--t--HomeRel--MobieID---------misc--------Supervisory----- */
 	/* messages REL->SM */
 	{ REL_TO_SM,  0, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm-----ccc----DDDIII++---PT---", "INSCRIPTION ACK" }, /* inscription ack */
-	{ REL_TO_SM,  2, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm------------DDDIII++---PT---", "PLEASE WAIT" }, /* waiting on CC */
 	{ REL_TO_SM,  1, "V-CCCCCCCCRRRRRRRRRMMMMM----------------------------------------DDDIII++---PT---", "IDLE" }, /* broadcast */
+	{ REL_TO_SM,  2, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm------------DDDIII++---PT---", "PLEASE WAIT" }, /* waiting on CC */
 	{ REL_TO_SM,  3, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmmaaaaaaaa----DDDIII++---PT---", "ASSIGN INCOMING"}, /* assign incoming call */
-	{ REL_TO_SM,  4, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrfffffffffmmmmmmmaaaaaaaa----DDDIII++---PT---", "ASSIGN GROUP"}, /* assign groupp call */
+	{ REL_TO_SM,  4, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrfffffffffmmmmmmmaaaaaaaa----DDDIII++---PT---", "ASSIGN INCOMING (GROUP)"}, /* assign group call */
 	{ REL_TO_SM,  5, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmmaaaaaaaa----DDDIII++---PT---", "ASSIGN OUTGOING"}, /* assign outgoing call */
 	{ REL_TO_SM,  9, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm------------DDDIII++---PT---", "RELEASE ON CC" }, /* release call on CC */
 	{ REL_TO_SM, 16, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm----------------------------", "IDENTITY REQ"}, /* request identity */
@@ -363,7 +363,7 @@ static struct r2000_frame {
 	/* messages SM->REL */
 	{ SM_TO_REL,  0, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm--------ssss", "INSCRIPTION REQ" }, /* inscription */
 	{ SM_TO_REL,  1, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm--------ssss", "CALL REQ (PRIVATE)" }, /* request call */
-	{ SM_TO_REL,  1, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrfffffffffmmmmmmmddddddddssss", "CALL REQ (GROUP)" }, /* request call */
+	{ SM_TO_REL,  2, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrfffffffffmmmmmmmddddddddssss", "CALL REQ (GROUP)" }, /* request call */
 	{ SM_TO_REL,  3, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm--------ssss", "CALL REQ (PUBLIC)" }, /* request call */
 	{ SM_TO_REL,  6, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm------------", "RELEASE ON CC" }, /* release on CC */
 	{ SM_TO_REL, 16, "V-CCCCCCCCRRRRRRRRRMMMMMtttrrrrrrrrrmmmmmmmmmmmmmmmm--------ssss", "IDENTITY ACK" }, /* identity response */

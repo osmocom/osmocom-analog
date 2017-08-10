@@ -372,6 +372,10 @@ static int match_relais(r2000_t *r2000, frame_t *frame)
 
 static int match_subscriber(r2000_t *r2000, frame_t *frame)
 {
+	/* ignore dialing messages, because subscriber info is not used in there  */
+	if (frame->message == 19 || frame->message == 20)
+		return 1;
+
 	if (r2000->subscriber.relais != frame->sm_relais
 	 || r2000->subscriber.mor != frame->sm_mor) {
 		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for different subscriber '%s' received, ignoring.\n", print_subscriber_frame(frame));
@@ -686,9 +690,11 @@ static void rx_idle(r2000_t *r2000, frame_t *frame)
 		r2000->subscriber.relais = frame->sm_relais;
 		r2000->subscriber.mor = frame->sm_mor;
 
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received inscription from station mobile '%s'\n", print_subscriber_frame(frame));
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Home Relais: %d'\n", frame->sm_relais);
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Mobile ID: %d'\n", frame->sm_mor);
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received inscription from station mobile '%s'\n", print_subscriber_subscr(&r2000->subscriber));
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Mobile Type: %d'\n", r2000->subscriber.type);
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Home Relais: %d'\n", r2000->subscriber.relais);
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Mobile ID: %d'\n", r2000->subscriber.mor);
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, " (Use '%s' as dial string to call the station mobile.)'\n", subscriber2string(&r2000->subscriber));
 
 		r2000_new_state(r2000, STATE_INSCRIPTION);
 		break;
@@ -852,12 +858,15 @@ static void timeout_out_ident(r2000_t *r2000)
 {
 	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (outgoing call)\n");
 
-	r2000_release(r2000);
+	r2000_go_idle(r2000);
 }
 
 static void timeout_in_ident(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (incoming call)\n");
+	if (r2000->state == STATE_IN_IDENT)
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (incoming call)\n");
+	else
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (recalling outgoing call)\n");
 
 	/* move us back to cc */
 	r2000 = move_call_to_chan(r2000, CHAN_TYPE_CC);
@@ -871,11 +880,9 @@ static void timeout_in_ident(r2000_t *r2000)
 	}
 
 	/* ... or release */
-	if (r2000->callref) {
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Phone does not response, releasing towards network\n");
-		call_in_release(r2000->callref, CAUSE_OUTOFORDER);
-		r2000->callref = 0;
-	}
+	PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Phone does not response, releasing towards network\n");
+	call_in_release(r2000->callref, CAUSE_OUTOFORDER);
+	r2000->callref = 0;
 	r2000_release(r2000);
 }
 
