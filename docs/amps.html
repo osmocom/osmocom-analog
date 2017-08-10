@@ -10,8 +10,6 @@
 
 <center><img src="amps.jpg"/></center>
 
-<center><h1>*this doc is under construction*</h1></center>
-
 <ul>
 	<li><a href="#history">History</a>
 	<li><a href="#howitworks">How it works</a>
@@ -65,8 +63,26 @@ How it works
 <p>
 The detailed communication between base station and mobile station is described in <a href="TIA_EIA_553_A.compressed.pdf">TIA/EIA-553 standard</a>.
 Click for reading the PDF file.
-Thanx to TIA for allowing me to add the standard document to this project's documentation.
+Thanks to TIA for allowing me to add the standard document to this project's documentation.
 <i>Reproduced under written permission from Telecommunications Industry Association.</i>
+</p>
+
+<center><img src="amps-cells.jpg"/></center>
+
+<p>
+The idea a cellular network was to use clusters to re-use frequencies more ofter, so more calls can be made in one area.
+As depicted, in a cluster with 7 cells (A to G), all cells must use different frequencies.
+All frequencies can be re-used in surrounding clusters.
+In the example, the G cell can use channel 4, 5 and 6 again in all other clusters, because their distance is far enough.
+As depicted, the distance is 4.6 times the radius of a cell coverage.
+To increase the number of calls using the same number of channels, the size of the cells have to be reduced.
+Because cells getting smaller, hand-off is required when moving from one cell area to another.
+A phone in a smaller cell must transmit with lower power than in large cells.
+To keep track in which cell the phone currently located, a registration process tells the mobile switching office (MSO) where the phone can be reached in case of an incoming call.
+</p>
+
+<p>
+<font color="red">Registering, power control and handoff are the key features of a cellular network.</font>
 </p>
 
 <p>
@@ -93,37 +109,52 @@ A radio noise floor of 10% would be reduced to 1% by the expander.
 </p>
 
 <p>
-Amps system was the first cellular system.
-By reducing cell size, the frequencies can be reused in lower distances, so more calls can be made in an area with the same amount of channels.
-Different cell sizes require a control of the tranmission power of the phone and the base station.
-A system with small cells must handoff (handover) the call to another cell, if a subscriber moves outside the coverage area.
-In order to know where a phone can be reached, it must register to a new cell (area), if it moves.
-A database keeps track of the current location of the mobile phone.
+The signaling is done with Manchester Code.
+The symbol rate is 10,000 Hz, resulting in a frequency of 10 KHz.
+To allow such high frequencies, the carrier frequency is directly shifted, instead of modulating two alternating tones.
+</p>
+
+<center><img src="amps-focc.png"/></center>
+
+<p>
+As depicted, each frame that is sent on the control channel of a base station,
+starts with a dotting sequence (1010101...) to sync the receiver
+and a sync word (11100010010) to indicate start of message.
+Two words of 40 bits are repeated 5 times for redundancy.
+An A-word belongs to mobiles with the last significant bit of their mobile identification number equals '1' and a B-word to mobiles with the last significant bit of their mobile identification number equals '0'.
+Around sync and dotting and after every 10 bits of a message a B/I-bit is inserted, to indicate if the control channel is busy or not.
+During an incoming message from a mobile phone, the base station will block the channels by setting the B/I-bit, so other mobile phone must wait until the channel is marked free again.
+The bad news is, that the base station must react in less than 5 milliseconds, which is too fast for Osmocom-Analog.
+The good news is, that this feature can be turned off.
+</p>
+
+<center><img src="amps-words.png"/></center>
+
+<p>
+This example shows two words that are used to call a mobile phone.
+Each word consists of different bits, except for the last 12 bits.
+They are used for parity check, resulting in 28 usable bit for the message itself.
+Other words are used to broadcast cell info of the base station.
+</p>
+
+<center><img src="amps-recc.png"/></center>
+
+<p>
+The other direction is similar, but the size of the messages are different.
+After dotting sequence and sync word, a digital color code (DCC) is used to prevent cells in surrounding clusters to receive the message from the mobile phone.
+The size of each word is 48 bits.
+These include the 36-bits-message and the 12 parity bits.
+</p>
+
+<center><img src="amps-fvc.png"/></center>
+
+<p>
+On a voice channel, the messages have even more redundancy, by repeating them 11 times.
 </p>
 
 <p>
-<font color="red">Registering, power control and handoff are the key features of a cellular network.</font>
-</p>
-
-<p>
-</p>
-
-<p>
-</p>
-
-<p>
-</p>
-
-<p>
-</p>
-
-<p>
-</p>
-
-<p>
-</p>
-
-<p>
+Describing all messages with their function and their content is beyond the scope of this introduction.
+Refer to the TIA specification, described above.
 </p>
 
 <p class="toppic">
@@ -166,7 +197,7 @@ The transmitter will now shift frequency according the the level of the sound ca
 In my case, my sound card is connected to a transmitter, where a positive sample value causes a negative frequency deviation.
 This is why I need to flip the polarity of the signal, so I generate a negative sample value that causes a positive frequency deviation.
 I use the '-F yes' option or '--flip-polarity yes'.
-Also it is essential to use a transmitter with direct access to the modulator and and a receiver with direct access to the disciminator.
+Also it is essential to use a transmitter with direct access to the modulator and and a receiver with direct access to the discriiminator.
 I use '-p -d' or '--pre-emphasis --de-emphasis' to process emphasis for audio signal in software.
 I use the calling channel (control channel) 334, which could also be used as traffic channel (voice channel).
 </p>
@@ -181,84 +212,167 @@ Selected System ID (SID) 40 belongs to:
         San Jose, CA (GTE Mobile)
         San Rosa, CA (GTE Mobile)
         Santa Barbara, CA (GTE Mobile)
-amps.c:390 notice : You selected 'combined control &amp; paging &amp; voice channel'.
+amps.c:531 notice : You selected 'combined control &amp; paging &amp; voice channel'.
 This is a hack, but the only way to use control channel and voice channel on one transceiver.
- Some phones may reject this.
-amps.c:481 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp; paging
- &amp; voice channel.
-Base station on channel 334 ready, please tune transmitter to 880.020 MHz and receiver to 835.020 MHz.
-frame.c:3658 info   : RX Level: 54% Quality: 66% Polarity: NEGATIVE
-frame.c:3658 info   : RX Level: 53% Quality: 65% Polarity: NEGATIVE
-frame.c:3658 info   : RX Level: 52% Quality: 60% Polarity: NEGATIVE
+Some phones may reject this, but all my phones don't.
+amps.c:632 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp; paging
+&amp; voice channel.
+dsp.c:909 info   : Change mode to FOCC
+amps.c:585 notice : Created channel #334 (System B) of type 'CC/PC/VC' = combined control &amp; paging
+&amp; voice channel
+Base station on channel 334 ready (combined control &amp; paging &amp; voice channel),
+please tune transmitter to 880.020 MHz and receiver to 835.020 MHz.
+
+</pre>
+
+<pre>
+
+# tacs -k 323 -F yes -p -d
+...
+Selected Area ID (AID) 3600 belongs to:
+        CellNet, United Kingdom
+amps.c:531 notice : You selected 'combined control &amp; paging &amp; voice channel'.
+This is a hack, but the only way to use control channel and voice channel on one transceiver.
+Some phones may reject this, but all my phones don't.
+amps.c:632 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp; paging
+&amp; voice channel.
+dsp.c:909 info   : Change mode to FOCC
+amps.c:585 notice : Created channel #323 (System B) of type 'CC/PC/VC' = combined control &amp; paging
+&amp; voice channel
+Base station on channel 323 ready (combined control &amp; paging &amp; voice channel),
+please tune transmitter to 943.0625 MHz and receiver to 898.0625 MHz.
 
 </pre>
 
 <p>
 You should tune the receiver to 880.020 first, to check if you can hear and decode the idle signal from the base station.
-Then tune to actually uplink frequency 835.020 MHz.
+Then tune to actually up-link frequency 835.020 MHz.
 The actual level is not yet relevant.
 (You may check the quality using '-l 2' or '--loopback 2' command line option and build a radio loop by tuning the receiver to the transmitter.)
 </p>
 
 <p>
 If the polarity is correct and the volume of the signal (frequency deviation) is about right, you will make the phone register.
-The phone will transmit on the uplink.
+The phone will transmit on the up-link.
 If not, try other polarity.
+Also check if the phone allows to register on the selected system (A or B) and allowed to roam (any SID/AID).
 This is how my phone registers to my network:
 </p>
 
 <pre>
 
-frame.c:3630 info   : RX RECC: DCC=0
-frame.c:2990 info   : Received: Word A - Abbreviated Address Word
-frame.c:2990 info   : Received: Word B - Extended Address Word
-frame.c:2990 info   : Received: Word C - Serial Number Word
-amps.c:635 info   : Registration 617XXXXXXX (ESN = 825b5f79, Class 6 / Discontinuous / 25 MHz)
-transaction.c:175 info   : Transaction state IDLE -&gt; REGISTER ACK
-transaction.c:98 info   : Created transaction '617XXXXXXX' for subscriber 'REGISTER ACK'
-amps.c:989 info   : Sending Register acknowledge
-transaction.c:175 info   : Transaction state REGISTER ACK -&gt; REGISTER ACK SEND
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
-transaction.c:117 info   : Destroying transaction for subscriber '617XXXXXXX'
-transaction.c:175 info   : Transaction state REGISTER ACK SEND -&gt; IDLE
+frame.c:3711 info   : RX Level: 93% Quality: 99% Polarity: POSITIVE
+frame.c:3680 info   : RX RECC: DCC=0 (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word A - Abbreviated Address Word
+frame.c:3322 info   : expecting 2 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word B - Extended Address Word
+frame.c:3322 info   : expecting 1 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word C - Serial Number Word
+frame.c:3322 info   : expecting 0 more word(s) to come
+amps.c:793 info   : Registration 617XXXXXXX (ESN = 8a376086, Class 1 / Continuous / 25 MHz, TIA/EIA-553
+or IS-54A mobile station)
+amps.c:799 info   :  -&gt; Home country: USA
+amps.c:801 info   :  -&gt; Home number: 617XXXXXXX
+transaction.c:245 info   : Transaction state IDLE -&gt; REGISTER ACK
+transaction.c:150 info   : Created transaction for subscriber '617XXXXXXX'
+amps.c:1142 info   : Sending Register acknowledge
+transaction.c:245 info   : Transaction state REGISTER ACK -&gt; REGISTER ACK SEND
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+transaction.c:163 info   : Destroying transaction for subscriber '617XXXXXXX'
+transaction.c:245 info   : Transaction state REGISTER ACK SEND -&gt; IDLE
+
 
 </pre>
+
+<p>
+After some time (several minutes), the phone re-registers, because a counter in the broadcast message is incremented.
+This allows the mobile switching office (MSO) to check if the phone is still available.
+Changing the SID will cause the phone to register instantaneously.
+</p>
+
+<p>
+Level adjustment:
+We see a receive level of around 93%.
+This is already good, since I did the adjustment previously.
+Tune your receiver to the up-link frequency, so you get loop-back of base station broadcast.
+Run the software with "-l 2" option, so it will decode its own broadcast, if looped back through radios.
+Use the variable resistor (connecting your transmitter) to adjust the volume until the received level matches the same level of your previously received message.
+In my case I adjust the transmitter to match around 93%. (+- 10% is good)
+Now, whatever frequency deviation the phone transmits for signaling, so does your transmitter.
+Use the other variable resistor (connecting your receiver) to adjust the volume until the level matches about 100%. (+- 10% is good)
+Switch back the receiver to up-link frequency and restart the phone.
+</p>
+
+<p>
+To make a call from the mobile phone to the base station, just enter some digits at the mobile phone and press the dial button.
+The phone requests an outgoing call on the reverse control channel (RECC), including identity and called number.
+The base station will send an assignment to the mobile station on forward control channel (FOCC).
+Then phone an base station switch to the voice channel.
+In this case we have only defined one channel, so the control channel becomes a voice channel for the duration of the call.
+All other phones will loose coverage during the call.
+</p>
 
 <pre>
 
-frame.c:3630 info   : RX RECC: DCC=0
-frame.c:2990 info   : Received: Word A - Abbreviated Address Word
-frame.c:2990 info   : Received: Word B - Extended Address Word
-frame.c:2990 info   : Received: Word C - Serial Number Word
-frame.c:2990 info   : Received: Word D - First Word of the Called-Address (Origination - Voice Service)
-amps.c:653 info   : Call 617XXXXXXX -&gt; 5551212 (ESN = 825b5f79, Class 6 / Discontinuous / 25 MHz)
-transaction.c:175 info   : Transaction state IDLE -&gt; CALL ASSIGN MOBILE ORIGINAT ING
-transaction.c:98 info   : Created transaction '617XXXXXXX' for subscriber 'CALLASSIGN MOBILE ORIGINATING'
-amps.c:1003 info   : Assigning channel to call from mobile station
-transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING -&gt;
-CALL ASSIGN MOBILE ORIGINATING SEND
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
-transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING SEND -&gt; CALL
-amps.c:951 info   : Staying on combined control + voice channel 334
-amps.c:959 info   : Setup call to network.
-call.c:590 info   : Incoming call from '617XXXXXXX' to '5551212'
-dsp.c:678 notice : SAT level 72.31% quality 98%p)
-dsp.c:678 notice : SAT level 78.63% quality 100%)
-dsp.c:678 notice : SAT level 78.76% quality 100%)
-amps.c:585 info   : Detected SAT signal with quality=100.
-dsp.c:678 notice : SAT level 78.66% quality 100%)
+frame.c:3711 info   : RX Level: 91% Quality: 96% Polarity: POSITIVE
+frame.c:3680 info   : RX RECC: DCC=0 (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word A - Abbreviated Address Word
+frame.c:3322 info   : expecting 3 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word B - Extended Address Word
+frame.c:3322 info   : expecting 2 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word C - Serial Number Word
+frame.c:3322 info   : expecting 1 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word D - First Word of the Called-Address (Origination - Voice Service)
+frame.c:3322 info   : expecting 0 more word(s) to come
+amps.c:816 info   : Call 617XXXXXXX -&gt; 9200 (ESN = 8a376086, Class 1 / Continuous / 25 MHz, TIA/EIA-553
+or IS-54A mobile station)
+transaction.c:245 info   : Transaction state IDLE -&gt; CALL ASSIGN MOBILE ORIGINATING
+transaction.c:150 info   : Created transaction for subscriber '617XXXXXXX'
+amps.c:1156 info   : Assigning channel to call from mobile station
+transaction.c:245 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING -&gt; CALL ASSIGN MOBILE ORIGINATING SEND
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+amps.c:1104 info   : Staying on combined control + voice channel 334
+amps.c:1109 info   : Setup call to network.
+call.c:765 info   : Incoming call from '617XXXXXXX' to '9200'
+call.c:790 info   : Sending MNCC call towards Network
+amps.c:1162 info   : Assignment complete, voice connected
+transaction.c:245 info   : Transaction state CALL ASSIGN MOBILE ORIGINATING SEND -&gt; CALL
+dsp.c:915 info   : Change mode from FOCC to FVC
+dsp.c:762 notice : SAT level 101.56% quality 96%
+dsp.c:762 notice : SAT level 100.97% quality 97%
+dsp.c:762 notice : SAT level 102.29% quality 96%
+dsp.c:762 notice : SAT level 102.31% quality 96%
+dsp.c:762 notice : SAT level 102.00% quality 96%
+amps.c:739 info   : Detected SAT signal with quality=96.
+dsp.c:762 notice : SAT level 102.04% quality 96%
+dsp.c:762 notice : SAT level 102.26% quality 96%
 
 </pre>
+
+<p>
+The SAT shows us that the level of the voice channel is right.
+If a second transceiver for voice channel is used, adjust receiver to receive sat 100% (+- 10).
+Then switch the receiver to the transmitter frequency and adjust transmitted SAT level to 100% (+-10.
+</p>
+
+<p>
+If the mobile station hangs up, the phone transmits a signaling tone of 10 KHz:
+</p>
 
 <pre>
 
@@ -271,59 +385,83 @@ amps.c:481 info   : Entering IDLE state, sending Overhead/Filler frames on combi
 
 </pre>
 
+<p>
+The make a call to the phone, enter the number and press 'd' to dial.
+The base station will page the mobile phone on forward control channel (FOCC).
+The mobile phone will identify itself on the reverse control channel (RECC).
+The base station will send an assignment to the mobile station on forward control channel.
+Then phone an base station switch to the voice channel.
+The base station sends rinign order message on the forward voice channel (FVC) to make the phone ring.
+The mobile station will send signaling tone on reverse voice channel (RVC) to indicate that it has not been answered yet.
+</p>
+
 <pre>
 
-call.c:457 info   : Outgoing call to 617XXXXXXX
-amps.c:753 info   : Call to mobile station, paging station id '617XXXXXXX'
-transaction.c:175 info   : Transaction state IDLE -&gt; PAGE
-transaction.c:98 info   : Created transaction '617XXXXXXX' for subscriber 'PAGE'
-amps.c:1025 info   : Paging the phone
-transaction.c:175 info   : Transaction state PAGE -&gt; PAGE SEND
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
-transaction.c:175 info   : Transaction state PAGE SEND -&gt; PAGE REPLY
-frame.c:3658 info   : RX Level: 60% Quality: 90% Polarity: POSITIVE
-frame.c:3630 info   : RX RECC: DCC=0
-frame.c:2990 info   : Received: Word A - Abbreviated Address Word
-frame.c:2990 info   : Received: Word B - Extended Address Word
-frame.c:2990 info   : Received: Word C - Serial Number Word
-amps.c:655 info   : Paging reply 617XXXXXXX (ESN = 825b5f79, Class 6 / Discontinuous / 25 MHz)
-transaction.c:175 info   : Transaction state PAGE REPLY -&gt; CALL ASSIGN MOBILE TERMINATING
-amps.c:1012 info   : Assigning channel to call to mobile station
-transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE TERMINATING -&gt;
-CALL ASSIGN MOBILE TERMINATING SEND
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
-frame.c:2691 info   : Transmit: Word 1 - Abbreviated Address Word
-frame.c:2691 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
-transaction.c:175 info   : Transaction state CALL ASSIGN MOBILE TERMINATING SEND -&gt;
-CALL ALERT MOBILE TERMINATING
-amps.c:951 info   : Staying on combined control + voice channel 334
-frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
-dsp.c:678 notice : SAT level 76.43% quality 98%
-frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
-dsp.c:678 notice : SAT level 77.44% quality 99%
-frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
-dsp.c:678 notice : SAT level 78.58% quality 99%
-amps.c:585 info   : Detected SAT signal with quality=99.
-frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
-dsp.c:678 notice : SAT level 79.75% quality 100%
-amps.c:525 info   : Detected Signaling Tone with quality=100.
-call.c:646 info   : Call is alerting
-transaction.c:175 info   : Transaction state CALL ALERT MOBILE TERMINATING -&gt;
-CALL ALERT MOBILE TERMINATING SEND
-dsp.c:678 notice : SAT level 67.88% quality 98%
-dsp.c:678 notice : SAT level 80.28% quality 99%
-dsp.c:678 notice : SAT level 80.39% quality 99%
-dsp.c:678 notice : SAT level 80.08% quality 100%
+call.c:594 info   : Outgoing call to 617XXXXXXX
+amps.c:929 info   : Call to mobile station, paging station id '617XXXXXXX'
+transaction.c:245 info   : Transaction state IDLE -&gt; PAGE
+transaction.c:150 info   : Created transaction for subscriber '617XXXXXXX'
+amps.c:1184 info   : Paging the phone  
+transaction.c:245 info   : Transaction state PAGE -&gt; PAGE SEND
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC == 11)
+transaction.c:245 info   : Transaction state PAGE SEND -&gt; PAGE REPLY
+frame.c:3711 info   : RX Level: 90% Quality: 95% Polarity: POSITIVE
+frame.c:3680 info   : RX RECC: DCC=0 (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word A - Abbreviated Address Word
+frame.c:3322 info   : expecting 2 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word B - Extended Address Word
+frame.c:3322 info   : expecting 1 more word(s) to come
+frame.c:3688 info   : RX RECC: (5 of 5 CRCs are ok)
+frame.c:3059 info   : Received: Word C - Serial Number Word
+frame.c:3322 info   : expecting 0 more word(s) to come
+amps.c:814 info   : Paging reply 617XXXXXXX (ESN = 8a376086, Class 1 / Continuous / 25 MHz, TIA/EIA-553
+or IS-54A mobile station)
+transaction.c:245 info   : Transaction state PAGE REPLY -&gt; CALL ASSIGN MOBILE TERMINATING
+amps.c:1168 info   : Assigning channel to call to mobile station
+transaction.c:245 info   : Transaction state CALL ASSIGN MOBILE TERMINATING -&gt; CALL ASSIGN MOBILE TERMINATING SEND
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+frame.c:2739 info   : Transmit: Word 1 - Abbreviated Address Word
+frame.c:2739 info   : Transmit: Word 2 - Extended Address Word (SCC != 11)
+amps.c:1104 info   : Staying on combined control + voice channel 334
+amps.c:1174 info   : Assignment complete, next: sending alerting on VC
+transaction.c:245 info   : Transaction state CALL ASSIGN MOBILE TERMINATING SEND -&gt; CALL ALERT MOBILE TERMINATING
+dsp.c:915 info   : Change mode from FOCC to FVC
+amps.c:1216 info   : Sending alerting
+frame.c:2739 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:762 notice : SAT level 101.24% quality 98%
+dsp.c:762 notice : SAT level 101.47% quality 95%
+amps.c:1216 info   : Sending alerting  
+frame.c:2739 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:762 notice : SAT level 98.32% quality 95%
+dsp.c:762 notice : SAT level 95.59% quality 97%
+amps.c:1216 info   : Sending alerting  
+frame.c:2739 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:762 notice : SAT level 96.94% quality 98%
+amps.c:739 info   : Detected SAT signal with quality=98.
+dsp.c:762 notice : SAT level 95.97% quality 97%
+amps.c:1216 info   : Sending alerting  
+frame.c:2739 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:762 notice : SAT level 96.28% quality 95%
+dsp.c:762 notice : SAT level 95.89% quality 95%
+amps.c:679 info   : Detected Signaling Tone with quality=99.
+call.c:830 info   : Call is alerting
+transaction.c:245 info   : Transaction state CALL ALERT MOBILE TERMINATING -&gt; CALL ALERT MOBILE TERMINATING SEND
 
 </pre>
+
+<p>
+The phone sends a signaling tone while it is ringing.
+If the user answers, the phone stops signaling tone.
+</p>
 
 <pre>
 
@@ -333,23 +471,29 @@ transaction.c:175 info   : Transaction state CALL ALERT MOBILE TERMINATING SEND 
 
 </pre>
 
+<p>
+If the base station hangs up, it sends a release message on forward voice channel (FVC).
+To hangup, press 'h'.
+</p>
+
 <pre>
 
-call.c:479 info   : Call hangup
-amps.c:836 info   : Call has been released by network, releasing call.
-amps.c:866 info   : Call control releases on voice channel, releasing towards mobile station.
-transaction.c:175 info   : Transaction state CALL -&gt; CALL RELEASE
-amps.c:1048 info   : Releasing call to mobile station
-transaction.c:175 info   : Transaction state CALL RELEASE -&gt; CALL RELEASE SEND
-frame.c:2691 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
-dsp.c:678 notice : SAT level 76.60% quality 100%
-transaction.c:117 info   : Destroying transaction for subscriber '617XXXXXXX'
-transaction.c:175 info   : Transaction state CALL RELEASE SEND -&gt; IDLE
-amps.c:481 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp;
-paging &amp; voice channel.
+call.c:619 info   : Call hangup
+amps.c:999 info   : Call has been released by network, releasing call.
+amps.c:1019 info   : Call control releases on voice channel, releasing towards mobile station.
+transaction.c:245 info   : Transaction state CALL -&gt; CALL RELEASE
+amps.c:1207 info   : Releasing call towards mobile station
+transaction.c:245 info   : Transaction state CALL RELEASE -&gt; CALL RELEASE SEND
+frame.c:2739 info   : Transmit: Mobile Station Control Message Word 1 (SCC == 11)
+dsp.c:762 notice : SAT level 102.37% quality 96%
+dsp.c:762 notice : SAT level 101.61% quality 98%
+amps.c:1211 info   : Release call was sent, destroying call
+transaction.c:163 info   : Destroying transaction for subscriber '617XXXXXXX'
+transaction.c:245 info   : Transaction state CALL RELEASE SEND -&gt; IDLE
+amps.c:632 info   : Entering IDLE state, sending Overhead/Filler frames on combined control &amp; paging &amp; voice channel.
+dsp.c:909 info   : Change mode to FOCC
 
 </pre>
-
 
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
 </td></tr></table></center>
