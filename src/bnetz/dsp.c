@@ -47,6 +47,7 @@
 #define MAX_MODULATION	3000.0
 #define DBM0_DEVIATION	2800.0	/* deviation of dBm0 at 1 kHz */
 #define TX_PEAK_FSK	(4000.0 / 2000.0 * 1000.0 / DBM0_DEVIATION)
+#define TX_PEAK_METER	(3000.0 / 2900.0 * 1000.0 / DBM0_DEVIATION) /* FIXME: really 3KHz deviation??? */
 #define MAX_DISPLAY	1.4	/* something above dBm0 */
 #define BIT_RATE	100.0
 #define BIT_ADJUST	0.5	/* full adjustment on bit change */
@@ -60,9 +61,17 @@
 #define LOSS_INTERVAL	100	/* filter steps (milliseconds) for one second interval */
 #define LOSS_TIME	12	/* duration of signal loss before release */
 
+/* table for fast sine generation */
+static sample_t dsp_metering[65536];
+
 /* global init for FSK */
 void dsp_init(void)
 {
+	int i;
+
+	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for metering tone.\n");
+	for (i = 0; i < 65536; i++)
+		dsp_metering[i] = sin((double)i / 65536.0 * 2.0 * PI) * TX_PEAK_METER;
 }
 
 static int fsk_send_bit(void *inst);
@@ -98,6 +107,10 @@ int dsp_init_sender(bnetz_t *bnetz)
 		return -ENOMEM;
 	}
 	bnetz->chunk_spl = spl;
+
+	/* metering tone */
+	bnetz->meter_phaseshift65536 = 65536.0 / ((double)bnetz->sender.samplerate / METERING_HZ);
+	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", bnetz->meter_phaseshift65536);
 
 	return 0;
 }
@@ -212,7 +225,8 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	/* fsk/tone signal */
 	fsk_receive(&bnetz->fsk, samples, length);
 
-	if (bnetz->dsp_mode == DSP_MODE_AUDIO && bnetz->callref) {
+	if ((bnetz->dsp_mode == DSP_MODE_AUDIO
+	  || bnetz->dsp_mode == DSP_MODE_AUDIO_METER) && bnetz->callref) {
 		int count;
 
 		count = samplerate_downsample(&bnetz->sender.srstate, samples, length);
@@ -257,6 +271,25 @@ static int fsk_send_bit(void *inst)
 	}
 }
 
+/* Add metering pulse tone to audio stream. Keep phase for next call of function. */
+static void metering_tone(bnetz_t *bnetz, sample_t *samples, int length)
+{
+        double phaseshift, phase;
+	int i;
+
+	phaseshift = bnetz->meter_phaseshift65536;
+	phase = bnetz->meter_phase65536;
+
+	for (i = 0; i < length; i++) {
+		*samples++ += dsp_metering[(uint16_t)phase];
+		phase += phaseshift;
+		if (phase >= 65536)
+			phase -= 65536;
+	}
+
+	bnetz->meter_phase65536 = phase;
+}
+
 /* Provide stream of audio toward radio unit */
 void sender_send(sender_t *sender, sample_t *samples, int length)
 {
@@ -269,7 +302,10 @@ again:
 		memset(samples, 0, length * sizeof(*samples));
 		break;
 	case DSP_MODE_AUDIO:
+	case DSP_MODE_AUDIO_METER:
 		jitter_load(&bnetz->sender.dejitter, samples, length);
+		if (bnetz->dsp_mode == DSP_MODE_AUDIO_METER)
+			metering_tone(bnetz, samples, length);
 		break;
 	case DSP_MODE_0:
 	case DSP_MODE_1:
@@ -294,6 +330,8 @@ const char *bnetz_dsp_mode_name(enum dsp_mode mode)
 		return "SILENCE";
 	case DSP_MODE_AUDIO:
 		return "AUDIO";
+	case DSP_MODE_AUDIO_METER:
+		return "AUDIO + METERING PULSE";
 	case DSP_MODE_0:
 		return "TONE 0";
 	case DSP_MODE_1:

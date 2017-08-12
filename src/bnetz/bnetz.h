@@ -5,6 +5,7 @@
 enum dsp_mode {
 	DSP_MODE_SILENCE,	/* sending silence */
 	DSP_MODE_AUDIO,		/* stream audio */
+	DSP_MODE_AUDIO_METER,	/* stream audio */
 	DSP_MODE_0,		/* send tone 0 */
 	DSP_MODE_1,		/* send tone 1 */
 	DSP_MODE_TELEGRAMM,	/* send "Telegramm" */
@@ -52,6 +53,7 @@ typedef struct bnetz {
 
 	/* system info */
 	int			gfs;			/* 'Gruppenfreisignal' */
+	int			metering;		/* use metering pulses in seconds 0 = off, < 0 = force */
 
 	/* switch sender to channel 19 */
 	char			paging_file[256];	/* if set, write to given file to switch to channel 19 or back */
@@ -82,13 +84,13 @@ typedef struct bnetz {
 	int			rx_telegramm_qualidx;	/* index of quality array above */
 	int			tone_detected;		/* what tone has been detected */
 	int			tone_count;		/* how long has that tone been detected */
-	double			phaseshift65536[2];	/* how much the phase of sine wave changes per sample */
-	double			phase65536;		/* current phase */
 	const char		*tx_telegramm;		/* carries bits of one frame to transmit */
 	int			tx_telegramm_pos;
 	int			samples_per_chunk;	/* samples per loss detection interval */
 	sample_t		*chunk_spl;		/* chunk sample */
 	int			chunk_pos;		/* current received sample of chunk */
+	double			meter_phaseshift65536;	/* how much the phase of sine wave changes per sample */
+	double			meter_phase65536;	/* current phase */
 
 	/* loopback test for latency */
 	int			loopback_count;		/* count digits from 0 to 9 */
@@ -97,7 +99,7 @@ typedef struct bnetz {
 
 double bnetz_kanal2freq(int kanal, int unterband);
 int bnetz_init(void);
-int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_factor, const char *paging);
+int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_factor, const char *paging, int metering);
 void bnetz_destroy(sender_t *sender);
 void bnetz_loss_indication(bnetz_t *bnetz);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);

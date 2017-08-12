@@ -41,19 +41,22 @@
 static int new_callref = 0x40000000;
 
 /* mobile originating call */
-#define CARRIER_TO	0.08	/* 80 ms search for carrier */
-#define DIALING_TO	3.8	/* timeout after channel allocation "Kanalbelegung" */
-#define DIALING_TO2	0.5	/* timeout while receiving digits */
+#define CARRIER_TO		0.08	/* 80 ms search for carrier */
+#define DIALING_TO		3.8	/* timeout after channel allocation "Kanalbelegung" */
+#define DIALING_TO2		0.5	/* timeout while receiving digits */
 
 /* mobile terminating call */
-#define ALERTING_TO	60	/* timeout after 60 seconds alerting the MS */
-#define PAGING_TO	2.1	/* 700..2100 ms timeout after paging "Selektivruf" */
-#define PAGE_TRIES	2	/* two tries */
-#define SWITCH19_TIME	1.0	/* time to switch channel (radio should be tansmitting after that) */
-#define SWITCHBACK_TIME	0.1	/* time to wait until switching back (latency of sound device shall be lower) */
+#define ALERTING_TO		60	/* timeout after 60 seconds alerting the MS */
+#define PAGING_TO		2.1	/* 700..2100 ms timeout after paging "Selektivruf" */
+#define PAGE_TRIES		2	/* two tries */
+#define SWITCH19_TIME		1.0	/* time to switch channel (radio should be tansmitting after that) */
+#define SWITCHBACK_TIME		0.1	/* time to wait until switching back (latency of sound device shall be lower) */
 
-#define TRENN_COUNT	4	/* min. 350 ms disconnect "Trennsignal" */
-#define TRENN_COUNT_NA	96	/* 12 s disconnect "Trennsignal" if no answer */
+#define TRENN_COUNT		4	/* min. 350 ms disconnect "Trennsignal" */
+#define TRENN_COUNT_NA		96	/* 12 s disconnect "Trennsignal" if no answer */
+
+#define METERING_DURATION	0.2	/* duration of metering pulse */
+#define METERING_START		1.0	/* start metering 1 second after call start */
 
 const char *bnetz_state_name(enum bnetz_state state)
 {
@@ -156,7 +159,7 @@ static void bnetz_timeout(struct timer *timer);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
-int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_factor, const char *paging)
+int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_factor, const char *paging, int metering)
 {
 	bnetz_t *bnetz;
 	enum paging_signal paging_signal = PAGING_SIGNAL_NONE;
@@ -232,6 +235,7 @@ error_paging:
 	}
 
 	bnetz->gfs = gfs;
+	bnetz->metering = metering;
 	strncpy(bnetz->paging_file, paging_file, sizeof(bnetz->paging_file) - 1);
 	strncpy(bnetz->paging_on, paging_on, sizeof(bnetz->paging_on) - 1);
 	strncpy(bnetz->paging_off, paging_off, sizeof(bnetz->paging_off) - 1);
@@ -429,6 +433,9 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			timer_stop(&bnetz->timer);
 			bnetz_new_state(bnetz, BNETZ_GESPRAECH);
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
+			/* start metering pulses if forced */
+			if (bnetz->metering < 0)
+				timer_start(&bnetz->timer, METERING_START);
 			call_in_answer(bnetz->callref, bnetz->station_id);
 			break;
 		}
@@ -597,6 +604,9 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 				timer_stop(&bnetz->timer);
 				bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
 				bnetz_new_state(bnetz, BNETZ_GESPRAECH);
+				/* start metering pulses if enabled and supported by phone or if forced */
+				if (bnetz->metering < 0 || (bnetz->metering > 0 && (bnetz->dial_type == DIAL_TYPE_METER || bnetz->dial_type == DIAL_TYPE_METER_MUENZ)))
+					timer_start(&bnetz->timer, METERING_START);
 
 				/* setup call */
 				PDEBUG(DBNETZ, DEBUG_INFO, "Setup call to network.\n");
@@ -627,9 +637,13 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, d
 		}
 		break;
 	case BNETZ_GESPRAECH:
+#if 0
+disabled, because any quality shall release the call.
+lets see, if noise will not generate a release signal....
 		/* only good telegramms shall pass */
 		if (quality < 0.7)
 			return;
+#endif
 		if (digit == 't') {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Received 'Schlusssignal' from mobile station\n");
 			bnetz_release(bnetz, TRENN_COUNT);
@@ -684,6 +698,22 @@ static void bnetz_timeout(struct timer *timer)
 		bnetz_release(bnetz, TRENN_COUNT_NA);
 		call_in_release(bnetz->callref, CAUSE_NOANSWER);
 		bnetz->callref = 0;
+		break;
+	case BNETZ_GESPRAECH:
+		switch (bnetz->dsp_mode) {
+		case DSP_MODE_AUDIO:
+			/* turn on merting pulse */
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO_METER);
+			timer_start(&bnetz->timer, METERING_DURATION);
+			break;
+		case DSP_MODE_AUDIO_METER:
+			/* turn off and wait given seconds for next metering cycle */
+			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
+			timer_start(&bnetz->timer, (double)abs(bnetz->metering) - METERING_DURATION);
+			break;
+		default:
+			break;
+		}
 		break;
 	default:
 		break;
@@ -845,7 +875,8 @@ void call_rx_audio(int callref, sample_t *samples, int count)
 	if (!sender)
 		return;
 
-	if (bnetz->dsp_mode == DSP_MODE_AUDIO) {
+	if (bnetz->dsp_mode == DSP_MODE_AUDIO
+	 || bnetz->dsp_mode == DSP_MODE_AUDIO_METER) {
 		sample_t up[(int)((double)count * bnetz->sender.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&bnetz->sender.srstate, samples, count, up);
 		jitter_save(&bnetz->sender.dejitter, up, count);

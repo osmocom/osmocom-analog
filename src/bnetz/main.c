@@ -37,6 +37,7 @@
 #include "ansage.h"
 
 int gfs = 2;
+int metering = 20;
 const char *paging = "tone";
 double lossdetect = 0;
 
@@ -53,6 +54,11 @@ void print_help(const char *arg0)
 	printf("        Set to 19 in order to make the phone transmit at 100 mW instead of\n");
 	printf("        full 15 Watts. If supported, the phone uses the channel with low power\n");
 	printf("        (Kanal kleiner Leistung).\n");
+	printf(" -M --gebuehrenimpuls <secods> | -<seconds> | 0\n");
+	printf("        Send metering pulses every given number of seconds or 0 to turn off.\n");
+	printf("        Pulses will only be sent on outgoing calls and only if mobile station\n");
+	printf("        supports it and only for outgoing calls. Use negative value to force\n");
+	printf("        metering pulses for all phones and all calls. (default = %d)\n", metering);
 	printf(" -P --paging tone | notone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");
@@ -79,12 +85,13 @@ static int handle_options(int argc, char **argv)
 
 	static struct option long_options_special[] = {
 		{"gfs", 1, 0, 'G'},
+		{"gebuehrenimpuls", 1, 0, 'M'},
 		{"paging", 1, 0, 'P'},
 		{"loss", 1, 0, 'L'},
 		{0, 0, 0, 0},
 	};
 
-	set_options_common("G:P:L:", long_options_special);
+	set_options_common("G:M:P:L:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -106,6 +113,10 @@ static int handle_options(int argc, char **argv)
 					exit(0);
 			} else
 				gfs = atoi(optarg);
+			skip_args += 2;
+			break;
+		case 'M':
+			metering = atoi(optarg);
 			skip_args += 2;
 			break;
 		case 'P':
@@ -181,7 +192,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, (double)lossdetect / 100.0, paging);
+		rc = bnetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, (double)lossdetect / 100.0, paging, metering);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
