@@ -103,6 +103,6 @@ int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 void bnetz_destroy(sender_t *sender);
 void bnetz_loss_indication(bnetz_t *bnetz);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);
-void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, double quality);
+void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_dev, double quality_avg);
 const char *bnetz_get_telegramm(bnetz_t *bnetz);
 

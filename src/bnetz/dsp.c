@@ -161,6 +161,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 /* Collect 16 data bits (digit) and check for sync mark '01110'. */
 static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 {
+	double level_avg, level_dev, quality_avg;
 	bnetz_t *bnetz = (bnetz_t *)inst;
 	int i;
 
@@ -187,15 +188,24 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 		return;
 
 	/* average level and quality */
-	level = quality = 0;
+	level_avg = level_dev = quality_avg = 0;
 	for (i = 0; i < 16; i++) {
-		level += bnetz->rx_telegramm_level[i];
-		quality += bnetz->rx_telegramm_quality[i];
+		level_avg += bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx];
+		quality_avg += bnetz->rx_telegramm_quality[bnetz->rx_telegramm_qualidx];
+		if (++bnetz->rx_telegramm_qualidx == 16)
+			bnetz->rx_telegramm_qualidx = 0;
 	}
-	level /= 16.0; quality /= 16.0;
+	level_avg /= 16.0; quality_avg /= 16.0;
+	for (i = 0; i < 16; i++) {
+		level = bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx];
+		level_dev += (level - level_avg) * (level - level_avg);
+		if (++bnetz->rx_telegramm_qualidx == 16)
+			bnetz->rx_telegramm_qualidx = 0;
+	}
+	level_dev = sqrt(level_dev / 16.0);
 
 	/* send telegramm */
-	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm, level, quality);
+	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm, level_avg, level_dev, quality_avg);
 }
 
 /* Process received audio stream from radio unit. */

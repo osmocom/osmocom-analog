@@ -445,21 +445,23 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 }
 
 /* A digit was received. */
-void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level, double quality)
+void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_dev, double quality_avg)
 {
 	struct impulstelegramm *it;
 	int digit = 0;
 
 	/* drop any telegramm that is too bad */
-	if (quality < 0.2)
+	if (level_dev / level_avg > 0.2)
 		return;
+
+	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: average=%.0f%% deviation=%.0f%% Quality: %.0f%%\n", level_avg * 100.0, level_dev / level_avg * 100.0, quality_avg * 100.0);
 
 	it = bnetz_telegramm2digit(telegramm);
 	if (it) {
 		digit = it->digit;
-		PDEBUG(DBNETZ, (bnetz->sender.loopback) ? DEBUG_NOTICE : DEBUG_INFO, "Received telegramm '%s' (RX Level: %.0f%% Quality=%.0f)\n", it->description, level * 100.0 + 0.5, quality * 100.0 + 0.5);
+		PDEBUG(DBNETZ, (bnetz->sender.loopback) ? DEBUG_NOTICE : DEBUG_INFO, "Received telegramm '%s'\n", it->description);
 	} else {
-		PDEBUG(DBNETZ, DEBUG_DEBUG, "Received unknown telegramm digit '0x%04x' (RX Level: %.0f%% Quality=%.0f) (might be radio noise)\n", telegramm, level * 100.0 + 0.5, quality * 100.0 + 0.5);
+		PDEBUG(DBNETZ, DEBUG_DEBUG, "Received unknown telegramm digit '0x%04x' (might be radio noise)\n", telegramm);
 		return;
 	}
 
