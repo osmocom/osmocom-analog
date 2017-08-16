@@ -23,6 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#define __USE_GNU
 #include <pthread.h>
 #include <unistd.h>
 #include "sample.h"
@@ -465,6 +466,7 @@ int sdr_start(void __attribute__((__unused__)) *inst)
 	if (sdr_threads) {
 		int rc;
 		pthread_t tid;
+		char tname[64];
 
 		PDEBUG(DSDR, DEBUG_DEBUG, "Create threads!\n");
 		sdr_thread_write.running = 1;
@@ -475,6 +477,10 @@ int sdr_start(void __attribute__((__unused__)) *inst)
 			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create thread!\n");
 			return rc;
 		}
+		pthread_getname_np(tid, tname, sizeof(tname));
+		strncat(tname, "-sdr_tx", sizeof(tname));
+		tname[sizeof(tname) - 1] = '\0';
+		pthread_setname_np(tid, tname);
 		sdr_thread_read.running = 1;
 		sdr_thread_read.exit = 0;
 		rc = pthread_create(&tid, NULL, sdr_read_child, inst);
@@ -483,6 +489,10 @@ int sdr_start(void __attribute__((__unused__)) *inst)
 			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create thread!\n");
 			return rc;
 		}
+		pthread_getname_np(tid, tname, sizeof(tname));
+		strncat(tname, "-sdr_rx", sizeof(tname));
+		tname[sizeof(tname) - 1] = '\0';
+		pthread_setname_np(tid, tname);
 	}
 
 	return 0;
