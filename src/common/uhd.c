@@ -27,6 +27,9 @@
 #include "uhd.h"
 #include "debug.h"
 
+/* use to TX time stamp */
+//#define TX_TIMESTAMP
+
 static uhd_usrp_handle		usrp = NULL;
 static uhd_tx_streamer_handle	tx_streamer = NULL;
 static uhd_rx_streamer_handle	rx_streamer = NULL;
@@ -42,14 +45,16 @@ static time_t			rx_time_secs = 0;
 static double			rx_time_fract_sec = 0.0;
 static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
+static int			tx_timestamps;
 
-int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double rate, double tx_gain, double rx_gain, double bandwidth)
+int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double rate, double tx_gain, double rx_gain, double bandwidth, int _tx_timestamps)
 {
 	uhd_error error;
 	double got_frequency, got_rate, got_gain, got_bandwidth;
 	char got_antenna[64];
 
 	samplerate = rate;
+	tx_timestamps = _tx_timestamps;
 
 	PDEBUG(DUHD, DEBUG_INFO, "Using device args \"%s\"\n", _device_args);
 	PDEBUG(DUHD, DEBUG_INFO, "Using stream args \"%s\"\n", _stream_args);
@@ -472,7 +477,10 @@ int uhd_send(float *buff, int num)
 		if (chunk > (int)tx_samps_per_buff)
 			chunk = (int)tx_samps_per_buff;
 		/* create tx metadata */
-		error = uhd_tx_metadata_make(&tx_metadata, true, tx_time_secs, tx_time_fract_sec, true, false);
+		if (tx_timestamps)
+			error = uhd_tx_metadata_make(&tx_metadata, true, tx_time_secs, tx_time_fract_sec, false, false);
+		else
+			error = uhd_tx_metadata_make(&tx_metadata, false, 0, 0.0, false, false);
 		if (error)
 			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create TX metadata\n");
 		buffs_ptr[0] = buff;
@@ -551,10 +559,13 @@ int uhd_get_tosend(int latspl)
 	/* if we have not yet sent any data, we set initial tx time stamp */
 	if (tx_time_secs == 0 && tx_time_fract_sec == 0.0) {
 		tx_time_secs = rx_time_secs;
-		tx_time_fract_sec = rx_time_fract_sec + (double)latspl / samplerate;
-		if (tx_time_fract_sec >= 1.0) {
-			tx_time_fract_sec -= 1.0;
-			tx_time_secs++;
+		tx_time_fract_sec = rx_time_fract_sec;
+		if (tx_timestamps) {
+			tx_time_fract_sec += (double)latspl / samplerate;
+			if (tx_time_fract_sec >= 1.0) {
+				tx_time_fract_sec -= 1.0;
+				tx_time_secs++;
+			}
 		}
 	}
 

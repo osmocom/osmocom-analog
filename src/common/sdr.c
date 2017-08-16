@@ -85,8 +85,9 @@ static int sdr_latspl;
 static int sdr_threads;
 static sdr_thread_t sdr_thread_read, sdr_thread_write;
 static int sdr_swap_links;
+static int sdr_uhd_tx_timestamps;
 
-int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, const char *stream_args, const char *tune_args, const char *tx_antenna, const char *rx_antenna, double tx_gain, double rx_gain, int samplerate, double bandwidth, const char *write_iq_tx_wave, const char *write_iq_rx_wave, const char *read_iq_tx_wave, const char *read_iq_rx_wave, int latspl, int swap_links)
+int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, const char *stream_args, const char *tune_args, const char *tx_antenna, const char *rx_antenna, double tx_gain, double rx_gain, int samplerate, double bandwidth, const char *write_iq_tx_wave, const char *write_iq_rx_wave, const char *read_iq_tx_wave, const char *read_iq_rx_wave, int latspl, int swap_links, int uhd_tx_timestamps)
 {
 	PDEBUG(DSDR, DEBUG_DEBUG, "Init SDR\n");
 
@@ -110,6 +111,7 @@ int sdr_init(int sdr_uhd, int sdr_soapy, int channel, const char *device_args, c
 	sdr_oversample = 1;
 	sdr_latspl = latspl;
 	sdr_swap_links = swap_links;
+	sdr_uhd_tx_timestamps = uhd_tx_timestamps;
 
 	return 0;
 }
@@ -326,7 +328,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd) {
-		rc = uhd_open(sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, tx_center_frequency, rx_center_frequency, sdr_samplerate, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth);
+		rc = uhd_open(sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, tx_center_frequency, rx_center_frequency, sdr_samplerate, sdr_tx_gain, sdr_rx_gain, sdr_bandwidth, sdr_uhd_tx_timestamps);
 		if (rc)
 			goto error;
 	}

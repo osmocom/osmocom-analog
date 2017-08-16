@@ -79,6 +79,7 @@ const char *write_iq_rx_wave = NULL;
 const char *read_iq_tx_wave = NULL;
 const char *read_iq_rx_wave = NULL;
 int sdr_swap_links = 0;
+int sdr_uhd_tx_timestamps = 0;
 
 void print_help_common(const char *arg0, const char *ext_usage)
 {
@@ -183,6 +184,10 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("        Replace transmitted IQ data by given wave file.\n");
 	printf("    --sdr-swap-links\n");
 	printf("        Swap RX and TX frequencies for loopback tests over the air.r\n");
+#ifdef HAVE_UHD
+	printf("    --sdr-uhd-tx-timestamps\n");
+	printf("        Use TX timestamps on UHD device. (May not work with some devices!)\n");
+#endif
 #endif
 	printf("\nNetwork specific options:\n");
 }
@@ -225,6 +230,7 @@ void print_hotkeys_common(void)
 #define	OPT_READ_IQ_RX_WAVE	1114
 #define	OPT_READ_IQ_TX_WAVE	1115
 #define	OPT_SDR_SWAP_LINKS	1116
+#define OPT_SDR_UHD_TX_TS	1117
 
 static struct option long_options_common[] = {
 	{"help", 0, 0, 'h'},
@@ -266,6 +272,7 @@ static struct option long_options_common[] = {
 	{"read-iq-rx-wave", 1, 0, OPT_READ_IQ_RX_WAVE},
 	{"read-iq-tx-wave", 1, 0, OPT_READ_IQ_TX_WAVE},
 	{"sdr-swap-links", 0, 0, OPT_SDR_SWAP_LINKS},
+	{"sdr-uhd-tx-timestamps", 0, 0, OPT_SDR_UHD_TX_TS},
 	{0, 0, 0, 0}
 };
 
@@ -497,6 +504,10 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		sdr_swap_links = 1;
 		*skip_args += 1;
 		break;
+	case OPT_SDR_UHD_TX_TS:
+		sdr_uhd_tx_timestamps = 1;
+		*skip_args += 1;
+		break;
 	default:
 		exit (0);
 	}
@@ -580,7 +591,7 @@ void main_common(int *quit, int latency, int interval, void (*myhandler)(void), 
 		sdr_samplerate = samplerate;
 	if (sdr_bandwidth == 0.0)
 		sdr_bandwidth = sdr_samplerate;
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_samplerate, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave, latspl, sdr_swap_links);
+	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_samplerate, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave, latspl, sdr_swap_links, sdr_uhd_tx_timestamps);
 	if (rc < 0)
 		return;
 #endif

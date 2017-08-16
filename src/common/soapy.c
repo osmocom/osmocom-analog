@@ -388,7 +388,7 @@ int soapy_send(float *buff, int num)
 		buffs_ptr[0] = buff;
 		count = SoapySDRDevice_writeStream(sdr, txStream, buffs_ptr, chunk, &flags, 0, 1000000);
 		if (count <= 0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamr (error=%d)\n", count);
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamer (error=%d)\n", count);
 			break;
 		}
 
