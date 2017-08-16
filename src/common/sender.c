@@ -27,6 +27,10 @@
 #include "sample.h"
 #include "debug.h"
 #include "sender.h"
+#include "timer.h"
+
+/* debug time consumption of audio processing */
+//#define DEBUG_TIME_CONSUMPTION
 
 sender_t *sender_head = NULL;
 static sender_t **sender_tailp = &sender_head;
@@ -287,6 +291,9 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 	sender_t *inst;
 	int rc, count;
 	int num_chan, i;
+#ifdef DEBUG_TIME_CONSUMPTION
+	static double t1, t2, t3, t4, t5, d1 = 0, d2 = 0, d3 = 0, d4 = 0, s = 0;
+#endif
 
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
@@ -297,6 +304,9 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 		samples[i] = buff[i];
 	}
 
+#ifdef DEBUG_TIME_CONSUMPTION
+	t1 = get_time();
+#endif
 	count = sender->audio_get_tosend(sender->audio, latspl);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
@@ -311,6 +321,9 @@ cant_recover:
 		}
 		return;
 	}
+#ifdef DEBUG_TIME_CONSUMPTION
+	t2 = get_time();
+#endif
 	if (count > 0) {
 		/* limit to our buffer */
 		if (count > latspl)
@@ -337,6 +350,9 @@ cant_recover:
 			on[i] = inst->paging_on;
 		}
 
+#ifdef DEBUG_TIME_CONSUMPTION
+		t2 = get_time();
+#endif
 		if (sender->wave_tx_rec.fp)
 			wave_write(&sender->wave_tx_rec, samples, count);
 		if (sender->wave_tx_play.fp)
@@ -353,6 +369,9 @@ cant_recover:
 			return;
 		}
 	}
+#ifdef DEBUG_TIME_CONSUMPTION
+	t3 = get_time();
+#endif
 
 	count = sender->audio_read(sender->audio, samples, latspl, num_chan);
 	if (count < 0) {
@@ -369,6 +388,9 @@ cant_recover:
 		}
 		return;
 	}
+#ifdef DEBUG_TIME_CONSUMPTION
+	t4 = get_time();
+#endif
 	if (count) {
 		if (sender->wave_rx_rec.fp)
 			wave_write(&sender->wave_rx_rec, samples, count);
@@ -395,6 +417,18 @@ cant_recover:
 				jitter_save(&inst->dejitter, samples[i], count);
 		}
 	}
+#ifdef DEBUG_TIME_CONSUMPTION
+	t5 = get_time();
+	d1 += (t2 - t1);
+	d2 += (t3 - t2);
+	d3 += (t4 - t3);
+	d4 += (t5 - t4);
+	if (get_time() - s >= 1.0) {
+		printf("duration: %.3f (process TX), %.3f (send TX), %.3f (receive RX), %.3f (process RX)\n", d1, d2, d3, d4);
+		s = get_time();
+		d1 = d2 = d3 = d4 = 0;
+	}
+#endif
 }
 
 void sender_paging(sender_t *sender, int on)
