@@ -169,7 +169,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	level /= TX_PEAK_FSK;
 
 	/* continuous tone detection */
-	if (level > 0.10 && quality > 0.5) {
+	if (level > 0.10 && quality > 0.10) {
 		fsk_receive_tone(bnetz, bit, 1, level, quality);
 	} else
 		fsk_receive_tone(bnetz, bit, 0, level, quality);
