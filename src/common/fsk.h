@@ -5,7 +5,6 @@ typedef struct ffsk {
 	int (*send_bit)(void *inst);
 	void (*receive_bit)(void *inst, int bit, double quality, double level);
 	fm_demod_t	demod;
-	iir_filter_t	tx_filter;
 	double		bits_per_sample;	/* fraction of a bit per sample */
 	double		*sin_tab;		/* sine table with correct peak level */
 	double		phaseshift65536[2];	/* how much the phase of fsk synbol changes per sample */

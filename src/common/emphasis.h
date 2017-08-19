@@ -1,5 +1,6 @@
 typedef struct emphasis {
 	struct {
+		iir_filter_t lp;
 		double x_last;
 		double factor;
 		double amp;

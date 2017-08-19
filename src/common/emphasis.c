@@ -29,6 +29,7 @@
 #define PI		M_PI
 
 #define CUT_OFF_H	100.0	/* cut-off frequency for high-pass filter */
+#define CUT_OFF_L	4000.0	/* cut-off frequency for low-pass filter */
 
 static void gen_sine(sample_t *samples, int num, int samplerate, double freq)
 {
@@ -66,7 +67,11 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 	state->d.factor = factor;
 	state->d.amp = 1.0;
 
+	/* do not de-emphasis below CUT_OFF_H */
 	iir_highpass_init(&state->d.hp, CUT_OFF_H, samplerate, 1);
+
+	/* do not pre-emphasis above CUT_OFF_L */
+	iir_lowpass_init(&state->p.lp, CUT_OFF_L, samplerate, 1);
 
 	/* calibrate amplification to be neutral at 1000 Hz */
 	gen_sine(test_samples, sizeof(test_samples) / sizeof(test_samples[0]), samplerate, 1000.0);
@@ -83,6 +88,8 @@ void pre_emphasis(emphasis_t *state, sample_t *samples, int num)
 {
 	double x, y, x_last, factor, amp;
 	int i;
+
+	iir_process(&state->p.lp, samples, num);
 
 	x_last = state->p.x_last;
 	factor = state->p.factor;

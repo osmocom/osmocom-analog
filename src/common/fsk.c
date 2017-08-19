@@ -115,9 +115,6 @@ int fsk_init(fsk_t *fsk, void *inst, int (*send_bit)(void *inst), void (*receive
 		fsk->cycles_per_bit65536[1] = waves * 65536.0;
 	}
 
-	/* filter prevents emphasis to overshoot on bit change */
-	iir_lowpass_init(&fsk->tx_filter, 4000.0, samplerate, 2);
-
 	return 0;
 
 error:
@@ -277,8 +274,6 @@ next_bit:
 
 done:
 	fsk->tx_phase65536 = phase;
-
-	iir_process(&fsk->tx_filter, sample, count);
 
 	return count;
 }
