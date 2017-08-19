@@ -99,10 +99,12 @@ typedef struct r2000 {
 	uint32_t		super_tx_word;		/* supervisory info to transmit */
 	int			super_tx_word_length;
 	int			super_tx_word_pos;
+	iir_filter_t		super_tx_hp;		/* filters away the speech that overlaps with the supervisory */
 	uint32_t		super_rx_word;		/* shift register for received supervisory info */
 	double			super_rx_level[20];	/* level infos */
 	double			super_rx_quality[20];	/* quality infos */
 	int			super_rx_index;		/* index for level and quality buffer */
+	iir_filter_t		super_rx_hp;		/* filters away the supervisory */
 double super_bittime;
 double super_bitpos;
 

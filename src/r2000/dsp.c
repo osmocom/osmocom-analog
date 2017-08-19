@@ -60,7 +60,7 @@
 #define SUPER_BIT_ADJUST	0.5	/* how much do we adjust bit clock on frequency change */
 #define SUPER_F0		136.0
 #define SUPER_F1		164.0
-#define FILTER_STEP		0.002	/* step every 2 ms */
+#define SUPER_CUTOFF_H		400.0	/* filter to remove spectrum of supervisory signal */
 #define MAX_DISPLAY		1.4	/* something above dBm0 */
 
 /* global init for FSK */
@@ -101,6 +101,13 @@ int dsp_init_sender(r2000_t *r2000)
 		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
 		return -EINVAL;
 	}
+
+	/* remove frequencies of supervisory spectrum:
+	 * TX = remove low frequencies from speech to be transmitted
+	 * RX = remove received supervisory signal
+	 */
+	iir_highpass_init(&r2000->super_tx_hp, SUPER_CUTOFF_H, r2000->sender.samplerate, 2);
+	iir_highpass_init(&r2000->super_rx_hp, SUPER_CUTOFF_H, r2000->sender.samplerate, 2);
 
 	return 0;
 }
@@ -248,6 +255,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length)
 	 && r2000->callref) {
 		int count;
 
+		iir_process(&r2000->super_rx_hp, samples, length);
 		count = samplerate_downsample(&r2000->sender.srstate, samples, length);
 #if 0
 		/* compandor only in direction REL->MS */
@@ -314,6 +322,7 @@ again:
 	case DSP_MODE_AUDIO_TX:
 	case DSP_MODE_AUDIO_TX_RX:
 		jitter_load(&r2000->sender.dejitter, samples, length);
+		iir_process(&r2000->super_tx_hp, samples, length);
 		/* do pre-emphasis */
 		if (r2000->pre_emphasis)
 			pre_emphasis(&r2000->estate, samples, length);
