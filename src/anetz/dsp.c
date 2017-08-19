@@ -339,9 +339,11 @@ static void fsk_tone(anetz_t *anetz, sample_t *samples, int length)
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, sample_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	anetz_t *anetz = (anetz_t *) sender;
+
+	memset(power, 1, length);
 
 	switch (anetz->dsp_mode) {
 	case DSP_MODE_SILENCE:

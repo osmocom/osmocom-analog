@@ -557,7 +557,7 @@ void sdr_close(void *inst)
 	}
 }
 
-int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
+int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float buffer[num * 2], *buff = NULL;
@@ -576,9 +576,9 @@ int sdr_write(void *inst, sample_t **samples, int num, enum paging_signal __attr
 		for (c = 0; c < channels; c++) {
 			/* switch to paging channel, if requested */
 			if (on[c] && sdr->paging_channel)
-				fm_modulate_complex(&sdr->chan[sdr->paging_channel].mod, samples[c], num, buff);
+				fm_modulate_complex(&sdr->chan[sdr->paging_channel].mod, samples[c], power[c], num, buff);
 			else
-				fm_modulate_complex(&sdr->chan[c].mod, samples[c], num, buff);
+				fm_modulate_complex(&sdr->chan[c].mod, samples[c], power[c], num, buff);
 		}
 	} else {
 		buff = (float *)samples;

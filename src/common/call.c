@@ -690,6 +690,7 @@ void process_call(int c)
 
 	/* handle audio, if sound device is used */
 	sample_t samples[call.latspl + 10], *samples_list[1];
+	uint8_t *power_list[1];
 	int count;
 	int rc;
 
@@ -725,7 +726,8 @@ void process_call(int c)
 			jitter_load(&call.dejitter, samples, count);
 		}
 		samples_list[0] = samples;
-		rc = sound_write(call.sound, samples_list, count, NULL, NULL, 1);
+		power_list[0] = NULL;
+		rc = sound_write(call.sound, samples_list, power_list, count, NULL, NULL, 1);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE)

@@ -301,10 +301,12 @@ static void metering_tone(bnetz_t *bnetz, sample_t *samples, int length)
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, sample_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	bnetz_t *bnetz = (bnetz_t *) sender;
 	int count;
+
+	memset(power, 1, length);
 
 again:
 	switch (bnetz->dsp_mode) {

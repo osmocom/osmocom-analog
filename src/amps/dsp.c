@@ -138,7 +138,6 @@ static double sat_freq[4] = {
 };
 
 static sample_t dsp_sine_sat[65536];
-static sample_t dsp_sine_test[65536];
 
 static uint8_t dsp_sync_check[0x800];
 
@@ -152,7 +151,6 @@ void dsp_init(void)
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
 		dsp_sine_sat[i] = s * ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION);
-		dsp_sine_test[i] = s * ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION);
 	}
 
 	/* sync checker */
@@ -266,10 +264,6 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	/* signaling tone */
 	audio_goertzel_init(&amps->sat_goertzel[4], (!tacs) ? 10000.0 : 8000.0, amps->sender.samplerate);
 	sat_reset(amps, "Initial state");
-
-	/* test tone */
-	amps->test_phaseshift65536 = 65536.0 / ((double)amps->sender.samplerate / 1000.0);
-	PDEBUG(DDSP, DEBUG_DEBUG, "test_phaseshift65536 = %.4f\n", amps->test_phaseshift65536);
 
 	/* be more tolerant when syncing */
 	amps->fsk_rx_sync_tolerant = tolerant;
@@ -468,26 +462,8 @@ static void sat_encode(amps_t *amps, sample_t *samples, int length)
 	amps->sat_phase65536 = phase;
 }
 
-static void test_tone_encode(amps_t *amps, sample_t *samples, int length)
-{
-        double phaseshift, phase;
-	int i;
-
-	phaseshift = amps->test_phaseshift65536;
-	phase = amps->test_phase65536;
-
-	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_test[(uint16_t)phase];
-		phase += phaseshift;
-		if (phase >= 65536)
-			phase -= 65536;
-	}
-
-	amps->test_phase65536 = phase;
-}
-
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, sample_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	amps_t *amps = (amps_t *) sender;
 	int count;
@@ -495,10 +471,11 @@ void sender_send(sender_t *sender, sample_t *samples, int length)
 again:
 	switch (amps->dsp_mode) {
 	case DSP_MODE_OFF:
-		/* test tone, if transmitter is off */
-		test_tone_encode(amps, samples, length);
+		memset(power, 0, length);
+		memset(samples, 0, sizeof(*samples) * length);
 		break;
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
+		memset(power, 1, length);
 		jitter_load(&amps->sender.dejitter, samples, length);
 		/* pre-emphasis */
 		if (amps->pre_emphasis)
@@ -511,7 +488,9 @@ again:
 		/* Encode frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
 		count = fsk_frame(amps, samples, length);
+		memset(power, 1, count);
 		samples += count;
+		power += count;
 		length -= count;
 		if (length)
 			goto again;

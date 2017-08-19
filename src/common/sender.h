@@ -44,7 +44,7 @@ typedef struct sender {
 	void			*(*audio_open)(const char *, double *, double *, int, double, int, double, double);
 	int 			(*audio_start)(void *);
 	void 			(*audio_close)(void *);
-	int			(*audio_write)(void *, sample_t **, int, enum paging_signal *, int *, int);
+	int			(*audio_write)(void *, sample_t **, uint8_t **, int, enum paging_signal *, int *, int);
 	int			(*audio_read)(void *, sample_t **, int, int);
 	int			(*audio_get_tosend)(void *, int);
 	int			samplerate;
@@ -96,7 +96,7 @@ void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation
 int sender_open_audio(void);
 int sender_start_audio(void);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
-void sender_send(sender_t *sender, sample_t *samples, int count);
+void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int count);
 void sender_receive(sender_t *sender, sample_t *samples, int count);
 void sender_paging(sender_t *sender, int on);
 

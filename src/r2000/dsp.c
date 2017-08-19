@@ -309,7 +309,7 @@ static int super_send_bit(void *inst)
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, sample_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	r2000_t *r2000 = (r2000_t *) sender;
 	int count;
@@ -317,10 +317,12 @@ void sender_send(sender_t *sender, sample_t *samples, int length)
 again:
 	switch (r2000->dsp_mode) {
 	case DSP_MODE_OFF:
+		memset(power, 0, length);
 		memset(samples, 0, sizeof(*samples) * length);
 		break;
 	case DSP_MODE_AUDIO_TX:
 	case DSP_MODE_AUDIO_TX_RX:
+		memset(power, 1, length);
 		jitter_load(&r2000->sender.dejitter, samples, length);
 		iir_process(&r2000->super_tx_hp, samples, length);
 		/* do pre-emphasis */
@@ -341,7 +343,9 @@ again:
 			/* add supervisory to sample buffer */
 			fsk_send(&r2000->super_fsk, samples, count, 1);
 		}
+		memset(power, 1, count);
 		samples += count;
+		power += count;
 		length -= count;
 		if (length)
 			goto again;

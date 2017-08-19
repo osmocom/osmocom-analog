@@ -30,6 +30,7 @@ int tot_samples;
 
 #define SAMPLES 1000
 sample_t samples[SAMPLES], I[SAMPLES], Q[SAMPLES];
+uint8_t power[SAMPLES];
 float buff[SAMPLES * 2];
 fm_mod_t mod;
 fm_demod_t demod;
@@ -37,9 +38,10 @@ iir_filter_t lp;
 
 int main(void)
 {
+	memset(power, 1, sizeof(power));
 	fm_mod_init(&mod, 50000, 0, 0.333);
 	T_START()
-	fm_modulate_complex(&mod, samples, SAMPLES, buff);
+	fm_modulate_complex(&mod, samples, power, SAMPLES, buff);
 	T_STOP("FM modulate", SAMPLES)
 
 	fm_demod_init(&demod, 50000, 0, 10000.0);

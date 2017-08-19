@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
 #include "sample.h"
 #include "fm_modulation.h"
@@ -30,17 +31,30 @@
 /* init FM modulator */
 int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitude)
 {
+	int i;
+
 	memset(mod, 0, sizeof(*mod));
 	mod->samplerate = samplerate;
 	mod->offset = offset;
 	mod->amplitude = amplitude;
 
-#ifdef FAST_SINE
-	int i;
+	mod->ramp_length = samplerate * 0.001;
+	mod->ramp_tab = calloc(mod->ramp_length, sizeof(*mod->ramp_tab));
+	if (!mod->ramp_tab) {
+		fprintf(stderr, "No mem!\n");
+		return -ENOMEM;
+	}
+	mod->state = MOD_STATE_OFF;
 
+	/* generate ramp up with ramp_length */
+	for (i = 0; i < mod->ramp_length; i++)
+		mod->ramp_tab[i] = 0.5 - cos(M_PI * i / mod->ramp_length) / 2.0;
+
+#ifdef FAST_SINE
 	mod->sin_tab = calloc(65536+16384, sizeof(*mod->sin_tab));
 	if (!mod->sin_tab) {
 		fprintf(stderr, "No mem!\n");
+		fm_mod_exit(mod);
 		return -ENOMEM;
 	}
 
@@ -54,6 +68,10 @@ int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitud
 
 void fm_mod_exit(fm_mod_t *mod)
 {
+	if (mod->ramp_tab) {
+		free(mod->ramp_tab);
+		mod->ramp_tab = NULL;
+	}
 	if (mod->sin_tab) {
 		free(mod->sin_tab);
 		mod->sin_tab = NULL;
@@ -61,10 +79,11 @@ void fm_mod_exit(fm_mod_t *mod)
 }
 
 /* do frequency modulation of samples and add them to existing baseband */
-void fm_modulate_complex(fm_mod_t *mod, sample_t *frequency, int length, float *baseband)
+void fm_modulate_complex(fm_mod_t *mod, sample_t *frequency, uint8_t *power, int length, float *baseband)
 {
 	double dev, rate, phase, offset;
-	int s, ss;
+	int ramp, ramp_length;
+	double *ramp_tab;
 #ifdef FAST_SINE
 	double *sin_tab, *cos_tab;
 #else
@@ -74,6 +93,9 @@ void fm_modulate_complex(fm_mod_t *mod, sample_t *frequency, int length, float *
 	rate = mod->samplerate;
 	phase = mod->phase;
 	offset = mod->offset;
+	ramp = mod->ramp;
+	ramp_length = mod->ramp_length;
+	ramp_tab = mod->ramp_tab;
 #ifdef FAST_SINE
 	sin_tab = mod->sin_tab;
 	cos_tab = mod->sin_tab + 16384;
@@ -81,30 +103,127 @@ void fm_modulate_complex(fm_mod_t *mod, sample_t *frequency, int length, float *
 	amplitude = mod->amplitude;
 #endif
 
-	/* modulate */
-	for (s = 0, ss = 0; s < length; s++) {
-		/* deviation is defined by the frequency value and the offset */
-		dev = offset + frequency[s];
+again:
+	switch (mod->state) {
+	case MOD_STATE_ON:
+		/* modulate */
+		while (length) {
+			/* is power is not set, ramp down */
+			if (!(*power)) {
+				mod->state = MOD_STATE_RAMP_DOWN;
+				break;
+			}
+			/* deviation is defined by the frequency value and the offset */
+			dev = offset + *frequency++;
+			power++;
+			length--;
 #ifdef FAST_SINE
-		phase += 65536.0 * dev / rate;
-		if (phase < 0.0)
-			phase += 65536.0;
-		else if (phase >= 65536.0)
-			phase -= 65536.0;
-		baseband[ss++] += cos_tab[(uint16_t)phase];
-		baseband[ss++] += sin_tab[(uint16_t)phase];
+			phase += 65536.0 * dev / rate;
+			if (phase < 0.0)
+				phase += 65536.0;
+			else if (phase >= 65536.0)
+				phase -= 65536.0;
+			*baseband++ += cos_tab[(uint16_t)phase];
+			*baseband++ += sin_tab[(uint16_t)phase];
 #else
-		phase += 2.0 * M_PI * dev / rate;
-		if (phase < 0.0)
-			phase += 2.0 * M_PI;
-		else if (phase >= 2.0 * M_PI)
-			phase -= 2.0 * M_PI;
-		baseband[ss++] += cos(phase) * amplitude;
-		baseband[ss++] += sin(phase) * amplitude;
+			phase += 2.0 * M_PI * dev / rate;
+			if (phase < 0.0)
+				phase += 2.0 * M_PI;
+			else if (phase >= 2.0 * M_PI)
+				phase -= 2.0 * M_PI;
+			*baseband++ += cos(phase) * amplitude;
+			*baseband++ += sin(phase) * amplitude;
 #endif
+		}
+		break;
+	case MOD_STATE_RAMP_DOWN:
+		while (length) {
+			/* if power is set, ramp up */
+			if (*power) {
+				mod->state = MOD_STATE_RAMP_UP;
+				break;
+			}
+			if (ramp == 0) {
+				mod->state = MOD_STATE_OFF;
+				break;
+			}
+			dev = offset + *frequency++;
+			power++;
+			length--;
+#ifdef FAST_SINE
+			phase += 65536.0 * dev / rate;
+			if (phase < 0.0)
+				phase += 65536.0;
+			else if (phase >= 65536.0)
+				phase -= 65536.0;
+			*baseband++ += cos_tab[(uint16_t)phase] * ramp_tab[ramp];
+			*baseband++ += sin_tab[(uint16_t)phase] * ramp_tab[ramp];
+#else
+			phase += 2.0 * M_PI * dev / rate;
+			if (phase < 0.0)
+				phase += 2.0 * M_PI;
+			else if (phase >= 2.0 * M_PI)
+				phase -= 2.0 * M_PI;
+			*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
+			*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
+#endif
+			ramp--;
+		}
+		break;
+	case MOD_STATE_OFF:
+		while (length) {
+			/* if power is set, ramp up */
+			if (*power) {
+				mod->state = MOD_STATE_RAMP_UP;
+				break;
+			}
+			frequency++;
+			power++;
+			length--;
+			baseband += 2;
+		}
+		break;
+	case MOD_STATE_RAMP_UP:
+		while (length) {
+			/* is power is not set, ramp down */
+			if (!(*power)) {
+				mod->state = MOD_STATE_RAMP_DOWN;
+				break;
+			}
+			if (ramp == ramp_length - 1) {
+				mod->state = MOD_STATE_ON;
+				break;
+			}
+			/* deviation is defined by the frequency value and the offset */
+			dev = offset + *frequency++;
+			power++;
+			length--;
+#ifdef FAST_SINE
+			phase += 65536.0 * dev / rate;
+			if (phase < 0.0)
+				phase += 65536.0;
+			else if (phase >= 65536.0)
+				phase -= 65536.0;
+			*baseband++ += cos_tab[(uint16_t)phase] * ramp_tab[ramp];
+			*baseband++ += sin_tab[(uint16_t)phase] * ramp_tab[ramp];
+#else
+			phase += 2.0 * M_PI * dev / rate;
+			if (phase < 0.0)
+				phase += 2.0 * M_PI;
+			else if (phase >= 2.0 * M_PI)
+				phase -= 2.0 * M_PI;
+			*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
+			*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
+#endif
+			ramp++;
+		}
+		break;
 	}
+	if (length)
+		goto again;
 
 	mod->phase = phase;
+	mod->ramp = ramp;
 }
 
 /* init FM demodulator */

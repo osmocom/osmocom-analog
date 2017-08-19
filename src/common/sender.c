@@ -298,10 +298,12 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
 	sample_t buff[num_chan][latspl], *samples[num_chan];
+	uint8_t pbuff[num_chan][latspl], *power[num_chan];
 	enum paging_signal paging_signal[num_chan];
 	int on[num_chan];
 	for (i = 0; i < num_chan; i++) {
 		samples[i] = buff[i];
+		power[i] = pbuff[i];
 	}
 
 #ifdef DEBUG_TIME_CONSUMPTION
@@ -334,7 +336,7 @@ cant_recover:
 			if (inst->loopback == 3)
 				jitter_load(&inst->dejitter, samples[i], count);
 			else
-				sender_send(inst, samples[i], count);
+				sender_send(inst, samples[i], power[i], count);
 			/* internal loopback: loop back TX audio to RX */
 			if (inst->loopback == 1) {
 				display_wave(inst, samples[i], count, inst->max_display);
@@ -358,7 +360,7 @@ cant_recover:
 		if (sender->wave_tx_play.fp)
 			wave_read(&sender->wave_tx_play, samples, count);
 
-		rc = sender->audio_write(sender->audio, samples, count, paging_signal, on, num_chan);
+		rc = sender->audio_write(sender->audio, samples, power, count, paging_signal, on, num_chan);
 		if (rc < 0) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			if (rc == -EPIPE) {

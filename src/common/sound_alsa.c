@@ -259,7 +259,7 @@ static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum p
 	}
 }
 
-int sound_write(void *inst, sample_t **samples, int num, enum paging_signal *paging_signal, int *on, int channels)
+int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) **power, int num, enum paging_signal *paging_signal, int *on, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
 	double spl_deviation = sound->spl_deviation;

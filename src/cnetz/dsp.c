@@ -250,39 +250,6 @@ void calc_clock_speed(cnetz_t *cnetz, double samples, int tx, int result)
 	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Clock: RX=%.3f TX=%.3f; Signal: RX=%.3f TX=%.3f ppm\n", speed_ppm_avg[0], speed_ppm_avg[1], speed_ppm_avg[2], speed_ppm_avg[3]);
 }
 
-static int fsk_testtone_encode(cnetz_t *cnetz)
-{
-	sample_t *spl;
-	double phase, bitstep;
-	int i, count;
-
-	spl = cnetz->fsk_tx_buffer;
-	phase = cnetz->fsk_tx_phase;
-	bitstep = cnetz->fsk_tx_bitstep * 256.0;
-
-	/* add 198 bits of test tone */
-	for (i = 0; i < 99; i++) {
-		do {
-			*spl++ = ramp_up[(uint8_t)phase];
-			phase += bitstep;
-		} while (phase < 256.0);
-		phase -= 256.0;
-		do {
-			*spl++ = ramp_down[(uint8_t)phase];
-			phase += bitstep;
-		} while (phase < 256.0);
-		phase -= 256.0;
-	}
-
-	/* depending on the number of samples, return the number */
-	count = ((uintptr_t)spl - (uintptr_t)cnetz->fsk_tx_buffer) / sizeof(*spl);
-
-	cnetz->fsk_tx_phase = phase;
-	cnetz->fsk_tx_buffer_length = count;
-
-	return count;
-}
-
 static int fsk_nothing_encode(cnetz_t *cnetz)
 {
 	sample_t *spl;
@@ -293,10 +260,10 @@ static int fsk_nothing_encode(cnetz_t *cnetz)
 	phase = cnetz->fsk_tx_phase;
 	bitstep = cnetz->fsk_tx_bitstep * 256.0;
 
-	/* add 198 bits of silence */
+	/* add 198 bits of no power (silence) */
 	for (i = 0; i < 198; i++) {
 		do {
-			*spl++ = 0;
+			*spl++ = -10.0; /* marker for power off */
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -315,7 +282,7 @@ static int fsk_nothing_encode(cnetz_t *cnetz)
  * input: 184 data bits (including barker code)
  * output: samples
  * return number of samples */
-static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
+static int fsk_block_encode(cnetz_t *cnetz, const char *bits, int ogk)
 {
 	/* alloc samples, add 1 in case there is a rest */
 	sample_t *spl;
@@ -331,7 +298,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 	/* add 7 bits of pause */
 	for (i = 0; i < 7; i++) {
 		do {
-			*spl++ = 0;
+			*spl++ = 0.0;
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -411,10 +378,18 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits)
 		phase -= 256.0;
 	}
 	for (i = 1; i < 7; i++) {
-		do {
-			*spl++ = 0;
-			phase += bitstep;
-		} while (phase < 256.0);
+		/* turn off power for OgK */
+		if (ogk) {
+			do {
+				*spl++ = -10.0; /* marker for power off */
+				phase += bitstep;
+			} while (phase < 256.0);
+		} else {
+			do {
+				*spl++ = 0.0;
+				phase += bitstep;
+			} while (phase < 256.0);
+		}
 		phase -= 256.0;
 	}
 
@@ -618,7 +593,7 @@ static int shrink_speech(cnetz_t *cnetz, sample_t *speech_buffer)
 	return speech_length;
 }
 
-static int fsk_telegramm(cnetz_t *cnetz, sample_t *samples, int length)
+static int fsk_telegramm(cnetz_t *cnetz, sample_t *samples, uint8_t *power, int length)
 {
 	int count = 0, pos, copy, i, speech_length, speech_pos;
 	sample_t *spl, *speech_buffer;
@@ -693,7 +668,7 @@ again:
 					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
 					bits = cnetz_encode_telegramm(cnetz);
 				}
-				fsk_block_encode(cnetz, bits);
+				fsk_block_encode(cnetz, bits, 1);
 			} else {
 				fsk_nothing_encode(cnetz);
 			}
@@ -701,7 +676,7 @@ again:
 		case DSP_MODE_SPK_K:
 			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung'\n");
 			bits = cnetz_encode_telegramm(cnetz);
-			fsk_block_encode(cnetz, bits);
+			fsk_block_encode(cnetz, bits, 0);
 			break;
 		case DSP_MODE_SPK_V:
 			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung'\n");
@@ -710,7 +685,7 @@ again:
 			break;
 		case DSP_MODE_OFF:
 		default:
-			fsk_testtone_encode(cnetz);
+			fsk_nothing_encode(cnetz);
 		}
 
 		if (cnetz->dsp_mode == DSP_MODE_SPK_V) {
@@ -733,7 +708,7 @@ again:
 	if (length - count < copy)
 		copy = length - count;
 	for (i = 0; i < copy; i++) {
-		if (*spl > 5.0) { /* marker found */
+		if (*spl > 5.0) { /* speech marker found */
 			int begin, end, j;
 			/* correct marker (not the best way) */
 			*spl -= 10.0;
@@ -760,12 +735,19 @@ again:
 			speech_length += begin; /* add one bit duration after speech */
 			speech_pos = 0;
 		}
+		if (*spl < -5.0) { /* power off marker found */
+			/* correct marker (not the best way) */
+			*spl += 10.0;
+			*power = 0;
+		} else
+			*power = 1;
 		/* add speech as long as we have something left in buffer */
 		if (speech_pos < speech_length)
 			*samples++ = *spl + speech_buffer[speech_pos++];
 		else
 			*samples++ = *spl;
 		spl++;
+		power++;
 	}
 	cnetz->dsp_speech_length = speech_length;
 	cnetz->dsp_speech_pos = speech_pos;
@@ -783,7 +765,7 @@ again:
 }
 
 /* Provide stream of audio toward radio unit */
-void sender_send(sender_t *sender, sample_t *samples, int length)
+void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	cnetz_t *cnetz = (cnetz_t *) sender;
 	int count;
@@ -797,7 +779,7 @@ void sender_send(sender_t *sender, sample_t *samples, int length)
 	return;
 #endif
 
-	count = fsk_telegramm(cnetz, samples, length);
+	count = fsk_telegramm(cnetz, samples, power, length);
 	if (count < length) {
 		printf("length=%d < count=%d\n", length, count);
 		printf("this shall not happen, so please fix!\n");
