@@ -29,8 +29,6 @@
 #include "../common/timer.h"
 #include "../common/call.h"
 #include "../common/cause.h"
-#include "../common/freiton.h"
-#include "../common/besetztton.h"
 #include "anetz.h"
 #include "dsp.h"
 

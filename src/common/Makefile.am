@@ -15,8 +15,6 @@ libcommon_a_SOURCES = \
 	dtmf.c \
 	samplerate.c \
 	call.c \
-	freiton.c \
-	besetztton.c \
 	testton.c \
 	mncc_sock.c \
 	cause.c \

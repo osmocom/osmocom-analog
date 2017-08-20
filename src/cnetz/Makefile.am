@@ -1,3 +1,4 @@
+AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 
 bin_PROGRAMS = \
@@ -13,6 +14,8 @@ cnetz_SOURCES = \
 	fsk_demod.c \
 	scrambler.c \
 	image.c \
+	$(top_builddir)/src/anetz/freiton.c \
+	$(top_builddir)/src/anetz/besetztton.c \
 	ansage.c \
 	main.c
 cnetz_LDADD = \

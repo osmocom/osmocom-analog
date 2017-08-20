@@ -8,6 +8,8 @@ anetz_SOURCES = \
 	dsp.c \
 	stations.c \
 	image.c \
+	freiton.c \
+	besetztton.c \
 	main.c
 anetz_LDADD = \
 	$(COMMON_LA) \
