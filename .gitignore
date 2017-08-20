@@ -22,6 +22,7 @@ compile
 m4
 src/common/libcommon.a
 src/common/libmobile.a
+src/common/libimage.a
 src/anetz/anetz
 src/bnetz/bnetz
 src/cnetz/cnetz
@@ -31,6 +32,7 @@ src/amps/amps
 src/tacs/tacs
 src/jtacs/jtacs
 src/r2000/radiocom2000
+src/tv/osmotv
 sim/cnetz_sim
 src/test/test_filter
 src/test/test_compandor

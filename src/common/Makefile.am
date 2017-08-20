@@ -1,6 +1,6 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(UHD_CFLAGS) $(SOAPY_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(GRAPHICSMAGICK_CFLAGS) $(IMAGEMAGICK_CFLAGS) $(UHD_CFLAGS) $(SOAPY_CFLAGS)
 
-noinst_LIBRARIES = libcommon.a libmobile.a
+noinst_LIBRARIES = libcommon.a libmobile.a libimage.a
 
 libcommon_a_SOURCES = \
 	sample.c \
@@ -31,6 +31,9 @@ libmobile_a_SOURCES = \
 	display_status.c \
 	main_mobile.c
 
+libimage_a_SOURCES = \
+	img.c
+
 if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR
 
@@ -53,5 +56,9 @@ AM_CPPFLAGS += -DHAVE_SOAPY
 
 libcommon_a_SOURCES += \
 	soapy.c
+endif
+
+if ENABLE_MAGICK
+AM_CPPFLAGS += -DWITH_MAGICK
 endif
 
