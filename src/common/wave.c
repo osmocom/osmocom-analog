@@ -51,7 +51,7 @@ static void *record_child(void *arg)
 		/* quit on error */
 		if (len < 0) {
 error:
-			fprintf(stderr, "Failed to write to recording wave file! (errno %d)\n", errno);
+			fprintf(stderr, "Failed to write to recording WAVE file! (errno %d)\n", errno);
 			rec->finish = 1;
 			return NULL;
 		}
@@ -87,7 +87,7 @@ static void *playback_child(void *arg)
 		len = fread(play->buffer + play->buffer_writep, 1, to_read, play->fp);
 		/* quit on error */
 		if (len < 0) {
-			fprintf(stderr, "Failed to read from playback wave file! (errno %d)\n", errno);
+			fprintf(stderr, "Failed to read from playback WAVE file! (errno %d)\n", errno);
 			play->finish = 1;
 			return NULL;
 		}
@@ -145,11 +145,11 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 
 	rc = pthread_create(&rec->tid, NULL, record_child, rec);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to create thread to record wave file! (errno %d)\n", errno);
+		fprintf(stderr, "Failed to create thread to record WAVE file! (errno %d)\n", errno);
 		goto error;
 	}
 
-	printf("*** Writing received audio to %s.\n", filename);
+	printf("*** Writing WAVE file to %s.\n", filename);
 
 	return 0;
 
@@ -303,11 +303,11 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 
 	rc = pthread_create(&play->tid, NULL, playback_child, play);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to create thread to playback wave file! (errno %d)\n", errno);
+		fprintf(stderr, "Failed to create thread to playback WAVE file! (errno %d)\n", errno);
 		goto error;
 	}
 
-	printf("*** Replacing received audio by %s.\n", filename);
+	printf("*** Reading WAVE file from %s.\n", filename);
 
 	return 0;
 
@@ -339,7 +339,7 @@ int wave_write(wave_rec_t *rec, sample_t **samples, int length)
 	to_write = (rec->buffer_size + rec->buffer_readp - rec->buffer_writep - 1) % rec->buffer_size;
 	to_write /= 2 * rec->channels;
 	if (to_write < length)
-		fprintf(stderr, "Record wave buffer overflow.\n");
+		fprintf(stderr, "Record WAVE buffer overflow.\n");
 	else
 		to_write = length;
 	if (to_write == 0)
@@ -492,7 +492,7 @@ void wave_destroy_record(wave_rec_t *rec)
 	fclose(rec->fp);
 	rec->fp = NULL;
 
-	printf("*** Received audio is written to WAVE file.\n");
+	printf("*** WAVE file written.\n");
 }
 
 void wave_destroy_playback(wave_play_t *play)
