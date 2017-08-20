@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../common/sample.h"
-#include "../common/main.h"
+#include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -405,7 +405,7 @@ int main_amps_tacs(int argc, char *argv[])
 			printf("Base station on channel %d ready (%s), please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0) / 1e6, amps_channel2freq(kanal[i], 1) / 1e6);
 	}
 
-	main_common(&quit, latency, interval, NULL, station_id, 10);
+	main_mobile(&quit, latency, interval, NULL, station_id, 10);
 
 fail:
 	/* destroy transceiver instance */

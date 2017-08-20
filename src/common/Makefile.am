@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(UHD_CFLAGS) $(SOAPY_CFLAGS)
 
-noinst_LIBRARIES = libcommon.a
+noinst_LIBRARIES = libcommon.a libmobile.a
 
 libcommon_a_SOURCES = \
 	sample.c \
@@ -14,20 +14,22 @@ libcommon_a_SOURCES = \
 	iir_filter.c \
 	dtmf.c \
 	samplerate.c \
-	call.c \
-	testton.c \
-	mncc_sock.c \
-	cause.c \
 	emphasis.c \
 	compandor.c \
 	fft.c \
 	fm_modulation.c \
 	fsk.c \
-	hagelbarger.c \
+	display_wave.c
+
+libmobile_a_SOURCES = \
 	sender.c \
-	display_wave.c \
+	cause.c \
+	call.c \
+	testton.c \
+	mncc_sock.c \
+	hagelbarger.c \
 	display_status.c \
-	main_common.c
+	main_mobile.c
 
 if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR

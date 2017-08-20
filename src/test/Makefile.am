@@ -14,6 +14,7 @@ test_filter_SOURCES = test_filter.c dummy.c
 
 test_filter_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -26,6 +27,7 @@ test_compandor_SOURCES = \
 
 test_compandor_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -36,6 +38,7 @@ test_emphasis_SOURCES = test_emphasis.c dummy.c
 
 test_emphasis_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -49,6 +52,7 @@ test_dms_SOURCES = \
 
 test_dms_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -62,6 +66,7 @@ test_sms_SOURCES = \
 
 test_sms_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -72,6 +77,7 @@ test_performance_SOURCES = dummy.c test_performance.c
 
 test_performance_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

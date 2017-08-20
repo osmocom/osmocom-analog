@@ -13,6 +13,7 @@ radiocom2000_SOURCES = \
 	main.c
 radiocom2000_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

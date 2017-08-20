@@ -72,11 +72,16 @@ void free_nmt(nmt_t *nmt)
 	free(nmt);
 }
 
+extern void main_mobile();
+
 int main(void)
 {
 	nmt_t *nmt;
 	dms_t *dms;
 	int i, j;
+
+	/* this is never called, it forces the linker to add mobile functions */
+	if (debuglevel == -1000) main_mobile();
 
 	debuglevel = DEBUG_DEBUG;
 	dms_allow_loopback = 1;

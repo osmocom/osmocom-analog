@@ -21,6 +21,7 @@ compile
 .dirstamp
 m4
 src/common/libcommon.a
+src/common/libmobile.a
 src/anetz/anetz
 src/bnetz/bnetz
 src/cnetz/cnetz

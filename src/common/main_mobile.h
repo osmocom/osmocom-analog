@@ -42,7 +42,7 @@ void opt_switch_common(int c, char *arg0, int *skip_args);
 extern int quit;
 void sighandler(int sigset);
 
-void main_common(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits);
+void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits);
 
 void dump_info(void);
 

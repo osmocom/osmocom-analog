@@ -24,7 +24,7 @@
 #include <string.h>
 #include <math.h>
 #include "../common/sample.h"
-#include "../common/main.h"
+#include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], anetz_kanal2freq(kanal[i], 0) / 1e6, anetz_kanal2freq(kanal[i], 1) / 1e6);
 	}
 
-	main_common(&quit, latency, interval, NULL, station_id, 5);
+	main_mobile(&quit, latency, interval, NULL, station_id, 5);
 
 fail:
 	/* destroy transceiver instance */

@@ -29,7 +29,7 @@
 #include <termios.h>
 #include <errno.h>
 #include "sample.h"
-#include "main.h"
+#include "main_mobile.h"
 #include "debug.h"
 #include "sender.h"
 #include "timer.h"
@@ -547,7 +547,7 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_common(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits)
+void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits)
 {
 	int latspl;
 	sender_t *sender;

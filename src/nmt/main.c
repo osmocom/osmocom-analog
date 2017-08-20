@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "../common/sample.h"
-#include "../common/main.h"
+#include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/mncc_sock.h"
@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
 
 	nmt_check_channels(nmt_system);
 
-	main_common(&quit, latency, interval, myhandler, station_id, 7);
+	main_mobile(&quit, latency, interval, myhandler, station_id, 7);
 
 fail:
 	/* fifo */

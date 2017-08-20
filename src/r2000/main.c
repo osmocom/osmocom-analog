@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "../common/sample.h"
-#include "../common/main.h"
+#include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/mncc_sock.h"
@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
 
 	r2000_check_channels();
 
-	main_common(&quit, latency, interval, NULL, station_id, 9);
+	main_mobile(&quit, latency, interval, NULL, station_id, 9);
 
 fail:
 	/* destroy transceiver instance */

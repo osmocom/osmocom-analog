@@ -13,6 +13,7 @@ tacs_SOURCES = \
 tacs_LDADD = \
 	$(COMMON_LA) \
 	../amps/libamps.a \
+	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

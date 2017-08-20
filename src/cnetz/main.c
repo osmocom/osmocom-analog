@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../common/sample.h"
-#include "../common/main.h"
+#include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
 #include "../common/call.h"
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	main_common(&quit, latency, interval, NULL, station_id, 7);
+	main_mobile(&quit, latency, interval, NULL, station_id, 7);
 
 fail:
 	flush_db();

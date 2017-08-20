@@ -27,7 +27,7 @@
 #include "../common/timer.h"
 #include "../common/call.h"
 #include "../common/mncc_sock.h"
-#include "../common/main.h"
+#include "../common/main_mobile.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
 #include "bnetz.h"
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 		printf("To call phone, switch transmitter (using paging signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0) / 1e6);
 	}
 
-	main_common(&quit, latency, interval, NULL, station_id, 5);
+	main_mobile(&quit, latency, interval, NULL, station_id, 5);
 
 fail:
 	/* destroy transceiver instance */

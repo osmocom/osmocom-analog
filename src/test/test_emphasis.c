@@ -35,6 +35,8 @@ static void gen_samples(sample_t *samples, double freq)
 	}
 }
 
+extern void main_mobile();
+
 int main(void)
 {
 	emphasis_t estate;
@@ -42,6 +44,9 @@ int main(void)
 	sample_t samples[SAMPLERATE];
 	double level;
 	double i;
+
+	/* this is never called, it forces the linker to add mobile functions */
+	if (debuglevel == -1000) main_mobile();
 
 	debuglevel = DEBUG_DEBUG;
 
