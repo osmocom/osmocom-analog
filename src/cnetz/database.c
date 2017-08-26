@@ -36,6 +36,7 @@
 #define MELDE_MAXIMAL		3
 
 typedef struct cnetz_database {
+
 	struct cnetz_database	*next;
 	uint8_t			futln_nat;	/* who ... */
 	uint8_t			futln_fuvst;
@@ -154,10 +155,10 @@ int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
 		if (db->futln_nat == futln_nat
 		 && db->futln_fuvst == futln_fuvst
 		 && db->futln_rest == futln_rest)
-			return 1;
+			return db->extended;
 		db = db->next;
 	}
-	return 0;
+	return -1;
 }
 
 void flush_db(void)

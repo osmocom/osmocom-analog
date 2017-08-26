@@ -67,7 +67,7 @@ typedef struct telegramm {
 	uint8_t fuz_fuvst_nr;
 	uint8_t betriebs_art;
 	uint8_t ankuendigung_gespraechsende;
-	uint8_t teilnehmersperre;
+	uint8_t teilnehmergruppensperre;
 	uint8_t anzahl_gesperrter_teilnehmergruppen;
 	uint8_t fuz_rest_nr;
 	uint16_t gebuehren_stand;

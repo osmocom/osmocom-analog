@@ -311,7 +311,7 @@ dsp.c:218 notice : Clock: RX=19.44 TX=19.49; Signal: RX=19.35 TX=19.43 ppm
 <p>
 One can see that the measured clock from the sound card (sample rate) differs about +19.45 PPM.
 Because I did not do any correction to the signal processing, the same error applies to the signal processing.
-Use command line option '-S 19.45,19.45' or '--clock-speed 19.45,19.45' to compensate the clock error by adjusting the signal processor.
+Use command line option '-C 19.45,19.45' or '--clock-speed 19.45,19.45' to compensate the clock error by adjusting the signal processor.
 Let it run again for one hour and you will see that clock deviation of the signal is below 1 PPM.
 </p>
 
@@ -384,7 +384,7 @@ To run the base station I the following command line options:
 
 <pre>
 
-# cnetz -k 131 -p -d -S 19.25,19.25
+# cnetz -k 131 -p -d -C 19.25,19.25
 ...
 cnetz.c:142 notice : You selected channel 131 ('Orga-Kanal') for combined callin
 g + traffic channel. Some phones will reject this.

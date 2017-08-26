@@ -114,7 +114,7 @@ static const char *param_genauigkeit[] = {
 };
 
 static const char *param_grenzwert[] = {
-	"Illegaler Parameter 0",
+	"No limit",
 	"> 15 dB S/N",
 	"> 17 dB S/N",
 	"> 19 dB S/N",
@@ -272,7 +272,7 @@ static struct definition_parameter {
 	{ 'U',"FuTln-Heimmat FuVSt-Nr.",		 5, NULL },
 	{ 'V',"Sicherungs-Code",			16, NULL },
 	{ 'W',"WS-Kennung",				 2, param_wskennung },
-	{ 'X',"Wahlziffer beliebig 16 Ziffer",		64, NULL },
+	{ 'X',"Wahlziffer beliebig 16 Ziffern",		64, NULL },
 	{ 'Z',"Zeitschlitz-Nr.",			 5, NULL },
 	{ 'a',"Grenzert fuer Ausloesen",		 4, param_ausloesen },
 	{ 'b',"Chipkarten-FuTelG-Bit",			 1, param_chipkarte },
@@ -363,7 +363,7 @@ static struct definition_opcode {
 	{ "________________________________________________________________", NULL, "opcode 34",BLOCK_I,"Illegaler Opcode" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "EBQ(R)",	BLOCK_R,"Einbuchquittung" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "UBQ(R)",	BLOCK_R,"Umbuchquittung" },
-	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WSK(R)",	BLOCK_R,"Wartescglange kommend" },
+	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WSK(R)",	BLOCK_R,"Warteschglange kommend" },
 	{ "PP-MMMMMDDDDEEEE------HHHHHHHHHHFFFFFFFF------------------------", NULL, "MLR(M)",	BLOCK_M,"Melde-Leer-Ruf" },
 	{ "PPdZZZZZffflvvWW------yyIIIAAAAAFFFFFFFFkkgprrrrmmmmnnnnuuuuaaaa", NULL, "LR(R)",	BLOCK_R,"Leer-Ruf" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "ATQ(R)",	BLOCK_R,"Quittung fuer Ausloesen des FuTelG im OgK-Betrieb" },
@@ -655,7 +655,7 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 			value = telegramm->ankuendigung_gespraechsende;
 			break;
 		case 'D':
-			value = telegramm->teilnehmersperre;
+			value = telegramm->teilnehmergruppensperre;
 			break;
 		case 'E':
 			value = telegramm->anzahl_gesperrter_teilnehmergruppen;
@@ -868,7 +868,7 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 			telegramm->ankuendigung_gespraechsende = value;
 			break;
 		case 'D':
-			telegramm->teilnehmersperre = value;
+			telegramm->teilnehmergruppensperre = value;
 			break;
 		case 'E':
 			telegramm->anzahl_gesperrter_teilnehmergruppen = value;
@@ -1533,7 +1533,7 @@ selected:
 			nr = 1;
 			goto selected;
 		} else {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm with no cell number, ignoring!\n");
+			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm with unknown cell number, ignoring!\n");
 			return;
 		}
 	}

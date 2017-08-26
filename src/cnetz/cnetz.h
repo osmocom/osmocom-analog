@@ -37,6 +37,8 @@ enum cnetz_state {
 #define N_AFKT		6		/* number of release frames to send during concentrated signaling */
 #define N_AFV		4		/* number of release frames to send during distributed signaling */
 #define N		3		/* now many times we repeat a message on OgK */
+#define T_VAG2		180		/* time on outgoing queue */
+#define T_VAK		60		/* time on incoming queue */
 
 /* clear causes */
 #define CNETZ_CAUSE_GASSENBESETZT	0	/* network congested */
@@ -71,6 +73,8 @@ typedef struct cnetz {
 	/* cell config */
 	int			ms_power;		/* power level of MS, use 0..3 */
 	int			auth;			/* authentication support of the cell */
+	int			warteschlange;		/* use queue */
+	int			metering;		/* use metering pulses in seconds 0 = off */
 
 	/* all cnetz states */
 	enum cnetz_state	state;			/* main state of sender */
@@ -127,7 +131,7 @@ int cnetz_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum cnetz_chan_type chan_type);
 const char *chan_type_long_name(enum cnetz_chan_type chan_type);
 int cnetz_init(void);
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int warteschlange, int metering, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
 void cnetz_destroy(sender_t *sender);
 void cnetz_go_idle(cnetz_t *cnetz);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);

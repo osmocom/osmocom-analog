@@ -39,7 +39,7 @@ const char *transaction2rufnummer(transaction_t *trans)
 }
 
 /* create transaction */
-transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended)
+transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended)
 {
 	sender_t *sender;
 	transaction_t *trans = NULL;
@@ -80,7 +80,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint32_t state, uint8_t futln_
 
 	if (state == TRANS_VWG)
 		trans->mo_call = 1;
-	if (state == TRANS_VAK)
+	if (state == TRANS_VAK || state == TRANS_WSK)
 		trans->mt_call = 1;
 
 	const char *rufnummer = transaction2rufnummer(trans);
@@ -147,7 +147,7 @@ void unlink_transaction(transaction_t *trans)
 	cnetz_display_status();
 }
 
-transaction_t *search_transaction(cnetz_t *cnetz, uint32_t state_mask)
+transaction_t *search_transaction(cnetz_t *cnetz, uint64_t state_mask)
 {
 	transaction_t *trans = cnetz->trans_list;
 
@@ -200,7 +200,7 @@ transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref)
 	return NULL;
 }
 
-static const char *trans_state_name(int state)
+static const char *trans_state_name(uint64_t state)
 {
 	switch (state) {
 	case 0:
@@ -223,6 +223,8 @@ static const char *trans_state_name(int state)
 		return "WBN";
 	case TRANS_VAG:
 		return "VAG";
+	case TRANS_WSK:
+		return "WSK";
 	case TRANS_VAK:
 		return "VAK";
 	case TRANS_BQ:
@@ -235,16 +237,28 @@ static const char *trans_state_name(int state)
 		return "DS";
 	case TRANS_AHQ:
 		return "AHQ";
+	case TRANS_VA:
+		return "VA";
 	case TRANS_AF:
 		return "AF";
 	case TRANS_AT:
 		return "AT";
+	case TRANS_ATQ:
+		return "ATQ";
+	case TRANS_MO_QUEUE:
+		return "MO_QUEUE";
+	case TRANS_MT_QUEUE:
+		return "MT_QUEUE";
+	case TRANS_MO_DELAY:
+		return "MO_DELAY";
+	case TRANS_MT_DELAY:
+		return "MT_DELAY";
 	default:
 		return "<invald transaction state>";
 	}
 }
 
-const char *trans_short_state_name(int state)
+const char *trans_short_state_name(uint64_t state)
 {
 	switch (state) {
 	case 0:
@@ -279,9 +293,9 @@ const char *trans_short_state_name(int state)
 	}
 }
 
-void trans_new_state(transaction_t *trans, int state)
+void trans_new_state(transaction_t *trans, uint64_t state)
 {
-	PDEBUG(DTRANS, DEBUG_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));
+	PDEBUG(DTRANS, DEBUG_INFO, "Transaction (%s) state %s -> %s\n", transaction2rufnummer(trans), trans_state_name(trans->state), trans_state_name(state));
 	trans->state = state;
 	cnetz_display_status();
 }
