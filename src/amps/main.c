@@ -6,6 +6,7 @@
 #include "congestion.h"
 
 const int tacs = 0;
+const int jtacs = 0;
 
 int main(int argc, char *argv[])
 {

@@ -83,16 +83,28 @@ double amps_channel2freq(int channel, int uplink)
 			channel -= 1023;
 
 		freq = 870.030 + (channel - 1) * 0.030;
-	} else {
+
+		if (uplink)
+			freq -= 45.000;
+	} else if (!jtacs) {
 		/* 600 channels */
 		if (channel < 1 || channel > 600)
 			return 0;
 
 		freq = 935.0125 + (channel - 1) * 0.025;
-	}
 
-	if (uplink)
-		freq -= 45.000;
+		if (uplink)
+			freq -= 45.000;
+	} else {
+		/* 799 channels */
+		if (channel < 1 || channel > 799)
+			return 0;
+
+		freq = 860.0125 + (channel - 1) * 0.025;
+
+		if (uplink)
+			freq += 55.000;
+	}
 
 	return freq * 1e6;
 }

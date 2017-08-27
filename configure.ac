@@ -48,6 +48,7 @@ AC_OUTPUT(
     src/nmt/Makefile
     src/amps/Makefile
     src/tacs/Makefile
+    src/jtacs/Makefile
     src/r2000/Makefile
     src/test/Makefile
     src/Makefile
