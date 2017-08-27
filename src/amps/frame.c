@@ -1728,43 +1728,26 @@ static const char *ie_chan(uint64_t value)
 
 static const char *ie_cmac(uint64_t value)
 {
-	if (!tacs) {
-		switch (value) {
-		case 0:
+	switch (value) {
+	case 0:
+		if (!tacs)
 			return "6 dbW (4 Watts)";
-		case 1:
-			return "2 dbW (1.6 Watts)";
-		case 2:
-			return "-2 dbW (630 Milliwatts)";
-		case 3:
-			return "-6 dbW (250 Milliwatts)";
-		case 4:
-			return "-10 dbW (100 Milliwatts)";
-		case 5:
-			return "-14 dbW (40 Milliwatts)";
-		case 6:
-			return "-18 dbW (16 Milliwatts)";
-		}
-		return "-22 dbW (6.3 Milliwatts)";
-	} else {
-		switch (value) {
-		case 0:
-			return "4.5 dbW (2.82 Watts)";
-		case 1:
-			return "0.5 dbW (1.12 Watts)";
-		case 2:
-			return "-3.5 dbW (447 Milliwatts)";
-		case 3:
-			return "-7.5 dbW (178 Milliwatts)";
-		case 4:
-			return "-11.5 dbW (70.8 Milliwatts)";
-		case 5:
-			return "-15.5 dbW (28.2 Milliwatts)";
-		case 6:
-			return "-19.5 dbW (11.2 Milliwatts)";
-		}
-		return "-23.5 dbW (4.5 Milliwatts)";
+		else
+			return "10 dbW (10 Watts)";
+	case 1:
+		return "2 dbW (1.6 Watts)";
+	case 2:
+		return "-2 dbW (630 Milliwatts)";
+	case 3:
+		return "-6 dbW (250 Milliwatts)";
+	case 4:
+		return "-10 dbW (100 Milliwatts)";
+	case 5:
+		return "-14 dbW (40 Milliwatts)";
+	case 6:
+		return "-18 dbW (16 Milliwatts)";
 	}
+	return "-22 dbW (6.3 Milliwatts)";
 }
 
 static const char *ie_cmax(uint64_t value)

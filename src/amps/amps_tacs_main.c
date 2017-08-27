@@ -58,13 +58,8 @@ void print_help(const char *arg0)
 	printf("        If the phone shows 'NoSrv', try the other way.\n");
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station 0..7. (default = '%d')\n", ms_power);
-    if (!tacs) {
-	printf("        0 = 4 W;     1 = 1.6 W;  2 = 630 mW;  3 = 250 mW;\n");
+	printf("        0 = %2d W;    1 = 1.6 W;  2 = 630 mW;  3 = 250 mW;\n", (tacs) ? 10 : 4);
 	printf("	4 = 100 mW;  5 = 40 mW;  6 = 16 mW;   7 = 6.3 mW\n");
-    } else {
-	printf("        0 = 2.82 W;   1 = 1.12 W;   2 = 447 mW;   3 = 178 mW;\n");
-	printf("	4 = 70.8 mW;  5 = 28.2 mW;  6 = 11.2 mW;  7 = 4.5 mW\n");
-    }
 	printf(" -D --dtx <parameter>\n");
 	printf("        Give DTX parameter for Discontinuous Transmission. (default = '%d')\n", dtx);
 	printf("        0 = disable DTX;                     1 = reserved;\n");
