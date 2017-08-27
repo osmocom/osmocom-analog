@@ -604,7 +604,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 				/* get audio for the duration of 60 bits */
 				/* prevent overflow, if speech_size != 0 and SPK_V
 				 * has been restarted. */
-				if (fsk->speech_count <= fsk->speech_size)
+				if (fsk->speech_count < fsk->speech_size)
 					fsk->speech_buffer[fsk->speech_count++] = samples[i];
 			} else
 			if (t >= 65.5) {
