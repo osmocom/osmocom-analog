@@ -59,6 +59,11 @@ typedef struct sdr {
 	wave_rec_t	wave_tx_rec;
 	wave_play_t	wave_rx_play;
 	wave_play_t	wave_tx_play;
+	float		*modbuff;	/* buffer for FM transmodulation */
+	sample_t	*modbuff_I;
+	sample_t	*modbuff_Q;
+	sample_t	*wavespl0;	/* sample buffer for wave generation */
+	sample_t	*wavespl1;
 } sdr_t;
 
 typedef struct sdr_thread {
@@ -66,6 +71,7 @@ typedef struct sdr_thread {
 	volatile int running, exit;	/* flags to control exit of threads */
 	int buffer_size;
 	volatile float *buffer;
+	float *buffer2;
 	volatile int in, out;		/* in and out pointers (atomic, so no locking required) */
 	int max_fill;			/* measure maximum buffer fill */
 	double max_fill_timer;		/* timer to display/reset maximum fill */
@@ -140,6 +146,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		sdr_oversample = sdr_samplerate / samplerate;
 		sdr_threads = 1;
 	}
+
 	if (sdr_threads) {
 		memset(&sdr_thread_read, 0, sizeof(sdr_thread_read));
 		sdr_thread_read.buffer_size = sdr_latspl * 2 * sdr_oversample + 2;
@@ -148,11 +155,21 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
 			return NULL;
 		}
+		sdr_thread_read.buffer2 = calloc(sdr_thread_read.buffer_size, sizeof(*sdr_thread_read.buffer2));
+		if (!sdr_thread_read.buffer2) {
+			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			return NULL;
+		}
 		sdr_thread_read.in = sdr_thread_read.out = 0;
 		memset(&sdr_thread_write, 0, sizeof(sdr_thread_write));
 		sdr_thread_write.buffer_size = sdr_latspl * 2 + 2;
 		sdr_thread_write.buffer = calloc(sdr_thread_write.buffer_size, sizeof(*sdr_thread_write.buffer));
 		if (!sdr_thread_write.buffer) {
+			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			return NULL;
+		}
+		sdr_thread_write.buffer2 = calloc(sdr_thread_write.buffer_size * sdr_oversample, sizeof(*sdr_thread_write.buffer2));
+		if (!sdr_thread_write.buffer2) {
 			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
 			return NULL;
 		}
@@ -178,6 +195,33 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	sdr->channels = channels;
 	sdr->amplitude = 1.0 / (double)channels;
 	sdr->samplerate = samplerate;
+
+	/* alloc fm modulation buffers */
+	sdr->modbuff = calloc(sdr_latspl * 2, sizeof(*sdr->modbuff));
+	if (!sdr->modbuff) {
+		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		goto error;
+	}
+	sdr->modbuff_I = calloc(sdr_latspl, sizeof(*sdr->modbuff_I));
+	if (!sdr->modbuff_I) {
+		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		goto error;
+	}
+	sdr->modbuff_Q = calloc(sdr_latspl, sizeof(*sdr->modbuff_Q));
+	if (!sdr->modbuff_Q) {
+		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		goto error;
+	}
+	sdr->wavespl0 = calloc(sdr_latspl, sizeof(*sdr->wavespl0));
+	if (!sdr->wavespl0) {
+		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		goto error;
+	}
+	sdr->wavespl1 = calloc(sdr_latspl, sizeof(*sdr->wavespl1));
+	if (!sdr->wavespl1) {
+		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		goto error;
+	}
 
 	/* special case where we use a paging frequency */
 	if (paging_frequency) {
@@ -372,25 +416,24 @@ static void *sdr_write_child(void __attribute__((__unused__)) *arg)
 		}
 		num = fill / 2;
 		if (num) {
-			float buff[num * 2 * sdr_oversample];
 #ifdef DEBUG_BUFFER
 			printf("Thread found %d samples in write buffer and forwards them to SDR.\n", num);
 #endif
 			out = sdr_thread_write.out;
 			for (s = 0, ss = 0; s < num; s++) {
 				for (o = 0; o < sdr_oversample; o++) {
-					buff[ss++] = sdr_thread_write.buffer[out];
-					buff[ss++] = sdr_thread_write.buffer[out + 1];
+					sdr_thread_write.buffer2[ss++] = sdr_thread_write.buffer[out];
+					sdr_thread_write.buffer2[ss++] = sdr_thread_write.buffer[out + 1];
 				}
 				out = (out + 2) % sdr_thread_write.buffer_size;
 			}
 #ifdef HAVE_UHD
 			if (sdr_use_uhd)
-				uhd_send(buff, num * sdr_oversample);
+				uhd_send(sdr_thread_write.buffer2, num * sdr_oversample);
 #endif
 #ifdef HAVE_SOAPY
 			if (sdr_use_soapy)
-				soapy_send(buff, num * sdr_oversample);
+				soapy_send(sdr_thread_write.buffer2, num * sdr_oversample);
 #endif
 			sdr_thread_write.out = out;
 		}
@@ -416,14 +459,13 @@ static void *sdr_read_child(void __attribute__((__unused__)) *arg)
 		space = (sdr_thread_read.out - sdr_thread_read.in - 2 + sdr_thread_read.buffer_size) % sdr_thread_read.buffer_size;
 		num = space / 2;
 		if (num) {
-			float buff[num * 2];
 #ifdef HAVE_UHD
 			if (sdr_use_uhd)
-				count = uhd_receive(buff, num);
+				count = uhd_receive(sdr_thread_read.buffer2, num);
 #endif
 #ifdef HAVE_SOAPY
 			if (sdr_use_soapy)
-				count = soapy_receive(buff, num);
+				count = soapy_receive(sdr_thread_read.buffer2, num);
 #endif
 			if (count > 0) {
 #ifdef DEBUG_BUFFER
@@ -431,8 +473,8 @@ static void *sdr_read_child(void __attribute__((__unused__)) *arg)
 #endif
 				in = sdr_thread_read.in;
 				for (s = 0, ss = 0; s < count; s++) {
-					sdr_thread_read.buffer[in++] = buff[ss++];
-					sdr_thread_read.buffer[in++] = buff[ss++];
+					sdr_thread_read.buffer[in++] = sdr_thread_read.buffer2[ss++];
+					sdr_thread_read.buffer[in++] = sdr_thread_read.buffer2[ss++];
 					in %= sdr_thread_read.buffer_size;
 				}
 				sdr_thread_read.in = in;
@@ -523,8 +565,12 @@ void sdr_close(void *inst)
 
 	if (sdr_thread_read.buffer)
 		free((void *)sdr_thread_read.buffer);
+	if (sdr_thread_read.buffer2)
+		free((void *)sdr_thread_read.buffer2);
 	if (sdr_thread_write.buffer)
 		free((void *)sdr_thread_write.buffer);
+	if (sdr_thread_write.buffer2)
+		free((void *)sdr_thread_write.buffer2);
 
 #ifdef HAVE_UHD
 	if (sdr_use_uhd)
@@ -537,6 +583,11 @@ void sdr_close(void *inst)
 #endif
 
 	if (sdr) {
+		free(sdr->modbuff);
+		free(sdr->modbuff_I);
+		free(sdr->modbuff_Q);
+		free(sdr->wavespl0);
+		free(sdr->wavespl1);
 		wave_destroy_record(&sdr->wave_rx_rec);
 		wave_destroy_record(&sdr->wave_tx_rec);
 		wave_destroy_playback(&sdr->wave_rx_play);
@@ -560,10 +611,14 @@ void sdr_close(void *inst)
 int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
-	float buffer[num * 2], *buff = NULL;
+	float *buff = NULL;
 	int c, s, ss;
 	int sent = 0;
 
+	if (num > sdr_latspl) {
+		fprintf(stderr, "exceeding maximum size given by sdr_latspl, please fix!\n");
+		abort();
+	}
 	if (channels != sdr->channels && channels != 0) {
 		PDEBUG(DSDR, DEBUG_ERROR, "Invalid number of channels, please fix!\n");
 		abort();
@@ -571,8 +626,8 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 
 	/* process all channels */
 	if (channels) {
-		memset(buffer, 0, sizeof(buffer));
-		buff = buffer;
+		buff = sdr->modbuff;
+		memset(buff, 0, sizeof(*buff) * num * 2);
 		for (c = 0; c < channels; c++) {
 			/* switch to paging channel, if requested */
 			if (on[c] && sdr->paging_channel)
@@ -585,19 +640,19 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 	}
 
 	if (sdr->wave_tx_rec.fp) {
-		sample_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
+		sample_t *spl_list[2] = { sdr->wavespl0, sdr->wavespl1 };
 		for (s = 0, ss = 0; s < num; s++) {
-			spl[0][s] = buff[ss++];
-			spl[1][s] = buff[ss++];
+			spl_list[0][s] = buff[ss++];
+			spl_list[1][s] = buff[ss++];
 		}
 		wave_write(&sdr->wave_tx_rec, spl_list, num);
 	}
 	if (sdr->wave_tx_play.fp) {
-		sample_t spl[2][num], *spl_list[2] = { spl[0], spl[1] };
+		sample_t *spl_list[2] = { sdr->wavespl0, sdr->wavespl1 };
 		wave_read(&sdr->wave_tx_play, spl_list, num);
 		for (s = 0, ss = 0; s < num; s++) {
-			buff[ss++] = spl[0][s];
-			buff[ss++] = spl[1][s];
+			buff[ss++] = spl_list[0][s];
+			buff[ss++] = spl_list[1][s];
 		}
 	}
 
@@ -640,13 +695,17 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 int sdr_read(void *inst, sample_t **samples, int num, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
-	float buffer[num * 2], *buff = NULL;
-	sample_t I[num], Q[num];
+	float *buff = NULL;
 	int count = 0;
 	int c, s, ss;
 
+	if (num > sdr_latspl) {
+		fprintf(stderr, "exceeding maximum size given by sdr_latspl, please fix!\n");
+		abort();
+	}
+
 	if (channels) {
-		buff = buffer;
+		buff = sdr->modbuff;
 	} else {
 		buff = (float *)samples;
 	}
@@ -694,19 +753,19 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 }
 
 	if (sdr->wave_rx_rec.fp) {
-		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
+		sample_t *spl_list[2] = { sdr->wavespl0, sdr->wavespl1 };
 		for (s = 0, ss = 0; s < count; s++) {
-			spl[0][s] = buff[ss++];
-			spl[1][s] = buff[ss++];
+			spl_list[0][s] = buff[ss++];
+			spl_list[1][s] = buff[ss++];
 		}
 		wave_write(&sdr->wave_rx_rec, spl_list, count);
 	}
 	if (sdr->wave_rx_play.fp) {
-		sample_t spl[2][count], *spl_list[2] = { spl[0], spl[1] };
+		sample_t *spl_list[2] = { sdr->wavespl0, sdr->wavespl1 };
 		wave_read(&sdr->wave_rx_play, spl_list, count);
 		for (s = 0, ss = 0; s < count; s++) {
-			buff[ss++] = spl[0][s];
-			buff[ss++] = spl[1][s];
+			buff[ss++] = spl_list[0][s];
+			buff[ss++] = spl_list[1][s];
 		}
 	}
 	display_iq(buff, count);
@@ -714,7 +773,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 
 	if (channels) {
 		for (c = 0; c < channels; c++)
-			fm_demodulate_complex(&sdr->chan[c].demod, samples[c], count, buff, I, Q);
+			fm_demodulate_complex(&sdr->chan[c].demod, samples[c], count, buff, sdr->modbuff_I, sdr->modbuff_Q);
 	}
 
 	return count;
