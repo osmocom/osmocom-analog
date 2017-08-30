@@ -71,7 +71,7 @@ int metering = 20;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "[-M] -S <rx ppm>,<tx ppm> -p -d ");
+	main_mobile_print_help(arg0, "[-M] -S <rx ppm>,<tx ppm> -p -d ");
 	/*      -                                                                             - */
 	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
@@ -192,7 +192,7 @@ void print_help(const char *arg0)
 	printf("        input. (default = '%s')\n", (demod == FSK_DEMOD_LEVEL) ? "level" : (demod == FSK_DEMOD_SLOPE) ? "slope" : "auto");
 	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
-	print_hotkeys_common();
+	main_mobile_print_hotkeys();
 	printf("Press 'i' key to dump list of currently attached subscribers.\n");
 }
 
@@ -238,7 +238,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("T:MC:F:P:AQ:G:S:D:", long_options_special);
+	main_mobile_set_options("T:MC:F:P:AQ:G:S:D:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -396,7 +396,7 @@ static int handle_options(int argc, char **argv)
 			skip_args += 2;
 			break;
 		default:
-			opt_switch_common(c, argv[0], &skip_args);
+			main_mobile_opt_switch(c, argv[0], &skip_args);
 		}
 	}
 
@@ -420,6 +420,8 @@ int main(int argc, char *argv[])
 	init_freiton();
 	init_besetzton();
 	init_ansage();
+
+	main_mobile_init();
 
 	skip_args = handle_options(argc, argv);
 	argc -= skip_args;

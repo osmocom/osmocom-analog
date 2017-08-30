@@ -28,6 +28,7 @@
 #include <math.h>
 #include <termios.h>
 #include <errno.h>
+#include <getopt.h>
 #include "sample.h"
 #include "main_mobile.h"
 #include "debug.h"
@@ -37,13 +38,17 @@
 #include "mncc_sock.h"
 #ifdef HAVE_SDR
 #include "sdr.h"
+#include "sdr_config.h"
 #endif
 
-/* common settings */
+static int got_init = 0;
+
+/* common mobile settings */
 int num_kanal = 0;
 int kanal[MAX_SENDER];
 int num_audiodev = 0;
 const char *audiodev[MAX_SENDER] = { "hw:0,0" };
+int use_sdr = 0;
 const char *call_audiodev = "";
 int samplerate = 48000;
 int call_samplerate = 48000;
@@ -63,25 +68,16 @@ const char *write_tx_wave = NULL;
 const char *write_rx_wave = NULL;
 const char *read_tx_wave = NULL;
 const char *read_rx_wave = NULL;
-int use_sdr = 0;
-int sdr_channel = 0;
-static const char *sdr_device_args = "",  *sdr_stream_args = "",  *sdr_tune_args = "";
-static int sdr_samplerate = 0;
-static double sdr_bandwidth = 0.0;
-#ifdef HAVE_SDR
-static int sdr_uhd = 0;
-static int sdr_soapy = 0;
-#endif
-double sdr_tx_gain = 0, sdr_rx_gain = 0;
-const char *sdr_tx_antenna = "", *sdr_rx_antenna = "";
-const char *write_iq_tx_wave = NULL;
-const char *write_iq_rx_wave = NULL;
-const char *read_iq_tx_wave = NULL;
-const char *read_iq_rx_wave = NULL;
-int sdr_swap_links = 0;
-int sdr_uhd_tx_timestamps = 0;
 
-void print_help_common(const char *arg0, const char *ext_usage)
+void main_mobile_init(void)
+{
+	got_init = 1;
+#ifdef HAVE_SDR
+	sdr_config_init();
+#endif
+}
+
+void main_mobile_print_help(const char *arg0, const char *ext_usage)
 {
 	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
 	printf("\nGlobal options:\n");
@@ -144,55 +140,12 @@ void print_help_common(const char *arg0, const char *ext_usage)
 	printf("    --read-tx-wave <file>\n");
 	printf("        Replace transmitted audio by given wave file.\n");
 #ifdef HAVE_SDR
-	printf("\nSDR options:\n");
-	/*      -                                                                             - */
-#ifdef HAVE_UHD
-	printf("    --sdr-uhd\n");
-	printf("        Force UHD driver\n");
-#endif
-#ifdef HAVE_SOAPY
-	printf("    --sdr-soapy\n");
-	printf("        Force SoapySDR driver\n");
-#endif
-	printf("    --sdr-channel <channel #>\n");
-	printf("        Give channel number for multi channel SDR device (default = %d)\n", sdr_channel);
-	printf("    --sdr-device-args <args>\n");
-	printf("    --sdr-stream-args <args>\n");
-	printf("    --sdr-tune-args <args>\n");
-	printf("        Optional SDR device arguments, seperated by comma\n");
-	printf("        e.g. --sdr-device-args <key>=<value>[,<key>=<value>[,...]]\n");
-	printf("    --sdr-samplerate <samplerate>\n");
-	printf("        Sample rate to use with SDR. By default it equals the regular sample\n");
-	printf("        rate.\n");
-	printf("    --sdr-bandwidth <bandwidth>\n");
-	printf("        Give IF filter bandwidth to use. If not, sample rate is used.\n");
-	printf("    --sdr-rx-antenna <name>\n");
-	printf("        SDR device's RX antenna name, use 'list' to get a list\n");
-	printf("    --sdr-tx-antenna <name>\n");
-	printf("        SDR device's TX antenna name, use 'list' to get a list\n");
-	printf("    --sdr-rx-gain <gain>\n");
-	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_rx_gain);
-	printf("    --sdr-tx-gain <gain>\n");
-	printf("        SDR device's TX gain in dB (default = %.1f)\n", sdr_tx_gain);
-	printf("    --write-iq-rx-wave <file>\n");
-	printf("        Write received IQ data to given wave file.\n");
-	printf("    --write-iq-tx-wave <file>\n");
-	printf("        Write transmitted IQ data to given wave file.\n");
-	printf("    --read-iq-rx-wave <file>\n");
-	printf("        Replace received IQ data by given wave file.\n");
-	printf("    --read-iq-tx-wave <file>\n");
-	printf("        Replace transmitted IQ data by given wave file.\n");
-	printf("    --sdr-swap-links\n");
-	printf("        Swap RX and TX frequencies for loopback tests over the air.r\n");
-#ifdef HAVE_UHD
-	printf("    --sdr-uhd-tx-timestamps\n");
-	printf("        Use TX timestamps on UHD device. (May not work with some devices!)\n");
-#endif
+	sdr_config_print_help();
 #endif
 	printf("\nNetwork specific options:\n");
 }
 
-void print_hotkeys_common(void)
+void main_mobile_print_hotkeys(void)
 {
 	printf("\n");
 	printf("Press digits '0'..'9' and then 'd' key to dial towards mobile station\n");
@@ -200,8 +153,7 @@ void print_hotkeys_common(void)
 	printf("Press 'w' key to toggle display of RX wave form.\n");
 	printf("Press 'c' key to toggle display of channel status.\n");
 #ifdef HAVE_SDR
-	printf("Press 'i' key to toggle display of RX I/Q vector.\n");
-	printf("Press 's' key to toggle display of RX spectrum.\n");
+	sdr_config_print_hotkeys();
 #endif
 }
 
@@ -213,26 +165,7 @@ void print_hotkeys_common(void)
 #define	OPT_CALL_SAMPLERATE	1005
 #define	OPT_MNCC_NAME		1006
 
-#define	OPT_SDR_UHD		1100
-#define	OPT_SDR_SOAPY		1101
-#define	OPT_SDR_CHANNEL		1102
-#define	OPT_SDR_DEVICE_ARGS	1103
-#define	OPT_SDR_STREAM_ARGS	1104
-#define	OPT_SDR_TUNE_ARGS	1105
-#define	OPT_SDR_RX_ANTENNA	1106
-#define	OPT_SDR_TX_ANTENNA	1107
-#define	OPT_SDR_RX_GAIN		1108
-#define	OPT_SDR_TX_GAIN		1109
-#define	OPT_SDR_SAMPLERATE	1110
-#define	OPT_SDR_BANDWIDTH	1111
-#define	OPT_WRITE_IQ_RX_WAVE	1112
-#define	OPT_WRITE_IQ_TX_WAVE	1113
-#define	OPT_READ_IQ_RX_WAVE	1114
-#define	OPT_READ_IQ_TX_WAVE	1115
-#define	OPT_SDR_SWAP_LINKS	1116
-#define OPT_SDR_UHD_TX_TS	1117
-
-static struct option long_options_common[] = {
+static struct option main_mobile_long_options[] = {
 	{"help", 0, 0, 'h'},
 	{"debug", 1, 0, 'v'},
 	{"kanal", 1, 0, 'k'},
@@ -255,28 +188,10 @@ static struct option long_options_common[] = {
 	{"write-tx-wave", 1, 0, OPT_WRITE_TX_WAVE},
 	{"read-rx-wave", 1, 0, OPT_READ_RX_WAVE},
 	{"read-tx-wave", 1, 0, OPT_READ_TX_WAVE},
-	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
-	{"sdr-soapy", 0, 0, OPT_SDR_SOAPY},
-	{"sdr-channel", 1, 0, OPT_SDR_CHANNEL},
-	{"sdr-device-args", 1, 0, OPT_SDR_DEVICE_ARGS},
-	{"sdr-stream-args", 1, 0, OPT_SDR_STREAM_ARGS},
-	{"sdr-tune-args", 1, 0, OPT_SDR_TUNE_ARGS},
-	{"sdr-samplerate", 1, 0, OPT_SDR_SAMPLERATE},
-	{"sdr-bandwidth", 1, 0, OPT_SDR_BANDWIDTH},
-	{"sdr-rx-antenna", 1, 0, OPT_SDR_RX_ANTENNA},
-	{"sdr-tx-antenna", 1, 0, OPT_SDR_TX_ANTENNA},
-	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
-	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
-	{"write-iq-rx-wave", 1, 0, OPT_WRITE_IQ_RX_WAVE},
-	{"write-iq-tx-wave", 1, 0, OPT_WRITE_IQ_TX_WAVE},
-	{"read-iq-rx-wave", 1, 0, OPT_READ_IQ_RX_WAVE},
-	{"read-iq-tx-wave", 1, 0, OPT_READ_IQ_TX_WAVE},
-	{"sdr-swap-links", 0, 0, OPT_SDR_SWAP_LINKS},
-	{"sdr-uhd-tx-timestamps", 0, 0, OPT_SDR_UHD_TX_TS},
 	{0, 0, 0, 0}
 };
 
-const char *optstring_common = "hv:k:a:s:i:b:pdg:mc:t:l:r:";
+static const char *main_mobile_optstring = "hv:k:a:s:i:b:pdg:mc:t:l:r:";
 
 struct option *long_options;
 char *optstring;
@@ -293,28 +208,42 @@ static void check_duplicate_option(int num, struct option *option)
 	}
 }
 
-void set_options_common(const char *optstring_special, struct option *long_options_special)
+void main_mobile_set_options(const char *optstring_special, struct option *long_options_special)
 {
-	int i;
+	int i = 0, j;
 
-	long_options = calloc(sizeof(*long_options), 100);
-	for (i = 0; long_options_common[i].name; i++) {
-		check_duplicate_option(i, &long_options_common[i]);
-		memcpy(&long_options[i], &long_options_common[i], sizeof(*long_options));
+	long_options = calloc(sizeof(*long_options), 256);
+	for (j = 0; main_mobile_long_options[j].name; i++, j++) {
+		check_duplicate_option(i, &main_mobile_long_options[j]);
+		memcpy(&long_options[i], &main_mobile_long_options[j], sizeof(*long_options));
 	}
+#ifdef HAVE_SDR
+	for (j = 0; sdr_config_long_options[j].name; i++, j++) {
+		check_duplicate_option(i, &sdr_config_long_options[j]);
+		memcpy(&long_options[i], &sdr_config_long_options[j], sizeof(*long_options));
+	}
+#endif
 	for (; long_options_special->name; i++) {
 		check_duplicate_option(i, long_options_special);
 		memcpy(&long_options[i], long_options_special++, sizeof(*long_options));
 	}
 	
-	optstring = calloc(strlen(optstring_common) + strlen(optstring_special) + 1, 1);
-	strcpy(optstring, optstring_common);
+	optstring = calloc(256, 2);
+	strcpy(optstring, main_mobile_optstring);
+#ifdef HAVE_SDR
+	strcat(optstring, sdr_config_optstring);
+#endif
 	strcat(optstring, optstring_special);
 }
 
-void opt_switch_common(int c, char *arg0, int *skip_args)
+void print_help(const char *arg0);
+
+void main_mobile_opt_switch(int c, char *arg0, int *skip_args)
 {
 	double gain_db;
+#ifdef HAVE_SDR
+	int rc;
+#endif
 
 	switch (c) {
 	case 'h':
@@ -424,92 +353,14 @@ void opt_switch_common(int c, char *arg0, int *skip_args)
 		read_tx_wave = strdup(optarg);
 		*skip_args += 2;
 		break;
-	case OPT_SDR_UHD:
-#ifdef HAVE_SDR
-		use_sdr = 1;
-		sdr_uhd = 1;
-#else
-		fprintf(stderr, "UHD SDR support not compiled in!\n");
-		exit(0);
-#endif
-		*skip_args += 1;
-		break;
-	case OPT_SDR_SOAPY:
-#ifdef HAVE_SDR
-		use_sdr = 1;
-		sdr_soapy = 1;
-#else
-		fprintf(stderr, "SoapySDR support not compiled in!\n");
-		exit(0);
-#endif
-		*skip_args += 1;
-		break;
-	case OPT_SDR_CHANNEL:
-		sdr_channel = atoi(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_DEVICE_ARGS:
-		sdr_device_args = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_STREAM_ARGS:
-		sdr_stream_args = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_TUNE_ARGS:
-		sdr_tune_args = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_SAMPLERATE:
-		sdr_samplerate = atoi(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_BANDWIDTH:
-		sdr_bandwidth = atof(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_RX_ANTENNA:
-		sdr_rx_antenna = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_TX_ANTENNA:
-		sdr_tx_antenna = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_RX_GAIN:
-		sdr_rx_gain = atof(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_TX_GAIN:
-		sdr_tx_gain = atof(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_WRITE_IQ_RX_WAVE:
-		write_iq_rx_wave = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_WRITE_IQ_TX_WAVE:
-		write_iq_tx_wave = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_READ_IQ_RX_WAVE:
-		read_iq_rx_wave = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_READ_IQ_TX_WAVE:
-		read_iq_tx_wave = strdup(optarg);
-		*skip_args += 2;
-		break;
-	case OPT_SDR_SWAP_LINKS:
-		sdr_swap_links = 1;
-		*skip_args += 1;
-		break;
-	case OPT_SDR_UHD_TX_TS:
-		sdr_uhd_tx_timestamps = 1;
-		*skip_args += 1;
-		break;
 	default:
-		exit (0);
+#ifdef HAVE_SDR
+		rc = sdr_config_opt_switch(c, skip_args);
+		if (rc < 0)
+			exit (0);
+		
+#endif
+		break;
 	}
 }
 
@@ -556,6 +407,11 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	int c;
 	int rc;
 
+	if (!got_init) {
+		fprintf(stderr, "main_mobile_init was not called, please fix!\n");
+		abort();
+	}
+
 	/* latency of send buffer in samples */
 	latspl = samplerate * latency / 1000;
 
@@ -582,24 +438,15 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	}
 
 #ifdef HAVE_SDR
-	if ((sdr_uhd == 1 && sdr_soapy == 1)) {
-		fprintf(stderr, "You must choose which one you want: --sdr-uhd or --sdr-soapy\n");
-		return;
-	}
-
-	if (sdr_samplerate == 0.0)
-		sdr_samplerate = samplerate;
-	if (sdr_bandwidth == 0.0)
-		sdr_bandwidth = sdr_samplerate;
-	rc = sdr_init(sdr_uhd, sdr_soapy, sdr_channel, sdr_device_args, sdr_stream_args, sdr_tune_args, sdr_tx_antenna, sdr_rx_antenna, sdr_tx_gain, sdr_rx_gain, sdr_samplerate, sdr_bandwidth, write_iq_tx_wave, write_iq_rx_wave, read_iq_tx_wave, read_iq_rx_wave, latspl, sdr_swap_links, sdr_uhd_tx_timestamps);
+	rc = sdr_configure(samplerate);
 	if (rc < 0)
 		return;
 #endif
 
 	/* open audio */
-	if (sender_open_audio())
+	if (sender_open_audio(latspl))
 		return;
-	if (call_open_audio())
+	if (call_open_audio(latspl))
 		return;
 
 	/* real time priority */

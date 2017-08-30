@@ -528,14 +528,14 @@ error:
 	return rc;
 }
 
-int call_open_audio(void)
+int call_open_audio(int latspl)
 {
 	if (!call.audiodev[0])
 		return 0;
 
 	/* open sound device for call control */
 	/* use factor 1.4 of speech level for complete range of sound card */
-	call.sound = sound_open(call.audiodev, NULL, NULL, 1, 0.0, call.samplerate, 1.4, 4000.0);
+	call.sound = sound_open(call.audiodev, NULL, NULL, 1, 0.0, call.samplerate, latspl, 1.4, 4000.0);
 	if (!call.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 		return -EIO;

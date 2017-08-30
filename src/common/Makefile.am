@@ -35,6 +35,7 @@ if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR
 
 libcommon_a_SOURCES += \
+	sdr_config.c \
 	sdr.c \
 	display_iq.c \
 	display_spectrum.c

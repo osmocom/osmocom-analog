@@ -59,7 +59,7 @@ int send_callerid = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "[-N 900] -Y <traffic area> | list  [-I 1] [-0 1] ");
+	main_mobile_print_help(arg0, "[-N 900] -Y <traffic area> | list  [-I 1] [-0 1] ");
 	/*      -                                                                             - */
 	printf(" -N --nmt-system 450/900\n");
 	printf("        Give NMT type as first paramer. (default = '%d')\n", nmt_system);
@@ -94,7 +94,7 @@ void print_help(const char *arg0)
 	printf("        If set, the caller ID is sent while ringing the phone. (default = '%d')\n", send_callerid);
 	printf("\nstation-id: Give 7 digits of station-id, you don't need to enter it\n");
 	printf("        for every start of this program.\n");
-	print_hotkeys_common();
+	main_mobile_print_hotkeys();
 }
 
 static int handle_options(int argc, char **argv)
@@ -116,7 +116,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("N:T:P:Y:A:C:0:S:I:", long_options_special);
+	main_mobile_set_options("N:T:P:Y:A:C:0:S:I:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c, rc;
@@ -224,7 +224,7 @@ error_ta:
 			skip_args += 2;
 			break;
 		default:
-			opt_switch_common(c, argv[0], &skip_args);
+			main_mobile_opt_switch(c, argv[0], &skip_args);
 		}
 		first_option = 0;
 	}
@@ -289,6 +289,8 @@ int main(int argc, char *argv[])
 	/* init common tones */
 	init_nmt_tones();
 	init_announcement();
+
+	main_mobile_init();
 
 	skip_args = handle_options(argc, argv);
 	argc -= skip_args;

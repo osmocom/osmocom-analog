@@ -22,13 +22,13 @@ extern const char *write_tx_wave;
 extern const char *read_rx_wave;
 extern const char *read_tx_wave;
 
-void print_help(const char *arg0);
-void print_help_common(const char *arg0, const char *ext_usage);
-void print_hotkeys_common(void);
+void main_mobile_init(void);
+void main_mobile_print_help(const char *arg0, const char *ext_usage);
+void main_mobile_print_hotkeys(void);
 extern struct option *long_options;
 extern char *optstring;
-void set_options_common(const char *optstring_special, struct option *long_options_special);
-void opt_switch_common(int c, char *arg0, int *skip_args);
+void main_mobile_set_options(const char *optstring_special, struct option *long_options_special);
+void main_mobile_opt_switch(int c, char *arg0, int *skip_args);
 
 #define OPT_ARRAY(num_name, name, value) \
 { \

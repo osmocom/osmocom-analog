@@ -52,7 +52,7 @@ enum r2000_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "-R <relais number> [option] ");
+	main_mobile_print_help(arg0, "-R <relais number> [option] ");
 	/*      -                                                                             - */
 	printf(" -B --band <number> | list\n");
 	printf(" -B --bande <number> | list\n");
@@ -96,7 +96,7 @@ void print_help(const char *arg0)
 	printf("\nstation-id: Give 1 digit of station mobile type + 3 digits of home relais ID\n");
 	printf("        + 5 digits of mobile ID.\n");
 	printf("        (e.g. 103200819 = type 1, relais ID 32, mobile ID 819)\n");
-	print_hotkeys_common();
+	main_mobile_print_hotkeys();
 }
 
 #define OPT_BANDE	256
@@ -124,7 +124,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	set_options_common("B:T:R:I:P:C:N:S", long_options_special);
+	main_mobile_set_options("B:T:R:I:P:C:N:S", long_options_special);
 
 	while (1) {
 		int option_index = 0, c, rc;
@@ -264,7 +264,7 @@ static int handle_options(int argc, char **argv)
 			skip_args += 1;
 			break;
 		default:
-			opt_switch_common(c, argv[0], &skip_args);
+			main_mobile_opt_switch(c, argv[0], &skip_args);
 		}
 	}
 
@@ -283,6 +283,8 @@ int main(int argc, char *argv[])
 
 	/* init tones */
 	init_radiocom_tones();
+
+	main_mobile_init();
 
 	skip_args = handle_options(argc, argv);
 	argc -= skip_args;

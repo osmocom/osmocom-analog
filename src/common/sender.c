@@ -153,7 +153,7 @@ error:
 	return rc;
 }
 
-int sender_open_audio(void)
+int sender_open_audio(int latspl)
 {
 	sender_t *master, *inst;
 	int channels;
@@ -212,7 +212,7 @@ int sender_open_audio(void)
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, master->max_deviation, master->max_modulation);
+		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, latspl, master->max_deviation, master->max_modulation);
 		if (!master->audio) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "No audio device!\n");
 			return -EIO;

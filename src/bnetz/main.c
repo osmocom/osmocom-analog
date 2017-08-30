@@ -43,7 +43,7 @@ double lossdetect = 0;
 
 void print_help(const char *arg0)
 {
-	print_help_common(arg0, "[-G <gfs>] ");
+	main_mobile_print_help(arg0, "[-G <gfs>] ");
 	/*      -                                                                             - */
 	printf(" -G --gfs <gruppenfreisignal> | <lat>,<lon>\n");
 	printf("        Gruppenfreisignal\" 1..9 | 19 | 10..18 (default = '%d')\n", gfs);
@@ -75,7 +75,7 @@ void print_help(const char *arg0)
 	printf("        percent. (disabled by default)\n");
 	printf("\nstation-id: Give 5 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
-	print_hotkeys_common();
+	main_mobile_print_hotkeys();
 }
 
 static int handle_options(int argc, char **argv)
@@ -91,7 +91,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0},
 	};
 
-	set_options_common("G:M:P:L:", long_options_special);
+	main_mobile_set_options("G:M:P:L:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -128,7 +128,7 @@ static int handle_options(int argc, char **argv)
 			skip_args += 2;
 			break;
 		default:
-			opt_switch_common(c, argv[0], &skip_args);
+			main_mobile_opt_switch(c, argv[0], &skip_args);
 		}
 	}
 
@@ -146,6 +146,8 @@ int main(int argc, char *argv[])
 	init_freiton();
 	init_besetzton();
 	init_ansage();
+
+	main_mobile_init();
 
 	skip_args = handle_options(argc, argv);
 	argc -= skip_args;
