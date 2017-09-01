@@ -184,10 +184,12 @@ void display_iq(float *samples, int length)
 				/* overdrive:
 				 * 2 = close to -1..1 or above
 				 * 1 = close to -0.5..0.5 or above
+				 * Note: L is square of vector length,
+				 * so we compare with square values.
 				 */
-				if (L > 0.9)
+				if (L > 0.9 * 0.9)
 					overdrive[y/2][x] = 2;
-				else if (L > 0.45 && overdrive[y/2][x] < 1)
+				else if (L > 0.45 * 0.45 && overdrive[y/2][x] < 1)
 					overdrive[y/2][x] = 1;
 			}
 			if (iq_on == 1)
