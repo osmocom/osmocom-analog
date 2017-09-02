@@ -49,7 +49,7 @@ void display_iq_on(int on);
 void display_iq_limit_scroll(int on);
 void display_iq(float *samples, int length);
 
-void display_spectrum_init(int samplerate);
+void display_spectrum_init(int samplerate, double center_frequency);
 void display_spectrum_on(int on);
 void display_spectrum_limit_scroll(int on);
 void display_spectrum(float *samples, int length);

@@ -33,10 +33,11 @@ static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
 static uint8_t screen_color[HEIGHT][MAX_DISPLAY_WIDTH];
 static int spectrum_on = 0;
 static double db = 100;
+static double center_frequency, frequency_range;
 
 static dispspectrum_t disp;
 
-void display_spectrum_init(int samplerate)
+void display_spectrum_init(int samplerate, double _center_frequency)
 {
 	memset(&disp, 0, sizeof(disp));
 	disp.interval_max = (double)samplerate * DISPLAY_INTERVAL + 0.5;
@@ -44,6 +45,9 @@ void display_spectrum_init(int samplerate)
 	if (disp.interval_max < MAX_DISPLAY_SPECTRUM - 1)
 		disp.interval_max = MAX_DISPLAY_SPECTRUM - 1;
 	memset(buffer_max, 0, sizeof(buffer_max));
+
+	center_frequency = _center_frequency;
+	frequency_range = (double)samplerate;
 }
 
 void display_spectrum_on(int on)
@@ -90,6 +94,8 @@ void display_spectrum_limit_scroll(int on)
  */
 void display_spectrum(float *samples, int length)
 {
+	sender_t *sender;
+	char print_channel[32], print_frequency[32];
 	int width, h;
 	int pos, max;
 	double *buffer_I, *buffer_Q;
@@ -210,6 +216,34 @@ void display_spectrum(float *samples, int length)
 					for (k = (s >> 1) + 1; k < (e >> 1); k++) {
 						screen[k][j + o] = '|';
 						screen_color[k][j + o] = 4;
+					}
+				}
+			}
+			for (sender = sender_head; sender; sender = sender->next) {
+				j = (int)((sender->empfangsfrequenz - center_frequency) / frequency_range * (double) fft_size + width / 2 + 0.5);
+				if (j < 0 || j >= width) /* check out-of-range, should not happen */
+					continue;
+				for (k = 0; k < HEIGHT; k++) {
+					/* skip yellow graph */
+					if (screen_color[k][j] == 13)
+						continue;
+					screen[k][j] = ':';
+					screen_color[k][j] = 12;
+				}
+				sprintf(print_channel, "Ch%d", sender->kanal);
+				for (o = 0; o < (int)strlen(print_channel); o++) {
+					s = j - strlen(print_channel) + o;
+					if (s >= 0 && s < width) {
+						screen[HEIGHT - 1][s] = print_channel[o];
+						screen_color[HEIGHT - 1][s] = 7;
+					}
+				}
+				sprintf(print_frequency, "%.4f", sender->empfangsfrequenz / 1e6);
+				for (o = 0; o < (int)strlen(print_frequency); o++) {
+					s = j + o + 1;
+					if (s >= 0 && s < width) {
+						screen[HEIGHT - 1][s] = print_frequency[o];
+						screen_color[HEIGHT - 1][s] = 7;
 					}
 				}
 			}

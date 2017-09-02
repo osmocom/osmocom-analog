@@ -41,6 +41,7 @@ enum paging_signal;
 #include "tv_modulate.h"
 #include "channels.h"
 
+void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 

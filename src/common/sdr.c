@@ -114,9 +114,6 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		threads = 1;
 	}
 
-	display_iq_init(samplerate);
-	display_spectrum_init(samplerate);
-
 	bandwidth = 2.0 * (max_deviation + max_modulation);
 	PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of 2 * (%.1f + %.1f) = %.1f\n", max_deviation / 1000, max_modulation / 1000, bandwidth / 1000);
 
@@ -339,6 +336,9 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		rx_center_frequency = tx_center_frequency;
 		tx_center_frequency = temp;
 	}
+
+	display_iq_init(samplerate);
+	display_spectrum_init(samplerate, rx_center_frequency);
 
 #ifdef HAVE_UHD
 	if (sdr_config->uhd) {
