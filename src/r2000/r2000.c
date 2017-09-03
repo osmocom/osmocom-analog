@@ -197,7 +197,7 @@ static struct r2000_channels {
 } r2000_channels[] = {
 	{ CHAN_TYPE_CC,		"CC",	"control channel" },
 	{ CHAN_TYPE_TC,		"TC",	"taffic channel" },
-	{ CHAN_TYPE_CC_TC,	"CC/TC","combined control & taffic" },
+	{ CHAN_TYPE_CC_TC,	"CC/TC","combined control & taffic channel" },
 	{ 0, NULL, NULL }
 };
 
