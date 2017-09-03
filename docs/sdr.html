@@ -146,6 +146,7 @@ Multiple Channels
 </p>
 
 <p>
+Multiple channels can be useful, to keep the control channel, while establishing one or even multiple voice channels.
 One nice things about SDR is that a spectrum is transmitted and not just one modulated carrier.
 Because the carrier is actually generated in software, we can generate multiple carriers that fit in our bandwidth.
 I suggest to have at least one channel space between channels you want to generate.
@@ -158,8 +159,45 @@ In this case increase the sample rate (-s) to generate a wider spectrum. (--sdr-
 Note that the CPU usage increases for the main thread.
 I suggest to monitor the usage using "top -H".
 You will see each thread. Be sure not to get too close to 100 percent.
-I suggest to stay below 50%, at least for all threads.
+I suggest to stay below 60% for each threads.
 </p>
+
+<p>
+Example: C-Netz<br>
+Two channes are created, one the OgK (control channel) and one SpK (speech channel).
+The distance between channels is 20 KHz (two channels).
+Because C-Netz uses only odd channel numbers for 10 KHz spacing, we use channel 131 (OgK) and 135 (SpK).
+</p>
+
+<pre>
+
+# cnetz --sdr-soapy \
+        --sdr-rx-gain 50 \
+	--sdr-tx-gain 30 \
+        --sdr-bandwidth 5000000 \
+        --sdr-samplerate 5000000 \
+        --sdr-tune-args "OFFSET=1000000" \
+	-s 100000 \
+	-k 131 -k 135 \
+	-C 0,0
+
+</pre>
+
+<p>
+Example: Test TV signal<br>
+Give PAL 'FUBK' test image on TV channel 21.
+</p>
+
+<pre>
+
+# osmotv --sdr-soapy \
+         --sdr-tx-gain 60 \
+	 --sdr-tune-args "OFFSET=-3000000" \
+	 -r 13750000  \
+	 -c 21  \
+	 tx-fubk
+
+</pre>
 
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
 </td></tr></table></center>
