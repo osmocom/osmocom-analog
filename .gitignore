@@ -23,9 +23,11 @@ m4
 src/common/libcommon.a
 src/common/libmobile.a
 src/common/libimage.a
+src/common/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz
 src/cnetz/cnetz
+src/nmt/libdmssms.a
 src/nmt/nmt
 src/amps/libamps.a
 src/amps/amps
