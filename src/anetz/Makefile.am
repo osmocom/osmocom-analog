@@ -8,11 +8,10 @@ anetz_SOURCES = \
 	dsp.c \
 	stations.c \
 	image.c \
-	freiton.c \
-	besetztton.c \
 	main.c
 anetz_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/common/libgermanton.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
