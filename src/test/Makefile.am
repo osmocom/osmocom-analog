@@ -1,4 +1,3 @@
-AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -g $(all_includes)
 
 noinst_PROGRAMS = \
@@ -21,9 +20,7 @@ test_filter_LDADD = \
 	$(SOAPY_LIBS) \
 	-lm
 
-test_compandor_SOURCES = \
-	test_compandor.c \
-	dummy.c
+test_compandor_SOURCES = dummy.x test_compandor.c
 
 test_compandor_LDADD = \
 	$(COMMON_LA) \
@@ -45,13 +42,11 @@ test_emphasis_LDADD = \
 	$(SOAPY_LIBS) \
 	-lm
 
-test_dms_SOURCES = \
-	$(top_builddir)/src/nmt/dms.c \
-	test_dms.c \
-	dummy.c
+test_dms_SOURCES = test_dms.c dummy.c
 
 test_dms_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
@@ -59,13 +54,11 @@ test_dms_LDADD = \
 	$(SOAPY_LIBS) \
 	-lm
 
-test_sms_SOURCES = \
-	$(top_builddir)/src/nmt/sms.c \
-	dummy.c \
-	test_sms.c
+test_sms_SOURCES = dummy.c test_sms.c
 
 test_sms_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \
@@ -84,10 +77,14 @@ test_performance_LDADD = \
 	$(SOAPY_LIBS) \
 	-lm
 
-test_hagelbarger_SOURCES = \
-	$(top_builddir)/src/common/hagelbarger.c \
-	test_hagelbarger.c
+test_hagelbarger_SOURCES = dummy.c test_hagelbarger.c
 
 test_hagelbarger_LDADD = \
-	$(COMMON_LA)
+	$(COMMON_LA) \
+	$(top_builddir)/src/common/libmobile.a \
+	$(top_builddir)/src/common/libcommon.a \
+	$(ALSA_LIBS) \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS) \
+	-lm
 

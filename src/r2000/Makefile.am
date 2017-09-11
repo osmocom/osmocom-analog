@@ -1,4 +1,3 @@
-#AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 
 bin_PROGRAMS = \
