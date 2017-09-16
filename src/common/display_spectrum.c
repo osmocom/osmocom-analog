@@ -102,7 +102,7 @@ void display_spectrum(float *samples, int length)
 	int color = 9; /* default color */
 	int i, j, k, o;
 	double I, Q, v;
-	int s, e;
+	int s, e, l, n;
 
 	if (!spectrum_on)
 		return;
@@ -178,11 +178,31 @@ void display_spectrum(float *samples, int length)
 			*strchr(screen[0], '\0') = ')';
 			o = (width - fft_size) / 2; /* offset from left border */
 			for (j = 0; j < fft_size; j++) {
-				s = e = low[j];
-				if (j > 0 && low[j - 1] > e)
-					e = low[j - 1] - 1;
-				if (j < fft_size - 1 && low[j + 1] > e)
-					e = low[j + 1] - 1;
+				s = l = n = low[j];
+				/* get last and next value */
+				if (j > 0)
+					l = (low[j - 1] + s) / 2;
+				if (j < fft_size - 1)
+					n = (low[j + 1] + s) / 2;
+				if (s > l && s > n) {
+					/* current value is a minimum */
+					e = s;
+					s = (l < n) ? (l + 1) : (n + 1);
+				} else if (s < l && s < n) {
+					/* current value is a maximum */
+					e = (l > n) ? l : n;
+				} else if (l < n) {
+					/* last value is higher, next value is lower */
+					s = l + 1;
+					e = n;
+				} else if (l > n) {
+					/* last value is lower, next value is higher */
+					s = n + 1;
+					e = l;
+				} else {
+					/* current, last and next values are equal */
+					e = s;
+				}
 				if (s == e) {
 					if ((s & 1) == 0)
 						screen[s >> 1][j + o] = '\'';
@@ -205,8 +225,8 @@ void display_spectrum(float *samples, int length)
 						screen_color[k][j + o] = 13;
 					}
 				}
+				e = s;
 				s = heigh[j];
-				e = low[j];
 				if ((s >> 1) < (e >> 1)) {
 					if ((s & 1) == 0)
 						screen[s >> 1][j + o] = '|';
@@ -238,7 +258,10 @@ void display_spectrum(float *samples, int length)
 						screen_color[HEIGHT - 1][s] = 7;
 					}
 				}
-				sprintf(print_frequency, "%.4f", sender->empfangsfrequenz / 1e6);
+				if (fmod(sender->empfangsfrequenz, 1000.0))
+					sprintf(print_frequency, "%.4f", sender->empfangsfrequenz / 1e6);
+				else
+					sprintf(print_frequency, "%.3f", sender->empfangsfrequenz / 1e6);
 				for (o = 0; o < (int)strlen(print_frequency); o++) {
 					s = j + o + 1;
 					if (s >= 0 && s < width) {
