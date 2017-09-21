@@ -203,9 +203,10 @@ typedef struct call {
 	int test_audio_pos;	/* position for test tone toward mobile */
 	int dial_digits;	/* number of digits to be dialed */
 	int loopback;		/* loopback test for echo */
-	int use_mncc_sock;
-	int send_patterns;
-	int release_on_disconnect;
+	int echo_test;		/* send echo back to mobile phone */
+	int use_mncc_sock;	/* use MNCC socket instead of built-in call control */
+	int send_patterns;	/* send patterns towards fixed network */
+	int release_on_disconnect; /* release towards mobile phone, if MNCC call disconnects, don't send disconnect tone */
 
 } call_t;
 
@@ -486,7 +487,7 @@ static void process_timeout(struct timer *timer)
 	}
 }
 
-int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int use_mncc_sock, int send_patterns, int release_on_disconnect)
+int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int use_mncc_sock, int send_patterns, int release_on_disconnect, int echo_test)
 {
 	int rc = 0;
 
@@ -497,13 +498,30 @@ int call_init(const char *station_id, const char *audiodev, int samplerate, int 
 	call.latspl = latency * samplerate / 1000;
 	call.dial_digits = dial_digits;
 	call.loopback = loopback;
+	call.echo_test = echo_test;
 	call.use_mncc_sock = use_mncc_sock;
 	call.send_patterns = send_patterns;
 	call.release_on_disconnect = release_on_disconnect;
 	call.samplerate = samplerate;
 	strncpy(call.audiodev, audiodev, sizeof(call.audiodev) - 1);
 
-	if (call.use_mncc_sock)
+	if (use_mncc_sock && audiodev[0]) {
+		PDEBUG(DSENDER, DEBUG_ERROR, "You selected MNCC interface, but it cannot be used with call device (headset).\n");
+		rc = -EINVAL;
+		goto error;
+	}
+	if (use_mncc_sock && echo_test) {
+		PDEBUG(DSENDER, DEBUG_ERROR, "You selected MNCC interface, but it cannot be used with echo test.\n");
+		rc = -EINVAL;
+		goto error;
+	}
+	if (audiodev[0] && echo_test) {
+		PDEBUG(DSENDER, DEBUG_ERROR, "You selected call device (headset), but it cannot be used with echo test.\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	if (use_mncc_sock)
 		return 0;
 
 	if (!audiodev[0])
@@ -963,6 +981,7 @@ void call_tx_audio(int callref, sample_t *samples, int count)
 	if (!callref)
 		return;
 
+	/* is MNCC us used, forward audio */
 	if (call.use_mncc_sock) {
 		uint8_t buf[sizeof(struct gsm_data_frame) + count * sizeof(int16_t)];
 		struct gsm_data_frame *data = (struct gsm_data_frame *)buf;
@@ -981,14 +1000,16 @@ void call_tx_audio(int callref, sample_t *samples, int count)
 		samples_to_int16((int16_t *)data->data, samples, count);
 
 		mncc_write(buf, sizeof(buf));
-		return;
-	}
-
-	/* save audio from transceiver to jitter buffer */
+	} else
+	/* else, save audio from transceiver to jitter buffer */
 	if (call.sound) {
 		sample_t up[(int)((double)count * call.srstate.factor + 0.5) + 10];
 		count = samplerate_upsample(&call.srstate, samples, count, up);
 		jitter_save(&call.dejitter, up, count);
+	} else
+	/* else, if echo test is used, send echo back to mobile */
+	if (call.echo_test) {
+		call_rx_audio(callref, samples, count);
 	} else
 	/* else, if no sound is used, send test tone to mobile */
 	if (call.state == CALL_CONNECT) {
@@ -1162,7 +1183,7 @@ void call_mncc_recv(uint8_t *buf, int length)
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC disconnect from Network with cause %d\n", mncc->cause.value);
 
 		if (is_process_state(callref) == CALL_CONNECT && call.release_on_disconnect) {
-			PDEBUG(DCALL, DEBUG_INFO, "Releaseing, because we don't send disconnect tones to mobile phone\n");
+			PDEBUG(DCALL, DEBUG_INFO, "Releasing, because we don't send disconnect tones to mobile phone\n");
 
 			PDEBUG(DMNCC, DEBUG_INFO, "Releasing MNCC call towards Network\n");
 			mncc->msg_type = MNCC_REL_IND;

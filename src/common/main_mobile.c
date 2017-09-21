@@ -49,19 +49,20 @@ int kanal[MAX_SENDER];
 int num_audiodev = 0;
 const char *audiodev[MAX_SENDER] = { "hw:0,0" };
 int use_sdr = 0;
-const char *call_audiodev = "";
+static const char *call_audiodev = "";
 int samplerate = 48000;
-int call_samplerate = 48000;
+static int call_samplerate = 48000;
 int interval = 1;
 int latency = 50;
 int uses_emphasis = 1;
 int do_pre_emphasis = 0;
 int do_de_emphasis = 0;
 double rx_gain = 1.0;
-int use_mncc_sock = 0;
+static int echo_test = 0;
+static int use_mncc_sock = 0;
 const char *mncc_name = "";
-int send_patterns = 1;
-int release_on_disconnect = 1;
+static int send_patterns = 1;
+static int release_on_disconnect = 1;
 int loopback = 0;
 int rt_prio = 0;
 const char *write_tx_wave = NULL;
@@ -115,15 +116,18 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
 	printf("        level of the sound device is too low, even after setting maximum level\n");
 	printf("        with the mixer settings. (Works with sound card only.)\n");
+	printf(" -e --echo-test\n");
+	printf("        Use echo test, to send back audio from mobile phone's microphone to\n");
+	printf("        the speaker. (German: 'Blasprobe').\n");
+	printf(" -c --call-device hw:<card>,<device>\n");
+	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
+	printf("    --call-samplerate <rate>\n");
+	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" --mncc-name <name>\n");
 	printf("        '/tmp/bsc_mncc' is used by default, give name to change socket to\n");
 	printf("        '/tmp/bsc_mncc_<name>'. (Useful to run multiple networks.)\n");
-	printf(" -c --call-device hw:<card>,<device>\n");
-	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
-	printf("    --call-samplerate <rate>\n");
-	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
 	printf(" -t --tones 0 | 1\n");
 	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
 	printf("        network (default = '%d')\n", send_patterns);
@@ -177,6 +181,7 @@ static struct option main_mobile_long_options[] = {
 	{"pre-emphasis", 0, 0, 'p'},
 	{"de-emphasis", 0, 0, 'd'},
 	{"rx-gain", 1, 0, 'g'},
+	{"echo-test", 0, 0, 'e'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"mncc-name", 1, 0, OPT_MNCC_NAME},
 	{"call-device", 1, 0, 'c'},
@@ -191,7 +196,7 @@ static struct option main_mobile_long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char *main_mobile_optstring = "hv:k:a:s:i:b:pdg:mc:t:l:r:";
+static const char *main_mobile_optstring = "hv:k:a:s:i:b:pdg:mec:t:l:r:";
 
 struct option *long_options;
 char *optstring;
@@ -308,6 +313,10 @@ void main_mobile_opt_switch(int c, char *arg0, int *skip_args)
 		}
 		rx_gain = pow(10, gain_db / 20.0);
 		*skip_args += 2;
+		break;
+	case 'e':
+		echo_test = 1;
+		*skip_args += 1;
 		break;
 	case 'm':
 		use_mncc_sock = 1;
@@ -431,7 +440,7 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	}
 
 	/* init call device */
-	rc = call_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect);
+	rc = call_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect, echo_test);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		return;
