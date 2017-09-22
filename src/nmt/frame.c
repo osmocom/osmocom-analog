@@ -312,7 +312,7 @@ static struct nmt_frame {
 	{ NMT_MESSAGE_10a,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 1,	"10a",	"Call acknowledgment from MS on calling channel and access on access channel (shortened frame)" },
 	{ NMT_MESSAGE_10b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 1,	"10b",	"Seizure from ordinary MS and identity on traffic channel" },
 	{ NMT_MESSAGE_10c,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 6,	"10c",	"Seizure and identity from called MS on traffic channel" },
-	{ NMT_MESSAGE_10d,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 6,	"10c",	"Call acknowledgement from MS on the alternative type of call on combined CC/TC (shortened frame)" },
+	{ NMT_MESSAGE_10d,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 6,	"10d",	"Call acknowledgement from MS on the alternative type of call on combined CC/TC (shortened frame)" },
 	{ NMT_MESSAGE_11a,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 14,	"11a",	"Roaming updating seizure and identity on traffic channel" },
 	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgment on calling channel from MS with priority (shortened frame)" },
 	{ NMT_MESSAGE_12,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 11,	"12",	"Seizure from coin-box on traffic channel" },
@@ -447,7 +447,7 @@ static const char *param_country(uint64_t value, int __attribute__((unused)) ndi
 	case 8:
 		return "Finland / Spain / Indonesia";
 	case 9:
-		return "nordic country / Austraia";
+		return "nordic country / Austria";
 	case 10:
 		return "Austria";
 	case 14:
