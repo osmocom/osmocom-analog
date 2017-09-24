@@ -699,11 +699,9 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 		if (!tone)
 			break;
 		timer_stop(&trans->timer);
-		destroy_transaction(trans);
-		if (trans->callref) {
+		if (trans->callref)
 			call_in_release(trans->callref, CAUSE_NORMAL);
-			trans->callref = 0;
-		}
+		destroy_transaction(trans);
 		amps_go_idle(amps);
 		break;
 	case TRANS_CALL_MT_ALERT:
