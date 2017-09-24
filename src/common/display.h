@@ -11,7 +11,7 @@ typedef struct display_wave {
 	sample_t buffer[MAX_DISPLAY_WIDTH];
 } dispwav_t;
 
-#define MAX_DISPLAY_IQ 256
+#define MAX_DISPLAY_IQ 1024
 
 typedef struct display_iq {
 	int	interval_pos;

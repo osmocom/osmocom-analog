@@ -32,7 +32,7 @@ static double buffer_max[MAX_DISPLAY_SPECTRUM];
 static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
 static uint8_t screen_color[HEIGHT][MAX_DISPLAY_WIDTH];
 static int spectrum_on = 0;
-static double db = 100;
+static double db = 120;
 static double center_frequency, frequency_range;
 
 static dispspectrum_t disp;

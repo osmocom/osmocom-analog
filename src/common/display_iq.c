@@ -22,6 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdlib.h>
 #include "sample.h"
 #include "sender.h"
 
@@ -31,7 +32,8 @@
 #define SIZE	23
 
 static char screen[SIZE][MAX_DISPLAY_WIDTH];
-static char overdrive[SIZE][MAX_DISPLAY_WIDTH];
+static uint8_t screen_color[SIZE][MAX_DISPLAY_WIDTH];
+static uint8_t screen_history[SIZE * 2][MAX_DISPLAY_WIDTH];
 static int iq_on = 0;
 static double db = 80;
 
@@ -40,6 +42,7 @@ static dispiq_t disp;
 void display_iq_init(int samplerate)
 {
 	memset(&disp, 0, sizeof(disp));
+	memset(&screen_history, 0, sizeof(screen_history));
 	disp.interval_max = (double)samplerate * DISPLAY_INTERVAL + 0.5;
 	/* should not happen due to low interval */
 	if (disp.interval_max < MAX_DISPLAY_IQ - 1)
@@ -55,6 +58,7 @@ void display_iq_on(int on)
 
 	if (iq_on) {
 		memset(&screen, ' ', sizeof(screen));
+		memset(&screen_history, 0, sizeof(screen_history));
 		printf("\0337\033[H");
 		for (j = 0; j < SIZE; j++) {
 			screen[j][w] = '\0';
@@ -112,6 +116,7 @@ void display_iq(float *samples, int length)
 	int x_center, y_center;
 	double I, Q, L, l, s;
 	int x, y;
+	int v, r;
 	int width, h;
 
 	if (!iq_on)
@@ -138,7 +143,38 @@ void display_iq(float *samples, int length)
 		pos++;
 		if (pos == MAX_DISPLAY_IQ) {
 			memset(&screen, ' ', sizeof(screen));
-			memset(&overdrive, 0, sizeof(overdrive));
+			memset(&screen_color, 7, sizeof(screen_color));
+			/* render screen history to screen */
+			for (y = 0; y < SIZE * 2; y++) {
+				for (x = 0; x < width; x++) {
+					v = screen_history[y][x];
+					v -= 8;
+					if (v < 0)
+						v = 0;
+					screen_history[y][x] = v;
+					r = random() & 0x3f;
+					if (r >= v)
+						continue;
+					if (screen[y/2][x] == ':')
+						continue;
+					if (screen[y/2][x] == '.') {
+						if ((y & 1) == 0)
+							screen[y/2][x] = ':';
+						continue;
+					}
+					if (screen[y/2][x] == '\'') {
+						if ((y & 1))
+							screen[y/2][x] = ':';
+						continue;
+					}
+					if ((y & 1) == 0)
+						screen[y/2][x] = '\'';
+					else
+						screen[y/2][x] = '.';
+					screen_color[y/2][x] = 4;
+				}
+			}
+			/* plot current IQ date */
 			for (j = 0; j < MAX_DISPLAY_IQ; j++) {
 				I = buffer[j * 2];
 				Q = buffer[j * 2 + 1];
@@ -165,32 +201,36 @@ void display_iq(float *samples, int length)
 					continue;
 				if (y > SIZE * 2 - 1)
 					continue;
-				if (screen[y/2][x] == ':')
-					continue;
-				if (screen[y/2][x] == '.') {
+				if (screen[y/2][x] == ':' && screen_color[y/2][x] >= 10)
+					goto cont;
+				if (screen[y/2][x] == '.' && screen_color[y/2][x] >= 10) {
 					if ((y & 1) == 0)
 						screen[y/2][x] = ':';
-					continue;
+					goto cont;
 				}
-				if (screen[y/2][x] == '\'') {
+				if (screen[y/2][x] == '\'' && screen_color[y/2][x] >= 10) {
 					if ((y & 1))
 						screen[y/2][x] = ':';
-					continue;
+					goto cont;
 				}
 				if ((y & 1) == 0)
 					screen[y/2][x] = '\'';
 				else
 					screen[y/2][x] = '.';
+cont:
+				screen_history[y][x] = 255;
 				/* overdrive:
-				 * 2 = close to -1..1 or above
-				 * 1 = close to -0.5..0.5 or above
+				 * red = close to -1..1 or above
+				 * yellow = close to -0.5..0.5 or above
 				 * Note: L is square of vector length,
 				 * so we compare with square values.
 				 */
 				if (L > 0.9 * 0.9)
-					overdrive[y/2][x] = 2;
-				else if (L > 0.45 * 0.45 && overdrive[y/2][x] < 1)
-					overdrive[y/2][x] = 1;
+					screen_color[y/2][x] = 11;
+				else if (L > 0.45 * 0.45 && screen_color[y/2][x] != 11)
+					screen_color[y/2][x] = 13;
+				else if (screen_color[y/2][x] < 10)
+					screen_color[y/2][x] = 12;
 			}
 			if (iq_on == 1)
 				sprintf(screen[0], "(IQ linear");
@@ -201,7 +241,7 @@ void display_iq(float *samples, int length)
 			for (j = 0; j < SIZE; j++) {
 				for (k = 0; k < width; k++) {
 					if ((j == y_center || k == x_center) && screen[j][k] == ' ') {
-						/* blue cross */
+						/* cross */
 						if (color != 4) {
 							color = 4;
 							printf("\033[0;34m");
@@ -221,40 +261,13 @@ void display_iq(float *samples, int length)
 							else
 								putchar('|');
 						}
-					} else if (screen[j][k] == ':' || screen[j][k] == '.' || screen[j][k] == '\'') {
-						/* red / yellow / green plot */
-						switch (overdrive[j][k]) {
-						case 2:
-							/* red  */
-							if (color != 1) {
-								color = 1;
-								printf("\033[1;31m");
-							}
-							break;
-						case 1:
-							/* yellow */
-							if (color != 3) {
-								color = 3;
-								printf("\033[1;33m");
-							}
-							break;
-						default:
-							/* green */
-							if (color != 2) {
-								color = 2;
-								printf("\033[1;32m");
-							}
+					} else {
+						if (screen_color[j][k] != color) {
+							color = screen_color[j][k];
+							printf("\033[%d;3%dm", color / 10, color % 10);
 						}
 						putchar(screen[j][k]);
-					} else if (screen[j][k] != ' ') {
-						/* white other characters */
-						if (color != 7) {
-							color = 7;
-							printf("\033[1;37m");
-						}
-						putchar(screen[j][k]);
-					} else
-						putchar(screen[j][k]);
+					}
 				}
 				printf("\n");
 			}
