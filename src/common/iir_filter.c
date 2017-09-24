@@ -115,6 +115,7 @@ void iir_process(iir_filter_t *filter, sample_t *samples, int length)
 	b1 = filter->b1;
 	b2 = filter->b2;
 
+	/* these are state pointers, so no need to write back */
 	z1 = filter->z1;
 	z2 = filter->z2;
 
@@ -128,6 +129,39 @@ void iir_process(iir_filter_t *filter, sample_t *samples, int length)
 			in = out;
 		}
 		*samples++ = in;
+	}
+}
+
+void iir_process_baseband(iir_filter_t *filter, float *baseband, int length)
+{
+	double a0, a1, a2, b1, b2;
+	double *z1, *z2;
+	double in, out;
+	int iterations = filter->iter;
+	int i, j;
+
+	/* get states */
+	a0 = filter->a0;
+	a1 = filter->a1;
+	a2 = filter->a2;
+	b1 = filter->b1;
+	b2 = filter->b2;
+
+	/* these are state pointers, so no need to write back */
+	z1 = filter->z1;
+	z2 = filter->z2;
+
+	/* process filter */
+	for (i = 0; i < length; i++) {
+		in = *baseband;
+		for (j = 0; j < iterations; j++) {
+			out = in * a0 + z1[j];
+			z1[j] = in * a1 + z2[j] - b1 * out;
+			z2[j] = in * a2 - b2 * out;
+			in = out;
+		}
+		*baseband = in;
+		baseband += 2;
 	}
 }
 

@@ -12,5 +12,6 @@ void iir_highpass_init(iir_filter_t *filter, double frequency, int samplerate, i
 void iir_bandpass_init(iir_filter_t *filter, double frequency, int samplerate, int iterations);
 void iir_notch_init(iir_filter_t *filter, double frequency, int samplerate, int iterations);
 void iir_process(iir_filter_t *filter, sample_t *samples, int length);
+void iir_process_baseband(iir_filter_t *filter, float *baseband, int length);
 
 #endif /* _FILTER_H */

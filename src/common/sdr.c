@@ -47,6 +47,10 @@ enum paging_signal;
 /* enable to debug buffer handling */
 //#define DEBUG_BUFFER
 
+/* enable to test without oversampling filter */
+//#define DISABLE_FILTER
+
+
 typedef struct sdr_thread {
 	int use;
 	volatile int running, exit;	/* flags to control exit of threads */
@@ -56,6 +60,7 @@ typedef struct sdr_thread {
 	volatile int in, out;		/* in and out pointers (atomic, so no locking required) */
 	int max_fill;			/* measure maximum buffer fill */
 	double max_fill_timer;		/* timer to display/reset maximum fill */
+	iir_filter_t lp[2];		/* filter for upsample/downsample IQ data */
 } sdr_thread_t;
 
 typedef struct sdr_chan {
@@ -148,6 +153,10 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			return NULL;
 		}
 		sdr->thread_read.in = sdr->thread_read.out = 0;
+		if (oversample > 1) {
+			iir_lowpass_init(&sdr->thread_read.lp[0], samplerate / 2.0, sdr_config->samplerate, 2);
+			iir_lowpass_init(&sdr->thread_read.lp[1], samplerate / 2.0, sdr_config->samplerate, 2);
+		}
 		memset(&sdr->thread_write, 0, sizeof(sdr->thread_write));
 		sdr->thread_write.buffer_size = sdr->latspl * 2 + 2;
 		sdr->thread_write.buffer = calloc(sdr->thread_write.buffer_size, sizeof(*sdr->thread_write.buffer));
@@ -161,6 +170,10 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			return NULL;
 		}
 		sdr->thread_write.in = sdr->thread_write.out = 0;
+		if (oversample > 1) {
+			iir_lowpass_init(&sdr->thread_write.lp[0], samplerate / 2.0, sdr_config->samplerate, 2);
+			iir_lowpass_init(&sdr->thread_write.lp[1], samplerate / 2.0, sdr_config->samplerate, 2);
+		}
 	}
 
 	/* alloc fm modulation buffers */
@@ -397,6 +410,14 @@ static void *sdr_write_child(void *arg)
 				}
 				out = (out + 2) % sdr->thread_write.buffer_size;
 			}
+			sdr->thread_write.out = out;
+#ifndef DISABLE_FILTER
+			/* filter spectrum */
+			if (sdr->oversample > 1) {
+				iir_process_baseband(&sdr->thread_write.lp[0], sdr->thread_write.buffer2, num * sdr->oversample);
+				iir_process_baseband(&sdr->thread_write.lp[1], sdr->thread_write.buffer2 + 1, num * sdr->oversample);
+			}
+#endif
 #ifdef HAVE_UHD
 			if (sdr_config->uhd)
 				uhd_send(sdr->thread_write.buffer2, num * sdr->oversample);
@@ -405,7 +426,6 @@ static void *sdr_write_child(void *arg)
 			if (sdr_config->soapy)
 				soapy_send(sdr->thread_write.buffer2, num * sdr->oversample);
 #endif
-			sdr->thread_write.out = out;
 		}
 
 		/* delay some time */
@@ -440,6 +460,13 @@ static void *sdr_read_child(void *arg)
 			if (count > 0) {
 #ifdef DEBUG_BUFFER
 				printf("Thread read %d samples from SDR and writes them to read buffer.\n", count);
+#endif
+#ifndef DISABLE_FILTER
+				/* filter spectrum */
+				if (sdr->oversample > 1) {
+					iir_process_baseband(&sdr->thread_read.lp[0], sdr->thread_read.buffer2, count);
+					iir_process_baseband(&sdr->thread_read.lp[1], sdr->thread_read.buffer2 + 1, count);
+				}
 #endif
 				in = sdr->thread_read.in;
 				for (s = 0, ss = 0; s < count; s++) {
