@@ -48,6 +48,7 @@ int num_kanal = 1; /* only one channel used for debugging */
 void clear_console_text() {}
 void print_console_text() {}
 void display_status_limit_scroll() {}
+void *get_sender_by_empfangsfrequenz() { return NULL; }
 
 static double __attribute__((__unused__)) modulation = 0.7; /* level of modulation for I/Q amplitudes */
 static double frequency = 0.0;

@@ -268,6 +268,9 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	/* be more tolerant when syncing */
 	amps->fsk_rx_sync_tolerant = tolerant;
 
+	amps->dmp_frame_level = display_measurements_add(&amps->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	amps->dmp_frame_quality = display_measurements_add(&amps->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+
 	return 0;
 
 error:
@@ -605,6 +608,10 @@ prepare_frame:
 	}
 	if (amps->fsk_rx_frame_count == amps->fsk_rx_frame_length) {
 		int more;
+
+		/* update measurements */
+		display_measurements_update(amps->dmp_frame_level, amps->fsk_rx_frame_level / (double)amps->fsk_rx_frame_count * 100.0, 0.0);
+		display_measurements_update(amps->dmp_frame_quality, amps->fsk_rx_frame_quality / (double)amps->fsk_rx_frame_count * 100.0, 0.0);
 
 		/* a complete frame was received, so we process it */
 		amps->fsk_rx_frame[amps->fsk_rx_frame_count] = '\0';

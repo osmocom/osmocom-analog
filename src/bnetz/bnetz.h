@@ -75,6 +75,13 @@ typedef struct bnetz {
 	struct timer		timer;
 	int			trenn_count;		/* count number of release messages */
 
+	/* display measurements */
+	dispmeasparam_t		*dmp_tone_level;
+	dispmeasparam_t		*dmp_tone_quality;
+	dispmeasparam_t		*dmp_frame_level;
+	dispmeasparam_t		*dmp_frame_stddev;
+	dispmeasparam_t		*dmp_frame_quality;
+
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, "Telegramm" */
 	fsk_t			fsk;			/* fsk modem instance */

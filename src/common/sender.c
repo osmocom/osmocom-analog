@@ -44,7 +44,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 
 	sender->kanal = kanal;
 	sender->sendefrequenz = sendefrequenz;
-	sender->empfangsfrequenz = empfangsfrequenz;
+	sender->empfangsfrequenz = (loopback) ? sendefrequenz : empfangsfrequenz;
 	strncpy(sender->audiodev, audiodev, sizeof(sender->audiodev) - 1);
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
@@ -145,6 +145,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender_tailp = &sender->next;
 
 	display_wave_init(sender, samplerate);
+	display_measurements_init(sender, samplerate);
 
 	return 0;
 error:
@@ -157,7 +158,6 @@ int sender_open_audio(int latspl)
 {
 	sender_t *master, *inst;
 	int channels;
-	double paging_frequency = 0.0;
 	int i;
 	int rc;
 
@@ -171,13 +171,10 @@ int sender_open_audio(int latspl)
 		for (inst = master; inst; inst = inst->slave) {
 			channels++;
 		}
-		double tx_f[channels], rx_f[channels];
+		double tx_f[channels], rx_f[channels], paging_frequency = 0.0;
 		for (i = 0, inst = master; inst; i++, inst = inst->slave) {
 			tx_f[i] = inst->sendefrequenz;
-			if (inst->loopback)
-				rx_f[i] = inst->sendefrequenz;
-			else
-				rx_f[i] = inst->empfangsfrequenz;
+			rx_f[i] = inst->empfangsfrequenz;
 			if (inst->ruffrequenz)
 				paging_frequency = inst->ruffrequenz;
 		}
@@ -436,5 +433,17 @@ cant_recover:
 void sender_paging(sender_t *sender, int on)
 {
 	sender->paging_on = on;
+}
+
+sender_t *get_sender_by_empfangsfrequenz(double freq)
+{
+	sender_t *sender;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		if (sender->empfangsfrequenz == freq)
+			return sender;
+	}
+
+	return NULL;
 }
 

@@ -445,16 +445,16 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 }
 
 /* A digit was received. */
-void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_dev, double quality_avg)
+void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_stddev, double quality_avg)
 {
 	struct impulstelegramm *it;
 	int digit = 0;
 
 	/* drop any telegramm that is too bad */
-	if (level_dev / level_avg > 0.2)
+	if (level_stddev / level_avg > 0.2)
 		return;
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: average=%.0f%% deviation=%.0f%% Quality: %.0f%%\n", level_avg * 100.0, level_dev / level_avg * 100.0, quality_avg * 100.0);
+	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: average=%.0f%% standard deviation=%.0f%% Quality: %.0f%%\n", level_avg * 100.0, level_stddev / level_avg * 100.0, quality_avg * 100.0);
 
 	it = bnetz_telegramm2digit(telegramm);
 	if (it) {

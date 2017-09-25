@@ -25,6 +25,10 @@ typedef struct anetz {
 	char			station_id[8];		/* current station ID */
 	struct timer		timer;
 
+	/* display measurements */
+	dispmeasparam_t		*dmp_tone_level;
+	dispmeasparam_t		*dmp_tone_quality;
+
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
 	goertzel_t		fsk_tone_goertzel[2];	/* filter for tone decoding */

@@ -19,7 +19,8 @@ libcommon_a_SOURCES = \
 	fft.c \
 	fm_modulation.c \
 	fsk.c \
-	display_wave.c
+	display_wave.c \
+	display_measurements.c
 
 libmobile_a_SOURCES = \
 	sender.c \

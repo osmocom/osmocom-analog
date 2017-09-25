@@ -32,8 +32,7 @@ enum paging_signal;
 #include "sample.h"
 #include "fm_modulation.h"
 #include "timer.h"
-#include "wave.h"
-#include "display.h"
+#include "sender.h"
 #include "sdr_config.h"
 #include "sdr.h"
 #ifdef HAVE_UHD
@@ -68,6 +67,9 @@ typedef struct sdr_chan {
 	double		rx_frequency;	/* frequency used */
 	fm_mod_t	mod;		/* modulator instance */
 	fm_demod_t	demod;		/* demodulator instance */
+	dispmeasparam_t	*dmp_rf_level;
+	dispmeasparam_t	*dmp_freq_offset;
+	dispmeasparam_t	*dmp_deviation;
 } sdr_chan_t;
 
 typedef struct sdr {
@@ -339,6 +341,15 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;
 			}
+		}
+		/* init measurements display */
+		for (c = 0; c < channels; c++) {
+			sender_t *sender = get_sender_by_empfangsfrequenz(sdr->chan[c].rx_frequency);
+			if (!sender)
+				continue;
+			sdr->chan[c].dmp_rf_level = display_measurements_add(sender, "RF Level", "%.1f dB", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
+			sdr->chan[c].dmp_freq_offset = display_measurements_add(sender, "Freq. Offset", "%+.2f KHz", DISPLAY_MEAS_AVG, DISPLAY_MEAS_CENTER, -max_deviation / 1000.0 * 2.0, max_deviation / 1000.0 * 2.0, 0.0);
+			sdr->chan[c].dmp_deviation = display_measurements_add(sender, "Deviation", "%.2f KHz", DISPLAY_MEAS_PEAK2PEAK, DISPLAY_MEAS_LEFT, 0.0, max_deviation / 1000.0 * 1.5, max_deviation / 1000.0);
 		}
 	}
 
@@ -747,7 +758,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 #endif
 		if (count <= 0)
 			return count;
-}
+	}
 
 	if (sdr->wave_rx_rec.fp) {
 		sample_t *spl_list[2] = { sdr->wavespl0, sdr->wavespl1 };
@@ -769,8 +780,35 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 	display_spectrum(buff, count);
 
 	if (channels) {
-		for (c = 0; c < channels; c++)
+		for (c = 0; c < channels; c++) {
 			fm_demodulate_complex(&sdr->chan[c].demod, samples[c], count, buff, sdr->modbuff_I, sdr->modbuff_Q);
+			sender_t *sender = get_sender_by_empfangsfrequenz(sdr->chan[c].rx_frequency);
+			if (!sender || !count)
+				continue;
+			double min, max, avg;
+			avg = 0.0;
+			for (s = 0; s < count; s++) {
+				/* average the square length of vector */
+				avg += sdr->modbuff_I[s] * sdr->modbuff_I[s] + sdr->modbuff_Q[s] * sdr->modbuff_Q[s];
+			}
+			avg = sqrt(avg /(double)count); /* RMS */
+			avg = log10(avg) * 20;
+			display_measurements_update(sdr->chan[c].dmp_rf_level, avg, 0.0);
+			min = 0.0;
+			max = 0.0;
+			avg = 0.0;
+			for (s = 0; s < count; s++) {
+				avg += samples[c][s];
+				if (s == 0 || samples[c][s] > max)
+					max = samples[c][s];
+				if (s == 0 || samples[c][s] < min)
+					min = samples[c][s];
+			}
+			avg /= (double)count;
+			display_measurements_update(sdr->chan[c].dmp_freq_offset, avg / 1000.0, 0.0);
+			/* use half min and max, because we want the deviation above/below (+-) center frequency. */
+			display_measurements_update(sdr->chan[c].dmp_deviation, min / 2.0 / 1000.0, max / 2.0 / 1000.0);
+		}
 	}
 
 	return count;

@@ -152,10 +152,11 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 void main_mobile_print_hotkeys(void)
 {
 	printf("\n");
-	printf("Press digits '0'..'9' and then 'd' key to dial towards mobile station\n");
+	printf("Press digits '0'..'9' and then 'd' key to dial towards mobile station.\n");
 	printf("Press 'h' key to hangup.\n");
 	printf("Press 'w' key to toggle display of RX wave form.\n");
 	printf("Press 'c' key to toggle display of channel status.\n");
+	printf("Press 'm' key to toggle display of measurement value.\n");
 #ifdef HAVE_SDR
 	sdr_config_print_hotkeys();
 #endif
@@ -524,35 +525,49 @@ next_char:
 			*quit = 1;
 			goto next_char;
 		case 'w':
-			/* toggle display */
+			/* toggle wave display */
+			display_status_on(0);
+			display_measurements_on(0);
 #ifdef HAVE_SDR
 			display_iq_on(0);
 			display_spectrum_on(0);
 #endif
-			display_status_on(0);
 			display_wave_on(-1);
 			goto next_char;
 		case 'c':
-			/* toggle display */
+			/* toggle call state display */
+			display_wave_on(0);
+			display_measurements_on(0);
 #ifdef HAVE_SDR
 			display_iq_on(0);
 			display_spectrum_on(0);
 #endif
-			display_wave_on(0);
 			display_status_on(-1);
+			goto next_char;
+		case 'm':
+			/* toggle measurements display */
+			display_wave_on(0);
+			display_status_on(0);
+#ifdef HAVE_SDR
+			display_iq_on(0);
+			display_spectrum_on(0);
+#endif
+			display_measurements_on(-1);
 			goto next_char;
 #ifdef HAVE_SDR
 		case 'q':
-			/* toggle display */
+			/* toggle IQ display */
 			display_wave_on(0);
 			display_status_on(0);
+			display_measurements_on(0);
 			display_spectrum_on(0);
 			display_iq_on(-1);
 			goto next_char;
 		case 's':
-			/* toggle spectrum */
+			/* toggle spectrum display */
 			display_wave_on(0);
 			display_status_on(0);
+			display_measurements_on(0);
 			display_iq_on(0);
 			display_spectrum_on(-1);
 			goto next_char;
@@ -568,6 +583,8 @@ next_char:
 
 		if (myhandler)
 			myhandler();
+
+		display_measurements((double)interval / 1000.0);
 
 		now = get_time();
 

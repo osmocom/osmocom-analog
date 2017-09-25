@@ -84,6 +84,9 @@ typedef struct sender {
 
 	/* display wave */
 	dispwav_t		dispwav;		/* display wave form */
+
+	/* display measurements */
+	dispmeas_t		dispmeas;		/* display measurements */
 } sender_t;
 
 /* list of all senders */
@@ -99,4 +102,5 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int count);
 void sender_receive(sender_t *sender, sample_t *samples, int count);
 void sender_paging(sender_t *sender, int on);
+sender_t *get_sender_by_empfangsfrequenz(double freq);
 

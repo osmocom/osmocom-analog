@@ -26,8 +26,6 @@
 #include "sample.h"
 #include "sender.h"
 
-#define DISPLAY_INTERVAL 0.04
-
 /* must be odd value! */
 #define SIZE	23
 

@@ -26,8 +26,6 @@
 #include "sample.h"
 #include "sender.h"
 
-#define DISPLAY_INTERVAL 0.04
-
 #define HEIGHT	11
 
 static int num_sender = 0;

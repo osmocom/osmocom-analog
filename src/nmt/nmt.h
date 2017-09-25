@@ -90,6 +90,10 @@ typedef struct nmt {
 	char			dialing[33];		/* dialed digits */
 	int			mft_num;		/* counter for digit for MFT */
 
+	/* display measurements */
+	dispmeasparam_t		*dmp_frame_level;
+	dispmeasparam_t		*dmp_frame_quality;
+
 	/* features */
 	int			compandor;		/* if compandor shall be used */
 	int			supervisory;		/* if set, use supervisory signal 1..4 */

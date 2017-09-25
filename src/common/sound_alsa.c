@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
 #include <alsa/asoundlib.h>
 #include "sample.h"
 #include "debug.h"
@@ -30,6 +31,8 @@ typedef struct sound {
 	double spl_deviation;		/* how much deviation is one sample step */
 	double paging_phaseshift;	/* phase to shift every sample */
 	double paging_phase;	 	/* current phase */
+	double rx_frequency[2];		/* rx frequency of radio connected to channel */
+	dispmeasparam_t *dmp[2];
 } sound_t;
 
 static int set_hw_params(snd_pcm_t *handle, int samplerate, int *channels)
@@ -184,6 +187,18 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 	rc = sound_prepare(sound);
 	if (rc < 0)
 		goto error;
+
+	if (rx_frequency) {
+		sender_t *sender;
+		int i;
+		for (i = 0; i < channels; i++) {
+			sound->rx_frequency[i] = rx_frequency[i];
+			sender = get_sender_by_empfangsfrequenz(sound->rx_frequency[i]);
+			if (!sender)
+				continue;
+			sound->dmp[i] = display_measurements_add(sender, "RX Level", "%.1f dB", DISPLAY_MEAS_PEAK, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
+		}
+	}
 
 	return sound;
 
@@ -344,6 +359,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels)
 	double spl_deviation = sound->spl_deviation;
 	int16_t buff[num << 1];
 	int32_t spl;
+	int32_t max[2], a;
 	int in, rc;
 	int i, ii;
 
@@ -372,23 +388,49 @@ int sound_read(void *inst, sample_t **samples, int num, int channels)
 		return rc;
 	}
 
+	if (rc == 0)
+		return rc;
+
 	if (sound->cchannels == 2) {
 		if (channels < 2) {
 			for (i = 0, ii = 0; i < rc; i++) {
 				spl = buff[ii++];
 				spl += buff[ii++];
+				a = (spl >= 0) ? spl : -spl;
+				if (i == 0 || a > max[0])
+					max[0] = a;
 				samples[0][i] = (double)spl * spl_deviation;
 			}
 		} else {
 			for (i = 0, ii = 0; i < rc; i++) {
-				samples[0][i] = (double)buff[ii++] * spl_deviation;
-				samples[1][i] = (double)buff[ii++] * spl_deviation;
+				spl = buff[ii++];
+				a = (spl >= 0) ? spl : -spl;
+				if (i == 0 || a > max[0])
+					max[0] = a;
+				samples[0][i] = (double)spl * spl_deviation;
+				spl = buff[ii++];
+				a = (spl >= 0) ? spl : -spl;
+				if (i == 0 || a > max[1])
+					max[1] = a;
+				samples[1][i] = (double)spl * spl_deviation;
 			}
 		}
 	} else {
 		for (i = 0, ii = 0; i < rc; i++) {
-			samples[0][i] = (double)buff[ii++] * spl_deviation;
+			spl = buff[ii++];
+			a = (spl >= 0) ? spl : -spl;
+			if (i == 0 || a > max[0])
+				max[0] = a;
+			samples[0][i] = (double)spl * spl_deviation;
 		}
+	}
+
+	sender_t *sender;
+	for (i = 0; i < channels; i++) {
+		sender = get_sender_by_empfangsfrequenz(sound->rx_frequency[i]);
+		if (!sender)
+			continue;
+		display_measurements_update(sound->dmp[i], log10((double)max[i] / 32768.0) * 20, 0.0);
 	}
 
 	return rc;

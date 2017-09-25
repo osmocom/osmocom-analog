@@ -42,6 +42,8 @@
 #define TX_PEAK_PAGE	(15000.0 / DBM0_DEVIATION)	/* 15 kHz, no emphasis */
 #define MAX_DISPLAY	(15000.0 / DBM0_DEVIATION)	/* 15 kHz, no emphasis */
 #define CHUNK_DURATION	0.010	/* 10 ms */
+#define TONE_THRESHOLD	0.05
+#define QUAL_THRESHOLD	0.5
 
 // FIXME: how long until we detect a tone?
 #define TONE_DETECT_TH	8	/* chunk intervals to detect continuous tone */
@@ -108,6 +110,9 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
 	anetz->tone_phaseshift65536 = 65536.0 / ((double)anetz->sender.samplerate / tone);
 	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", tone, anetz->tone_phaseshift65536);
 
+	anetz->dmp_tone_level = display_measurements_add(&anetz->sender, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	anetz->dmp_tone_quality = display_measurements_add(&anetz->sender, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+
 	return 0;
 }
 
@@ -123,7 +128,7 @@ void dsp_cleanup_sender(anetz_t *anetz)
 }
 
 /* Count duration of tone and indicate detection/loss to protocol handler. */
-static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double level)
+static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double level, double quality)
 {
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || tone != anetz->tone_detected) {
@@ -145,7 +150,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	if (anetz->tone_count >= TONE_DETECT_TH)
 		audio_reset_loss(&anetz->sender.loss);
 	if (anetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %d%%)\n", fsk_tones[anetz->tone_detected], (int)(level * 100.0 + 0.5));
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %.0f%%, quality =%.0f%%)\n", fsk_tones[anetz->tone_detected], level * 100.0, quality * 100.0);
 		anetz_receive_tone(anetz, anetz->tone_detected);
 	}
 }
@@ -153,7 +158,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 /* Filter one chunk of audio an detect tone, quality and loss of signal. */
 static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 {
-	double level, result[2];
+	double level, result[2], quality[2];
 
 	level = audio_level(spl, max);
 
@@ -162,22 +167,25 @@ static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 
 	audio_goertzel(anetz->fsk_tone_goertzel, spl, max, 0, result, 2);
 
-	/* show quality of tone */
-	if (anetz->sender.loopback) {
-		/* adjust level, so we get peak of sine curve */
-		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[1], level / 0.63662 * 100.0 / TX_PEAK_TONE, result[1] / level * 100.0);
-	}
-	if (level / 0.63 > 0.05 && result[0] / level > 0.5)
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[0], level / 0.63662 * 100.0 / TX_PEAK_TONE, result[0] / level * 100.0);
+	/* normalize quality of tones and level */
+	quality[0] = result[0] / level;
+	quality[1] = result[1] / level;
+	/* adjust level, so we get peak of sine curve */
+	level = level / 0.63662 / TX_PEAK_TONE;
+	/* show tones */
+	display_measurements_update(anetz->dmp_tone_level, level * 100.0, 0.0);
+	display_measurements_update(anetz->dmp_tone_quality, quality[1] * 100.0, 0.0);
+	if ((level > TONE_THRESHOLD && quality[1] > QUAL_THRESHOLD) || anetz->sender.loopback)
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[1], level * 100.0, quality[1] * 100.0);
 
 	/* adjust level, so we get peak of sine curve */
 	/* indicate detected tone */
-	if (level / 0.63 > 0.05 && result[0] / level > 0.5)
-		fsk_receive_tone(anetz, 0, 1, level / 0.63662 / TX_PEAK_TONE);
-	else if (level / 0.63 > 0.05 && result[1] / level > 0.5)
-		fsk_receive_tone(anetz, 1, 1, level / 0.63662 / TX_PEAK_TONE);
+	if (level > TONE_THRESHOLD && quality[0] > QUAL_THRESHOLD)
+		fsk_receive_tone(anetz, 0, 1, level, quality[0]);
+	else if (level > TONE_THRESHOLD && quality[1] > QUAL_THRESHOLD)
+		fsk_receive_tone(anetz, 1, 1, level, quality[1]);
 	else
-		fsk_receive_tone(anetz, -1, 0, level / 0.63662 / TX_PEAK_TONE);
+		fsk_receive_tone(anetz, -1, 0, level, 0.0);
 }
 
 /* Process received audio stream from radio unit. */

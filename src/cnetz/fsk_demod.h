@@ -56,6 +56,10 @@ typedef struct fsk_fm_demod {
 	double		change_when[256];	/* ring buffer to store time when level has changed */
 	uint8_t		change_pos;		/* index for next write */
 
+	/* display measurements */
+	dispmeasparam_t		*dmp_frame_level;
+	dispmeasparam_t		*dmp_frame_stddev;
+
 	/* debug */
 	FILE		*debug_fp;		/* file pointer for debugging output */
 } fsk_fm_demod_t;

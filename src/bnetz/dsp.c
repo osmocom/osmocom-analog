@@ -112,6 +112,12 @@ int dsp_init_sender(bnetz_t *bnetz)
 	bnetz->meter_phaseshift65536 = 65536.0 / ((double)bnetz->sender.samplerate / METERING_HZ);
 	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", bnetz->meter_phaseshift65536);
 
+	bnetz->dmp_tone_level = display_measurements_add(&bnetz->sender, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	bnetz->dmp_tone_quality = display_measurements_add(&bnetz->sender, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	bnetz->dmp_frame_level = display_measurements_add(&bnetz->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	bnetz->dmp_frame_stddev = display_measurements_add(&bnetz->sender, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	bnetz->dmp_frame_quality = display_measurements_add(&bnetz->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+
 	return 0;
 }
 
@@ -161,12 +167,16 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 /* Collect 16 data bits (digit) and check for sync mark '01110'. */
 static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 {
-	double level_avg, level_dev, quality_avg;
+	double level_avg, level_stddev, quality_avg;
 	bnetz_t *bnetz = (bnetz_t *)inst;
 	int i;
 
 	/* normalize FSK level */
 	level /= TX_PEAK_FSK;
+
+	/* update measurements */
+	display_measurements_update(bnetz->dmp_tone_level, level * 100.0 , 0.0);
+	display_measurements_update(bnetz->dmp_tone_quality, quality * 100.0, 0.0);
 
 	/* continuous tone detection */
 	if (level > 0.10 && quality > 0.10) {
@@ -188,7 +198,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 		return;
 
 	/* average level and quality */
-	level_avg = level_dev = quality_avg = 0;
+	level_avg = level_stddev = quality_avg = 0;
 	for (i = 0; i < 16; i++) {
 		level_avg += bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx];
 		quality_avg += bnetz->rx_telegramm_quality[bnetz->rx_telegramm_qualidx];
@@ -198,14 +208,19 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	level_avg /= 16.0; quality_avg /= 16.0;
 	for (i = 0; i < 16; i++) {
 		level = bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx];
-		level_dev += (level - level_avg) * (level - level_avg);
+		level_stddev += (level - level_avg) * (level - level_avg);
 		if (++bnetz->rx_telegramm_qualidx == 16)
 			bnetz->rx_telegramm_qualidx = 0;
 	}
-	level_dev = sqrt(level_dev / 16.0);
+	level_stddev = sqrt(level_stddev / 16.0);
 
-	/* send telegramm */
-	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm, level_avg, level_dev, quality_avg);
+	/* update measurements */
+	display_measurements_update(bnetz->dmp_frame_level, level_avg * 100.0 , 0.0);
+	display_measurements_update(bnetz->dmp_frame_stddev, level_stddev / level_avg * 100.0, 0.0);
+	display_measurements_update(bnetz->dmp_frame_quality, quality_avg * 100.0, 0.0);
+
+	/* receive telegramm */
+	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm, level_avg, level_stddev, quality_avg);
 }
 
 /* Process received audio stream from radio unit. */

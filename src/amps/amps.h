@@ -46,6 +46,10 @@ typedef struct amps {
 	enum amps_state		state;
 	int			channel_busy;		/* indicate channel is busy while receiving */
 
+	/* display measurements */
+	dispmeasparam_t		*dmp_frame_level;
+	dispmeasparam_t		*dmp_frame_quality;
+
 	/* system info */
 	amps_si			si;
 

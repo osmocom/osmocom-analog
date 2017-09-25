@@ -192,6 +192,9 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 		printf("**** Writing decoder debug file '%s' ****\n", debug_filename);
 #endif
 
+	fsk->dmp_frame_level = display_measurements_add(&cnetz->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	fsk->dmp_frame_stddev = display_measurements_add(&cnetz->sender, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+
 	return 0;
 
 error:
@@ -393,6 +396,9 @@ got_sync:
 				/* received 662 bits after start of block (10 SPK blocks + 1 bit (== 2 level changes)) */
 				fsk->sync_time = fmod(fsk->sync_time - (66*10+2) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 			}
+			/* update measurements */
+			display_measurements_update(fsk->dmp_frame_level, fabs(fsk->sync_level) / fsk->cnetz->fsk_deviation * 100.0, 0.0);
+			display_measurements_update(fsk->dmp_frame_stddev, fsk->sync_stddev / fabs(fsk->sync_level) * 100.0, 0.0);
 			/* receive frame */
 			cnetz_decode_telegramm(fsk->cnetz, fsk->rx_buffer, fsk->sync_level, fsk->sync_time, fsk->sync_stddev);
 		}

@@ -152,6 +152,9 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	/* dtmf */
 	dtmf_init(&nmt->dtmf, 8000);
 
+	nmt->dmp_frame_level = display_measurements_add(&nmt->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	nmt->dmp_frame_quality = display_measurements_add(&nmt->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+
 	return 0;
 }
 
@@ -241,6 +244,10 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 		quality += nmt->rx_quality[i];
 	}
 	level /= 140.0; quality /= 140.0;
+
+	/* update measurements */
+	display_measurements_update(nmt->dmp_frame_level, level * 100.0, 0.0);
+	display_measurements_update(nmt->dmp_frame_quality, quality * 100.0, 0.0);
 
 	/* send telegramm */
 	frames_elapsed = (nmt->rx_bits_count_current - nmt->rx_bits_count_last + 83) / 166; /* round to nearest frame */

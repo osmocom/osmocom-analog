@@ -73,6 +73,12 @@ typedef struct r2000 {
 	int			page_try;		/* the try number of calling the mobile */
 	int			tx_frame_count;		/* to count repeated frames */
 
+	/* display measurements */
+	dispmeasparam_t		*dmp_frame_level;
+	dispmeasparam_t		*dmp_frame_quality;
+	dispmeasparam_t		*dmp_super_level;
+	dispmeasparam_t		*dmp_super_quality;
+
 	/* features */
 	int			compandor;		/* if compandor shall be used */
 

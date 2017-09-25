@@ -30,7 +30,7 @@ static int line_count = 0;
 static int lines_total = 0;
 static char screen[MAX_HEIGHT_STATUS][MAX_DISPLAY_WIDTH];
 
-void print_status(int on)
+static void print_status(int on)
 {
 	int i, j;
 	int w, h;
