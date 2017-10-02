@@ -175,12 +175,13 @@ void print_help(const char *arg0)
 	printf("        block all matching phones. Alternatively the phone number may be given\n");
 	printf("        here, so that the 4 bits get calculated automatically. The optional\n");
 	printf("        second value can be given, to define a range - in the same way.\n");
-    if (futln_sperre_start < 0)
+    if (futln_sperre_start < 0) {
 	printf("        (default = no value given)\n");
-    else if (futln_sperre_end < 0)
+    } else if (futln_sperre_end < 0) {
 	printf("        (default = %d)\n", futln_sperre_start);
-    else
+    } else {
 	printf("        (default = %d-%d)\n", futln_sperre_start, futln_sperre_end);
+    }
 	printf(" -D --demod auto | slope | level\n");
 	printf("        Adjust demodulation algorithm. Use 'slope' to detect a level change\n");
 	printf("        by finding the highest slope of a bit transition. It is useful, if\n");

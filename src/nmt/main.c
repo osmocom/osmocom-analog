@@ -68,10 +68,11 @@ void print_help(const char *arg0)
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(nmt_system, chan_type[0]));
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station 0..3. (default = '%d')\n", ms_power);
-    if (nmt_system == 450)
+    if (nmt_system == 450) {
 	printf("        NMT-450: 3 = 15 W / 7 W (handheld), 2 = 1.5 W, 1/0 = 150 mW\n");
-    else
+    } else {
 	printf("        NMT-900: 3/2 = 6 W, 1 = 1.5 W, 0 = 150 mW\n");
+    }
 	printf(" -Y --traffic-area <traffic area> | list\n");
 	printf("        NOTE: MUST MATCH WITH YOUR ROAMING SETTINGS IN THE PHONE!\n");
 	printf("              Your phone will not connect, if country code is different!\n");
