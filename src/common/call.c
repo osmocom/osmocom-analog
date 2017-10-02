@@ -633,7 +633,7 @@ dial_after_hangup:
 	case CALL_CONNECT:
 	case CALL_DISCONNECTED:
 		if (c > 0) {
-			if (c == 'h' || c == 'd') {
+			if (c == 'h' || (c == 'd' && call.state == CALL_DISCONNECTED)) {
 				PDEBUG(DCALL, DEBUG_INFO, "Call hangup\n");
 				call_new_state(CALL_IDLE);
 				if (call.callref) {
@@ -655,7 +655,7 @@ dial_after_hangup:
 				sprintf(text, "call active: %s (press h=hangup)\r", call.station_id);
 		}
 		if (call.state == CALL_DISCONNECTED)
-			sprintf(text, "call disconnected: %s (press h=hangup)\r", cause_name(call.disc_cause));
+			sprintf(text, "call disconnected: %s (press h=hangup d=redial)\r", cause_name(call.disc_cause));
 		break;
 	}
 	/* skip if nothing has changed */
