@@ -590,8 +590,8 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	uint32_t min1;
 	uint16_t min2;
 	amps_number2min("1234567890", &min1, &min2);
-	transaction_t __attribute__((__unused__)) *trans = create_transaction(amps, TRANS_CALL_ASSIGN, min1, min2, 0, 0, 0, amps->sender.kanal);
-	amps_new_state(amps, STATE_BUSY);
+	transaction_t __attribute__((__unused__)) *trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, 0, 0, 0, amps->sender.kanal);
+//	amps_new_state(amps, STATE_BUSY);
 #endif
 
 	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%d (System %s) of type '%s' = %s\n", channel, band, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
@@ -753,9 +753,6 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 		trans->sat_detected = 0;
 	}
 
-	if (amps->sender.loopback)
-		return;
-
 	/* no SAT during alerting */
 	if (trans->state == TRANS_CALL_MT_ALERT
 	 || trans->state == TRANS_CALL_MT_ALERT_SEND)
@@ -769,6 +766,9 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 		else
 			timer_stop(&trans->timer);
 	}
+
+	if (amps->sender.loopback)
+		return;
 }
 
 static void timeout_sat(amps_t *amps, double duration)
