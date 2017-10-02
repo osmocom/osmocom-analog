@@ -218,12 +218,12 @@ void fsk_fm_exit(fsk_fm_demod_t *fsk)
 #endif
 }
 
-/* get levels, sync time and jitter from sync sequence or frame data */
-static inline void get_levels(fsk_fm_demod_t *fsk, double *_min, double *_max, double *_avg, int *_probes, int num, double *_time, double *_jitter)
+/* get levels, sync time and jitter/stddev from sync sequence or frame data */
+static inline void get_levels(fsk_fm_demod_t *fsk, double *_min, double *_max, double *_avg, int *_probes, int num, double *_time, double *_jitter, double *_stddev)
 {
 	int count = 0;
 	double min = 0, max = 0, avg = 0, level;
-	double time = 0, t, sync_average, sync_time, jitter = 0;
+	double time = 0, t, sync_average, sync_time, jitter = 0.0, stddev = 0.0;
 	int bit_offset;
 	int i;
 
@@ -252,6 +252,8 @@ static inline void get_levels(fsk_fm_demod_t *fsk, double *_min, double *_max, d
 		avg += level;
 		count++;
 	}
+	avg /= (double)count;
+	time /= (double)count;
 
 	/* should never happen */
 	if (!count) {
@@ -264,13 +266,13 @@ static inline void get_levels(fsk_fm_demod_t *fsk, double *_min, double *_max, d
 	 * late (positive) we received the sync relative to current bit_time.
 	 * sync_time is the absolute time within the super frame.
 	 */
-	sync_average = time / (double)count;
+	sync_average = time;
 	sync_time = fmod(sync_average + fsk->bit_time + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 
 	*_probes = count;
 	*_min = min;
 	*_max = max;
-	*_avg = avg / (double)count;
+	*_avg = avg;
 
 	if (_time) {
 //		if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V)
@@ -302,6 +304,16 @@ static inline void get_levels(fsk_fm_demod_t *fsk, double *_min, double *_max, d
 			jitter += t;
 		}
 		*_jitter = jitter / (double)count;
+	}
+	if (_stddev) {
+		/* get standard deviation of level */
+		for (i = 0; i < num; i++) {
+			level = fsk->change_levels[(fsk->change_pos - 1 - i) & 0xff];
+			if (level <= 0.0)
+				continue;
+			stddev += (level - avg) * (level - avg);
+		}
+		*_stddev = sqrt(stddev / (double)count);
 	}
 }
 
@@ -348,11 +360,11 @@ got_sync:
 			if (debug)
 				fprintf(fsk->debug_fp, " SYNC!");
 #endif
-			get_levels(fsk, &min, &max, &avg, &probes, 30, &fsk->sync_time, &fsk->sync_jitter);
+			get_levels(fsk, &min, &max, &avg, &probes, 30, &fsk->sync_time, NULL, &fsk->sync_stddev);
 			fsk->sync_level = avg;
 			if (fsk->sync == FSK_SYNC_NEGATIVE)
 				fsk->sync_level = -fsk->sync_level;
-//			printf("sync (change min=%.0f%% max=%.0f%% avg=%.0f%% sync_time=%.2f jitter=%.2f probes=%d)\n", min * 100, max * 100, avg * 100, fsk->sync_time, fsk->sync_jitter, probes);
+//			printf("sync (change min=%.0f%% max=%.0f%% avg=%.0f%% sync_time=%.2f stddev=%.0f%% probes=%d)\n", min * 100, max * 100, avg * 100, fsk->sync_time, fsk->sync_stddev / avg, probes);
 			fsk->level_threshold = (double)avg;
 			fsk->rx_sync = 0;
 			fsk->rx_buffer_count = 0;
@@ -381,7 +393,8 @@ got_sync:
 				/* received 662 bits after start of block (10 SPK blocks + 1 bit (== 2 level changes)) */
 				fsk->sync_time = fmod(fsk->sync_time - (66*10+2) + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 			}
-			cnetz_decode_telegramm(fsk->cnetz, fsk->rx_buffer, fsk->sync_level, fsk->sync_time, fsk->sync_jitter);
+			/* receive frame */
+			cnetz_decode_telegramm(fsk->cnetz, fsk->rx_buffer, fsk->sync_level, fsk->sync_time, fsk->sync_stddev);
 		}
 		break;
 	}
@@ -457,7 +470,7 @@ static inline void find_change_slope(fsk_fm_demod_t *fsk)
 		fsk->last_change_positive = change_positive;
 		if (!fsk->sync) {
 			fsk->next_bit = 1.5;
-			got_bit(fsk, change_positive, (level_max - level_min) / 2);
+			got_bit(fsk, change_positive, (level_max - level_min) / 2.0);
 		}
 	}
 	if (fsk->next_bit <= 0.0) {
@@ -530,9 +543,10 @@ static inline void find_change_level(fsk_fm_demod_t *fsk)
 		fsk->last_change_positive = change_positive;
 		if (!fsk->sync) {
 			fsk->next_bit = 1.5;
-			/* if bit change is inside window, we can get level from end of window */
-			s = fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_len - 1) % fsk->bit_buffer_len];
-			got_bit(fsk, change_positive, fabs(s));
+			/* if bit change is inside window, we can get level from borders of window */
+			s = fsk->bit_buffer_spl[fsk->bit_buffer_pos];
+			s -= fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_len - 1) % fsk->bit_buffer_len];
+			got_bit(fsk, change_positive, fabs(s / 2.0));
 		}
 	}
 	if (fsk->next_bit <= 0.0) {

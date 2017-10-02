@@ -61,7 +61,6 @@
 typedef struct telegramm {
 	double level;		/* average level of received sync sequence */
 	double sync_time;	/* when did we receive the sync for this frame */
-	double jitter;		/* phase jitter of sync sequence */
 	uint8_t	opcode;
 	/* used parameters depend on opcode */
 	uint8_t fuz_fuvst_nr;
@@ -124,6 +123,6 @@ int match_fuz(cnetz_t *cnetz, telegramm_t *telegramm, int cell);
 int match_futln(telegramm_t *telegramm, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
 
 int detect_sync(uint64_t bitstream);
-void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, double sync_time, double jitter);
+void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, double sync_time, double stddev);
 const char *cnetz_encode_telegramm(cnetz_t *cnetz);
 

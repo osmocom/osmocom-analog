@@ -39,7 +39,7 @@ typedef struct fsk_fm_demod {
 	enum fsk_sync	sync;			/* set, if we are in sync and what polarity we receive */
 	double		sync_level;		/* what was the level, when we received the sync */
 	double		sync_time;		/* when did we receive sync, relative to super frame */
-	double		sync_jitter;		/* what was the jitter of the sync */
+	double		sync_stddev;		/* standard deviation of level changes */
 
 	/* speech */
 	sample_t	*speech_buffer;		/* holds one chunk of 12.5ms */
