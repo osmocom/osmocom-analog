@@ -513,24 +513,24 @@ void r2000_check_channels(void)
 	}
 	if (cc && !tc) {
 		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+			PDEBUG(DR2000, DEBUG_NOTICE, "\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 		note = 1;
 	}
 	if (tc && !cc) {
 		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call is possible at all!\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+			PDEBUG(DR2000, DEBUG_NOTICE, "\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** No call is possible at all!\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 		note = 1;
 	}
 	if (combined) {
 		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected combined 'CC/TC' some phones might reject this.\n");
+			PDEBUG(DR2000, DEBUG_NOTICE, "\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected combined 'CC/TC' some phones might reject this.\n");
 		note = 1;
 	}
 }
