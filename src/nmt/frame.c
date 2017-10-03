@@ -202,7 +202,7 @@ uint16_t nmt_encode_area_no(uint8_t area_no)
 
 /* convert given number to caller ID frame with given index
  * return next index */
-int nmt_encode_a_number(frame_t *frame, int index, enum number_type type, const char *number)
+int nmt_encode_a_number(frame_t *frame, int index, enum number_type type, const char *number, int nmt_system, int channel, int ms_power, uint8_t traffic_area)
 {
 	int number_offset = 0;
 	int number_len = strlen(number);
@@ -223,6 +223,8 @@ int nmt_encode_a_number(frame_t *frame, int index, enum number_type type, const 
 
 	/* encode */
 	frame->mt = NMT_MESSAGE_8;
+	frame->channel_no = nmt_encode_channel(nmt_system, channel, ms_power);
+	frame->traffic_area = nmt_encode_traffic_area(nmt_system, channel, traffic_area);
 	frame->seq_number = index;
 	if (index == 0) {
 		/* number type */

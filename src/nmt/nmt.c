@@ -570,86 +570,6 @@ static void set_line_signal(nmt_t *nmt, frame_t *frame, uint8_t signal)
 	frame->line_signal = (signal << 8) | (signal << 4) | signal;
 }
 
-/* convert given number to caller ID frame with given index
- * return next index */
-static int encode_a_number(nmt_t *nmt, frame_t *frame, int index, enum number_type type, const char *number)
-{
-	int number_offset = 0;
-	int number_len = strlen(number);
-	int nframes;
-	uint8_t sum, ntype = 0, digit;
-	int i, shift;
-
-	/* number of frames
-	 * 0..5 digits need one frame, 6..12 digits need two frames, ... */
-	nframes = (number_len + 8) / 7;
-
-	/* cycle index */
-	index %= nframes;
-
-	/* number offset for second frame is 5, and then additional 7 for the following frames */
-	if (index)
-		number_offset = index * 7 - 2;
-
-	/* encode */
-	frame->mt = NMT_MESSAGE_8;
-	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
-	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
-	frame->seq_number = index;
-	if (index == 0) {
-		/* number type */
-		switch (type) {
-		case TYPE_NOTAVAIL:
-			ntype = 3;
-			break;
-		case TYPE_ANONYMOUS:
-			ntype = 4;
-			break;
-		case TYPE_UNKNOWN:
-			ntype = 0;
-			break;
-		case TYPE_SUBSCRIBER:
-			ntype = 0;
-			break;
-		case TYPE_NATIONAL:
-			ntype = 1;
-			break;
-		case TYPE_INTERNATIONAL:
-			ntype = 2;
-			break;
-		}
-		/* first 5 digits */
-		frame->additional_info = ((nframes - 1) << 24) | (ntype << 20);
-		shift = 16;
-	} else {
-		/* next digits */
-		frame->additional_info = 0;
-		shift = 24;
-	}
-	for (i = number_offset; number[i] && shift >= 0; i++, shift -= 4) {
-		digit = number[i];
-		if (digit >= '1' && digit <= '9')
-			digit -= '0';
-		else if (digit == '0')
-			digit = 10;
-		else
-			digit = 13; /* '+' and illegal digits */
-		frame->additional_info |= (digit << shift);
-	}
-
-	/* checksum */
-	sum = (frame->seq_number << 4) | frame->additional_info >> 24;
-	sum += (frame->additional_info >> 16);
-	sum += (frame->additional_info >> 8);
-	sum += frame->additional_info;
-	frame->checksum = sum;
-
-	/* return next frame index or cycle to first frame */
-	if (++index == nframes)
-		index = 0;
-	return index;
-}
-
 /*
  * handle idle channel
  */
@@ -1213,7 +1133,7 @@ static void tx_mt_ringing(nmt_t *nmt, frame_t *frame)
 		if (nmt->tx_callerid_count) {
 			if (nmt->tx_frame_count == 5)
 				PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'A-number'.\n");
-			encode_a_number(nmt, frame, nmt->tx_frame_count - 4, trans->caller_type, trans->caller_id);
+			nmt_encode_a_number(frame, nmt->tx_frame_count - 4, trans->caller_type, trans->caller_id, nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power, nmt->sysinfo.traffic_area);
 		} else
 			frame->mt = NMT_MESSAGE_6;
 	}
