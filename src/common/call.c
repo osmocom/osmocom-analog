@@ -828,13 +828,15 @@ int call_in_setup(int callref, const char *callerid, const char *dialing)
 		return -CAUSE_BUSY;
 	}
 	call.callref = callref;
-	call_new_state(CALL_CONNECT);
 	if (callerid) {
 		strncpy(call.station_id, callerid, call.dial_digits);
 		call.station_id[call.dial_digits] = '\0';
 	}
 	strncpy(call.dialing, dialing, sizeof(call.dialing) - 1);
 	call.dialing[sizeof(call.dialing) - 1] = '\0';
+	call_new_state(CALL_CONNECT);
+	PDEBUG(DCALL, DEBUG_INFO, "Call automatically answered\n");
+	call_out_answer(callref);
 
 	return 0;
 }
@@ -1176,7 +1178,7 @@ void call_mncc_recv(uint8_t *buf, int length)
 	case MNCC_SETUP_RSP:
 		PDEBUG(DMNCC, DEBUG_INFO, "Received MNCC answer from Network\n");
 		set_state_process(callref, CALL_CONNECT);
-		PDEBUG(DCALL, DEBUG_INFO, "Call disconnected\n");
+		PDEBUG(DCALL, DEBUG_INFO, "Call answered\n");
 		call_out_answer(callref);
 		break;
 	case MNCC_DISC_REQ:
