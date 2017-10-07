@@ -677,7 +677,7 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 				return NMT_MESSAGE_14a;
 			if (digits[11] == 15)
 				return NMT_MESSAGE_14b;
-			return -1;
+			break;
 		case 8:
 			if (digits[11] == 2)
 				return NMT_MESSAGE_13b;
