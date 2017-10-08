@@ -490,10 +490,16 @@ static void nmt_page(transaction_t *trans, int try)
 static int match_channel(nmt_t *nmt, frame_t *frame)
 {
 	int channel, power;
+	int rc;
 
 	/* check channel match */
-	nmt_decode_channel(nmt->sysinfo.system, frame->channel_no, &channel, &power);
-	if ((channel & 0x3ff) != (nmt->sender.kanal & 0x3ff)) {
+	rc = nmt_decode_channel(nmt->sysinfo.system, frame->channel_no, &channel, &power);
+	if (rc < 0) {
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Frame with illegal encoded channel received, ignoring.\n");
+		return 0;
+	}
+	/* in case of interleaved channel, ignore the missing upper bit */
+	if ((channel % 1024) != (nmt->sender.kanal % 1024)) {
 		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Frame for different channel %d received, ignoring.\n", channel);
 		return 0;
 	}

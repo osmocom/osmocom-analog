@@ -47,8 +47,8 @@ uint64_t nmt_encode_channel(int nmt_system, int channel, int power)
 		value |= power << 9;
 	} else {
 		/* interleaved channels are indicated in traffic area */
-		if (value > 1000)
-			value -= 1000;
+		if (value >= 1024)
+			value -= 1024;
 		value |= channel;
 		/* if channel >= 512, set upper bit */
 		if (value & 0x200)
@@ -132,7 +132,7 @@ uint64_t nmt_encode_traffic_area(int nmt_system, int channel, uint8_t traffic_ar
 	} else {
 		/* upper bit is used for indication of interleaved channel */
 		value = traffic_area & 0x7f;
-		if (channel > 1000)
+		if (channel >= 1024)
 			value |= 0x80;
 	}
 
@@ -487,7 +487,7 @@ static const char *param_ta_900(uint64_t value, int __attribute__((unused)) ndig
 	static char result[32];
 
 	if ((value & 0x80))
-		sprintf(result, "%" PRIu64 " (Channel No. + 1000)", value & 0x7f);
+		sprintf(result, "%" PRIu64 " (Channel No. + 1024)", value & 0x7f);
 	else
 		sprintf(result, "%" PRIu64, value);
 
