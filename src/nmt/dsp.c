@@ -303,7 +303,7 @@ void super_reset(nmt_t *nmt)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, sample_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
 {
 	nmt_t *nmt = (nmt_t *) sender;
 	sample_t *spl;

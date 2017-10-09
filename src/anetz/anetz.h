@@ -1,3 +1,4 @@
+#include "../common/squelch.h"
 #include "../common/goertzel.h"
 #include "../common/sender.h"
 
@@ -46,13 +47,14 @@ typedef struct anetz {
 	int			paging_tone;		/* current tone (0..3) in sequenced mode */
 	int			paging_count;		/* current sample count of tone in seq. mode */
 	int			paging_transition;	/* set to number of samples during transition */
+	squelch_t		squelch;		/* squelch detection process */
 } anetz_t;
 
 
 double anetz_kanal2freq(int kanal, int unterband);
 int anetz_init(void);
-int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_volume);
+int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db);
 void anetz_destroy(sender_t *sender);
-void anetz_loss_indication(anetz_t *anetz);
+void anetz_loss_indication(anetz_t *anetz, double loss_time);
 void anetz_receive_tone(anetz_t *anetz, int bit);
 

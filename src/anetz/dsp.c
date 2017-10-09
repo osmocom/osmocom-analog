@@ -49,8 +49,8 @@
 #define TONE_DETECT_TH	8	/* chunk intervals to detect continuous tone */
 
 /* carrier loss detection */
-#define LOSS_INTERVAL	100	/* filter steps (chunk durations) for one second interval */
-#define LOSS_TIME	12	/* duration of signal loss before release */
+#define MUTE_TIME	0.1	/* time to mute after loosing signal */
+#define LOSS_TIME	12.0	/* duration of signal loss before release (what was the actual duration ???) */
 
 /* two signaling tones */
 static double fsk_tones[2] = {
@@ -77,7 +77,7 @@ void dsp_init(void)
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
+int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double squelch_db)
 {
 	sample_t *spl;
 	int i;
@@ -85,13 +85,14 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence)
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
+	/* init squelch */
+	squelch_init(&anetz->squelch, anetz->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
+
 	/* set modulation parameters */
 	sender_set_fm(&anetz->sender, MAX_DEVIATION * page_gain, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
 
 	anetz->page_gain = page_gain;
 	anetz->page_sequence = page_sequence;
-
-	audio_init_loss(&anetz->sender.loss, LOSS_INTERVAL, anetz->sender.loss_volume, LOSS_TIME);
 
 	anetz->samples_per_chunk = anetz->sender.samplerate * CHUNK_DURATION;
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per chunk duration.\n", anetz->samples_per_chunk);
@@ -147,23 +148,18 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 
 	anetz->tone_count++;
 
-	if (anetz->tone_count >= TONE_DETECT_TH)
-		audio_reset_loss(&anetz->sender.loss);
 	if (anetz->tone_count == TONE_DETECT_TH) {
 		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %.0f%%, quality =%.0f%%)\n", fsk_tones[anetz->tone_detected], level * 100.0, quality * 100.0);
 		anetz_receive_tone(anetz, anetz->tone_detected);
 	}
 }
 
-/* Filter one chunk of audio an detect tone, quality and loss of signal. */
+/* Filter one chunk of audio an detect tone and quality of signal. */
 static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 {
 	double level, result[2], quality[2];
 
 	level = audio_level(spl, max);
-
-	if (audio_detect_loss(&anetz->sender.loss, level))
-		anetz_loss_indication(anetz);
 
 	audio_goertzel(anetz->fsk_tone_goertzel, spl, max, 0, result, 2);
 
@@ -189,12 +185,24 @@ static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, sample_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_level_db)
 {
 	anetz_t *anetz = (anetz_t *) sender;
 	sample_t *spl;
 	int max, pos;
 	int i;
+
+	/* process signal mute/loss, also for signalling tone */
+	switch (squelch(&anetz->squelch, rf_level_db, (double)length / (double)anetz->sender.samplerate)) {
+	case SQUELCH_LOSS:
+		anetz_loss_indication(anetz, LOSS_TIME);
+		// fall through:
+	case SQUELCH_MUTE:
+		memset(samples, 0, sizeof(*samples) * length);
+		break;
+	default:
+		break;
+	}
 
 	/* write received samples to decode buffer */
 	max = anetz->samples_per_chunk;

@@ -700,7 +700,7 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 	return sent;
 }
 
-int sdr_read(void *inst, sample_t **samples, int num, int channels)
+int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_level_db)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 	float *buff = NULL;
@@ -794,6 +794,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels)
 			avg = sqrt(avg /(double)count); /* RMS */
 			avg = log10(avg) * 20;
 			display_measurements_update(sdr->chan[c].dmp_rf_level, avg, 0.0);
+			rf_level_db[c] = avg;
 			min = 0.0;
 			max = 0.0;
 			avg = 0.0;

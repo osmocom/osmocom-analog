@@ -550,7 +550,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 /* decode samples and hut for bit changes
  * use deviation to find greatest slope of the signal (bit change)
  */
-void sender_receive(sender_t *sender, sample_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
 {
 	cnetz_t *cnetz = (cnetz_t *) sender;
 

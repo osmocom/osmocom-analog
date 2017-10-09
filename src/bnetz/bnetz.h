@@ -1,3 +1,4 @@
+#include "../common/squelch.h"
 #include "../common/fsk.h"
 #include "../common/sender.h"
 
@@ -93,11 +94,9 @@ typedef struct bnetz {
 	int			tone_count;		/* how long has that tone been detected */
 	const char		*tx_telegramm;		/* carries bits of one frame to transmit */
 	int			tx_telegramm_pos;
-	int			samples_per_chunk;	/* samples per loss detection interval */
-	sample_t		*chunk_spl;		/* chunk sample */
-	int			chunk_pos;		/* current received sample of chunk */
 	double			meter_phaseshift65536;	/* how much the phase of sine wave changes per sample */
 	double			meter_phase65536;	/* current phase */
+	squelch_t		squelch;		/* squelch detection process */
 
 	/* loopback test for latency */
 	int			loopback_count;		/* count digits from 0 to 9 */
@@ -106,9 +105,9 @@ typedef struct bnetz {
 
 double bnetz_kanal2freq(int kanal, int unterband);
 int bnetz_init(void);
-int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_factor, const char *paging, int metering);
+int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering);
 void bnetz_destroy(sender_t *sender);
-void bnetz_loss_indication(bnetz_t *bnetz);
+void bnetz_loss_indication(bnetz_t *bnetz, double loss_time);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);
 void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_dev, double quality_avg);
 const char *bnetz_get_telegramm(bnetz_t *bnetz);

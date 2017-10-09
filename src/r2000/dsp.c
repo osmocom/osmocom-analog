@@ -241,7 +241,7 @@ static void super_receive_bit(void *inst, int bit, double quality, double level)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, sample_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
 {
 	r2000_t *r2000 = (r2000_t *) sender;
 	sample_t *spl;

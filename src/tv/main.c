@@ -324,7 +324,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		int s, ss, tosend;
 		while (!quit) {
 			usleep(1000);
-			sdr_read(sdr, (void *)sendbuff, latspl, 0);
+			sdr_read(sdr, (void *)sendbuff, latspl, 0, NULL);
 			tosend = sdr_get_tosend(sdr, latspl);
 			if (tosend > latspl / 10)
 				tosend = latspl / 10;

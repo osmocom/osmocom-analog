@@ -39,7 +39,7 @@
 /* settings */
 double page_gain = 1;
 int page_sequence = 0;
-double lossdetect = 0;
+double squelch_db = -INFINITY;
 
 void print_help(const char *arg0)
 {
@@ -55,9 +55,11 @@ void print_help(const char *arg0)
 	printf(" -P --page-sequence 0 | <ms>\n");
 	printf("        Cycle paging tones, rather than sending simultaniously. Try 100.\n");
 	printf("        (default = '%d')\n", page_sequence);
-	printf(" -L --loss <volume>\n");
-	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
-	printf("        percent. (disabled by default)\n");
+	printf(" -S --squelch <dB> | auto\n");
+	printf("        Use given RF level to detect loss of signal. When the signal gets lost\n");
+	printf("        and stays below this level, the connection is released.\n");
+	printf("        Use 'auto' to do automatic noise floor calibration to detect loss.\n");
+	printf("        Only works with SDR! (disabled by default)\n");
 	printf("\nstation-id: Give (last) 5 digits of station-id, you don't need to enter it\n");
 	printf("        for every start of this program.\n");
 	main_mobile_print_hotkeys();
@@ -73,11 +75,11 @@ static int handle_options(int argc, char **argv)
 		{"geo", 1, 0, 'G'},
 		{"page-gain", 1, 0, 'V'},
 		{"page-sequence", 1, 0, 'P'},
-		{"loss", 1, 0, 'L'},
+		{"squelch", 1, 0, 'S'},
 		{0, 0, 0, 0}
 	};
 
-	main_mobile_set_options("G:V:P:L:", long_options_special);
+	main_mobile_set_options("G:V:P:S:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -109,8 +111,11 @@ static int handle_options(int argc, char **argv)
 			page_sequence = atoi(optarg);
 			skip_args += 2;
 			break;
-		case 'L':
-			lossdetect = atoi(optarg);
+		case 'S':
+			if (!strcasecmp(optarg, "auto"))
+				squelch_db = 0.0;
+			else
+				squelch_db = atof(optarg);
 			skip_args += 2;
 			break;
 		default:
@@ -179,7 +184,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = anetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, lossdetect / 100.0);
+		rc = anetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

@@ -638,6 +638,9 @@ The base station returns to idle.
 
 <p>
 Level adjustment:
+</p>
+
+<p>
 We see a receive level of around 85%.
 Tune your receiver to the up-link frequency, so you get loop-back of base station broadcast.
 Use the variable resistor (connecting your transmitter) to adjust the volume until the received level matches the same level of your previously received message.
@@ -703,53 +706,38 @@ dsp.c:159 info   : Detecting continous tone: 2070:Level= 104% Quality=100%
 
 <p>
 Detecting loss of carrier signal:
-We do not have any RSSI (Received Signal Strength Indicator) signal from our radio, so we cannot directly find out if the signal is lost.
-But we have a constant noise level when the signal is lost.
-Be sure to have squelch on your receiver all the way open, so that noise reaches the base station.
-In order to see this level, use command line option '-L 100 -v 0' or '--loss 100 --verbose 0'.
-The noise level (relative to the sound card's input level) is shown:
+</p>
+
+<p>
+This works with SDR only, because we do not have any RSSI (Received Signal Strength Indicator) signal from a radio connected to the sound card.
+With SDR we know the RX level, so we can define a threashold value for a lost signal.
+Use '-S &lt;db&gt;' or '--squelch &lt;db&gt;' to define the squelch threshold level.
+To measure the noise floor, use the 'm' key to get a bar graph of the current RSSI. (RF level)
+Add some dB to the noise floor for the squelch threshold value.
+An easier way is to use '-S auto' or '--squelch auto' to automatically measure the noise floor level and then automatically use a threshold level that is some dB above this measured level.
+This level is then used to detect loss of carrier.
+Also this level is used to mute the audio path, whenever the signal gets lost for a short time.
+After about 12 seconds of signal loss, a call is released - similar to the real network.
 </p>
 
 <pre>
 ...
-loss.c:74 debug  : Noise level = 22%
+squelch.c:94 info   : RF signal measurement: -69.2 dB noise floor, using threshold of -63.2 dB
 ...
 </pre>
 
 <p>
-Since we have a noise level of about 20%, we can use a threshold of 10%.
-Use command line option '-L 10' in this case.
-To see the process, keep debugging on by using command line option '-v 0'.
-Whenever the noise level is above the given percentage, loss of carrier is assumed, if the noise level is constant.
-If the noise level changes (due to speech), the noise is ignored and the loss counter is reset.
-After a system specific duration of signal loss, the call is released.
-</p>
-
-<p>
-In this example I cut the power off the phone and waited for the base station to time out.
+In the following example I cut off the power of the phone beeing in a call and waited 12 seconds for the base station to time out:
 </p>
 
 <pre>
 ...
-loss.c:74 debug  : Noise level = 1%
-loss.c:74 debug  : Noise level = 2%
-loss.c:74 debug  : Noise level = 1%
-loss.c:74 debug  : Noise level = 22%
-loss.c:74 debug  : Noise level = 21%
-loss.c:84 debug  : Detected signal loss 1 for intervals level change 6% (below 10%).
-loss.c:74 debug  : Noise level = 21%
-loss.c:84 debug  : Detected signal loss 2 for intervals level change 2% (below 10%).
-...
-loss.c:74 debug  : Noise level = 22%
-loss.c:84 debug  : Detected signal loss 11 for intervals level change 7% (below 10%).
-loss.c:74 debug  : Noise level = 21%
-loss.c:84 debug  : Detected signal loss 12 for intervals level change 3% (below 10%).
-bnetz.c:448 notice : Detected loss of signal, releasing.
-bnetz.c:363 info   : Entering release state, sending 'Trennsignal'.
-call.c:706 info   : Call has been released with cause=41
-bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
-bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
-bnetz.c:439 debug  : Sending telegramm 'Trennsignal/Schlusssignal'.
+squelch.c:114 info   : RF signal weak: Muting audio (RF -77.6 dB &lt; -70.7 db)
+bnetz.c:392 notice : Detected loss of signal after 12 seconds, releasing.
+bnetz.c:297 info   : Entering release state, sending 'Trennsignal' (4 times).
+call.c:933 info   : Call has been released with cause=41
+bnetz.c:279 info   : Entering IDLE state on channel 17, sending 'Gruppenfreisignal' 2.
+call.c:637 info   : Call hangup
 ...
 </pre>
 

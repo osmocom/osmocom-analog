@@ -353,7 +353,7 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 
 #define KEEP_FRAMES	8	/* minimum frames not to read, due to bug in ALSA */
 
-int sound_read(void *inst, sample_t **samples, int num, int channels)
+int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf_level_db)
 {
 	sound_t *sound = (sound_t *)inst;
 	double spl_deviation = sound->spl_deviation;
@@ -431,6 +431,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels)
 		if (!sender)
 			continue;
 		display_measurements_update(sound->dmp[i], log10((double)max[i] / 32768.0) * 20, 0.0);
+		rf_level_db[i] = 0.0;
 	}
 
 	return rc;

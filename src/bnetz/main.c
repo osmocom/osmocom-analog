@@ -22,6 +22,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/timer.h"
@@ -39,7 +40,7 @@
 int gfs = 2;
 int metering = 20;
 const char *paging = "tone";
-double lossdetect = 0;
+double squelch_db = -INFINITY;
 
 void print_help(const char *arg0)
 {
@@ -70,9 +71,11 @@ void print_help(const char *arg0)
 	printf("        Example: /sys/class/gpio/gpio17/value=1:0 writes a '1' to\n");
 	printf("        /sys/class/gpio/gpio17/value to switching to channel 19 and a '0' to\n");
 	printf("        switch back. (default = %s)\n", paging);
-	printf(" -L --loss <volume>\n");
-	printf("        Detect loss of carrier by detecting steady noise above given volume in\n");
-	printf("        percent. (disabled by default)\n");
+	printf(" -S --squelch <dB>\n");
+	printf("        Use given RF level to detect loss of signal. When the signal gets lost\n");
+	printf("        and stays below this level, the connection is released.\n");
+	printf("        Use 'auto' to do automatic noise floor calibration to detect loss.\n");
+	printf("        Only works with SDR! (disabled by default)\n");
 	printf("\nstation-id: Give 5 digit station-id, you don't need to enter it for every\n");
 	printf("        start of this program.\n");
 	main_mobile_print_hotkeys();
@@ -87,11 +90,11 @@ static int handle_options(int argc, char **argv)
 		{"gfs", 1, 0, 'G'},
 		{"gebuehrenimpuls", 1, 0, 'M'},
 		{"paging", 1, 0, 'P'},
-		{"loss", 1, 0, 'L'},
+		{"squelch", 1, 0, 'S'},
 		{0, 0, 0, 0},
 	};
 
-	main_mobile_set_options("G:M:P:L:", long_options_special);
+	main_mobile_set_options("G:M:P:S:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -123,8 +126,11 @@ static int handle_options(int argc, char **argv)
 			paging = strdup(optarg);
 			skip_args += 2;
 			break;
-		case 'L':
-			lossdetect = atoi(optarg);
+		case 'S':
+			if (!strcasecmp(optarg, "auto"))
+				squelch_db = 0.0;
+			else
+				squelch_db = atof(optarg);
 			skip_args += 2;
 			break;
 		default:
@@ -194,7 +200,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = bnetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, (double)lossdetect / 100.0, paging, metering);
+		rc = bnetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, paging, metering);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

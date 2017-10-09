@@ -5,7 +5,6 @@
 #include "wave.h"
 #include "samplerate.h"
 #include "jitter.h"
-#include "loss.h"
 #include "emphasis.h"
 #include "display.h"
 
@@ -45,7 +44,7 @@ typedef struct sender {
 	int 			(*audio_start)(void *);
 	void 			(*audio_close)(void *);
 	int			(*audio_write)(void *, sample_t **, uint8_t **, int, enum paging_signal *, int *, int);
-	int			(*audio_read)(void *, sample_t **, int, int);
+	int			(*audio_read)(void *, sample_t **, int, int, double *);
 	int			(*audio_get_tosend)(void *, int);
 	int			samplerate;
 	samplerate_t		srstate;		/* sample rate conversion state */
@@ -74,10 +73,6 @@ typedef struct sender {
 	sample_t		rxbuf[160];
 	int			rxbuf_pos;		/* current fill of buffer */
 
-	/* loss of carrier detection */
-	double			loss_volume;
-	loss_t			loss;
-
 	/* paging tone */
 	enum paging_signal	paging_signal;		/* if paging signal is used and how it is performed */
 	int			paging_on;		/* 1 or 0 for on or off */
@@ -93,14 +88,14 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_volume, enum paging_signal paging_signal);
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal);
 void sender_destroy(sender_t *sender);
 void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double dBm0_deviation, double max_display);
 int sender_open_audio(int latspl);
 int sender_start_audio(void);
 void process_sender_audio(sender_t *sender, int *quit, int latspl);
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int count);
-void sender_receive(sender_t *sender, sample_t *samples, int count);
+void sender_receive(sender_t *sender, sample_t *samples, int count, double rf_level_db);
 void sender_paging(sender_t *sender, int on);
 sender_t *get_sender_by_empfangsfrequenz(double freq);
 

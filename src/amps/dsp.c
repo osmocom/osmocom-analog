@@ -851,7 +851,7 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, sample_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
 {
 	amps_t *amps = (amps_t *) sender;
 

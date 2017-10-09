@@ -37,7 +37,7 @@ static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double loss_volume, enum paging_signal paging_signal)
+int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal)
 {
 	sender_t *master, *slave;
 	int rc = 0;
@@ -51,7 +51,6 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	sender->pre_emphasis = pre_emphasis;
 	sender->de_emphasis = de_emphasis;
 	sender->loopback = loopback;
-	sender->loss_volume = loss_volume;
 	sender->paging_signal = paging_signal;
 	sender->write_rx_wave = write_rx_wave;
 	sender->write_tx_wave = write_tx_wave;
@@ -298,6 +297,7 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 	uint8_t pbuff[num_chan][latspl], *power[num_chan];
 	enum paging_signal paging_signal[num_chan];
 	int on[num_chan];
+	double rf_level_db[num_chan];
 	for (i = 0; i < num_chan; i++) {
 		samples[i] = buff[i];
 		power[i] = pbuff[i];
@@ -337,7 +337,7 @@ cant_recover:
 			/* internal loopback: loop back TX audio to RX */
 			if (inst->loopback == 1) {
 				display_wave(inst, samples[i], count, inst->max_display);
-				sender_receive(inst, samples[i], count);
+				sender_receive(inst, samples[i], count, 0.0);
 			}
 			/* do pre emphasis towards radio */
 			if (inst->pre_emphasis)
@@ -372,7 +372,7 @@ cant_recover:
 	t3 = get_time();
 #endif
 
-	count = sender->audio_read(sender->audio, samples, latspl, num_chan);
+	count = sender->audio_read(sender->audio, samples, latspl, num_chan, rf_level_db);
 	if (count < 0) {
 		/* special case when audio_read wants us to quit */
 		if (count == -EPERM) {
@@ -410,7 +410,7 @@ cant_recover:
 			}
 			if (inst->loopback != 1) {
 				display_wave(inst, samples[i], count, inst->max_display);
-				sender_receive(inst, samples[i], count);
+				sender_receive(inst, samples[i], count, rf_level_db[i]);
 			}
 			if (inst->loopback == 3)
 				jitter_save(&inst->dejitter, samples[i], count);

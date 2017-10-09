@@ -10,7 +10,6 @@ libcommon_a_SOURCES = \
 	wave.c \
 	goertzel.c \
 	jitter.c \
-	loss.c \
 	iir_filter.c \
 	dtmf.c \
 	samplerate.c \
@@ -20,7 +19,8 @@ libcommon_a_SOURCES = \
 	fm_modulation.c \
 	fsk.c \
 	display_wave.c \
-	display_measurements.c
+	display_measurements.c \
+	squelch.c
 
 libmobile_a_SOURCES = \
 	sender.c \

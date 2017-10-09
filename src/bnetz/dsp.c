@@ -57,9 +57,8 @@
 #define TONE_DETECT_TH	7	/* 70 milliseconds to detect continuous tone */
 
 /* carrier loss detection */
-#define CHUNK_DURATION	0.010	/* 10 ms */
-#define LOSS_INTERVAL	100	/* filter steps (milliseconds) for one second interval */
-#define LOSS_TIME	12	/* duration of signal loss before release */
+#define MUTE_TIME	0.1	/* time to mute after loosing signal */
+#define LOSS_TIME	12.5	/* duration of signal loss before release (according to FTZ 1727 Pfl 32 Clause 3.2.3.2) */
 
 /* table for fast sine generation */
 static sample_t dsp_metering[65536];
@@ -78,16 +77,15 @@ static int fsk_send_bit(void *inst);
 static void fsk_receive_bit(void *inst, int bit, double quality, double level);
 
 /* Init transceiver instance. */
-int dsp_init_sender(bnetz_t *bnetz)
+int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 {
-	sample_t *spl;
-
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+
+	/* init squelch */
+	squelch_init(&bnetz->squelch, bnetz->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
 
 	/* set modulation parameters */
 	sender_set_fm(&bnetz->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
-
-	audio_init_loss(&bnetz->sender.loss, LOSS_INTERVAL, bnetz->sender.loss_volume, LOSS_TIME);
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 2000 Hz)\n", TX_PEAK_FSK, 4.0);
 
@@ -98,15 +96,6 @@ int dsp_init_sender(bnetz_t *bnetz)
 	}
 
 	bnetz->tone_detected = -1;
-
-	bnetz->samples_per_chunk = (double)bnetz->sender.samplerate * CHUNK_DURATION;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per chunk duration.\n", bnetz->samples_per_chunk);
-	spl = calloc(bnetz->samples_per_chunk, sizeof(sample_t));
-	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
-		return -ENOMEM;
-	}
-	bnetz->chunk_spl = spl;
 
 	/* metering tone */
 	bnetz->meter_phaseshift65536 = 65536.0 / ((double)bnetz->sender.samplerate / METERING_HZ);
@@ -127,11 +116,6 @@ void dsp_cleanup_sender(bnetz_t *bnetz)
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	fsk_cleanup(&bnetz->fsk);
-
-	if (bnetz->chunk_spl) {
-		free(bnetz->chunk_spl);
-		bnetz->chunk_spl = NULL;
-	}
 }
 
 /* Count duration of tone and indicate detection/loss to protocol handler. */
@@ -154,8 +138,6 @@ static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level
 
 	bnetz->tone_count++;
 
-	if (bnetz->tone_count >= TONE_DETECT_TH)
-		audio_reset_loss(&bnetz->sender.loss);
 	if (bnetz->tone_count == TONE_DETECT_TH) {
 		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous tone: F%d Level=%3.0f%% Quality=%3.0f%%\n", bnetz->tone_detected, level * 100.0, quality * 100.0);
 		/* must reset, so we will not get corrupt first digit */
@@ -224,31 +206,27 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 }
 
 /* Process received audio stream from radio unit. */
-void sender_receive(sender_t *sender, sample_t *samples, int length)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_level_db)
 {
 	bnetz_t *bnetz = (bnetz_t *) sender;
 	sample_t *spl;
-	int max, pos;
-	double level;
+	int pos;
 	int i;
-
-	/* write received samples to decode buffer */
-	max = bnetz->samples_per_chunk;
-	pos = bnetz->chunk_pos;
-	spl = bnetz->chunk_spl;
-	for (i = 0; i < length; i++) {
-		spl[pos++] = samples[i];
-		if (pos == max) {
-			pos = 0;
-			level = audio_level(spl, max);
-			if (audio_detect_loss(&bnetz->sender.loss, level))
-				bnetz_loss_indication(bnetz);
-		}
-	}
-	bnetz->chunk_pos = pos;
 
 	/* fsk/tone signal */
 	fsk_receive(&bnetz->fsk, samples, length);
+
+	/* process signal mute/loss, without signalling tone / FSK frames */
+	switch (squelch(&bnetz->squelch, rf_level_db, (double)length / (double)bnetz->sender.samplerate)) {
+	case SQUELCH_LOSS:
+		bnetz_loss_indication(bnetz, LOSS_TIME);
+		// fall through:
+	case SQUELCH_MUTE:
+		memset(samples, 0, sizeof(*samples) * length);
+		break;
+	default:
+		break;
+	}
 
 	if ((bnetz->dsp_mode == DSP_MODE_AUDIO
 	  || bnetz->dsp_mode == DSP_MODE_AUDIO_METER) && bnetz->callref) {

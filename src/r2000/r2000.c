@@ -441,7 +441,7 @@ int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const ch
 	PDEBUG(DR2000, DEBUG_DEBUG, "Creating 'Radiocom 2000' instance for channel = %d (sample rate %d).\n", channel, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&r2000->sender, channel, r2000_channel2freq(band, channel, 0), r2000_channel2freq(band, channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, 0, PAGING_SIGNAL_NONE);
+	rc = sender_create(&r2000->sender, channel, r2000_channel2freq(band, channel, 0), r2000_channel2freq(band, channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DR2000, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
