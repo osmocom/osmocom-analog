@@ -147,12 +147,12 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		sdr->thread_read.buffer = calloc(sdr->thread_read.buffer_size, sizeof(*sdr->thread_read.buffer));
 		if (!sdr->thread_read.buffer) {
 			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
-			return NULL;
+			goto error;
 		}
 		sdr->thread_read.buffer2 = calloc(sdr->thread_read.buffer_size, sizeof(*sdr->thread_read.buffer2));
 		if (!sdr->thread_read.buffer2) {
 			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
-			return NULL;
+			goto error;
 		}
 		sdr->thread_read.in = sdr->thread_read.out = 0;
 		if (oversample > 1) {
@@ -164,12 +164,12 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		sdr->thread_write.buffer = calloc(sdr->thread_write.buffer_size, sizeof(*sdr->thread_write.buffer));
 		if (!sdr->thread_write.buffer) {
 			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
-			return NULL;
+			goto error;
 		}
 		sdr->thread_write.buffer2 = calloc(sdr->thread_write.buffer_size * sdr->oversample, sizeof(*sdr->thread_write.buffer2));
 		if (!sdr->thread_write.buffer2) {
 			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
-			return NULL;
+			goto error;
 		}
 		sdr->thread_write.in = sdr->thread_write.out = 0;
 		if (oversample > 1) {
