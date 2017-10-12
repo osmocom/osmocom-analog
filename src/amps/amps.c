@@ -75,6 +75,9 @@ double amps_channel2freq(int channel, int uplink)
 	double freq;
 
 	if (!tacs) {
+		if (uplink == 2)
+			return -45.000 * 1e6;
+
 		/* 832 channels, 990 not used, see TIA/EIA-136-110 */
 		if (channel < 1 || channel > 1023 || (channel > 799 && channel < 991))
 			return 0;
@@ -87,6 +90,9 @@ double amps_channel2freq(int channel, int uplink)
 		if (uplink)
 			freq -= 45.000;
 	} else if (!jtacs) {
+		if (uplink == 2)
+			return -45.000 * 1e6;
+
 		/* 600 channels */
 		if (channel < 1 || channel > 600)
 			return 0;
@@ -96,6 +102,9 @@ double amps_channel2freq(int channel, int uplink)
 		if (uplink)
 			freq -= 45.000;
 	} else {
+		if (uplink == 2)
+			return -55.000 * 1e6;
+
 		/* 799 channels */
 		if (channel < 1 || channel > 799)
 			return 0;

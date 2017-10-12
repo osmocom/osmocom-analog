@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
-		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], anetz_kanal2freq(kanal[i], 0) / 1e6, anetz_kanal2freq(kanal[i], 1) / 1e6);
+		printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], anetz_kanal2freq(kanal[i], 0) / 1e6, anetz_kanal2freq(kanal[i], 1) / 1e6, anetz_kanal2freq(kanal[i], 2) / 1e6);
 	}
 
 	main_mobile(&quit, latency, interval, NULL, station_id, 5);

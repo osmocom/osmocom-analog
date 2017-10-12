@@ -381,7 +381,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
 		}
-		printf("base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], r2000_channel2freq(band, kanal[i], 0) / 1e6, r2000_channel2freq(band, kanal[i], 1) / 1e6);
+		printf("base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], r2000_channel2freq(band, kanal[i], 0) / 1e6, r2000_channel2freq(band, kanal[i], 1) / 1e6, r2000_channel2freq(band, kanal[i], 2) / 1e6);
 		nconv = (nconv + 1) & 7;
 	}
 

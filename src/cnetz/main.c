@@ -566,9 +566,9 @@ int main(int argc, char *argv[])
 			goto fail;
 		}
 		if ((kanal[i] & 1)) {
-			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz.\n", kanal[i], cnetz_kanal2freq(kanal[i], 0) / 1e6, cnetz_kanal2freq(kanal[i], 1) / 1e6);
+			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], cnetz_kanal2freq(kanal[i], 0) / 1e6, cnetz_kanal2freq(kanal[i], 1) / 1e6, cnetz_kanal2freq(kanal[i], 2) / 1e6);
 		} else {
-			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], cnetz_kanal2freq(kanal[i], 0) / 1e6, cnetz_kanal2freq(kanal[i], 1) / 1e6);
+			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], cnetz_kanal2freq(kanal[i], 0) / 1e6, cnetz_kanal2freq(kanal[i], 1) / 1e6, cnetz_kanal2freq(kanal[i], 2) / 1e6);
 		}
 	}
 

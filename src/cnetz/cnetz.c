@@ -168,12 +168,15 @@ double cnetz_kanal2freq(int kanal, int unterband)
 {
 	double freq = 465.750;
 
+	if (unterband == 2)
+		return -10.000 * 1e6;
+
 	if ((kanal & 1))
 		freq -= (double)(kanal + 1) / 2.0 * 0.010;
 	else
 		freq -= (double)kanal / 2.0 * 0.0125;
 	if (unterband)
-		freq -= 10.0;
+		freq -= 10.000;
 
 	return freq * 1e6;
 }

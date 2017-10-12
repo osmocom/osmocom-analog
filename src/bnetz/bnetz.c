@@ -118,6 +118,9 @@ double bnetz_kanal2freq(int kanal, int unterband)
 {
 	double freq = 153.010;
 
+	if (unterband == 2)
+		return -4.600 * 1e6;
+
 	if (kanal >= 50)
 		freq += 9.200 - 0.020 * 49;
 	freq += (kanal - 1) * 0.020;

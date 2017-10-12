@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
 		}
-		printf("base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz.\n", kanal[i], nmt_channel2freq(nmt_system, country, kanal[i], 0, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, kanal[i], 1, NULL, NULL, NULL) / 1e6);
+		printf("base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], nmt_channel2freq(nmt_system, country, kanal[i], 0, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, kanal[i], 1, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, kanal[i], 2, NULL, NULL, NULL) / 1e6);
 	}
 
 	nmt_check_channels(nmt_system);

@@ -254,6 +254,8 @@ double nmt_channel2freq(int nmt_system, const char *short_name, int channel, int
 			for (j = 0; nmt_country[i].nmt_frequency[j].first_frequency; j++) {
 				if (channel >= nmt_country[i].nmt_frequency[j].first_channel
 				 && channel <= nmt_country[i].nmt_frequency[j].last_channel) {
+					if (uplink == 2)
+						return -nmt_country[i].nmt_frequency[j].duplex_spacing * 1e6;
 				 	/* add "channel offset" * "channel spacing" to "first frequency" */
 					freq = nmt_country[i].nmt_frequency[j].first_frequency;
 					freq += (double)(channel - nmt_country[i].nmt_frequency[j].first_channel) * nmt_country[i].nmt_frequency[j].channel_spacing;

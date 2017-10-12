@@ -114,6 +114,9 @@ double r2000_channel2freq(int band, int channel, int uplink)
 		return 0.0;
 	}
 
+	if (uplink == 2)
+		return -r2000_bands[i].duplex * 1e6;
+
 	freq = r2000_bands[i].dl_f0 + CHANNEL_SPACING * (double)(channel);
 	if (uplink)
 		freq -= r2000_bands[i].duplex;
