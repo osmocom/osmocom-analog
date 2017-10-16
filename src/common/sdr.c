@@ -49,6 +49,8 @@ enum paging_signal;
 /* enable to test without oversampling filter */
 //#define DISABLE_FILTER
 
+/* usable bandwidth of IQ rate, because no filter is perfect */
+#define USABLE_BANDWIDTH	0.75
 
 typedef struct sdr_thread {
 	int use;
@@ -122,7 +124,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 
 	bandwidth = 2.0 * (max_deviation + max_modulation);
-	PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of 2 * (%.1f + %.1f) = %.1f\n", max_deviation / 1000, max_modulation / 1000, bandwidth / 1000);
+	PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of each channel is 2 * (%.1f deviation + %.1f modulation) = %.1f KHz\n", max_deviation / 1e3, max_modulation / 1e3, bandwidth / 1e3);
 
 	if (channels < 1) {
 		PDEBUG(DSDR, DEBUG_ERROR, "No channel given, please fix!\n");
@@ -243,14 +245,13 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 				tx_high_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
 		}
 		/* range of TX */
-		double range = tx_high_frequency - tx_low_frequency;
-		if (range)
-			PDEBUG(DSDR, DEBUG_DEBUG, "Range between all TX Frequencies: %.6f MHz\n", range / 1e6);
-		if (range * 2 > samplerate) {
-			// why that? actually i don't know. i just want to be safe....
-			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies.\n");
-			PDEBUG(DSDR, DEBUG_NOTICE, "The given rate is %.6f MHz, but required rate must be >= %.6f MHz\n", samplerate / 1e6, range * 2.0 / 1e6);
+		double range = tx_high_frequency - tx_low_frequency + bandwidth;
+		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth for all TX Frequencies: %.0f Hz\n", range);
+		if (range > samplerate * USABLE_BANDWIDTH) {
+			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
+			PDEBUG(DSDR, DEBUG_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
 			PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
+			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
 			goto error;
 		}
 		tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
@@ -306,12 +307,13 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 				rx_high_frequency = sdr->chan[c].rx_frequency;
 		}
 		/* range of RX */
-		double range = rx_high_frequency - rx_low_frequency;
-		if (range)
-			PDEBUG(DSDR, DEBUG_DEBUG, "Range between all RX Frequencies: %.6f MHz\n", range / 1e6);
-		if (range * 2.0 > samplerate) {
-			// why that? actually i don't know. i just want to be safe....
-			PDEBUG(DSDR, DEBUG_NOTICE, "The sample rate must be at least twice the range between frequencies. Please increment samplerate!\n");
+		double range = rx_high_frequency - rx_low_frequency + bandwidth;
+		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth for all RX Frequencies: %.0f Hz\n", range);
+		if (range > samplerate * USABLE_BANDWIDTH) {
+			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
+			PDEBUG(DSDR, DEBUG_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
+			PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
+			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
 			goto error;
 		}
 		rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
