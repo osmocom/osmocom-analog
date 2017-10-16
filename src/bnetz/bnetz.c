@@ -55,7 +55,7 @@ static int new_callref = 0x40000000;
 #define TRENN_COUNT		4	/* min. 350 ms disconnect "Trennsignal" */
 #define TRENN_COUNT_NA		96	/* 12 s disconnect "Trennsignal" if no answer */
 
-#define METERING_DURATION	0.2	/* duration of metering pulse */
+#define METERING_DURATION	0.140	/* duration of metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.1) */
 #define METERING_START		1.0	/* start metering 1 second after call start */
 
 const char *bnetz_state_name(enum bnetz_state state)

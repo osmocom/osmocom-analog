@@ -47,7 +47,8 @@
 #define MAX_MODULATION	3000.0
 #define DBM0_DEVIATION	2800.0	/* deviation of dBm0 at 1 kHz */
 #define TX_PEAK_FSK	(4000.0 / 2000.0 * 1000.0 / DBM0_DEVIATION)
-#define TX_PEAK_METER	(3000.0 / 2900.0 * 1000.0 / DBM0_DEVIATION) /* FIXME: really 3KHz deviation??? */
+#define TX_PEAK_METER	(2000.0 / 2900.0 * 1000.0 / DBM0_DEVIATION) /* FIXME: what is the metering pulse deviation??? we use half of the 4kHz deviation, so we can still use -6dB of the speech level */
+#define DAMPEN_METER	0.5	/* use -6dB to dampen speech while sending metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.5) */
 #define MAX_DISPLAY	1.4	/* something above dBm0 */
 #define BIT_RATE	100.0
 #define BIT_ADJUST	0.5	/* full adjustment on bit change */
@@ -284,7 +285,9 @@ static void metering_tone(bnetz_t *bnetz, sample_t *samples, int length)
 	phase = bnetz->meter_phase65536;
 
 	for (i = 0; i < length; i++) {
-		*samples++ += dsp_metering[(uint16_t)phase];
+		/* Add metering pulse, also dampen audio level by 6 dB */
+		*samples = (*samples) * DAMPEN_METER + dsp_metering[(uint16_t)phase];
+		samples++;
 		phase += phaseshift;
 		if (phase >= 65536)
 			phase -= 65536;

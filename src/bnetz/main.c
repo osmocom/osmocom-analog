@@ -57,9 +57,9 @@ void print_help(const char *arg0)
 	printf("        (Kanal kleiner Leistung).\n");
 	printf(" -M --gebuehrenimpuls <secods> | -<seconds> | 0\n");
 	printf("        Send metering pulses every given number of seconds or 0 to turn off.\n");
-	printf("        Pulses will only be sent on outgoing calls and only if mobile station\n");
-	printf("        supports it and only for outgoing calls. Use negative value to force\n");
-	printf("        metering pulses for all phones and all calls. (default = %d)\n", metering);
+	printf("        Pulses will be sent on outgoing calls only and only if mobile station\n");
+	printf("        requests it. Use negative value to force metering pulses for all calls.\n");
+	printf("        (default = %d)\n", metering);
 	printf(" -P --paging tone | notone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");
