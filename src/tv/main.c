@@ -288,7 +288,12 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		float *buff = NULL;
 		void *sdr = NULL;
 		int latspl = samplerate * latency / 1000;
-		float *sendbuff;
+		float *sendbuff = NULL;
+
+		if ((sdr_config->uhd == 0 && sdr_config->soapy == 0)) {
+			fprintf(stderr, "You must choose SDR API you want: --sdr-uhd or --sdr-soapy or -w <file> to generate wave file.\n");
+			goto error;
+		}
 
 		sendbuff = calloc(latspl * 2, sizeof(*sendbuff));
 		if (!sendbuff) {
