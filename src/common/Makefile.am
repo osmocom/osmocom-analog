@@ -27,6 +27,7 @@ libmobile_a_SOURCES = \
 	cause.c \
 	call.c \
 	testton.c \
+	mncc_console.c \
 	mncc_sock.c \
 	hagelbarger.c \
 	display_status.c \

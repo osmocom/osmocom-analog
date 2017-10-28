@@ -227,7 +227,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 		for (i = 0; i < count; i++) {
 			spl[pos++] = samples[i];
 			if (pos == 160) {
-				call_tx_audio(anetz->callref, spl, 160);
+				call_up_audio(anetz->callref, spl, 160);
 				pos = 0;
 			}
 		}

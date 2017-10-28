@@ -837,7 +837,7 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 	for (i = 0; i < count; i++) {
 		spl[pos++] = speech_buffer[i];
 		if (pos == 160) {
-			call_tx_audio(cnetz->trans_list->callref, spl, 160);
+			call_up_audio(cnetz->trans_list->callref, spl, 160);
 			pos = 0;
 		}
 	}

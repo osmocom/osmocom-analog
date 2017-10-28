@@ -391,7 +391,7 @@ void bnetz_loss_indication(bnetz_t *bnetz, double loss_time)
 	 || bnetz->state == BNETZ_RUFHALTUNG) {
 		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Detected loss of signal after %.1f seconds, releasing.\n", loss_time);
 		bnetz_release(bnetz, TRENN_COUNT);
-		call_in_release(bnetz->callref, CAUSE_TEMPFAIL);
+		call_up_release(bnetz->callref, CAUSE_TEMPFAIL);
 		bnetz->callref = 0;
 	}
 }
@@ -425,7 +425,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			timer_stop(&bnetz->timer);
 			bnetz_new_state(bnetz, BNETZ_RUFHALTUNG);
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
-			call_in_alerting(bnetz->callref);
+			call_up_alerting(bnetz->callref);
 			timer_start(&bnetz->timer, ALERTING_TO);
 			break;
 		}
@@ -439,7 +439,7 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			/* start metering pulses if forced */
 			if (bnetz->metering < 0)
 				timer_start(&bnetz->timer, METERING_START);
-			call_in_answer(bnetz->callref, bnetz->station_id);
+			call_up_answer(bnetz->callref, bnetz->station_id);
 			break;
 		}
 	default:
@@ -615,7 +615,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 
 				/* setup call */
 				PDEBUG(DBNETZ, DEBUG_INFO, "Setup call to network.\n");
-				rc = call_in_setup(callref, bnetz->station_id, dialing);
+				rc = call_up_setup(callref, bnetz->station_id, dialing);
 				if (rc < 0) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
 					bnetz_release(bnetz, TRENN_COUNT);
@@ -652,7 +652,7 @@ lets see, if noise will not generate a release signal....
 		if (digit == 't') {
 			PDEBUG(DBNETZ, DEBUG_NOTICE, "Received 'Schlusssignal' from mobile station\n");
 			bnetz_release(bnetz, TRENN_COUNT);
-			call_in_release(bnetz->callref, CAUSE_NORMAL);
+			call_up_release(bnetz->callref, CAUSE_NORMAL);
 			bnetz->callref = 0;
 			break;
 		}
@@ -691,7 +691,7 @@ static void bnetz_timeout(struct timer *timer)
 		if (bnetz->page_try == PAGE_TRIES) {
 			PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for call acknowledge from mobile station, going idle.\n");
 			bnetz_release(bnetz, TRENN_COUNT);
-			call_in_release(bnetz->callref, CAUSE_OUTOFORDER);
+			call_up_release(bnetz->callref, CAUSE_OUTOFORDER);
 			bnetz->callref = 0;
 			break;
 		}
@@ -701,7 +701,7 @@ static void bnetz_timeout(struct timer *timer)
 	case BNETZ_RUFHALTUNG:
 		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for answer of mobile station, releasing.\n");
 		bnetz_release(bnetz, TRENN_COUNT_NA);
-		call_in_release(bnetz->callref, CAUSE_NOANSWER);
+		call_up_release(bnetz->callref, CAUSE_NOANSWER);
 		bnetz->callref = 0;
 		break;
 	case BNETZ_GESPRAECH:
@@ -726,7 +726,7 @@ static void bnetz_timeout(struct timer *timer)
 }
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
+int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;
@@ -776,7 +776,7 @@ inval:
 	return 0;
 }
 
-void call_out_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref)
 {
 }
 
@@ -784,7 +784,7 @@ void call_out_answer(int __attribute__((unused)) callref)
  * An active call stays active, so tones and annoucements can be received
  * by mobile station.
  */
-void call_out_disconnect(int callref, int cause)
+void call_down_disconnect(int callref, int cause)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;
@@ -798,7 +798,7 @@ void call_out_disconnect(int callref, int cause)
 	}
 	if (!sender) {
 		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
-		call_in_release(callref, CAUSE_INVALCALLREF);
+		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
@@ -820,13 +820,13 @@ void call_out_disconnect(int callref, int cause)
 		break;
 	}
 
-	call_in_release(callref, cause);
+	call_up_release(callref, cause);
 
 	bnetz->callref = 0;
 }
 
 /* Call control releases call toward mobile station. */
-void call_out_release(int callref, int __attribute__((unused)) cause)
+void call_down_release(int callref, int __attribute__((unused)) cause)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;
@@ -867,7 +867,7 @@ void call_out_release(int callref, int __attribute__((unused)) cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;

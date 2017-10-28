@@ -557,7 +557,7 @@ void r2000_go_idle(r2000_t *r2000)
 
 	if (r2000->callref) {
 		PDEBUG(DR2000, DEBUG_ERROR, "Going idle, but still having callref, please fix!\n");
-		call_in_release(r2000->callref, CAUSE_NORMAL);
+		call_up_release(r2000->callref, CAUSE_NORMAL);
 		r2000->callref = 0;
 	}
 
@@ -635,7 +635,7 @@ static r2000_t *move_call_to_chan(r2000_t *old_r2000, enum r2000_chan_type chan_
 		PDEBUG(DR2000, DEBUG_NOTICE, "Cannot move us to %s, because there is no free channel!\n", chan_type_long_name(chan_type));
 		if (old_r2000->callref) {
 			PDEBUG(DR2000, DEBUG_NOTICE, "Failed to assign channel, releasing towards network\n");
-			call_in_release(old_r2000->callref, CAUSE_NOCHANNEL);
+			call_up_release(old_r2000->callref, CAUSE_NOCHANNEL);
 			old_r2000->callref = 0;
 		}
 		r2000_release(old_r2000);
@@ -835,7 +835,7 @@ static void rx_ident(r2000_t *r2000, frame_t *frame)
 			/* alert the phone */
 			r2000_new_state(r2000, STATE_IN_ALERT);
 			timer_start(&r2000->timer, ALERT_TIME);
-			call_in_alerting(r2000->callref);
+			call_up_alerting(r2000->callref);
 			break;
 		case STATE_RECALL_IDENT:
 			/* alert the phone */
@@ -884,7 +884,7 @@ static void timeout_in_ident(r2000_t *r2000)
 
 	/* ... or release */
 	PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Phone does not response, releasing towards network\n");
-	call_in_release(r2000->callref, CAUSE_OUTOFORDER);
+	call_up_release(r2000->callref, CAUSE_OUTOFORDER);
 	r2000->callref = 0;
 	r2000_release(r2000);
 }
@@ -920,7 +920,7 @@ static int setup_call(r2000_t *r2000)
 
 	/* make call toward network */
 	PDEBUG(DR2000, DEBUG_INFO, "Setup call to network.\n");
-	rc = call_in_setup(callref, subscriber2string(&r2000->subscriber), r2000->subscriber.dialing);
+	rc = call_up_setup(callref, subscriber2string(&r2000->subscriber), r2000->subscriber.dialing);
 	if (rc < 0) {
 		PDEBUG(DR2000, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
 		r2000_release(r2000);
@@ -952,7 +952,7 @@ static void rx_alert(r2000_t *r2000, frame_t *frame)
 		case STATE_IN_ALERT:
 			/* answer incomming call */
 			PDEBUG(DR2000, DEBUG_INFO, "Answer call to network.\n");
-			call_in_answer(r2000->callref, subscriber2string(&r2000->subscriber));
+			call_up_answer(r2000->callref, subscriber2string(&r2000->subscriber));
 			break;
 		case STATE_OUT_ALERT:
 			/* setup call, possible r2000_release() is called there! */
@@ -983,7 +983,7 @@ static void timeout_alert(r2000_t *r2000)
 
 	PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Phone does not response, releasing towards network\n");
 	if (r2000->callref) {
-		call_in_release(r2000->callref, CAUSE_NOANSWER);
+		call_up_release(r2000->callref, CAUSE_NOANSWER);
 		r2000->callref = 0;
 	}
 	r2000_release(r2000);
@@ -1150,7 +1150,7 @@ static void timeout_active(r2000_t *r2000)
 {
 	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout after loosing supervisory signal, releasing call\n");
 
-	call_in_release(r2000->callref, CAUSE_TEMPFAIL);
+	call_up_release(r2000->callref, CAUSE_TEMPFAIL);
 	r2000->callref = 0;
 	r2000_release(r2000);
 }
@@ -1309,7 +1309,7 @@ void r2000_receive_frame(r2000_t *r2000, const char *bits, double quality, doubl
 		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received release from station mobile\n");
 
 		if (r2000->callref) {
-			call_in_release(r2000->callref, CAUSE_NORMAL);
+			call_up_release(r2000->callref, CAUSE_NORMAL);
 			r2000->callref = 0;
 		}
 		r2000_go_idle(r2000);
@@ -1425,7 +1425,7 @@ static void r2000_timeout(struct timer *timer)
  */
 
 /* Call control starts call towards station mobile. */
-int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
+int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	r2000_t *r2000, *tc;
@@ -1475,7 +1475,7 @@ int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, e
 }
 
 /* Call control answers call toward station mobile. */
-void call_out_answer(int callref)
+void call_down_answer(int callref)
 {
 	sender_t *sender;
 	r2000_t *r2000;
@@ -1487,7 +1487,7 @@ void call_out_answer(int callref)
 	}
 	if (!sender) {
 		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing answer, but no callref!\n");
-		call_in_release(callref, CAUSE_INVALCALLREF);
+		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
@@ -1506,7 +1506,7 @@ void call_out_answer(int callref)
  * An active call stays active, so tones and annoucements can be received
  * by station mobile.
  */
-void call_out_disconnect(int callref, int __attribute__((unused)) cause)
+void call_down_disconnect(int callref, int __attribute__((unused)) cause)
 {
 	sender_t *sender;
 	r2000_t *r2000;
@@ -1520,7 +1520,7 @@ void call_out_disconnect(int callref, int __attribute__((unused)) cause)
 	}
 	if (!sender) {
 		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
-		call_in_release(callref, CAUSE_INVALCALLREF);
+		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
@@ -1535,11 +1535,11 @@ void call_out_disconnect(int callref, int __attribute__((unused)) cause)
 		break;
 	}
 
-	call_in_release(callref, cause);
+	call_up_release(callref, cause);
 }
 
 /* Call control releases call toward station mobile. */
-void call_out_release(int callref, int __attribute__((unused)) cause)
+void call_down_release(int callref, int __attribute__((unused)) cause)
 {
 	sender_t *sender;
 	r2000_t *r2000;
@@ -1572,7 +1572,7 @@ void call_out_release(int callref, int __attribute__((unused)) cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	r2000_t *r2000;

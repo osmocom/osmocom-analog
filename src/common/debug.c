@@ -27,7 +27,7 @@
 #include "sample.h"
 #include "debug.h"
 #include "display.h"
-#include "call.h"
+#include "mncc_console.h"
 
 const char *debug_level[] = {
 	"debug  ",
@@ -51,7 +51,7 @@ struct debug_cat {
 	{ "amps", "\033[1;34m" },
 	{ "r2000", "\033[1;34m" },
 	{ "frame", "\033[0;36m" },
-	{ "call", "\033[1;37m" },
+	{ "call", "\033[0;37m" },
 	{ "mncc", "\033[1;32m" },
 	{ "database", "\033[0;33m" },
 	{ "transaction", "\033[0;32m" },

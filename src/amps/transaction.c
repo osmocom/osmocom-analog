@@ -127,7 +127,7 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 		if (old_amps) /* should be... */
 			amps_go_idle(old_amps);
 		if (old_callref)
-			call_in_release(old_callref, CAUSE_NORMAL);
+			call_up_release(old_callref, CAUSE_NORMAL);
 	}
 
 	trans = calloc(1, sizeof(*trans));

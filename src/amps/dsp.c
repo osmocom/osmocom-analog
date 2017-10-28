@@ -841,7 +841,7 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 			if (pos == 160) {
 				if (amps->dtx_state == 0)
 					comfort_noise(spl, 160);
-				call_tx_audio(trans->callref, spl, 160);
+				call_up_audio(trans->callref, spl, 160);
 				pos = 0;
 			}
 		}

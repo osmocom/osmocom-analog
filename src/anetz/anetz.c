@@ -287,7 +287,7 @@ void anetz_loss_indication(anetz_t *anetz, double loss_time)
 	if (anetz->state == ANETZ_GESPRAECH) {
 		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Detected loss of signal after %.1f seconds, releasing.\n", loss_time);
 		anetz_release(anetz);
-		call_in_release(anetz->callref, CAUSE_TEMPFAIL);
+		call_up_release(anetz->callref, CAUSE_TEMPFAIL);
 		anetz->callref = 0;
 	}
 }
@@ -328,7 +328,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				int rc;
 
 				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
-				rc = call_in_setup(callref, NULL, "010");
+				rc = call_up_setup(callref, NULL, "010");
 				if (rc < 0) {
 					PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
 					anetz_release(anetz);
@@ -337,7 +337,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				anetz->callref = callref;
 			} else {
 				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
-				call_in_answer(anetz->callref, anetz->station_id);
+				call_up_answer(anetz->callref, anetz->station_id);
 			}
 			anetz_set_dsp_mode(anetz, DSP_MODE_AUDIO, 0);
 		}
@@ -345,7 +345,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		if (tone == 1) {
 			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
 			anetz_release(anetz);
-			call_in_release(anetz->callref, CAUSE_NORMAL);
+			call_up_release(anetz->callref, CAUSE_NORMAL);
 			anetz->callref = 0;
 			break;
 		}
@@ -373,7 +373,7 @@ static void anetz_timeout(struct timer *timer)
 	case ANETZ_ANRUF:
 		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Timeout while waiting for answer, releasing.\n");
 	 	anetz_go_idle(anetz);
-		call_in_release(anetz->callref, CAUSE_NOANSWER);
+		call_up_release(anetz->callref, CAUSE_NOANSWER);
 		anetz->callref = 0;
 		break;
 	case ANETZ_AUSLOESEN:
@@ -385,7 +385,7 @@ static void anetz_timeout(struct timer *timer)
 }
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
+int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	anetz_t *anetz;
@@ -433,12 +433,12 @@ inval:
 	anetz->callref = callref;
 	anetz_page(anetz, dialing, freq);
 
-	call_in_alerting(callref);
+	call_up_alerting(callref);
 
 	return 0;
 }
 
-void call_out_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref)
 {
 }
 
@@ -446,7 +446,7 @@ void call_out_answer(int __attribute__((unused)) callref)
  * An active call stays active, so tones and annoucements can be received
  * by mobile station.
  */
-void call_out_disconnect(int callref, int cause)
+void call_down_disconnect(int callref, int cause)
 {
 	sender_t *sender;
 	anetz_t *anetz;
@@ -460,7 +460,7 @@ void call_out_disconnect(int callref, int cause)
 	}
 	if (!sender) {
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
-		call_in_release(callref, CAUSE_INVALCALLREF);
+		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
@@ -476,14 +476,14 @@ void call_out_disconnect(int callref, int cause)
 		break;
 	}
 
-	call_in_release(callref, cause);
+	call_up_release(callref, cause);
 
 	anetz->callref = 0;
 
 }
 
 /* Call control releases call toward mobile station. */
-void call_out_release(int callref, __attribute__((unused)) int cause)
+void call_down_release(int callref, __attribute__((unused)) int cause)
 {
 	sender_t *sender;
 	anetz_t *anetz;
@@ -518,7 +518,7 @@ void call_out_release(int callref, __attribute__((unused)) int cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	anetz_t *anetz;

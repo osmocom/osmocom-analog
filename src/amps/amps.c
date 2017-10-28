@@ -643,7 +643,7 @@ void amps_go_idle(amps_t *amps)
 	if (amps->trans_list) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Releasing but still having transaction, please fix!\n");
 		if (amps->trans_list->callref)
-			call_in_release(amps->trans_list->callref, CAUSE_NORMAL);
+			call_up_release(amps->trans_list->callref, CAUSE_NORMAL);
 		destroy_transaction(amps->trans_list);
 	}
 
@@ -676,7 +676,7 @@ static void amps_release(transaction_t *trans, uint8_t cause)
 	trans->order = 3;
 	/* release towards call control */
 	if (trans->callref) {
-		call_in_release(trans->callref, cause);
+		call_up_release(trans->callref, cause);
 		trans->callref = 0;
 	}
 	/* change DSP mode to transmit release */
@@ -709,14 +709,14 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 			break;
 		timer_stop(&trans->timer);
 		if (trans->callref)
-			call_in_release(trans->callref, CAUSE_NORMAL);
+			call_up_release(trans->callref, CAUSE_NORMAL);
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		break;
 	case TRANS_CALL_MT_ALERT:
 		if (tone) {
 			timer_stop(&trans->timer);
-			call_in_alerting(trans->callref);
+			call_up_alerting(trans->callref);
 			amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
 			trans_new_state(trans, TRANS_CALL_MT_ALERT_SEND);
 			timer_start(&trans->timer, ALERT_TO);
@@ -727,7 +727,7 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 			timer_stop(&trans->timer);
 			if (!trans->sat_detected)
 				timer_start(&trans->timer, SAT_TO1);
-			call_in_answer(trans->callref, amps_min2number(trans->min1, trans->min2));
+			call_up_answer(trans->callref, amps_min2number(trans->min1, trans->min2));
 			trans_new_state(trans, TRANS_CALL);
 		}
 		break;
@@ -887,7 +887,7 @@ reject:
  */
 
 /* Call control starts call towards mobile station. */
-int call_out_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
+int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -959,7 +959,7 @@ inval:
 	return 0;
 }
 
-void call_out_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref)
 {
 }
 
@@ -967,7 +967,7 @@ void call_out_answer(int __attribute__((unused)) callref)
  * An active call stays active, so tones and annoucements can be received
  * by mobile station.
  */
-void call_out_disconnect(int callref, int cause)
+void call_down_disconnect(int callref, int cause)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -984,7 +984,7 @@ void call_out_disconnect(int callref, int cause)
 	}
 	if (!sender) {
 		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
-		call_in_release(callref, CAUSE_INVALCALLREF);
+		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
@@ -1001,7 +1001,7 @@ void call_out_disconnect(int callref, int cause)
 		return;
 	default:
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control disconnects on control channel, removing transaction.\n");
-		call_in_release(callref, cause);
+		call_up_release(callref, cause);
 		trans->callref = 0;
 		destroy_transaction(trans);
 		amps_go_idle(amps);
@@ -1009,7 +1009,7 @@ void call_out_disconnect(int callref, int cause)
 }
 
 /* Call control releases call toward mobile station. */
-void call_out_release(int callref, int cause)
+void call_down_release(int callref, int cause)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -1046,7 +1046,7 @@ void call_out_release(int callref, int cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, sample_t *samples, int count)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -1126,7 +1126,7 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 	if (!trans->callref) {
 		/* setup call */
 		PDEBUG(DAMPS, DEBUG_INFO, "Setup call to network.\n");
-		rc = call_in_setup(callref, callerid, trans->dialing);
+		rc = call_up_setup(callref, callerid, trans->dialing);
 		if (rc < 0) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", rc);
 			amps_release(trans, 0);

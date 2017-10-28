@@ -881,7 +881,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			int callref = ++new_callref;
 			int rc;
 			PDEBUG(DNMT, DEBUG_INFO, "Setup call to network.\n");
-			rc = call_in_setup(callref, &trans->subscriber.country, nmt->dialing);
+			rc = call_up_setup(callref, &trans->subscriber.country, nmt->dialing);
 			if (rc < 0) {
 				PDEBUG(DNMT, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", rc);
 				nmt_release(nmt);
@@ -971,7 +971,7 @@ void timeout_mt_paging(transaction_t *trans)
 	PDEBUG(DNMT, DEBUG_NOTICE, "No answer from mobile phone (try %d).\n", trans->page_try);
 	if (trans->page_try == PAGE_TRIES) {
 		PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
-		call_in_release(trans->callref, CAUSE_OUTOFORDER);
+		call_up_release(trans->callref, CAUSE_OUTOFORDER);
 		destroy_transaction(trans);
 		return;
 	}
@@ -1036,7 +1036,7 @@ static void tx_mt_ident(nmt_t *nmt, frame_t *frame)
 	if (nmt->tx_frame_count == 8) {
 		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Release call towards network.\n");
-		call_in_release(trans->callref, CAUSE_TEMPFAIL);
+		call_up_release(trans->callref, CAUSE_TEMPFAIL);
 		destroy_transaction(trans);
 	}
 }
@@ -1066,7 +1066,7 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 				nmt->tx_callerid_count = 0;
 			}
 			timer_start(&nmt->timer, RINGING_TO);
-			call_in_alerting(trans->callref);
+			call_up_alerting(trans->callref);
 		}
 		break;
 	default:
@@ -1092,7 +1092,7 @@ static void tx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 		nmt->tx_frame_count = 0;
 		nmt->tx_callerid_count = 0;
 		timer_start(&nmt->timer, RINGING_TO);
-		call_in_alerting(trans->callref);
+		call_up_alerting(trans->callref);
 	}
 }
 
@@ -1121,7 +1121,7 @@ static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received acknowledge to autoanswer.\n");
 		nmt_new_state(nmt, STATE_MT_COMPLETE);
 		nmt->tx_frame_count = 0;
-		call_in_answer(trans->callref, &trans->subscriber.country);
+		call_up_answer(trans->callref, &trans->subscriber.country);
 		break;
 	default:
 		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
@@ -1180,7 +1180,7 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 		nmt_new_state(nmt, STATE_MT_COMPLETE);
 		nmt->tx_frame_count = 0;
 		timer_stop(&nmt->timer);
-		call_in_answer(trans->callref, &trans->subscriber.country);
+		call_up_answer(trans->callref, &trans->subscriber.country);
 		break;
 	default:
 		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
@@ -1220,7 +1220,7 @@ static void timeout_mt_ringing(nmt_t *nmt)
 
 	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout while waiting for answer of the phone.\n");
 	PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
-	call_in_release(trans->callref, CAUSE_NOANSWER);
+	call_up_release(trans->callref, CAUSE_NOANSWER);
 	trans->callref = 0;
 	nmt_release(nmt);
 }
@@ -1320,7 +1320,7 @@ static void timeout_active(nmt_t *nmt, double duration)
 	else
 		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout after %.0f seconds loosing supervisory signal.\n", duration);
 	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Release call towards network.\n");
-	call_in_release(trans->callref, CAUSE_TEMPFAIL);
+	call_up_release(trans->callref, CAUSE_TEMPFAIL);
 	trans->callref = 0;
 	nmt_release(nmt);
 }
@@ -1497,7 +1497,7 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 		nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
 		if (nmt->trans->callref) {
 			PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
-			call_in_release(nmt->trans->callref, CAUSE_NORMAL);
+			call_up_release(nmt->trans->callref, CAUSE_NORMAL);
 			nmt->trans->callref = 0;
 		}
 		return;
@@ -1719,7 +1719,7 @@ inval:
 
 	return 0;
 }
-int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
+int call_down_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing)
 {
 	return _out_setup(callref, caller_id, caller_type, dialing, NULL);
 }
@@ -1728,7 +1728,7 @@ int sms_out_setup(char *dialing, const char *caller_id, enum number_type caller_
 	return _out_setup(0, caller_id, caller_type, dialing, sms);
 }
 
-void call_out_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref)
 {
 }
 
@@ -1736,7 +1736,7 @@ void call_out_answer(int __attribute__((unused)) callref)
  * An active call stays active, so tones and annoucements can be received
  * by mobile station.
  */
-void call_out_disconnect(int callref, int cause)
+void call_down_disconnect(int callref, int cause)
 {
 	transaction_t *trans;
 	nmt_t *nmt;
@@ -1746,13 +1746,13 @@ void call_out_disconnect(int callref, int cause)
 	trans = get_transaction_by_callref(callref);
 	if (!trans) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
-		call_in_release(callref, CAUSE_INVALCALLREF);
+		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 	nmt = trans->nmt;
 
 	if (!nmt) {
-		call_in_release(callref, cause);
+		call_up_release(callref, cause);
 		trans->callref = 0;
 		destroy_transaction(trans);
 		return;
@@ -1774,11 +1774,11 @@ void call_out_disconnect(int callref, int cause)
 		break;
 	}
 
-	call_in_release(callref, cause);
+	call_up_release(callref, cause);
 }
 
 /* Call control releases call toward mobile station. */
-void call_out_release(int callref, int __attribute__((unused)) cause)
+void call_down_release(int callref, int __attribute__((unused)) cause)
 {
 	transaction_t *trans;
 	nmt_t *nmt;
@@ -1817,7 +1817,7 @@ void call_out_release(int callref, int __attribute__((unused)) cause)
 }
 
 /* Receive audio from call instance. */
-void call_rx_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, sample_t *samples, int count)
 {
 	transaction_t *trans;
 	nmt_t *nmt;

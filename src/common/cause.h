@@ -7,6 +7,9 @@
 #define CAUSE_TEMPFAIL		41
 #define CAUSE_INVALCALLREF	81
 
+#define LOCATION_USER		0
+#define LOCATION_PRIVATE_LOCAL	1
+
 const char *cause_name(int cause);
 
 

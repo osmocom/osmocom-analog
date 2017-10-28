@@ -9,34 +9,32 @@ enum number_type {
 	TYPE_INTERNATIONAL,
 };
 
-int call_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int use_mncc_sock, int send_patterns, int release_on_disconnect, int echo_test);
-void call_cleanup(void);
-int call_open_audio(int latspl);
-int call_start_audio(void);
-void process_call(int c);
-void clear_console_text(void);
-void print_console_text(void);
+int call_init(int _send_patterns, int _release_on_disconnect);
+
+/* function pointer to delive MNCC messages to upper layer */
+extern int (*mncc_up)(uint8_t *buf, int length);
+/* MNCC messages from upper layer */
+void mncc_down(uint8_t *buf, int length);
+/* flush all calls in case of MNCC socket failure */
+void mncc_flush(void);
 
 /* received messages */
-int call_in_setup(int callref, const char *callerid, const char *dialing);
-void call_in_alerting(int callref);
-void call_in_answer(int callref, const char *connect_id);
-void call_in_release(int callref, int cause);
+int call_up_setup(int callref, const char *callerid, const char *dialing);
+void call_up_alerting(int callref);
+void call_up_answer(int callref, const char *connect_id);
+void call_up_release(int callref, int cause);
 void call_tone_recall(int callref, int on);
 
 /* send messages */
-int call_out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing);
-void call_out_answer(int callref);
-void call_out_disconnect(int callref, int cause);
-void call_out_release(int callref, int cause);
+int call_down_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing);
+void call_down_answer(int callref);
+void call_down_disconnect(int callref, int cause);
+void call_down_release(int callref, int cause);
 
 /* send and receive audio */
-void call_rx_audio(int callref, sample_t *samples, int count);
-void call_tx_audio(int callref, sample_t *samples, int count);
+void call_up_audio(int callref, sample_t *samples, int count);
+void call_down_audio(int callref, sample_t *samples, int count);
 
-/* receive from mncc */
-void call_mncc_recv(uint8_t *buf, int length);
-void call_mncc_flush(void);
 /* clock to transmit to */
-void call_mncc_clock(void);
+void call_clock(void);
 

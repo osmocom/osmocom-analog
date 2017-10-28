@@ -35,6 +35,7 @@
 #include "sender.h"
 #include "timer.h"
 #include "call.h"
+#include "mncc_console.h"
 #include "mncc_sock.h"
 #ifdef HAVE_SDR
 #include "sdr.h"
@@ -425,6 +426,20 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	/* latency of send buffer in samples */
 	latspl = samplerate * latency / 1000;
 
+	/* check MNCC support */
+	if (use_mncc_sock && call_audiodev[0]) {
+		fprintf(stderr, "You selected MNCC interface, but it cannot be used with call device (headset).\n");
+		return;
+	}
+	if (use_mncc_sock && echo_test) {
+		fprintf(stderr, "You selected MNCC interface, but it cannot be used with echo test.\n");
+		return;
+	}
+	if (echo_test && call_audiodev[0]) {
+		fprintf(stderr, "You selected call device (headset), but it cannot be used with echo test.\n");
+		return;
+	}
+
 	/* init mncc */
 	if (use_mncc_sock) {
 		char mncc_sock_name[64];
@@ -433,15 +448,17 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 			mncc_sock_name[sizeof(mncc_sock_name) - 1] = '\0';
 		} else
 			strcpy(mncc_sock_name, "/tmp/bsc_mncc");
-		rc = mncc_init(mncc_sock_name);
+		rc = mncc_sock_init(mncc_sock_name);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
 			return;
 		}
+	} else {
+		console_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, echo_test);
 	}
 
-	/* init call device */
-	rc = call_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, use_mncc_sock, send_patterns, release_on_disconnect, echo_test);
+	/* init call control instance */
+	rc = call_init((use_mncc_sock) ? send_patterns : 0, release_on_disconnect);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		return;
@@ -456,7 +473,7 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	/* open audio */
 	if (sender_open_audio(latspl))
 		return;
-	if (call_open_audio(latspl))
+	if (console_open_audio(latspl))
 		return;
 
 	/* real time priority */
@@ -488,7 +505,7 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	/* start streaming */
 	if (sender_start_audio())
 		*quit = 1;
-	if (call_start_audio())
+	if (console_start_audio())
 		*quit = 1;
 
 	while(!(*quit)) {
@@ -512,7 +529,7 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 		if (now - last_time_call >= 0.020) {
 			last_time_call += 0.020;
 			/* call clock every 20ms */
-			call_mncc_clock();
+			call_clock();
 		}
 
 next_char:
@@ -578,8 +595,11 @@ next_char:
 			goto next_char;
 		}
 
-		/* process audio of built-in call control */
-		process_call(c);
+		/* process call control */
+		if (use_mncc_sock)
+			mncc_sock_handle();
+		else
+			process_console(c);
 
 		if (myhandler)
 			myhandler();
@@ -619,10 +639,11 @@ next_char:
 	}
 
 	/* cleanup call control */
-	call_cleanup();
+	if (!use_mncc_sock)
+		console_cleanup();
 
 	/* close mncc socket */
 	if (use_mncc_sock)
-		mncc_exit();
+		mncc_sock_exit();
 }
 

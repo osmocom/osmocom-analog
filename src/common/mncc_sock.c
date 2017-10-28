@@ -29,33 +29,34 @@
 #include "sample.h"
 #include "debug.h"
 #include "call.h"
+#include "cause.h"
 #include "mncc_sock.h"
 
 static int listen_sock = -1;
 static int mncc_sock = -1;
 
 /* write to mncc socket, return error or -EIO if no socket connection */
-int mncc_write(uint8_t *buf, int length)
+static int mncc_write(uint8_t *buf, int length)
 {
 	int rc;
 
 	if (mncc_sock <= 0) {
-		PDEBUG(DMNCC, DEBUG_NOTICE, "MNCC not connected.\n");
-		return -EIO;
+		PDEBUG(DMNCC, DEBUG_NOTICE, "We have no MNCC connection, rejecting.\n");
+		return -CAUSE_TEMPFAIL;
 	}
 	rc = send(mncc_sock, buf, length, 0);
 	if (rc < 0) {
 		PDEBUG(DMNCC, DEBUG_ERROR, "MNCC connection failed (errno = %d).\n", errno);
 		mncc_sock_close();
-		return 0;
+		return -CAUSE_TEMPFAIL;
 	}
 	if (rc != length) {
 		PDEBUG(DMNCC, DEBUG_NOTICE, "MNCC write failed.\n");
 		mncc_sock_close();
-		return 0;
+		return -CAUSE_TEMPFAIL;
 	}
 
-	return rc;
+	return 0;
 }
 
 
@@ -80,7 +81,7 @@ static int mncc_read(void)
 		return -errno;
 	}
 
-	call_mncc_recv(buf, rc);
+	mncc_down(buf, rc);
 
 	return rc;
 }
@@ -141,7 +142,7 @@ static int mncc_accept(void)
 	return 1;
 }
 
-void mncc_handle(void)
+void mncc_sock_handle(void)
 {
 	mncc_accept();
 
@@ -159,11 +160,11 @@ void mncc_sock_close(void)
 		close(mncc_sock);
 		mncc_sock = -1;
 		/* clear all call instances */
-		call_mncc_flush();
+		mncc_flush();
 	}
 }
 
-int mncc_init(const char *sock_name)
+int mncc_sock_init(const char *sock_name)
 {
 	struct sockaddr_un local;
 	unsigned int namelen;
@@ -197,14 +198,14 @@ int mncc_init(const char *sock_name)
 	if (rc < 0) {
 		PDEBUG(DMNCC, DEBUG_ERROR, "Failed to bind the unix domain "
 			"socket. '%s'\n", local.sun_path);
-		mncc_exit();
+		mncc_sock_exit();
 		return rc;
 	}
 
 	rc = listen(listen_sock, 0);
 	if (rc < 0) {
 		PDEBUG(DMNCC, DEBUG_ERROR, "Failed to listen.\n");
-		mncc_exit();
+		mncc_sock_exit();
 		return rc;
 	}
 
@@ -213,16 +214,18 @@ int mncc_init(const char *sock_name)
 	rc = fcntl(listen_sock, F_SETFL, flags | O_NONBLOCK);
 	if (rc < 0) {
 		PDEBUG(DMNCC, DEBUG_ERROR, "Failed to set socket into non-blocking IO mode.\n");
-		mncc_exit();
+		mncc_sock_exit();
 		return rc;
 	}
+
+	mncc_up = mncc_write;
 
 	PDEBUG(DMNCC, DEBUG_DEBUG, "MNCC socket at '%s' initialized, waiting for connection.\n", sock_name);
 
 	return 0;
 }
 
-void mncc_exit(void)
+void mncc_sock_exit(void)
 {
 	mncc_sock_close();
 

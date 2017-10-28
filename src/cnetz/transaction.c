@@ -62,7 +62,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 		if (old_cnetz) /* should be... */
 			cnetz_go_idle(old_cnetz);
 		if (old_callref)
-			call_in_release(old_callref, CAUSE_NORMAL);
+			call_up_release(old_callref, CAUSE_NORMAL);
 	}
 
 	trans = calloc(1, sizeof(*trans));
