@@ -680,7 +680,7 @@ static void amps_release(transaction_t *trans, uint8_t cause)
 		trans->callref = 0;
 	}
 	/* change DSP mode to transmit release */
-	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX)
+	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX || amps->dsp_mode == DSP_MODE_OFF)
 		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
 }
 
@@ -703,10 +703,12 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 
 	switch (trans->state) {
 	case TRANS_CALL:
-	case TRANS_CALL_RELEASE:
-	case TRANS_CALL_RELEASE_SEND:
 		if (!tone)
 			break;
+		/* fall through */
+	case TRANS_CALL_RELEASE:
+	case TRANS_CALL_RELEASE_SEND:
+		/* also loosing singaling tone indicates release confirm (after alerting) */
 		timer_stop(&trans->timer);
 		if (trans->callref)
 			call_up_release(trans->callref, CAUSE_NORMAL);
@@ -1122,7 +1124,18 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 	if (vc == amps)
 		PDEBUG(DAMPS, DEBUG_INFO, "Staying on combined control + voice channel %d\n", vc->sender.kanal);
 	else
-		PDEBUG(DAMPS, DEBUG_INFO, "Moving to traffic channel %d\n", vc->sender.kanal);
+		PDEBUG(DAMPS, DEBUG_INFO, "Moving to voice channel %d\n", vc->sender.kanal);
+
+	/* switch channel... */
+	timer_start(&trans->timer, SAT_TO1);
+	/* make channel busy */
+	amps_new_state(vc, STATE_BUSY);
+	/* relink */
+	unlink_transaction(trans);
+	link_transaction(trans, vc);
+	/* flush all other transactions, if any (in case of combined VC + CC) */
+	amps_flush_other_transactions(vc, trans);
+
 	if (!trans->callref) {
 		/* setup call */
 		PDEBUG(DAMPS, DEBUG_INFO, "Setup call to network.\n");
@@ -1134,14 +1147,6 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 		}
 		trans->callref = callref;
 	}
-	timer_start(&trans->timer, SAT_TO1);
-	/* make channel busy */
-	amps_new_state(vc, STATE_BUSY);
-	/* relink */
-	unlink_transaction(trans);
-	link_transaction(trans, vc);
-	/* flush all other transactions, if any (in case of combined VC + CC) */
-	amps_flush_other_transactions(vc, trans);
 
 	return vc;
 }
@@ -1216,7 +1221,6 @@ transaction_t *amps_tx_frame_fvc(amps_t *amps)
 {
 	transaction_t *trans = amps->trans_list;
 
-again:
 	trans = amps->trans_list;
 	if (!trans)
 		return NULL;
@@ -1227,10 +1231,8 @@ again:
 		trans_new_state(trans, TRANS_CALL_RELEASE_SEND);
 		return trans;
 	case TRANS_CALL_RELEASE_SEND:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call was sent, destroying call\n");
-		destroy_transaction(trans);
-		amps_go_idle(amps);
-		goto again;
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call was sent, continue sending release\n");
+		return trans;
 	case TRANS_CALL_MT_ALERT:
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting\n");
 		return trans;
