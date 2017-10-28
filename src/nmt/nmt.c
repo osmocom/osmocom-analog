@@ -241,6 +241,26 @@ static int dialstring2number(const char *dialstring, char *ms_country, char *ms_
 	return 0;
 }
 
+static inline int is_chan_class_cc(enum nmt_chan_type chan_type)
+{
+	if (chan_type == CHAN_TYPE_CC
+	 || chan_type == CHAN_TYPE_CCA
+	 || chan_type == CHAN_TYPE_CCB)
+		return 1;
+
+	return 0;
+}
+
+static inline int is_chan_class_tc(enum nmt_chan_type chan_type)
+{
+	if (chan_type == CHAN_TYPE_TC
+	 || chan_type == CHAN_TYPE_AC_TC
+	 || chan_type == CHAN_TYPE_CC_TC)
+		return 1;
+
+	return 0;
+}
+
 static void nmt_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
@@ -372,8 +392,8 @@ void nmt_check_channels(int __attribute__((unused)) nmt_system)
 		if (note)
 			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use at least one 'TC'!\n");
 		note = 1;
 	}
 	if (tc && !(cca || ccb)) {
@@ -381,23 +401,23 @@ void nmt_check_channels(int __attribute__((unused)) nmt_system)
 			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC'!\n");
 		note = 1;
 	}
 	if (cca && !ccb) {
 		if (note)
 			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling of MS type A only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the MS type B phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC' or 'CC/TC' instead!\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type B phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' instead!\n");
 		note = 1;
 	}
 	if (!cca && ccb) {
 		if (note)
 			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling of MS type B only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call from the MS type A phone is possible on this channel.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use combined 'CC' or 'CC/TC' instead!\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type A phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' instead!\n");
 		note = 1;
 	}
 }
@@ -468,8 +488,7 @@ static void nmt_page(transaction_t *trans, int try)
 	/* page on all CC (CC/TC) */
 	for (sender = sender_head; sender; sender = sender->next) {
 		nmt = (nmt_t *)sender;
-		if (nmt->sysinfo.chan_type != CHAN_TYPE_CC
-		 && nmt->sysinfo.chan_type != CHAN_TYPE_CC_TC)
+		if (!is_chan_class_cc(nmt->sysinfo.chan_type))
 			continue;
 		/* page on all idle channels and on channels we previously paged */
 		if (nmt->state != STATE_IDLE && nmt->trans != trans)
@@ -481,6 +500,26 @@ static void nmt_page(transaction_t *trans, int try)
 		nmt->tx_frame_count = 0;
 	}
 }
+
+static nmt_t *search_free_tc(void)
+{
+	sender_t *sender;
+	nmt_t *nmt, *cc_tc = NULL;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		nmt = (nmt_t *) sender;
+		if (nmt->state != STATE_IDLE)
+			continue;
+		/* remember combined voice/control/paging channel as second alternative */
+		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC_TC)
+			cc_tc = nmt;
+		else if (is_chan_class_tc(nmt->sysinfo.chan_type))
+			return nmt;
+	}
+
+	return cc_tc;
+}
+
 
 /*
  * frame matching functions to check if channels is accessed correctly
@@ -1015,15 +1054,36 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 {
 	transaction_t *trans = nmt->trans;
+	nmt_t *tc;
 
+	/* get free channel (after releasing all channels) */
+	tc = search_free_tc();
+	if (!tc) {
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "TC is not free anymore.\n");
+		PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
+		call_up_release(trans->callref, CAUSE_NOCHANNEL);
+		trans->callref = 0;
+		nmt_release(nmt);
+		/* send idle for now, then continue with release */
+		tx_idle(nmt, frame);
+		return;
+	}
+
+	/* link trans and tc together, so we can continue with channel assignment */
+	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Switching to TC channel #%d.\n", tc->sender.kanal);
+	nmt_new_state(nmt, STATE_IDLE);
+	tc->trans = trans;
+	trans->nmt = tc;
+	nmt_new_state(tc, STATE_MT_IDENT);
+
+	/* assign channel on 'nmt' to 'tc' */
 	frame->mt = NMT_MESSAGE_2b;
 	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.traffic_area);
 	frame->ms_country = nmt_digits2value(&trans->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
-	frame->tc_no = nmt_encode_tc(nmt->sysinfo.system, nmt->sender.kanal, nmt->sysinfo.ms_power);
+	frame->tc_no = nmt_encode_tc(tc->sysinfo.system, tc->sender.kanal, tc->sysinfo.ms_power);
 	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send channel activation to mobile.\n");
-	nmt_new_state(nmt, STATE_MT_IDENT);
 }
 
 static void tx_mt_ident(nmt_t *nmt, frame_t *frame)
@@ -1686,14 +1746,17 @@ inval:
 	/* 3. check if all paging (calling) channels are busy, return NOCHANNEL */
 	for (sender = sender_head; sender; sender = sender->next) {
 		nmt = (nmt_t *) sender;
-		if (nmt->sysinfo.chan_type != CHAN_TYPE_CC
-		 && nmt->sysinfo.chan_type != CHAN_TYPE_CC_TC)
-		 	continue;
+		if (!is_chan_class_cc(nmt->sysinfo.chan_type))
+			continue;
 		if (nmt->state == STATE_IDLE)
 			break;
 	}
 	if (!sender) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call, but no free calling channel, rejecting!\n");
+		return -CAUSE_NOCHANNEL;
+	}
+	if (!search_free_tc()) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call, but no free traffic channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 

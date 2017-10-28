@@ -314,10 +314,11 @@ int main(int argc, char *argv[])
 		for (i = 0; i < num_kanal; i++)
 			audiodev[i] = "sdr";
 		num_audiodev = num_kanal;
-		/* set chan_type */
-		if (num_chan_type == 0) {
-			for (i = 0; i < num_kanal; i++)
-				chan_type[i] = CHAN_TYPE_CC_TC;
+		/* set channel types for more than 1 channel */
+		if (num_kanal > 1 && num_chan_type == 0) {
+			chan_type[0] = CHAN_TYPE_CC;
+			for (i = 1; i < num_kanal; i++)
+				chan_type[i] = CHAN_TYPE_TC;
 			num_chan_type = num_kanal;
 		}
 		if (num_supervisory == 0) {
