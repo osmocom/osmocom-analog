@@ -140,29 +140,6 @@ Do this whenever you want to keep your adjustments.
 </p>
 
 <p class="toppic">
-Channel crossing
-</p>
-
-<p>
-By default, the right channel of your sound adapter is used to connect to the radio.
-Some adapters have mono input, especially on microphone jack.
-In this case you will always receive audio, no matter if you cross the channels or not.
-If you cross the channels, the left channel of your sound adapter is used.
-I use mono cables with only one channel on the tip of the plug.
-Usual sound adapters connect left channel on the tip of the plug, so we need to swap channels to use mono plugs.
-Use the command line option '-x' or '--cross':
-</p>
-
-<pre>
-
-# src/bnetz/bnetz -k 1 -x -l 2
-bnetz.c:268 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2 on channel 1.
-Base station ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
-To call phone, switch transmitter (using pilot signal) to 153.370 MHz.
-
-</pre>
-
-<p class="toppic">
 Emphasis
 </p>
 
@@ -332,6 +309,44 @@ Press 's' again to turn off this view.
 <p>
 Current transceiver and call state can be viewed by pressing 'c' key.
 Press 'c' again to turn off this view.
+</p>
+
+<p class="toppic">
+Mobile to mobile calls
+</p>
+
+<p>
+Calls can be forwarded between mobiles.
+By default, only one call can be made with the built-in console.
+If a headset is used, only one call can be made between headset and one mobile station.
+If call forwarding is used, two (or more) mobile stations can directly call each other.
+It is essential to have at least two voice channels of course.
+Depending on the network, a control channel or alternatively a combined control+voice channel is required.
+This feature makes sense for SDR only, because SDR can provide multiple voice and control channels.
+(It is also possible to use two radio receivers and transmitters connected to a sound card.)
+</p>
+
+<p>
+To forward calls, be sure to configure the network with at least two channels that support voice.
+Add '-x' to your command line.
+On one phone, enter the number of the other phone and start the call.
+</p>
+
+<pre>
+
+nmt -k 1 -k 4 -a hw:0,0 -a hw:0,0 -T CC/TC -T TC -0 1 -0 2 -Y se,1 -x
+
+</pre>
+
+<p>
+This example will run a base station with two channel (1 and 4) via two radios connectd to a stereo sound card.
+The sound card is accessed via '-a hw:0,0'.
+Because the sound card is stereo, the '-a' option can be given for two channels.
+The first channel is a combined control+traffic channel and the second a traffic channel.
+Both channels have different supervisory signals '-0 1 -0 2'.
+The station code is '-Y se,1'.
+Refer to NMT section about configuring an NMT network.
+I highly recommend to use an SDR instead of radios connected to a sound card.
 </p>
 
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>

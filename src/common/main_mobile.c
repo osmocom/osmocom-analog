@@ -37,6 +37,7 @@
 #include "call.h"
 #include "mncc_console.h"
 #include "mncc_sock.h"
+#include "mncc_cross.h"
 #ifdef HAVE_SDR
 #include "sdr.h"
 #include "sdr_config.h"
@@ -61,6 +62,7 @@ int do_de_emphasis = 0;
 double rx_gain = 1.0;
 static int echo_test = 0;
 static int use_mncc_sock = 0;
+static int use_mncc_cross = 0;
 const char *mncc_name = "";
 static int send_patterns = 1;
 static int release_on_disconnect = 1;
@@ -124,6 +126,10 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
 	printf("    --call-samplerate <rate>\n");
 	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
+	printf(" -x --mncc-cross\n");
+	printf("        Enable built-in call forwarding between mobiles. Be sure to have\n");
+	printf("        at least one control channel and two voice channels. Alternatively\n");
+	printf("        use one combined control+voice channel and one voice channels.\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
 	printf(" --mncc-name <name>\n");
@@ -184,6 +190,7 @@ static struct option main_mobile_long_options[] = {
 	{"de-emphasis", 0, 0, 'd'},
 	{"rx-gain", 1, 0, 'g'},
 	{"echo-test", 0, 0, 'e'},
+	{"mncc-cross", 0, 0, 'x'},
 	{"mncc-sock", 0, 0, 'm'},
 	{"mncc-name", 1, 0, OPT_MNCC_NAME},
 	{"call-device", 1, 0, 'c'},
@@ -198,7 +205,7 @@ static struct option main_mobile_long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char *main_mobile_optstring = "hv:k:a:s:i:b:pdg:mec:t:l:r:";
+static const char *main_mobile_optstring = "hv:k:a:s:i:b:pdg:exmc:t:l:r:";
 
 struct option *long_options;
 char *optstring;
@@ -320,6 +327,10 @@ void main_mobile_opt_switch(int c, char *arg0, int *skip_args)
 		echo_test = 1;
 		*skip_args += 1;
 		break;
+	case 'x':
+		use_mncc_cross = 1;
+		*skip_args += 1;
+		break;
 	case 'm':
 		use_mncc_sock = 1;
 		*skip_args += 1;
@@ -427,16 +438,32 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	latspl = samplerate * latency / 1000;
 
 	/* check MNCC support */
-	if (use_mncc_sock && call_audiodev[0]) {
-		fprintf(stderr, "You selected MNCC interface, but it cannot be used with call device (headset).\n");
+	if (use_mncc_cross && num_kanal == 1) {
+		fprintf(stderr, "You selected built-in call forwarding, but only channel is used. Does this makes sense?\n");
 		return;
 	}
-	if (use_mncc_sock && echo_test) {
-		fprintf(stderr, "You selected MNCC interface, but it cannot be used with echo test.\n");
+	if (use_mncc_sock && use_mncc_cross) {
+		fprintf(stderr, "You selected MNCC socket interface and built-in call forwarding, but only one can be selected.\n");
 		return;
 	}
 	if (echo_test && call_audiodev[0]) {
-		fprintf(stderr, "You selected call device (headset), but it cannot be used with echo test.\n");
+		fprintf(stderr, "You selected call device (headset) and echo test, but only one can be selected.\n");
+		return;
+	}
+	if (use_mncc_sock && call_audiodev[0]) {
+		fprintf(stderr, "You selected MNCC socket interface, but it cannot be used with call device (headset).\n");
+		return;
+	}
+	if (use_mncc_cross && call_audiodev[0]) {
+		fprintf(stderr, "You selected built-in call forwarding, but it cannot be used with call device (headset).\n");
+		return;
+	}
+	if (use_mncc_sock && echo_test) {
+		fprintf(stderr, "You selected MNCC socket interface, but it cannot be used with echo test.\n");
+		return;
+	}
+	if (use_mncc_cross && echo_test) {
+		fprintf(stderr, "You selected built-in call forwarding, but it cannot be used with echo test.\n");
 		return;
 	}
 
@@ -451,6 +478,12 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 		rc = mncc_sock_init(mncc_sock_name);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
+			return;
+		}
+	} else if (use_mncc_cross) {
+		rc = mncc_cross_init();
+		if (rc < 0) {
+			fprintf(stderr, "Failed to setup MNCC crossing process. Quitting!\n");
 			return;
 		}
 	} else {
@@ -598,6 +631,8 @@ next_char:
 		/* process call control */
 		if (use_mncc_sock)
 			mncc_sock_handle();
+		else if (use_mncc_cross)
+			mncc_cross_handle();
 		else
 			process_console(c);
 
@@ -639,11 +674,15 @@ next_char:
 	}
 
 	/* cleanup call control */
-	if (!use_mncc_sock)
+	if (!use_mncc_sock && !use_mncc_cross)
 		console_cleanup();
 
 	/* close mncc socket */
 	if (use_mncc_sock)
 		mncc_sock_exit();
+
+	/* close mncc forwarding */
+	if (use_mncc_cross)
+		mncc_cross_exit();
 }
 
