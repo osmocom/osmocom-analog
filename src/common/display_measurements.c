@@ -143,9 +143,9 @@ static void print_measurements(int on)
 				break;
 			}
 			/* add current value to history */
-			param->value_history[param->value_history_pos++] = value;
-			param->value2_history[param->value_history_pos++] = value2;
-			param->value_history_pos %= DISPLAY_PARAM_HISTORIES;
+			param->value_history[param->value_history_pos] = value;
+			param->value2_history[param->value_history_pos] = value2;
+			param->value_history_pos = param->value_history_pos % DISPLAY_PARAM_HISTORIES;
 			/* calculate hold values */
 			hold = -NAN;
 			hold2 = -NAN;
