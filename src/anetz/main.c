@@ -37,14 +37,19 @@
 #include "image.h"
 
 /* settings */
-double page_gain = 1;
-int page_sequence = 0;
-double squelch_db = -INFINITY;
+static char operator[32] = "010";
+static double page_gain = 1;
+static int page_sequence = 0;
+static double squelch_db = -INFINITY;
 
 void print_help(const char *arg0)
 {
 	main_mobile_print_help(arg0, "[-V 12] ");
 	/*      -                                                                             - */
+	printf(" -O --operator <number>\n");
+	printf("        Give number to dial when mobile station initiated a call. A-Netz does\n");
+	printf("        not support automatic dialing, so operator assistance is required.\n");
+	printf("        By default, the operator '%s' is dialed.\n", operator);
 	printf(" -G --geo <lat>,<lon>\n");
 	printf("        Give your coordinates of your location, to find closest base station.\n");
 	printf("	(e.g. '--geo 51.186959,7.080194') Or use '--geo list' to get a list of\n");
@@ -72,6 +77,7 @@ static int handle_options(int argc, char **argv)
 	double gain_db;
 
 	static struct option long_options_special[] = {
+		{"operator", 1, 0, 'O'},
 		{"geo", 1, 0, 'G'},
 		{"page-gain", 1, 0, 'V'},
 		{"page-sequence", 1, 0, 'P'},
@@ -79,7 +85,7 @@ static int handle_options(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	main_mobile_set_options("G:V:P:S:", long_options_special);
+	main_mobile_set_options("O:G:V:P:S:", long_options_special);
 
 	while (1) {
 		int option_index = 0, c;
@@ -90,6 +96,11 @@ static int handle_options(int argc, char **argv)
 			break;
 
 		switch (c) {
+		case 'O':
+			strncpy(operator, optarg, sizeof(operator) - 1);
+			operator[sizeof(operator) - 1] = '\0';
+			skip_args += 2;
+			break;
 		case 'G':
 			if (!strcasecmp(optarg, "list")) {
 				station_list();
@@ -184,7 +195,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = anetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db);
+		rc = anetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, operator);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

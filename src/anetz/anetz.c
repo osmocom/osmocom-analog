@@ -186,7 +186,7 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db)
+int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *operator)
 {
 	anetz_t *anetz;
 	int rc;
@@ -201,6 +201,8 @@ int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 		PDEBUG(DANETZ, DEBUG_ERROR, "No memory!\n");
 		return -EIO;
 	}
+
+	anetz->operator = operator;
 
 	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
 
@@ -328,7 +330,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 				int rc;
 
 				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
-				rc = call_up_setup(callref, NULL, "010");
+				rc = call_up_setup(callref, NULL, anetz->operator);
 				if (rc < 0) {
 					PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
 					anetz_release(anetz);

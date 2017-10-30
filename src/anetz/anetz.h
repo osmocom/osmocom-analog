@@ -48,12 +48,13 @@ typedef struct anetz {
 	int			paging_count;		/* current sample count of tone in seq. mode */
 	int			paging_transition;	/* set to number of samples during transition */
 	squelch_t		squelch;		/* squelch detection process */
+	const char		*operator;		/* destination to dial from mobile phone */
 } anetz_t;
 
 
 double anetz_kanal2freq(int kanal, int unterband);
 int anetz_init(void);
-int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db);
+int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *operator);
 void anetz_destroy(sender_t *sender);
 void anetz_loss_indication(anetz_t *anetz, double loss_time);
 void anetz_receive_tone(anetz_t *anetz, int bit);
