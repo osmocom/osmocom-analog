@@ -36,7 +36,7 @@
 
 #define	CUT_OFF_EMPHASIS_R2000	300 //FIXME: use real cut-off / time constant
 
-#define PAGE_TRIES		2	/* how many times trying to page */
+#define PAGE_TRIES		3	/* how many times trying to page */
 #define IDENT_TIME		3.0	/* time to wait for identity response */
 #define ALERT_TIME		60.0	/* time to wait for party to answer */
 #define DIAL1_TIME		1.0	/* time to wait for party to dial digits 1..10 */
@@ -427,7 +427,7 @@ int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const ch
 		r2000 = (r2000_t *)sender;
 		if ((r2000->sysinfo.chan_type == CHAN_TYPE_CC || r2000->sysinfo.chan_type == CHAN_TYPE_CC_TC)
 		 && (chan_type == CHAN_TYPE_CC || chan_type == CHAN_TYPE_CC_TC)) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "More than one control channel is not supported, please use traffic channels!\n");
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "More than one control channel is not supported, please define other channels as traffic channels!\n");
 			return -EINVAL;
 		}
 	}
@@ -469,12 +469,6 @@ int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const ch
 	if (rc < 0)
 		goto error;
 
-	r2000->pre_emphasis = pre_emphasis;
-	r2000->de_emphasis = de_emphasis;
-	rc = init_emphasis(&r2000->estate, samplerate, CUT_OFF_EMPHASIS_R2000);
-	if (rc < 0)
-		goto error;
-
 	/* init audio processing */
 	rc = dsp_init_sender(r2000);
 	if (rc < 0) {
@@ -500,7 +494,6 @@ void r2000_check_channels(void)
 	sender_t *sender;
 	r2000_t *r2000;
 	int cc = 0, tc = 0, combined = 0;
-	int note = 0;
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		r2000 = (r2000_t *) sender;
@@ -515,26 +508,18 @@ void r2000_check_channels(void)
 		}
 	}
 	if (cc && !tc) {
-		if (note)
-			PDEBUG(DR2000, DEBUG_NOTICE, "\n");
 		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** No call from the mobile phone is possible on this channel.\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
-		note = 1;
-	}
-	if (tc && !cc) {
-		if (note)
-			PDEBUG(DR2000, DEBUG_NOTICE, "\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
 		PDEBUG(DR2000, DEBUG_NOTICE, "*** No call is possible at all!\n");
 		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
-		note = 1;
+	}
+	if (tc && !cc) {
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** No register/call is possible at all!\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 	}
 	if (combined) {
-		if (note)
-			PDEBUG(DR2000, DEBUG_NOTICE, "\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected combined 'CC/TC' some phones might reject this.\n");
-		note = 1;
+		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected (non standard) combined 'CC/TC'.\n");
+		PDEBUG(DR2000, DEBUG_NOTICE, "Phones might reject this, but non of my phones does, so it's ok.\n");
 	}
 }
 
@@ -878,7 +863,7 @@ static void timeout_in_ident(r2000_t *r2000)
 
 	/* page again ... */
 	if (--r2000->page_try) {
-		r2000_page(r2000, r2000->page_try, (r2000->callref) ? STATE_IN_ASSIGN: STATE_RECALL_ASSIGN);
+		r2000_page(r2000, r2000->page_try, (r2000->state == STATE_IN_IDENT) ? STATE_IN_ASSIGN: STATE_RECALL_ASSIGN);
 		return;
 	}
 
@@ -920,13 +905,15 @@ static int setup_call(r2000_t *r2000)
 
 	/* make call toward network */
 	PDEBUG(DR2000, DEBUG_INFO, "Setup call to network.\n");
+	/* must set callref, since MNCC may directly call call_down_answer to trigger recall, nested in call_up_setup */
+	r2000->callref = callref;
 	rc = call_up_setup(callref, subscriber2string(&r2000->subscriber), r2000->subscriber.dialing);
 	if (rc < 0) {
 		PDEBUG(DR2000, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
+		r2000->callref = 0;
 		r2000_release(r2000);
 		return rc;
 	}
-	r2000->callref = callref;
 
 	return 0;
 }
