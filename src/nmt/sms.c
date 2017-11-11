@@ -360,8 +360,8 @@ static void sms_submit_report(nmt_t *nmt, uint8_t ref, int error)
  * receive from lower layer
  */
 
-/* decdoe message from 8 bit data */
-static void decode_message(const uint8_t *data, int length, char *message)
+/* decode 7-bit character message from 8 bit data */
+static void decode_message_7(const uint8_t *data, int length, char *message)
 {
 	int fill;
 	int i;
@@ -408,6 +408,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	int orig_digits, dest_digits, msg_chars;
 	uint8_t orig_type, orig_plan, dest_type, dest_plan;
 	int tp_vpf_present = 0;
+	int coding = 0;
 	int rc;
 
 	/* decode ref */
@@ -515,7 +516,13 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 		PDEBUG(DSMS, DEBUG_NOTICE, "short data coding scheme IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
-	if (data[0] != 0) {
+	if (data[0] == 0x00) {
+		PDEBUG(DSMS, DEBUG_DEBUG, "SMS coding is 7 bits (got 0x%02x)\n", data[0]);
+		coding = 7;
+	} else if ((data[0] & 0xf0) == 0x30) {
+		PDEBUG(DSMS, DEBUG_DEBUG, "SMS coding is 8 bits (got 0x%02x)\n", data[0]);
+		coding = 8;
+	} else {
 		PDEBUG(DSMS, DEBUG_NOTICE, "SMS coding unsupported (got 0x%02x)\n", data[0]);
 		return -FSC_ERROR_IN_MS;
 	}
@@ -539,14 +546,23 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	}
 	msg_data = data + 1;
 	msg_chars = data[0];
-	msg_len = (msg_chars * 7 + 7) / 8;
+	if (coding == 7)
+		msg_len = (msg_chars * 7 + 7) / 8;
+	else
+		msg_len = msg_chars;
 	if (length < 1 + msg_len) {
 		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	char message[msg_chars + 1];
-	decode_message(msg_data, msg_len, message);
-	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded message: '%s'\n", message);
+	if (coding == 7) {
+		decode_message_7(msg_data, msg_len, message);
+		PDEBUG(DSMS, DEBUG_DEBUG, "Decoded message: '%s'\n", message);
+	} else {
+		memcpy(message, msg_data, msg_len);
+		message[msg_len] = '\0';
+		PDEBUG(DSMS, DEBUG_DEBUG, "Included message: '%s'\n", message);
+	}
 
 	PDEBUG(DSMS, DEBUG_INFO, "Submitting SMS to upper layer\n");
 

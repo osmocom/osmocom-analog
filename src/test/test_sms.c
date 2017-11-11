@@ -9,14 +9,22 @@
 #include "../common/timer.h"
 #include "../nmt/nmt.h"
 
-static const uint8_t test_mo_sms_data[] = {
+static const uint8_t test_mo_sms_data1[] = {
 	0x00, 0x00, 0x00, 0xa1, 0x41, 0x0f, 0x11,
 	0x00, 0x04, 0xa1, 0x8a, 0x51,
 	0x00, 0x00, 0xff, 0x05, 0xc8, 0x20, 0x93,
 	0xf9, 0x7c,
 };
+static const uint8_t test_mo_sms_data2[] = {
+	0x00, 0x02, 0x07, 0xa1, 0xa9, 0x62, 0x65,
+	0xf4, 0x41, 0x10, 0x11, 0x02, 0x03, 0xa1,
+	0x21, 0xf3,
+	0x00, 0x30, 0xff, 0x06, 0x48, 0x61, 0x6c,
+	0x6c, 0x6f, 0x21,
+};
 
-static const char *test_mo_sms_text = "HALLO";
+static const char *test_mo_sms_text1 = "HALLO";
+static const char *test_mo_sms_text2 = "Hallo!";
 
 static const char *test_mt_sms_text = "Moin Moin";
 static const char *test_mt_sms_tel = "4948416068";
@@ -121,13 +129,30 @@ int main(void)
 	sms_init_sender(nmt);
 	sms_reset(nmt);
 
-	printf("(submitting SMS)\n");
+	printf("(submitting SMS 7-bit encoded)\n");
 	dms_buffer_count = 0;
-	for (i = 0; i < sizeof(test_mo_sms_data); i++)
-		dms_receive(nmt, test_mo_sms_data + i, 1, 1);
+	for (i = 0; i < sizeof(test_mo_sms_data1); i++)
+		dms_receive(nmt, test_mo_sms_data1 + i, 1, 1);
 
-	assert(dms_buffer_count == strlen(test_mo_sms_text), "Expecting SMS text length to match");
-	assert(!memcmp(dms_buffer, test_mo_sms_text, dms_buffer_count), "Expecting SMS text to match");
+	assert(dms_buffer_count == strlen(test_mo_sms_text1), "Expecting SMS text length to match");
+	assert(!memcmp(dms_buffer, test_mo_sms_text1, dms_buffer_count), "Expecting SMS text to match");
+
+	sms_cleanup_sender(nmt);
+	free(nmt);
+
+	ok();
+
+	nmt = calloc(sizeof(*nmt), 1);
+	sms_init_sender(nmt);
+	sms_reset(nmt);
+
+	printf("(submitting SMS 8-bit encoded)\n");
+	dms_buffer_count = 0;
+	for (i = 0; i < sizeof(test_mo_sms_data2); i++)
+		dms_receive(nmt, test_mo_sms_data2 + i, 1, 1);
+
+	assert(dms_buffer_count == strlen(test_mo_sms_text2), "Expecting SMS text length to match");
+	assert(!memcmp(dms_buffer, test_mo_sms_text2, dms_buffer_count), "Expecting SMS text to match");
 
 	sms_cleanup_sender(nmt);
 	free(nmt);
