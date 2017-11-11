@@ -183,7 +183,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 
 	nmt->rx_bits_count++;
 
-	if (nmt->dms_call)
+	if (nmt->trans && nmt->trans->dms_call)
 		fsk_receive_bit_dms(nmt, bit, quality, level);
 
 //	printf("bit=%d quality=%.4f\n", bit, quality);

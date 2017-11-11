@@ -245,7 +245,8 @@ static inline int is_chan_class_cc(enum nmt_chan_type chan_type)
 {
 	if (chan_type == CHAN_TYPE_CC
 	 || chan_type == CHAN_TYPE_CCA
-	 || chan_type == CHAN_TYPE_CCB)
+	 || chan_type == CHAN_TYPE_CCB
+	 || chan_type == CHAN_TYPE_CC_TC)
 		return 1;
 
 	return 0;
@@ -440,7 +441,6 @@ void nmt_destroy(sender_t *sender)
 void nmt_go_idle(nmt_t *nmt)
 {
 	timer_stop(&nmt->timer);
-	nmt->dms_call = 0;
 	dms_reset(nmt);
 	sms_reset(nmt);
 
@@ -454,7 +454,6 @@ void nmt_go_idle(nmt_t *nmt)
 	/* go active for loopback tests */
 	nmt_new_state(nmt, STATE_ACTIVE);
 	nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
-	nmt->dms_call = 1;
 #endif
 }
 
@@ -501,14 +500,16 @@ static void nmt_page(transaction_t *trans, int try)
 	}
 }
 
-static nmt_t *search_free_tc(void)
+static nmt_t *search_free_tc(nmt_t *own)
 {
 	sender_t *sender;
 	nmt_t *nmt, *cc_tc = NULL;
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		nmt = (nmt_t *) sender;
-		if (nmt->state != STATE_IDLE)
+		/* if our CC is used, we don't care about busy state,
+		 * because it can be used, if it is CC/TC type */
+		if (nmt != own && nmt->state != STATE_IDLE)
 			continue;
 		/* remember combined voice/control/paging channel as second alternative */
 		if (nmt->sysinfo.chan_type == CHAN_TYPE_CC_TC)
@@ -915,7 +916,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 		if (!strcmp(nmt->dialing, nmt->smsc_number)) {
 			/* SMS */
 			PDEBUG(DNMT, DEBUG_INFO, "Setup call to SMSC.\n");
-			nmt->dms_call = 1;
+			trans->dms_call = 1;
 		} else {
 			int callref = ++new_callref;
 			int rc;
@@ -955,6 +956,8 @@ not_consistent_digit:
 
 static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 {
+	transaction_t *trans = nmt->trans;
+
 	if (++nmt->tx_frame_count <= 4) {
 		set_line_signal(nmt, frame, 6);
 		if (nmt->tx_frame_count == 1)
@@ -971,7 +974,7 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 			nmt_new_state(nmt, STATE_ACTIVE);
 			nmt->active_state = ACTIVE_STATE_VOICE;
 			nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
-			if (nmt->supervisory && !nmt->dms_call) {
+			if (nmt->supervisory && !trans->dms_call) {
 				super_reset(nmt);
 				timer_start(&nmt->timer, SUPERVISORY_TO1);
 			}
@@ -1032,7 +1035,7 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 			break;
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received call acknowledgment from subscriber %c,%s.\n", trans->subscriber.country, trans->subscriber.number);
 		if (trans->sms_string[0])
-			nmt->dms_call = 1;
+			trans->dms_call = 1;
 		timer_stop(&trans->timer);
 		nmt_new_state(nmt, STATE_MT_CHANNEL);
 		trans->nmt = nmt;
@@ -1057,7 +1060,7 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 	nmt_t *tc;
 
 	/* get free channel (after releasing all channels) */
-	tc = search_free_tc();
+	tc = search_free_tc(nmt);
 	if (!tc) {
 		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "TC is not free anymore.\n");
 		PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
@@ -1069,11 +1072,14 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 		return;
 	}
 
-	/* link trans and tc together, so we can continue with channel assignment */
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Switching to TC channel #%d.\n", tc->sender.kanal);
-	nmt_new_state(nmt, STATE_IDLE);
-	tc->trans = trans;
-	trans->nmt = tc;
+	if (nmt != tc) {
+		/* link trans and tc together, so we can continue with channel assignment */
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Switching to TC channel #%d.\n", tc->sender.kanal);
+		nmt_go_idle(nmt);
+		tc->trans = trans;
+		trans->nmt = tc;
+	} else
+		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Staying on CC/TC channel #%d.\n", tc->sender.kanal);
 	nmt_new_state(tc, STATE_MT_IDENT);
 
 	/* assign channel on 'nmt' to 'tc' */
@@ -1111,7 +1117,7 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 			break;
 		nmt_value2digits(frame->ms_password, trans->subscriber.password, 3);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received identity (password %s).\n", trans->subscriber.password);
-		if (nmt->dms_call) {
+		if (trans->dms_call) {
 			nmt_new_state(nmt, STATE_MT_AUTOANSWER);
 			nmt->wait_autoanswer = 1;
 			nmt->tx_frame_count = 0;
@@ -1252,7 +1258,7 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 	transaction_t *trans = nmt->trans;
 
 	++nmt->tx_frame_count;
-	if (nmt->compandor && !nmt->dms_call) {
+	if (nmt->compandor && !trans->dms_call) {
 		if (nmt->tx_frame_count == 1)
 			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
 		set_line_signal(nmt, frame, 5);
@@ -1263,11 +1269,11 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 		nmt_new_state(nmt, STATE_ACTIVE);
 		nmt->active_state = ACTIVE_STATE_VOICE;
 		nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
-		if (nmt->supervisory && !nmt->dms_call) {
+		if (nmt->supervisory && !trans->dms_call) {
 			super_reset(nmt);
 			timer_start(&nmt->timer, SUPERVISORY_TO1);
 		}
-		if (nmt->dms_call) {
+		if (trans->dms_call) {
 			time_t ti = time(NULL);
 			sms_deliver(nmt, sms_ref, trans->caller_id, trans->caller_type, SMS_PLAN_ISDN_TEL, ti, trans->sms_string);
 		}
@@ -1755,7 +1761,7 @@ inval:
 		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call, but no free calling channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
-	if (!search_free_tc()) {
+	if (!search_free_tc(NULL)) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call, but no free traffic channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}

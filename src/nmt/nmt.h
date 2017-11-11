@@ -128,7 +128,6 @@ typedef struct nmt {
 
 	/* DMS/SMS states */
 	dms_t			dms;			/* DMS states */
-	int			dms_call;		/* indicates that this call is a DMS call */
 	sms_t			sms;			/* SMS states */
 	char			smsc_number[33];	/* digits to match SMSC */
 	struct timer		sms_timer;

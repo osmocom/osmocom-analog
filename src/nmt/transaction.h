@@ -21,7 +21,8 @@ typedef struct transaction {
 	char			caller_id[33];		/* caller id digits */
 	enum number_type	caller_type;		/* caller id type */
 
-	/* SMS */
+	/* DMS/SMS */
+	int			dms_call;		/* indicates to use DMS (used for SMS) */
 	char			sms_string[256];	/* current string to deliver */
 } transaction_t;
 
