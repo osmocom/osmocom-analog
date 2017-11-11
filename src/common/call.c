@@ -510,16 +510,21 @@ void call_up_release(int callref, int cause)
 
 	process = get_process(callref);
 	if (process) {
-		/* just keep MNCC connection it tones shall be sent.
+		/* just keep MNCC connection if tones shall be sent.
 		 * no tones while setting up / alerting the call. */
-		if (send_patterns && !process->state == PROCESS_SETUP_RO && !process->state == PROCESS_ALERTING_RO)
+		if (send_patterns
+		 && process->state != PROCESS_SETUP_RO
+		 && process->state != PROCESS_ALERTING_RO)
 			disconnect_process(callref, cause);
 		else
+		/* if no tones shall be sent, release on disconnect
+		 * or RO setup states */
 		if (process->state == PROCESS_DISCONNECT
 		 || process->state == PROCESS_SETUP_RO
 		 || process->state == PROCESS_ALERTING_RO) {
 			destroy_process(callref);
 			_indicate_disconnect_release(callref, cause, 0);
+		/* if no tones shall be sent, disconnect on all other states */
 		} else {
 			disconnect_process(callref, cause);
 			_indicate_disconnect_release(callref, cause, 1);
