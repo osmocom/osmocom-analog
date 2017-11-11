@@ -101,12 +101,14 @@ int timer_running(struct timer *timer)
 
 void process_timer(void)
 {
-	struct timer *timer = timer_head;
+	struct timer *timer;
 	double now;
 
 	now = get_time();
 
 again:
+	timer = timer_head;
+
 	while (timer) {
 		if (timer->linked && timer->timeout > 0 && now >= timer->timeout) {
 			timer->timeout = 0;
