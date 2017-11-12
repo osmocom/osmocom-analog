@@ -13,16 +13,17 @@
 #define DNMT		6
 #define DAMPS		7
 #define DR2000		8
-#define DFRAME		9
-#define DCALL		10
-#define DMNCC		11
-#define DDB		12
-#define DTRANS		13
-#define DDMS		14
-#define DSMS		15
-#define DSDR		16
-#define DUHD		17
-#define DSOAPY		18
+#define DJOLLY		9
+#define DFRAME		10
+#define DCALL		11
+#define DMNCC		12
+#define DDB		13
+#define DTRANS		14
+#define DDMS		15
+#define DSMS		16
+#define DSDR		17
+#define DUHD		18
+#define DSOAPY		19
 
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, -1, fmt, ## arg)
 #define PDEBUG_CHAN(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, CHAN, fmt, ## arg)

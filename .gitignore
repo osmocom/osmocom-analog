@@ -55,6 +55,7 @@ src/amps/amps
 src/tacs/tacs
 src/jtacs/jtacs
 src/r2000/radiocom2000
+src/jolly/jollycom
 src/tv/osmotv
 sim/cnetz_sim
 src/test/test_filter

@@ -107,6 +107,7 @@ AC_OUTPUT(
     src/tacs/Makefile
     src/jtacs/Makefile
     src/r2000/Makefile
+    src/jolly/Makefile
     src/tv/Makefile
     src/test/Makefile
     src/Makefile

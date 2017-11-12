@@ -50,7 +50,7 @@ enum r2000_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
 
 void print_help(const char *arg0)
 {
-	main_mobile_print_help(arg0, "-R <relais number> [option] ");
+	main_mobile_print_help(arg0, "[-R <relais number>] ");
 	/*      -                                                                             - */
 	printf(" -B --band <number> | list\n");
 	printf(" -B --bande <number> | list\n");

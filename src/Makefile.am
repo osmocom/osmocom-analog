@@ -39,7 +39,7 @@ SUBDIRS += \
 	tacs \
 	jtacs \
 	r2000 \
+	jolly \
 	tv \
 	test
-
 
