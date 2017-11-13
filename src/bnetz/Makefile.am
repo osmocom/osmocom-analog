@@ -13,7 +13,7 @@ bnetz_SOURCES = \
 	main.c
 bnetz_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/common/libgermanton.a \
+	$(top_builddir)/src/libgermanton/libgermanton.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(top_builddir)/src/libtimer/libtimer.a \

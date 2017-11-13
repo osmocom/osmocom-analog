@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(GRAPHICSMAGICK_CFLAGS) $(IMAGEMAGICK_CFLAGS) $(UHD_CFLAGS) $(SOAPY_CFLAGS)
 
-noinst_LIBRARIES = libcommon.a libmobile.a libgermanton.a libimage.a
+noinst_LIBRARIES = libcommon.a libmobile.a libimage.a
 
 libcommon_a_SOURCES = \
 	sample.c \
@@ -30,10 +30,6 @@ libmobile_a_SOURCES = \
 	hagelbarger.c \
 	display_status.c \
 	main_mobile.c
-
-libgermanton_a_SOURCES = \
-	freiton.c\
-	besetztton.c
 
 libimage_a_SOURCES = \
 	img.c
