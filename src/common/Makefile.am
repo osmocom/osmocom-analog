@@ -10,7 +10,6 @@ libcommon_a_SOURCES = \
 	wave.c \
 	goertzel.c \
 	jitter.c \
-	iir_filter.c \
 	dtmf.c \
 	samplerate.c \
 	emphasis.c \

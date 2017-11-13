@@ -22,7 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include "sample.h"
-#include "iir_filter.h"
+#include "../libfilter/iir_filter.h"
 #include "emphasis.h"
 #include "debug.h"
 

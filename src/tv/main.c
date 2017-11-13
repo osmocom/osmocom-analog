@@ -28,7 +28,7 @@ enum paging_signal;
 #include <signal.h>
 #include <math.h>
 #include "../common/sample.h"
-#include "../common/iir_filter.h"
+#include "../libfilter/iir_filter.h"
 #include "../common/fm_modulation.h"
 #include "../common/wave.h"
 #include "../common/img.h"
@@ -260,7 +260,7 @@ static int handle_options(int argc, char **argv)
 	return skip_args;
 }
 
-static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *sample_tone, uint8_t *power_tone, int samples)
+static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *sample_tone, __attribute__((__unused__)) uint8_t *power_tone, int samples)
 {
 	/* catch signals */
 	signal(SIGINT, sighandler);

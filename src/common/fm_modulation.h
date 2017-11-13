@@ -1,4 +1,4 @@
-#include "../common/iir_filter.h"
+#include "../libfilter/iir_filter.h"
 
 enum fm_mod_state {
 	MOD_STATE_OFF,		/* transmitter off, no IQ vector */

@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <math.h>
 #include "../common/sample.h"
-#include "../common/iir_filter.h"
+#include "../libfilter/iir_filter.h"
 #include "bas.h"
 #include "vcr.h"
 #include "fubk.h"

@@ -1,4 +1,4 @@
-#include "../common/iir_filter.h"
+#include "../libfilter/iir_filter.h"
 
 typedef struct scrambler {
 	double		carrier_phaseshift65536;/* carrier phase shift per sample */

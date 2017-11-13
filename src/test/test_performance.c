@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include "../common/sample.h"
-#include "../common/iir_filter.h"
+#include "../libfilter/iir_filter.h"
 #include "../common/fm_modulation.h"
 #include "../common/debug.h"
 
