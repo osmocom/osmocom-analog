@@ -1,4 +1,5 @@
 #include "../common/compandor.h"
+#include "../libtimer/timer.h"
 #include "../common/sender.h"
 #include "../common/call.h"
 #include "../common/fsk.h"

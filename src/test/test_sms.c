@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../nmt/nmt.h"
 
 static const uint8_t test_mo_sms_data1[] = {

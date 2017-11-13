@@ -29,7 +29,6 @@
 #include "../common/sample.h"
 #include "../common/main_mobile.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/mncc_sock.h"
 #include "r2000.h"
 #include "dsp.h"

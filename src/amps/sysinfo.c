@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include "../common/sample.h"
-#include "../common/timer.h"
 #include "amps.h"
 #include "frame.h"
 #include "main.h"

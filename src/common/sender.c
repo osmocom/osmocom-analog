@@ -27,7 +27,7 @@
 #include "sample.h"
 #include "debug.h"
 #include "sender.h"
-#include "timer.h"
+#include "../libtimer/timer.h"
 
 /* debug time consumption of audio processing */
 //#define DEBUG_TIME_CONSUMPTION

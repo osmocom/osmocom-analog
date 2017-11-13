@@ -1,4 +1,5 @@
 #include "../common/compandor.h"
+#include "../libtimer/timer.h"
 #include "../common/sender.h"
 #include "fsk_demod.h"
 #include "scrambler.h"

@@ -27,7 +27,6 @@
 #include <math.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "r2000.h"
 #include "dsp.h"
 

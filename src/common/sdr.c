@@ -31,7 +31,7 @@ enum paging_signal;
 #include <unistd.h>
 #include "sample.h"
 #include "fm_modulation.h"
-#include "timer.h"
+#include "../libtimer/timer.h"
 #include "sender.h"
 #include "sdr_config.h"
 #include "sdr.h"

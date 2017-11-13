@@ -23,7 +23,6 @@
 #include <string.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "nmt.h"
 #include "transaction.h"
 

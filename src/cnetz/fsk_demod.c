@@ -129,7 +129,6 @@
 #include <string.h>
 #include <math.h>
 #include "../common/sample.h"
-#include "../common/timer.h"
 #include "../common/debug.h"
 #include "cnetz.h"
 #include "dsp.h"

@@ -29,7 +29,7 @@
 #include "sender.h"
 #include "cause.h"
 #include "call.h"
-#include "timer.h"
+#include "../libtimer/timer.h"
 #include "mncc.h"
 
 #define DISC_TIMEOUT	30

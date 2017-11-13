@@ -27,7 +27,6 @@
 #include <errno.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/call.h"
 #include "cnetz.h"
 #include "sysinfo.h"

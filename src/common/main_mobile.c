@@ -33,7 +33,7 @@
 #include "main_mobile.h"
 #include "debug.h"
 #include "sender.h"
-#include "timer.h"
+#include "../libtimer/timer.h"
 #include "call.h"
 #include "mncc_console.h"
 #include "mncc_sock.h"

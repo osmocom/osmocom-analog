@@ -5,7 +5,6 @@ noinst_LIBRARIES = libcommon.a libmobile.a libgermanton.a libimage.a
 libcommon_a_SOURCES = \
 	sample.c \
 	debug.c \
-	timer.c \
 	sound_alsa.c \
 	wave.c \
 	goertzel.c \

@@ -44,7 +44,6 @@
 #include <errno.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/call.h"
 #include "../common/cause.h"
 #include "amps.h"

@@ -28,7 +28,6 @@
 #include <inttypes.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"

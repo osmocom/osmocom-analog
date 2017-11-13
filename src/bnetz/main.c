@@ -25,7 +25,6 @@
 #include <math.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/call.h"
 #include "../common/mncc_sock.h"
 #include "../common/main_mobile.h"

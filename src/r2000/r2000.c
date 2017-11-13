@@ -27,7 +27,6 @@
 #include <time.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/cause.h"
 #include "r2000.h"
 //#include "transaction.h"

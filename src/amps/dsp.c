@@ -83,7 +83,6 @@
 #include <math.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/call.h"
 #include "amps.h"
 #include "frame.h"

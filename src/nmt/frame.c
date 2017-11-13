@@ -24,7 +24,6 @@
 #include <inttypes.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "../common/hagelbarger.h"
 #include "nmt.h"
 #include "frame.h"

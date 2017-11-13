@@ -23,7 +23,6 @@
 #include <string.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/timer.h"
 #include "nmt.h"
 
 #define MUTE_DURATION		0.300	/* 200ms, and about 95ms for the frame itself */
