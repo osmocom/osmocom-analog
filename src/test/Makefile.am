@@ -15,6 +15,7 @@ test_filter_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
+	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -38,6 +39,7 @@ test_emphasis_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
+	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -51,6 +53,7 @@ test_dms_LDADD = \
 	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
+	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
@@ -64,6 +67,7 @@ test_sms_LDADD = \
 	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
+	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

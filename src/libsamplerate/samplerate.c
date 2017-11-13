@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include "sample.h"
+#include "../common/sample.h"
 #include "samplerate.h"
 
 int init_samplerate(samplerate_t *state, double low_samplerate, double high_samplerate, double filter_cutoff)

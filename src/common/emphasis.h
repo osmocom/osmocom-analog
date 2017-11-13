@@ -1,3 +1,5 @@
+#include "../libfilter/iir_filter.h"
+
 typedef struct emphasis {
 	struct {
 		iir_filter_t lp;

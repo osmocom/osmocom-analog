@@ -24,6 +24,7 @@ nmt_LDADD = \
 	libdmssms.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
+	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

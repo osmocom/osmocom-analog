@@ -11,7 +11,6 @@ libcommon_a_SOURCES = \
 	goertzel.c \
 	jitter.c \
 	dtmf.c \
-	samplerate.c \
 	emphasis.c \
 	compandor.c \
 	fft.c \

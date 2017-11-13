@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include "sample.h"
-#include "samplerate.h"
+#include "../libsamplerate/samplerate.h"
 #include "jitter.h"
 #include "debug.h"
 #include "testton.h"

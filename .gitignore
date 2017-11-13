@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libsamplerate/libsamplerate.a
 src/libfilter/libfilter.a
 src/common/libcommon.a
 src/common/libmobile.a

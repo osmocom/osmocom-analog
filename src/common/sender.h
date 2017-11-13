@@ -3,7 +3,7 @@
 #include "sdr.h"
 #endif
 #include "wave.h"
-#include "samplerate.h"
+#include "../libsamplerate/samplerate.h"
 #include "jitter.h"
 #include "emphasis.h"
 #include "display.h"
