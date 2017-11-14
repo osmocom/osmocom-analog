@@ -2,7 +2,7 @@
 #include "../libtimer/timer.h"
 #include "../common/sender.h"
 #include "fsk_demod.h"
-#include "scrambler.h"
+#include "../libscrambler/scrambler.h"
 #include "transaction.h"
 
 #define CNETZ_OGK_KANAL		131

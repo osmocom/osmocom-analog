@@ -11,7 +11,6 @@ cnetz_SOURCES = \
 	telegramm.c \
 	dsp.c \
 	fsk_demod.c \
-	scrambler.c \
 	image.c \
 	ansage.c \
 	main.c
@@ -22,6 +21,7 @@ cnetz_LDADD = \
 	$(top_builddir)/src/common/libcommon.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
+	$(top_builddir)/src/libscrambler/libscrambler.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

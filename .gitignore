@@ -23,6 +23,7 @@ m4
 src/libgermanton/libgermanton.a
 src/libtimer/libtimer.a
 src/libsamplerate/libsamplerate.a
+src/libscrambler/libscrambler.a
 src/libfilter/libfilter.a
 src/common/libcommon.a
 src/common/libmobile.a

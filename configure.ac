@@ -78,6 +78,7 @@ AC_OUTPUT(
     src/libgermanton/Makefile
     src/libtimer/Makefile
     src/libsamplerate/Makefile
+    src/libscrambler/Makefile
     src/libfilter/Makefile
     src/common/Makefile
     src/anetz/Makefile
