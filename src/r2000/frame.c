@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <inttypes.h>
-#include "../common/hagelbarger.h"
 #include "../common/debug.h"
+#include "../libhagelbarger/hagelbarger.h"
 #include "frame.h"
 
 static const char *param_hex(uint64_t value)

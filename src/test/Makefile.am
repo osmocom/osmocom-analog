@@ -98,6 +98,7 @@ test_hagelbarger_SOURCES = dummy.c test_hagelbarger.c
 
 test_hagelbarger_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \

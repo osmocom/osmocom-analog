@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "stdint.h"
 #include "string.h"
-#include "../common/hagelbarger.h"
+#include "../libhagelbarger/hagelbarger.h"
 
 int main(void)
 {

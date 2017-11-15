@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/hagelbarger.h"
+#include "../libhagelbarger/hagelbarger.h"
 #include "nmt.h"
 #include "frame.h"
 

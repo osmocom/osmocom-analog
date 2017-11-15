@@ -75,6 +75,7 @@ AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR su
 AS_IF([test "x$somethingmagick" == "xyes"],[AC_MSG_NOTICE( Compiling with ImageMagick )],[AC_MSG_NOTICE( ImageMagick not supported )])
 
 AC_OUTPUT(
+    src/libhagelbarger/Makefile
     src/libdtmf/Makefile
     src/libgermanton/Makefile
     src/libtimer/Makefile

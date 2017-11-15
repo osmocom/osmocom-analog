@@ -25,7 +25,6 @@ libmobile_a_SOURCES = \
 	mncc_console.c \
 	mncc_cross.c \
 	mncc_sock.c \
-	hagelbarger.c \
 	display_status.c \
 	main_mobile.c
 
