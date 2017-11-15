@@ -2,7 +2,7 @@
 #ifdef HAVE_SDR
 #include "sdr.h"
 #endif
-#include "wave.h"
+#include "../libwave/wave.h"
 #include "../libsamplerate/samplerate.h"
 #include "jitter.h"
 #include "emphasis.h"

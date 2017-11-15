@@ -18,6 +18,7 @@ test_filter_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/libwave/libwave.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -43,6 +44,7 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/libwave/libwave.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -58,6 +60,7 @@ test_dms_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/libwave/libwave.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -73,6 +76,7 @@ test_sms_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/libwave/libwave.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \

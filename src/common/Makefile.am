@@ -6,7 +6,6 @@ libcommon_a_SOURCES = \
 	sample.c \
 	debug.c \
 	sound_alsa.c \
-	wave.c \
 	goertzel.c \
 	jitter.c \
 	emphasis.c \

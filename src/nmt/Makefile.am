@@ -28,6 +28,7 @@ nmt_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/libwave/libwave.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \

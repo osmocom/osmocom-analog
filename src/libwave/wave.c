@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "sample.h"
+#include "../common/sample.h"
 #include "wave.h"
 
 /* NOTE: No locking required for writing and reading buffer pointers, since 'int' is atomic on >=32 bit machines */
