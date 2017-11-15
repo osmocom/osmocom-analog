@@ -1,4 +1,4 @@
-#include "../common/squelch.h"
+#include "../libsquelch/squelch.h"
 #include "../common/goertzel.h"
 #include "../common/sender.h"
 

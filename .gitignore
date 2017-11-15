@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libsquelch/libsquelch.a
 src/libhagelbarger/libhagelbarger.a
 src/libdtmf/libdtmf.a
 src/libgermanton/libgermanton.a
