@@ -9,7 +9,6 @@ libcommon_a_SOURCES = \
 	wave.c \
 	goertzel.c \
 	jitter.c \
-	dtmf.c \
 	emphasis.c \
 	compandor.c \
 	fft.c \

@@ -148,8 +148,8 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	nmt->dial_phaseshift65536 = 65536.0 / ((double)nmt->sender.samplerate / DIALTONE_HZ);
 	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", nmt->dial_phaseshift65536);
 
-	/* dtmf */
-	dtmf_init(&nmt->dtmf, 8000);
+	/* dtmf, generate tone relative to speech level */
+	dtmf_encode_init(&nmt->dtmf, 8000, 1.0 / SPEECH_LEVEL);
 
 	nmt->dmp_frame_level = display_measurements_add(&nmt->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
 	nmt->dmp_frame_quality = display_measurements_add(&nmt->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
@@ -342,7 +342,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 		if (nmt->compandor)
 			expand_audio(&nmt->cstate, samples, count);
 		if (nmt->dsp_mode == DSP_MODE_DTMF)
-			dtmf_tone(&nmt->dtmf, samples, count);
+			dtmf_encode(&nmt->dtmf, samples, count);
 		spl = nmt->sender.rxbuf;
 		pos = nmt->sender.rxbuf_pos;
 		for (i = 0; i < count; i++) {

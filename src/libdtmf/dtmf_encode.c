@@ -20,19 +20,19 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "sample.h"
-#include "dtmf.h"
+#include "../common/sample.h"
+#include "dtmf_encode.h"
 
 #define PI		M_PI
 
-static double tx_peak_dtmf_low = 0.2818 / SPEECH_LEVEL;	/* -11 dBm, relative to speech level */ 
-static double tx_peak_dtmf_high	= 0.3548 / SPEECH_LEVEL;/* -9 dBm, relative to speech level */ 
+#define PEAK_DTMF_LOW	0.2818	/* -11 dBm, relative to 0 dBm level */ 
+#define PEAK_DTMF_HIGH	0.3548	/* -9 dBm, relative to 0 dBm level */ 
 #define DTMF_DURATION	0.100	/* duration in seconds */
 
 static sample_t dsp_sine_dtmf_low[65536];
 static sample_t dsp_sine_dtmf_high[65536];
 
-void dtmf_init(dtmf_t *dtmf, int samplerate)
+void dtmf_encode_init(dtmf_enc_t *dtmf, int samplerate, double dBm_level)
 {
 	int i;
 
@@ -42,13 +42,13 @@ void dtmf_init(dtmf_t *dtmf, int samplerate)
 
 	// FIXME: do this globally and not per instance */
 	for (i = 0; i < 65536; i++) {
-		dsp_sine_dtmf_low[i] = sin((double)i / 65536.0 * 2.0 * PI) * tx_peak_dtmf_low;
-		dsp_sine_dtmf_high[i] = sin((double)i / 65536.0 * 2.0 * PI) * tx_peak_dtmf_high;
+		dsp_sine_dtmf_low[i] = sin((double)i / 65536.0 * 2.0 * PI) * PEAK_DTMF_LOW * dBm_level;
+		dsp_sine_dtmf_high[i] = sin((double)i / 65536.0 * 2.0 * PI) * PEAK_DTMF_HIGH * dBm_level;
 	}
 }
 
 /* set dtmf tone */
-void dtmf_set_tone(dtmf_t *dtmf, char tone)
+void dtmf_encode_set_tone(dtmf_enc_t *dtmf, char tone)
 {
 	double f1, f2;
 
@@ -80,7 +80,7 @@ void dtmf_set_tone(dtmf_t *dtmf, char tone)
 }
 
 /* Generate audio stream from DTMF tone. Keep phase for next call of function. */
-void dtmf_tone(dtmf_t *dtmf, sample_t *samples, int length)
+void dtmf_encode(dtmf_enc_t *dtmf, sample_t *samples, int length)
 {
         double *phaseshift, *phase;
 	int i, pos, max;

@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libdtmf/libdtmf.a
 src/libgermanton/libgermanton.a
 src/libtimer/libtimer.a
 src/libsamplerate/libsamplerate.a

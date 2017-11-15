@@ -1,7 +1,7 @@
 #include "../common/sender.h"
 #include "../libtimer/timer.h"
 #include "../common/compandor.h"
-#include "../common/dtmf.h"
+#include "../libdtmf/dtmf_encode.h"
 #include "../common/call.h"
 #include "../common/fsk.h"
 #include "../common/goertzel.h"
@@ -77,7 +77,7 @@ typedef struct nmt {
 	sender_t		sender;
 	nmt_sysinfo_t		sysinfo;
 	compandor_t		cstate;
-	dtmf_t			dtmf;
+	dtmf_enc_t		dtmf;
 	struct transaction	*trans;			/* pointer to transaction, if bound to channel */
 
 	/* sender's states */

@@ -1454,7 +1454,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		}
 		digit = nmt_value2digit(frame->digit);
-		dtmf_set_tone(&nmt->dtmf, digit);
+		dtmf_encode_set_tone(&nmt->dtmf, digit);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (odd)  digit %c.\n", digit);
 		nmt->mft_num++;
 		break;
@@ -1477,7 +1477,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		}
 		digit = nmt_value2digit(frame->digit);
-		dtmf_set_tone(&nmt->dtmf, digit);
+		dtmf_encode_set_tone(&nmt->dtmf, digit);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (even) digit %c.\n", digit);
 		nmt->mft_num++;
 		break;
