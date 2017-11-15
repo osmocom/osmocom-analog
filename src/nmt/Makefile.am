@@ -22,6 +22,7 @@ nmt_SOURCES = \
 nmt_LDADD = \
 	$(COMMON_LA) \
 	libdmssms.a \
+	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \
 	$(top_builddir)/src/libdtmf/libdtmf.a \
 	$(top_builddir)/src/common/libmobile.a \

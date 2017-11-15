@@ -7,7 +7,6 @@ libcommon_a_SOURCES = \
 	debug.c \
 	sound_alsa.c \
 	goertzel.c \
-	jitter.c \
 	emphasis.c \
 	compandor.c \
 	fft.c \

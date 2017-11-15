@@ -4,7 +4,7 @@
 #endif
 #include "../libwave/wave.h"
 #include "../libsamplerate/samplerate.h"
-#include "jitter.h"
+#include "../libjitter/jitter.h"
 #include "emphasis.h"
 #include "display.h"
 

@@ -26,7 +26,7 @@
 #include <sys/time.h>
 #include "sample.h"
 #include "../libsamplerate/samplerate.h"
-#include "jitter.h"
+#include "../libjitter/jitter.h"
 #include "debug.h"
 #include "testton.h"
 #include "mncc.h"

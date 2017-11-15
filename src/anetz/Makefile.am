@@ -11,6 +11,7 @@ anetz_SOURCES = \
 	main.c
 anetz_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libsquelch/libsquelch.a \
 	$(top_builddir)/src/libgermanton/libgermanton.a \
 	$(top_builddir)/src/common/libmobile.a \
