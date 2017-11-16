@@ -3,7 +3,7 @@
 #include "../common/compandor.h"
 #include "../libdtmf/dtmf_encode.h"
 #include "../common/call.h"
-#include "../common/fsk.h"
+#include "../libfsk/fsk.h"
 #include "../libgoertzel/goertzel.h"
 #include "dms.h"
 #include "sms.h"

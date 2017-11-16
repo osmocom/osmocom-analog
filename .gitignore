@@ -29,6 +29,7 @@ src/libtimer/libtimer.a
 src/libsamplerate/libsamplerate.a
 src/libscrambler/libscrambler.a
 src/libemphasis/libemphasis.a
+src/libfsk/libfsk.a
 src/libfm/libfm.a
 src/libfilter/libfilter.a
 src/libwave/libwave.a

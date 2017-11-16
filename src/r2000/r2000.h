@@ -2,7 +2,7 @@
 #include "../libtimer/timer.h"
 #include "../common/sender.h"
 #include "../common/call.h"
-#include "../common/fsk.h"
+#include "../libfsk/fsk.h"
 
 enum dsp_mode {
 	DSP_MODE_OFF,		/* no transmission */

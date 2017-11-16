@@ -7,7 +7,6 @@ libcommon_a_SOURCES = \
 	debug.c \
 	sound_alsa.c \
 	compandor.c \
-	fsk.c \
 	display_wave.c \
 	display_measurements.c
 

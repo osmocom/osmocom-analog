@@ -1,5 +1,5 @@
 #include "../libsquelch/squelch.h"
-#include "../common/fsk.h"
+#include "../libfsk/fsk.h"
 #include "../common/sender.h"
 #include "../libtimer/timer.h"
 
