@@ -4,7 +4,7 @@
 #include "../libdtmf/dtmf_encode.h"
 #include "../common/call.h"
 #include "../common/fsk.h"
-#include "../common/goertzel.h"
+#include "../libgoertzel/goertzel.h"
 #include "dms.h"
 #include "sms.h"
 

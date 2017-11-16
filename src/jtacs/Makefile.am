@@ -12,6 +12,7 @@ jtacs_SOURCES = \
 jtacs_LDADD = \
 	$(COMMON_LA) \
 	../amps/libamps.a \
+	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \

@@ -1,4 +1,4 @@
-#include "../common/goertzel.h"
+#include "../libgoertzel/goertzel.h"
 #include "../common/sender.h"
 #include "../libtimer/timer.h"
 #include "../common/compandor.h"

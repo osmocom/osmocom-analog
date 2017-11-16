@@ -22,8 +22,8 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "sample.h"
-#include "debug.h"
+#include "../common/sample.h"
+#include "../common/debug.h"
 #include "goertzel.h"
 
 /*

@@ -1,5 +1,5 @@
 #include "../libsquelch/squelch.h"
-#include "../common/goertzel.h"
+#include "../libgoertzel/goertzel.h"
 #include "../common/sender.h"
 
 enum dsp_mode {

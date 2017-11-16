@@ -28,7 +28,6 @@
 #include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/call.h"
-#include "../common/goertzel.h"
 #include "bnetz.h"
 #include "dsp.h"
 
