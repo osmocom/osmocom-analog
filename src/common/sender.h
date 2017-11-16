@@ -5,7 +5,7 @@
 #include "../libwave/wave.h"
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
-#include "emphasis.h"
+#include "../libemphasis/emphasis.h"
 #include "display.h"
 
 #define MAX_SENDER	16

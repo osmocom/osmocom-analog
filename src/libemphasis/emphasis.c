@@ -21,10 +21,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "sample.h"
+#include "../common/sample.h"
+#include "../common/debug.h"
 #include "../libfilter/iir_filter.h"
 #include "emphasis.h"
-#include "debug.h"
 
 #define PI		M_PI
 

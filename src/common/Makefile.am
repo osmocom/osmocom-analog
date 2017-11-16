@@ -6,7 +6,6 @@ libcommon_a_SOURCES = \
 	sample.c \
 	debug.c \
 	sound_alsa.c \
-	emphasis.c \
 	compandor.c \
 	fft.c \
 	fm_modulation.c \
