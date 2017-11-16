@@ -32,6 +32,7 @@ test_compandor_SOURCES = dummy.x test_compandor.c
 
 test_compandor_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(ALSA_LIBS) \

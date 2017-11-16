@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include "../common/sample.h"
-#include "../common/compandor.h"
+#include "../libcompandor/compandor.h"
 
 #define level2db(level)		(20 * log10(level))
 #define db2level(db)		pow(10, (double)db / 20.0)

@@ -17,6 +17,7 @@ cnetz_SOURCES = \
 cnetz_LDADD = \
 	$(COMMON_LA) \
 	../anetz/libgermanton.a \
+	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \

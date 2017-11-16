@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libcompandor/libcompandor.a
 src/libgoertzel/libgoertzel.a
 src/libjitter/libjitter.a
 src/libsquelch/libsquelch.a

@@ -1,6 +1,6 @@
 #include "../common/sender.h"
 #include "../libtimer/timer.h"
-#include "../common/compandor.h"
+#include "../libcompandor/compandor.h"
 #include "../libdtmf/dtmf_encode.h"
 #include "../common/call.h"
 #include "../libfsk/fsk.h"

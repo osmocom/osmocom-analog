@@ -6,7 +6,6 @@ libcommon_a_SOURCES = \
 	sample.c \
 	debug.c \
 	sound_alsa.c \
-	compandor.c \
 	display_wave.c \
 	display_measurements.c
 

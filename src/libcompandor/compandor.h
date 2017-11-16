@@ -1,3 +1,4 @@
+
 typedef struct compandor {
 	struct {
 		double	unaffected;

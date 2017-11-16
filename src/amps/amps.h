@@ -1,7 +1,7 @@
 #include "../libgoertzel/goertzel.h"
 #include "../common/sender.h"
 #include "../libtimer/timer.h"
-#include "../common/compandor.h"
+#include "../libcompandor/compandor.h"
 #include "sysinfo.h"
 #include "transaction.h"
 
