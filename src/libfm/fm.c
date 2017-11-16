@@ -23,8 +23,8 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "sample.h"
-#include "fm_modulation.h"
+#include "../common/sample.h"
+#include "fm.h"
 
 //#define FAST_SINE
 

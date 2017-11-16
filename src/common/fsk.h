@@ -1,4 +1,4 @@
-#include "../common/fm_modulation.h"
+#include "../libfm/fm.h"
 
 typedef struct ffsk {
 	void		*inst;

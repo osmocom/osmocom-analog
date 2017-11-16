@@ -33,6 +33,7 @@ amps_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libfft/libfft.a \

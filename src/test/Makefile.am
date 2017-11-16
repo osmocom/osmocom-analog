@@ -19,6 +19,7 @@ test_filter_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libfft/libfft.a \
@@ -48,6 +49,7 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libfft/libfft.a \
@@ -67,6 +69,7 @@ test_dms_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libfft/libfft.a \
@@ -86,6 +89,7 @@ test_sms_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libfft/libfft.a \
@@ -100,6 +104,7 @@ test_performance_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \

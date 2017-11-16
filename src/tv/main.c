@@ -29,7 +29,7 @@ enum paging_signal;
 #include <math.h>
 #include "../common/sample.h"
 #include "../libfilter/iir_filter.h"
-#include "../common/fm_modulation.h"
+#include "../libfm/fm.h"
 #include "../libwave/wave.h"
 #include "../common/img.h"
 #include "../common/debug.h"

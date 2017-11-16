@@ -84,6 +84,7 @@ AC_OUTPUT(
     src/libsamplerate/Makefile
     src/libscrambler/Makefile
     src/libemphasis/Makefile
+    src/libfm/Makefile
     src/libfilter/Makefile
     src/libwave/Makefile
     src/libfft/Makefile

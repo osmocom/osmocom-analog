@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include "../common/sample.h"
 #include "../libfilter/iir_filter.h"
-#include "../common/fm_modulation.h"
+#include "../libfm/fm.h"
 #include "../common/debug.h"
 
 struct timeval start_tv, tv;
