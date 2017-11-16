@@ -21,6 +21,7 @@ test_filter_LDADD = \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
+	$(top_builddir)/src/libfft/libfft.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -49,6 +50,7 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
+	$(top_builddir)/src/libfft/libfft.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -67,6 +69,7 @@ test_dms_LDADD = \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
+	$(top_builddir)/src/libfft/libfft.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -85,6 +88,7 @@ test_sms_LDADD = \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
+	$(top_builddir)/src/libfft/libfft.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \

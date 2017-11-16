@@ -16,8 +16,8 @@ cnetz_SOURCES = \
 	main.c
 cnetz_LDADD = \
 	$(COMMON_LA) \
+	../anetz/libgermanton.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
-	$(top_builddir)/src/libgermanton/libgermanton.a \
 	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
@@ -26,6 +26,7 @@ cnetz_LDADD = \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
+	$(top_builddir)/src/libfft/libfft.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \

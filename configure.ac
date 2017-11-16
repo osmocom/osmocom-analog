@@ -80,13 +80,13 @@ AC_OUTPUT(
     src/libsquelch/Makefile
     src/libhagelbarger/Makefile
     src/libdtmf/Makefile
-    src/libgermanton/Makefile
     src/libtimer/Makefile
     src/libsamplerate/Makefile
     src/libscrambler/Makefile
     src/libemphasis/Makefile
     src/libfilter/Makefile
     src/libwave/Makefile
+    src/libfft/Makefile
     src/common/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
