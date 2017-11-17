@@ -26,7 +26,9 @@
 #include <SoapySDR/Device.h>
 #include <SoapySDR/Formats.h>
 #include "soapy.h"
-#include "debug.h"
+#include "../common/debug.h"
+
+extern int sdr_rx_overflow;
 
 static SoapySDRDevice *sdr = NULL;
 SoapySDRStream *rxStream = NULL;
@@ -413,7 +415,7 @@ int soapy_receive(float *buff, int max)
 	while (1) {
 		if (max < rx_samps_per_buff) {
 			/* no more space this time */
-			PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX overflow!\n");
+			sdr_rx_overflow = 1;
 			break;
 		}
 		/* read RX stream */

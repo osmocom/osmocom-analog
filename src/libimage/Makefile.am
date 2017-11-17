@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(GRAPHICSMAGICK_CFLAGS) $(IMAGEMAGICK_CFLAGS) 
 
 noinst_LIBRARIES = libimage.a
 

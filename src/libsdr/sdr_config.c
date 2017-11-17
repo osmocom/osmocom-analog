@@ -24,7 +24,7 @@ enum paging_signal;
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#include "sample.h"
+#include "../common/sample.h"
 #include "sdr.h"
 #include "sdr_config.h"
 

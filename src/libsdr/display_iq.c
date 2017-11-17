@@ -23,8 +23,8 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include "sample.h"
-#include "sender.h"
+#include "../common/sample.h"
+#include "../common/sender.h"
 
 /* must be odd value! */
 #define SIZE	23

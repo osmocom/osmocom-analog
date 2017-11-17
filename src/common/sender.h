@@ -1,6 +1,6 @@
 #include "../libsound/sound.h"
 #ifdef HAVE_SDR
-#include "sdr.h"
+#include "../libsdr/sdr.h"
 #endif
 #include "../libwave/wave.h"
 #include "../libsamplerate/samplerate.h"

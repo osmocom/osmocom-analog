@@ -39,8 +39,8 @@
 #include "../libmncc/mncc_sock.h"
 #include "../libmncc/mncc_cross.h"
 #ifdef HAVE_SDR
-#include "sdr.h"
-#include "sdr_config.h"
+#include "../libsdr/sdr.h"
+#include "../libsdr/sdr_config.h"
 #endif
 
 static int got_init = 0;

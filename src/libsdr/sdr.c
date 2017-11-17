@@ -29,10 +29,10 @@ enum paging_signal;
 #define __USE_GNU
 #include <pthread.h>
 #include <unistd.h>
-#include "sample.h"
+#include "../common/sample.h"
 #include "../libfm/fm.h"
 #include "../libtimer/timer.h"
-#include "sender.h"
+#include "../common/sender.h"
 #include "sdr_config.h"
 #include "sdr.h"
 #ifdef HAVE_UHD
@@ -41,7 +41,7 @@ enum paging_signal;
 #ifdef HAVE_SOAPY
 #include "soapy.h"
 #endif
-#include "debug.h"
+#include "../common/debug.h"
 
 /* enable to debug buffer handling */
 //#define DEBUG_BUFFER
@@ -51,6 +51,8 @@ enum paging_signal;
 
 /* usable bandwidth of IQ rate, because no filter is perfect */
 #define USABLE_BANDWIDTH	0.75
+
+int sdr_rx_overflow = 0;
 
 typedef struct sdr_thread {
 	int use;
@@ -399,17 +401,6 @@ static void *sdr_write_child(void *arg)
 	while (sdr->thread_write.running) {
 		/* write to SDR */
 		fill = (sdr->thread_write.in - sdr->thread_write.out + sdr->thread_write.buffer_size) % sdr->thread_write.buffer_size;
-		if (fill > sdr->thread_write.max_fill)
-			sdr->thread_write.max_fill = fill;
-		if (sdr->thread_write.max_fill_timer == 0.0)
-			sdr->thread_write.max_fill_timer = get_time();
-		if (get_time() - sdr->thread_write.max_fill_timer > 1.0) {
-			double delay;
-			delay = (double)sdr->thread_write.max_fill / 2.0 / (double)sdr->samplerate;
-			sdr->thread_write.max_fill = 0;
-			sdr->thread_write.max_fill_timer += 1.0;
-			PDEBUG(DSDR, DEBUG_DEBUG, "write delay = %.3f ms\n", delay * 1000.0);
-		}
 		num = fill / 2;
 		if (num) {
 #ifdef DEBUG_BUFFER
@@ -668,9 +659,24 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 
 	if (sdr->threads) {
 		/* store data towards SDR in ring buffer */
-		int space, in;
+		int fill, space, in;
 
+		fill = (sdr->thread_write.in - sdr->thread_write.out + sdr->thread_write.buffer_size) % sdr->thread_write.buffer_size;
 		space = (sdr->thread_write.out - sdr->thread_write.in - 2 + sdr->thread_write.buffer_size) % sdr->thread_write.buffer_size;
+
+		/* debug fill level */
+		if (fill > sdr->thread_write.max_fill)
+			sdr->thread_write.max_fill = fill;
+		if (sdr->thread_write.max_fill_timer == 0.0)
+			sdr->thread_write.max_fill_timer = get_time();
+		if (get_time() - sdr->thread_write.max_fill_timer > 1.0) {
+			double delay;
+			delay = (double)sdr->thread_write.max_fill / 2.0 / (double)sdr->samplerate;
+			sdr->thread_write.max_fill = 0;
+			sdr->thread_write.max_fill_timer += 1.0;
+			PDEBUG(DSDR, DEBUG_DEBUG, "write delay = %.3f ms\n", delay * 1000.0);
+		}
+
 		if (space < num * 2) {
 			PDEBUG(DSDR, DEBUG_ERROR, "Write SDR buffer overflow!\n");
 			num = space / 2;
@@ -725,6 +731,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 		int fill, out;
 
 		fill = (sdr->thread_read.in - sdr->thread_read.out + sdr->thread_read.buffer_size) % sdr->thread_read.buffer_size;
+
+		/* debug fill level */
 		if (fill > sdr->thread_read.max_fill)
 			sdr->thread_read.max_fill = fill;
 		if (sdr->thread_read.max_fill_timer == 0.0)
@@ -736,6 +744,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 			sdr->thread_read.max_fill_timer += 1.0;
 			PDEBUG(DSDR, DEBUG_DEBUG, "read delay = %.3f ms\n", delay * 1000.0);
 		}
+
 		if (fill / 2 / sdr->oversample < num)
 			num = fill / 2 / sdr->oversample;
 #ifdef DEBUG_BUFFER
@@ -760,6 +769,11 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 #endif
 		if (count <= 0)
 			return count;
+	}
+
+	if (sdr_rx_overflow) {
+		PDEBUG(DSDR, DEBUG_ERROR, "SDR RX overflow!\n");
+		sdr_rx_overflow = 0;
 	}
 
 	if (sdr->wave_rx_rec.fp) {

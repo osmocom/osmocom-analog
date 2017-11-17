@@ -19,16 +19,21 @@ test_filter_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
-	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
 	-lm
+
+if HAVE_SDR
+test_filter_LDADD += \
+	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libfft/libfft.a \
+	$(top_builddir)/src/libfm/libfm.a
+endif
 
 test_compandor_SOURCES = dummy.x test_compandor.c
 
@@ -52,16 +57,21 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
-	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
 	-lm
+
+if HAVE_SDR
+test_emphasis_LDADD += \
+	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libfft/libfft.a \
+	$(top_builddir)/src/libfm/libfm.a
+endif
 
 test_dms_SOURCES = test_dms.c dummy.c
 
@@ -74,16 +84,21 @@ test_dms_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
-	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
 	-lm
+
+if HAVE_SDR
+test_dms_LDADD += \
+	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libfft/libfft.a \
+	$(top_builddir)/src/libfm/libfm.a
+endif
 
 test_sms_SOURCES = dummy.c test_sms.c
 
@@ -96,16 +111,21 @@ test_sms_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
-	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
 	-lm
+
+if HAVE_SDR
+test_sms_LDADD += \
+	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libfft/libfft.a \
+	$(top_builddir)/src/libfm/libfm.a
+endif
 
 test_performance_SOURCES = dummy.c test_performance.c
 

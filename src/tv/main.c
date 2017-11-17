@@ -34,8 +34,8 @@ enum paging_signal;
 #include "../libimage/img.h"
 #include "../common/debug.h"
 #ifdef HAVE_SDR
-#include "../common/sdr_config.h"
-#include "../common/sdr.h"
+#include "../libsdr/sdr_config.h"
+#include "../libsdr/sdr.h"
 #endif
 #include "bas.h"
 #include "tv_modulate.h"

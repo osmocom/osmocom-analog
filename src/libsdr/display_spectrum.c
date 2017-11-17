@@ -22,8 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "sample.h"
-#include "sender.h"
+#include "../common/sample.h"
+#include "../common/sender.h"
 #include "../libfft/fft.h"
 
 #define HEIGHT	20

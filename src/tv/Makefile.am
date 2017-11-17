@@ -16,11 +16,9 @@ osmotv_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libimage/libimage.a \
 	$(top_builddir)/src/common/libcommon.a \
-	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libfft/libfft.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
@@ -28,15 +26,16 @@ osmotv_LDADD = \
 	-lm
 
 if HAVE_SDR
+osmotv_LDADD += \
+	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libfft/libfft.a
+endif
+
+osmotv_LDADD += \
+	$(top_builddir)/src/libtimer/libtimer.a
+
+if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR
-endif
-
-if HAVE_UHD
-AM_CPPFLAGS += -DHAVE_UHD
-endif
-
-if HAVE_SOAPY
-AM_CPPFLAGS += -DHAVE_SOAPY
 endif
 
 if ENABLE_MAGICK

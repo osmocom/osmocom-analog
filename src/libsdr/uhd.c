@@ -25,10 +25,12 @@
 #include <uhd.h>
 #include <uhd/usrp/usrp.h>
 #include "uhd.h"
-#include "debug.h"
+#include "../common/debug.h"
 
 /* use to TX time stamp */
 //#define TX_TIMESTAMP
+
+extern int sdr_rx_overflow;
 
 static uhd_usrp_handle		usrp = NULL;
 static uhd_tx_streamer_handle	tx_streamer = NULL;
@@ -519,7 +521,7 @@ int uhd_receive(float *buff, int max)
 	while (1) {
 		if (max < (int)rx_samps_per_buff) {
 			/* no more space this time */
-			PDEBUG(DUHD, DEBUG_ERROR, "SDR RX overflow!\n");
+			sdr_rx_overflow = 1;
 			break;
 		}
 		/* read RX stream */
