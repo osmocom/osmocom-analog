@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libimage/libimage.a
 src/libcompandor/libcompandor.a
 src/libgoertzel/libgoertzel.a
 src/libjitter/libjitter.a
@@ -38,7 +39,6 @@ src/libfft/libfft.a
 src/libmncc/libmncc.a
 src/common/libcommon.a
 src/common/libmobile.a
-src/common/libimage.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz

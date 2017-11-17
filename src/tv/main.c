@@ -31,7 +31,7 @@ enum paging_signal;
 #include "../libfilter/iir_filter.h"
 #include "../libfm/fm.h"
 #include "../libwave/wave.h"
-#include "../common/img.h"
+#include "../libimage/img.h"
 #include "../common/debug.h"
 #ifdef HAVE_SDR
 #include "../common/sdr_config.h"
