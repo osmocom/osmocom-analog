@@ -27,10 +27,10 @@
 #include "sample.h"
 #include "debug.h"
 #include "sender.h"
-#include "cause.h"
 #include "call.h"
 #include "../libtimer/timer.h"
-#include "mncc.h"
+#include "../libmncc/mncc.h"
+#include "../libmncc/cause.h"
 
 #define DISC_TIMEOUT	30
 

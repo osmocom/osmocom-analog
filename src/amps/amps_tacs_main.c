@@ -26,7 +26,6 @@
 #include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/call.h"
-#include "../common/mncc_sock.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"

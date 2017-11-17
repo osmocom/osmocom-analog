@@ -27,7 +27,7 @@
 #include <time.h>
 #include "../common/sample.h"
 #include "../common/debug.h"
-#include "../common/cause.h"
+#include "../libmncc/cause.h"
 #include "r2000.h"
 //#include "transaction.h"
 #include "frame.h"

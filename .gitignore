@@ -35,6 +35,7 @@ src/libfm/libfm.a
 src/libfilter/libfilter.a
 src/libwave/libwave.a
 src/libfft/libfft.a
+src/libmncc/libmncc.a
 src/common/libcommon.a
 src/common/libmobile.a
 src/common/libimage.a

@@ -26,7 +26,6 @@
 #include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/call.h"
-#include "../common/mncc_sock.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
 #include "cnetz.h"

@@ -22,9 +22,9 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include "sample.h"
-#include "debug.h"
-#include "call.h"
+#include "../common/sample.h"
+#include "../common/debug.h"
+#include "../common/call.h"
 #include "cause.h"
 #include "mncc.h"
 #include "mncc_cross.h"

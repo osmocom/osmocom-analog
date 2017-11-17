@@ -24,16 +24,16 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
-#include "sample.h"
+#include "../common/sample.h"
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
-#include "debug.h"
+#include "../common/debug.h"
 #include "testton.h"
 #include "mncc.h"
-#include "call.h"
-#include "cause.h"
 #include "mncc_console.h"
-#include "sound.h"
+#include "cause.h"
+#include "../common/call.h"
+#include "../common/sound.h"
 
 static int new_callref = 0; /* toward mobile */
 
@@ -162,8 +162,23 @@ static int console_mncc_up(uint8_t *buf, int length)
 	case MNCC_SETUP_IND:
 		PDEBUG(DMNCC, DEBUG_INFO, "Incoming call from '%s'\n", mncc->calling.number);
 		/* setup is also allowed on disconnected call */
-		if (console.state == CONSOLE_DISCONNECT)
+		if (console.state == CONSOLE_DISCONNECT) {
+			PDEBUG(DMNCC, DEBUG_INFO, "Releasing pending disconnected call\n");
+			if (console.callref) {
+				uint8_t buf[sizeof(struct gsm_mncc)];
+				struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
+
+				memset(buf, 0, sizeof(buf));
+				mncc->msg_type = MNCC_REL_REQ;
+				mncc->callref = console.callref;
+				mncc->fields |= MNCC_F_CAUSE;
+				mncc->cause.location = LOCATION_USER;
+				mncc->cause.value = CAUSE_NORMAL;
+				mncc_down(buf, sizeof(struct gsm_mncc));
+				console.callref = 0;
+			}
 			console_new_state(CONSOLE_IDLE);
+		}
 		if (console.state != CONSOLE_IDLE) {
 			PDEBUG(DMNCC, DEBUG_NOTICE, "We are busy, rejecting.\n");
 			return -CAUSE_BUSY;

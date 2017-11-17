@@ -35,9 +35,9 @@
 #include "sender.h"
 #include "../libtimer/timer.h"
 #include "call.h"
-#include "mncc_console.h"
-#include "mncc_sock.h"
-#include "mncc_cross.h"
+#include "../libmncc/mncc_console.h"
+#include "../libmncc/mncc_sock.h"
+#include "../libmncc/mncc_cross.h"
 #ifdef HAVE_SDR
 #include "sdr.h"
 #include "sdr_config.h"

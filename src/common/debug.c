@@ -27,7 +27,7 @@
 #include "sample.h"
 #include "debug.h"
 #include "display.h"
-#include "mncc_console.h"
+#include "../libmncc/mncc_console.h"
 
 const char *debug_level[] = {
 	"debug  ",

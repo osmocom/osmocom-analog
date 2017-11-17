@@ -28,7 +28,7 @@
 #include "../common/debug.h"
 #include "../libtimer/timer.h"
 #include "../common/call.h"
-#include "../common/cause.h"
+#include "../libmncc/cause.h"
 #include "anetz.h"
 #include "dsp.h"
 

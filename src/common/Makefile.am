@@ -11,12 +11,7 @@ libcommon_a_SOURCES = \
 
 libmobile_a_SOURCES = \
 	sender.c \
-	cause.c \
 	call.c \
-	testton.c \
-	mncc_console.c \
-	mncc_cross.c \
-	mncc_sock.c \
 	display_status.c \
 	main_mobile.c
 

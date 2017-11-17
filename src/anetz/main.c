@@ -28,7 +28,6 @@
 #include "../common/debug.h"
 #include "../libtimer/timer.h"
 #include "../common/call.h"
-#include "../common/mncc_sock.h"
 #include "freiton.h"
 #include "besetztton.h"
 #include "anetz.h"

@@ -145,7 +145,7 @@
 #include "../common/sample.h"
 #include "../common/debug.h"
 #include "../common/call.h"
-#include "../common/cause.h"
+#include "../libmncc/cause.h"
 #include "cnetz.h"
 #include "database.h"
 #include "sysinfo.h"
