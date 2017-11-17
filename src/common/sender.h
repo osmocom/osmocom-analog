@@ -1,4 +1,4 @@
-#include "sound.h"
+#include "../libsound/sound.h"
 #ifdef HAVE_SDR
 #include "sdr.h"
 #endif

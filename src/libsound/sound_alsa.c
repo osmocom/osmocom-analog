@@ -21,9 +21,9 @@
 #include <stdint.h>
 #include <math.h>
 #include <alsa/asoundlib.h>
-#include "sample.h"
-#include "debug.h"
-#include "sender.h"
+#include "../common/sample.h"
+#include "../common/debug.h"
+#include "../common/sender.h"
 
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;

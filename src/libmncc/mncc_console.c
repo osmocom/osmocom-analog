@@ -33,7 +33,7 @@
 #include "mncc_console.h"
 #include "cause.h"
 #include "../common/call.h"
-#include "../common/sound.h"
+#include "../libsound/sound.h"
 
 static int new_callref = 0; /* toward mobile */
 

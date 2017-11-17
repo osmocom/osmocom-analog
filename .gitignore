@@ -37,6 +37,7 @@ src/libfilter/libfilter.a
 src/libwave/libwave.a
 src/libfft/libfft.a
 src/libmncc/libmncc.a
+src/libsound/libsound.a
 src/common/libcommon.a
 src/common/libmobile.a
 src/anetz/libgermanton.a

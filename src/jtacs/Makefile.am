@@ -25,6 +25,7 @@ jtacs_LDADD = \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
+	$(top_builddir)/src/libsound/libsound.a \
 	$(ALSA_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \

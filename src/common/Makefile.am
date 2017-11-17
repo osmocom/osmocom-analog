@@ -5,7 +5,6 @@ noinst_LIBRARIES = libcommon.a libmobile.a
 libcommon_a_SOURCES = \
 	sample.c \
 	debug.c \
-	sound_alsa.c \
 	display_wave.c \
 	display_measurements.c
 

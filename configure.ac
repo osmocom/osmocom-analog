@@ -92,6 +92,7 @@ AC_OUTPUT(
     src/libwave/Makefile
     src/libfft/Makefile
     src/libmncc/Makefile
+    src/libsound/Makefile
     src/common/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
