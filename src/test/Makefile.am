@@ -26,27 +26,22 @@ test_filter_LDADD = \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 if HAVE_SDR
 test_filter_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a
+	$(top_builddir)/src/libfm/libfm.a \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS)
 endif
 
 test_compandor_SOURCES = dummy.x test_compandor.c
 
 test_compandor_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/libdebug/libdebug.a \
-	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
-	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 test_emphasis_SOURCES = test_emphasis.c dummy.c
@@ -66,15 +61,15 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 if HAVE_SDR
 test_emphasis_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a
+	$(top_builddir)/src/libfm/libfm.a \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS)
 endif
 
 test_dms_SOURCES = test_dms.c dummy.c
@@ -95,15 +90,15 @@ test_dms_LDADD = \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 if HAVE_SDR
 test_dms_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a
+	$(top_builddir)/src/libfm/libfm.a \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS)
 endif
 
 test_sms_SOURCES = dummy.c test_sms.c
@@ -124,39 +119,29 @@ test_sms_LDADD = \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 if HAVE_SDR
 test_sms_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a
+	$(top_builddir)/src/libfm/libfm.a \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS)
 endif
 
 test_performance_SOURCES = dummy.c test_performance.c
 
 test_performance_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/libdebug/libdebug.a \
-	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
-	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 test_hagelbarger_SOURCES = dummy.c test_hagelbarger.c
 
 test_hagelbarger_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/libdebug/libdebug.a \
-	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \
-	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 

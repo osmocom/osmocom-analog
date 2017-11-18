@@ -21,20 +21,24 @@ osmotv_LDADD = \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	$(GRAPHICSMAGICK_LIBS) $(IMAGEMAGICK_LIBS) \
 	-lm
 
 if HAVE_SDR
 osmotv_LDADD += \
-	$(top_builddir)/src/libsdr/libsdr.a \
-	$(top_builddir)/src/libdisplay/libdisplay.a \
-	$(top_builddir)/src/libfft/libfft.a
+	$(top_builddir)/src/libsdr/libsdr.a
 endif
 
 osmotv_LDADD += \
+	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libtimer/libtimer.a
+
+if HAVE_SDR
+osmotv_LDADD += \
+	$(top_builddir)/src/libfft/libfft.a \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS)
+endif
 
 if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR

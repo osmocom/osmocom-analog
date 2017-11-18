@@ -41,14 +41,14 @@ amps_LDADD = \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS) \
 	-lm
 
 if HAVE_SDR
 amps_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a
+	$(top_builddir)/src/libfm/libfm.a \
+	$(UHD_LIBS) \
+	$(SOAPY_LIBS)
 endif
 
