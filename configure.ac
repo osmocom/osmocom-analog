@@ -76,6 +76,7 @@ AS_IF([test "x$somethingmagick" == "xyes"],[AC_MSG_NOTICE( Compiling with ImageM
 
 AC_OUTPUT(
     src/libmobile/Makefile
+    src/libdisplay/Makefile
     src/libimage/Makefile
     src/libcompandor/Makefile
     src/libgoertzel/Makefile

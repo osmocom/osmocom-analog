@@ -19,6 +19,7 @@ anetz_LDADD = \
 	$(COMMON_LA) \
 	libgermanton.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libsquelch/libsquelch.a \

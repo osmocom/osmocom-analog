@@ -13,6 +13,7 @@ radiocom2000_SOURCES = \
 radiocom2000_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \

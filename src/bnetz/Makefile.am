@@ -15,6 +15,7 @@ bnetz_LDADD = \
 	$(COMMON_LA) \
 	../anetz/libgermanton.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libsquelch/libsquelch.a \
 	$(top_builddir)/src/common/libcommon.a \

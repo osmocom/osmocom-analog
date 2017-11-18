@@ -23,7 +23,7 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
-#include "sender.h"
+#include "../libmobile/sender.h"
 
 static int status_on = 0;
 static int line_count = 0;

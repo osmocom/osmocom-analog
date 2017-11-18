@@ -27,6 +27,7 @@ amps_LDADD = \
 	$(COMMON_LA) \
 	libamps.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \

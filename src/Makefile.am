@@ -2,6 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = \
 	libmobile \
+	libdisplay \
 	libsample \
 	libimage \
 	libcompandor \

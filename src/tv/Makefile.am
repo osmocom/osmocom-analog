@@ -29,6 +29,7 @@ osmotv_LDADD = \
 if HAVE_SDR
 osmotv_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libfft/libfft.a
 endif
 

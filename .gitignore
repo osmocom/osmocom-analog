@@ -21,6 +21,7 @@ compile
 .dirstamp
 m4
 src/libmobile/libmobile.a
+src/libdisplay/libdisplay.a
 src/libimage/libimage.a
 src/libcompandor/libcompandor.a
 src/libgoertzel/libgoertzel.a
