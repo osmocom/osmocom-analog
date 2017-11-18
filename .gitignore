@@ -24,6 +24,7 @@ src/libdebug/libdebug.a
 src/libmobile/libmobile.a
 src/libdisplay/libdisplay.a
 src/libimage/libimage.a
+src/libsendevolumenregler/libsendevolumenregler.a
 src/libcompandor/libcompandor.a
 src/libgoertzel/libgoertzel.a
 src/libjitter/libjitter.a
@@ -57,6 +58,7 @@ src/r2000/radiocom2000
 src/tv/osmotv
 sim/cnetz_sim
 src/test/test_filter
+src/test/test_sendevolumenregler
 src/test/test_compandor
 src/test/test_emphasis
 src/test/test_dms

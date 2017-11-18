@@ -6,6 +6,7 @@ SUBDIRS = \
 	libdisplay \
 	libsample \
 	libimage \
+	libsendevolumenregler \
 	libcompandor \
 	libgoertzel \
 	libjitter \

@@ -2,6 +2,7 @@ AM_CPPFLAGS = -Wall -g $(all_includes)
 
 noinst_PROGRAMS = \
 	test_filter \
+	test_sendevolumenregler \
 	test_compandor \
 	test_emphasis \
 	test_dms \
@@ -36,6 +37,13 @@ test_filter_LDADD += \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS)
 endif
+
+test_sendevolumenregler_SOURCES = test_sendevolumenregler.c
+
+test_sendevolumenregler_LDADD = \
+	$(COMMON_LA) \
+	$(top_builddir)/src/libsendevolumenregler/libsendevolumenregler.a \
+	-lm
 
 test_compandor_SOURCES = dummy.x test_compandor.c
 

@@ -79,6 +79,7 @@ AC_OUTPUT(
     src/libmobile/Makefile
     src/libdisplay/Makefile
     src/libimage/Makefile
+    src/libsendevolumenregler/Makefile
     src/libcompandor/Makefile
     src/libgoertzel/Makefile
     src/libjitter/Makefile
