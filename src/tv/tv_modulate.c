@@ -19,7 +19,7 @@
 
 #include <math.h>
 #include <stdint.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "tv_modulate.h"
 
 #define WHITE_MODULATION	0.1

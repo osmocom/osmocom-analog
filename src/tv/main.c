@@ -27,7 +27,7 @@ enum paging_signal;
 #include <getopt.h>
 #include <signal.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
 #include "../libfm/fm.h"
 #include "../libwave/wave.h"

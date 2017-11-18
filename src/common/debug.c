@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <math.h>
-#include "sample.h"
+#include "../libsample/sample.h"
 #include "debug.h"
 #include "display.h"
 #include "../libmncc/mncc_console.h"

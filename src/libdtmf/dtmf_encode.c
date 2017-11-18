@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "dtmf_encode.h"
 
 #define PI		M_PI

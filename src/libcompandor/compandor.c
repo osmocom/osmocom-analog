@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "compandor.h"
 
 //#define db2level(db)			pow(10, (double)db / 20.0)

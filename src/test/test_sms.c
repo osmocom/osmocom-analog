@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../nmt/nmt.h"
 

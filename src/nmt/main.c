@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "nmt.h"

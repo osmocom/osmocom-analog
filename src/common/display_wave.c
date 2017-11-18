@@ -23,7 +23,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <sys/ioctl.h>
-#include "sample.h"
+#include "../libsample/sample.h"
 #include "sender.h"
 
 #define HEIGHT	11

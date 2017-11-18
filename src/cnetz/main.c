@@ -22,7 +22,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/main_mobile.h"
 #include "../common/debug.h"
 #include "../common/call.h"

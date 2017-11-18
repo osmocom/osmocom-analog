@@ -22,7 +22,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
-#include "sample.h"
+#include "../libsample/sample.h"
 #include "sender.h"
 
 static int status_on = 0;

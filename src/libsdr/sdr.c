@@ -29,7 +29,7 @@ enum paging_signal;
 #define __USE_GNU
 #include <pthread.h>
 #include <unistd.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../libfm/fm.h"
 #include "../libtimer/timer.h"
 #include "../common/sender.h"

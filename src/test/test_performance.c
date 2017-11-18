@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <sys/time.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
 #include "../libfm/fm.h"
 #include "../common/debug.h"

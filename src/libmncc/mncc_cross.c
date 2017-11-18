@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../common/call.h"
 #include "cause.h"

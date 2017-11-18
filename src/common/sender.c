@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include "sample.h"
+#include "../libsample/sample.h"
 #include "debug.h"
 #include "sender.h"
 #include "../libtimer/timer.h"

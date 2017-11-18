@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include <inttypes.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "amps.h"
 #include "dsp.h"

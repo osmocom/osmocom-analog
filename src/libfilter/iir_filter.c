@@ -22,7 +22,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "iir_filter.h"
 
 #define PI M_PI

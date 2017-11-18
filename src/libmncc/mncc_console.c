@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
 #include "../common/debug.h"

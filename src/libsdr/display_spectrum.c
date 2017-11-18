@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/sender.h"
 #include "../libfft/fft.h"
 

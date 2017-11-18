@@ -25,7 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../libtimer/timer.h"
 #include "../common/call.h"

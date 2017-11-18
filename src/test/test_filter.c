@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
 #include "../common/debug.h"
 

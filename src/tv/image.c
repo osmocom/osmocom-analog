@@ -19,7 +19,7 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "image.h"
 
 /* render image line starting with x and end with LINE_LENGTH

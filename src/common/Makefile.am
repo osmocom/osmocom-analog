@@ -3,7 +3,6 @@ AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 noinst_LIBRARIES = libcommon.a libmobile.a
 
 libcommon_a_SOURCES = \
-	sample.c \
 	debug.c \
 	display_wave.c \
 	display_measurements.c

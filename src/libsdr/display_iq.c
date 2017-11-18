@@ -23,7 +23,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/sender.h"
 
 /* must be odd value! */

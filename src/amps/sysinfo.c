@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "amps.h"
 #include "frame.h"
 #include "main.h"

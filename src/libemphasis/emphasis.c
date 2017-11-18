@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../libfilter/iir_filter.h"
 #include "emphasis.h"

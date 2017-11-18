@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "scrambler.h"
 
 #define PI		M_PI

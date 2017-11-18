@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <math.h>
-#include "sample.h"
+#include "../libsample/sample.h"
 #include "sender.h"
 
 #define MAX_NAME_LEN	16

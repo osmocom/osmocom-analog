@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <alsa/asoundlib.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../common/sender.h"
 

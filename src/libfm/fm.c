@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "fm.h"
 
 //#define FAST_SINE

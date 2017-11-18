@@ -25,7 +25,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../common/call.h"
 #include "cnetz.h"

@@ -94,6 +94,7 @@ AC_OUTPUT(
     src/libmncc/Makefile
     src/libsound/Makefile
     src/libsdr/Makefile
+    src/libsample/Makefile
     src/common/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile

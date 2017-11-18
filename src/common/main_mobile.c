@@ -29,7 +29,7 @@
 #include <termios.h>
 #include <errno.h>
 #include <getopt.h>
-#include "sample.h"
+#include "../libsample/sample.h"
 #include "main_mobile.h"
 #include "debug.h"
 #include "sender.h"

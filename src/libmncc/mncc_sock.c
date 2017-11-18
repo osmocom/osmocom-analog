@@ -26,7 +26,7 @@
 #include <sys/un.h>
 #include <stddef.h>
 #include <unistd.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "../common/debug.h"
 #include "../common/call.h"
 #include "cause.h"

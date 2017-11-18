@@ -20,7 +20,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "../common/sample.h"
+#include "../libsample/sample.h"
 #include "fubk.h"
 #include "font.h"
 
