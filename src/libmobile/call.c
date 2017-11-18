@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "sender.h"
 #include "call.h"
 #include "../libtimer/timer.h"

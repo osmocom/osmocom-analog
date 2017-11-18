@@ -23,7 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "cause.h"
 #include "mncc.h"

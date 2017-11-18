@@ -26,7 +26,7 @@
 #include <SoapySDR/Device.h>
 #include <SoapySDR/Formats.h>
 #include "soapy.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 
 extern int sdr_rx_overflow;
 

@@ -27,7 +27,7 @@
 #include <math.h>
 #include <inttypes.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"

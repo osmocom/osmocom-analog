@@ -19,7 +19,7 @@
 
 #include <string.h>
 #include <math.h>
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "squelch.h"
 
 #define CHAN squelch->chan

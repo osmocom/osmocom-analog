@@ -1,6 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = \
+	libdebug \
 	libmobile \
 	libdisplay \
 	libsample \
@@ -29,7 +30,6 @@ SUBDIRS += \
 endif
 
 SUBDIRS += \
-	common \
 	anetz \
 	bnetz \
 	cnetz \

@@ -75,6 +75,7 @@ AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR su
 AS_IF([test "x$somethingmagick" == "xyes"],[AC_MSG_NOTICE( Compiling with ImageMagick )],[AC_MSG_NOTICE( ImageMagick not supported )])
 
 AC_OUTPUT(
+    src/libdebug/Makefile
     src/libmobile/Makefile
     src/libdisplay/Makefile
     src/libimage/Makefile
@@ -97,7 +98,6 @@ AC_OUTPUT(
     src/libsound/Makefile
     src/libsdr/Makefile
     src/libsample/Makefile
-    src/common/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
     src/cnetz/Makefile

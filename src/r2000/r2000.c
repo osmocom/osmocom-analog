@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <time.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmncc/cause.h"
 #include "r2000.h"
 //#include "transaction.h"

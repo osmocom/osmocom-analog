@@ -4,7 +4,7 @@
 #include <string.h>
 #include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 
 #define level2db(level)		(20 * log10(level))
 #define db2level(db)		pow(10, (double)db / 20.0)

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../nmt/nmt.h"
 
 extern int dms_allow_loopback;

@@ -25,7 +25,7 @@
 #include <uhd.h>
 #include <uhd/usrp/usrp.h>
 #include "uhd.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 
 /* use to TX time stamp */
 //#define TX_TIMESTAMP

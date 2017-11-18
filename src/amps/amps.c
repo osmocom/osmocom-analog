@@ -43,7 +43,7 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "../libmncc/cause.h"
 #include "amps.h"

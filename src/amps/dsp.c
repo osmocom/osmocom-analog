@@ -82,7 +82,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "amps.h"
 #include "frame.h"

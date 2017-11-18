@@ -23,7 +23,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libhagelbarger/hagelbarger.h"
 #include "nmt.h"
 #include "frame.h"

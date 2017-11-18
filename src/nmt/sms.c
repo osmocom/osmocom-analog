@@ -24,7 +24,7 @@
 #include <time.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "nmt.h"
 
 #define SMS_RECEIVE_TO		5.0

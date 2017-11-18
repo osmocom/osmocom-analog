@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../nmt/nmt.h"
 
 static const uint8_t test_mo_sms_data1[] = {

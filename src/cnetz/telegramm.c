@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "cnetz.h"
 #include "dsp.h"
 #include "sysinfo.h"

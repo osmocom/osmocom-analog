@@ -22,7 +22,7 @@
 #include <math.h>
 #include <alsa/asoundlib.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmobile/sender.h"
 
 typedef struct sound {

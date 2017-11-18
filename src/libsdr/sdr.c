@@ -41,7 +41,7 @@ enum paging_signal;
 #ifdef HAVE_SOAPY
 #include "soapy.h"
 #endif
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 
 /* enable to debug buffer handling */
 //#define DEBUG_BUFFER

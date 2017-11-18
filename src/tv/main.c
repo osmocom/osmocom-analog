@@ -32,7 +32,7 @@ enum paging_signal;
 #include "../libfm/fm.h"
 #include "../libwave/wave.h"
 #include "../libimage/img.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #ifdef HAVE_SDR
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"

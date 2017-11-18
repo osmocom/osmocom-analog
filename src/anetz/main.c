@@ -25,7 +25,7 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
 #include "../libmobile/call.h"
 #include "freiton.h"

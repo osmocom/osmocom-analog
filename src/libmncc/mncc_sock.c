@@ -27,7 +27,7 @@
 #include <stddef.h>
 #include <unistd.h>
 #include "../libsample/sample.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "cause.h"
 #include "mncc_sock.h"

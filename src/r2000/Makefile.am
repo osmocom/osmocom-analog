@@ -12,12 +12,12 @@ radiocom2000_SOURCES = \
 	main.c
 radiocom2000_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \
-	$(top_builddir)/src/common/libcommon.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \

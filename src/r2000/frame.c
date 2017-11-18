@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <inttypes.h>
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libhagelbarger/hagelbarger.h"
 #include "frame.h"
 

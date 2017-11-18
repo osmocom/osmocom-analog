@@ -18,12 +18,12 @@ anetz_SOURCES = \
 anetz_LDADD = \
 	$(COMMON_LA) \
 	libgermanton.a \
+	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libsquelch/libsquelch.a \
-	$(top_builddir)/src/common/libcommon.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \

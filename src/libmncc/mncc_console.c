@@ -27,7 +27,7 @@
 #include "../libsample/sample.h"
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "testton.h"
 #include "mncc.h"
 #include "mncc_console.h"

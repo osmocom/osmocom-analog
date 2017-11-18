@@ -24,7 +24,7 @@
 #include <string.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
-#include "../common/debug.h"
+#include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"

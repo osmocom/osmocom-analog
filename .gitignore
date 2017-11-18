@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libdebug/libdebug.a
 src/libmobile/libmobile.a
 src/libdisplay/libdisplay.a
 src/libimage/libimage.a
@@ -42,7 +43,6 @@ src/libmncc/libmncc.a
 src/libsound/libsound.a
 src/libsdr/libsdr.a
 src/libsample/libsample.a
-src/common/libcommon.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz
