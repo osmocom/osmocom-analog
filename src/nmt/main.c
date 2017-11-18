@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "../libsample/sample.h"
-#include "../common/main_mobile.h"
+#include "../libmobile/main_mobile.h"
 #include "../common/debug.h"
 #include "nmt.h"
 #include "frame.h"

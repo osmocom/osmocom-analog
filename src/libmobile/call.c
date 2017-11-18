@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include "../libsample/sample.h"
-#include "debug.h"
+#include "../common/debug.h"
 #include "sender.h"
 #include "call.h"
 #include "../libtimer/timer.h"
@@ -332,6 +332,11 @@ static void process_timeout(struct timer *timer)
 		/* announcement timeout */
 		uint8_t buf[sizeof(struct gsm_mncc)];
 		struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
+
+		if (process->state == PROCESS_DISCONNECT) {
+			PDEBUG(DCALL, DEBUG_INFO, "Call released toward mobile network (after timeout)\n");
+			call_down_release(process->callref, process->cause);
+		}
 
 		memset(buf, 0, sizeof(buf));
 		mncc->msg_type = MNCC_REL_IND;
@@ -763,13 +768,14 @@ void mncc_down(uint8_t *buf, int length)
 		new_state_process(callref, PROCESS_DISCONNECT);
 		PDEBUG(DCALL, DEBUG_INFO, "Call disconnected\n");
 		call_down_disconnect(callref, mncc->cause.value);
+		timer_start(&process->timer, DISC_TIMEOUT);
 		break;
 	case MNCC_REL_REQ:
 		PDEBUG(DCALL, DEBUG_INFO, "Received MNCC release from fixed network with cause %d\n", mncc->cause.value);
 
 release:
 		destroy_process(callref);
-		PDEBUG(DCALL, DEBUG_INFO, "Call released\n");
+		PDEBUG(DCALL, DEBUG_INFO, "Call released toward mobile network\n");
 		call_down_release(callref, mncc->cause.value);
 		break;
 	}

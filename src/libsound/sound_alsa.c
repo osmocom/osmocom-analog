@@ -23,7 +23,7 @@
 #include <alsa/asoundlib.h>
 #include "../libsample/sample.h"
 #include "../common/debug.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;

@@ -24,10 +24,10 @@
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../common/main_mobile.h"
+#include "../libmobile/main_mobile.h"
 #include "../common/debug.h"
 #include "../libtimer/timer.h"
-#include "../common/call.h"
+#include "../libmobile/call.h"
 #include "freiton.h"
 #include "besetztton.h"
 #include "anetz.h"

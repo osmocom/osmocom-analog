@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include "../libsample/sample.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 
 /* must be odd value! */
 #define SIZE	23

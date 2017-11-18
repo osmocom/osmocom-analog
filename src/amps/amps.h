@@ -1,5 +1,5 @@
 #include "../libgoertzel/goertzel.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 #include "../libtimer/timer.h"
 #include "../libcompandor/compandor.h"
 #include "sysinfo.h"

@@ -6,7 +6,7 @@
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
 #include "../libemphasis/emphasis.h"
-#include "display.h"
+#include "../common/display.h"
 
 #define MAX_SENDER	16
 

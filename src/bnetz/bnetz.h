@@ -1,6 +1,6 @@
 #include "../libsquelch/squelch.h"
 #include "../libfsk/fsk.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 #include "../libtimer/timer.h"
 
 /* fsk modes of transmission */

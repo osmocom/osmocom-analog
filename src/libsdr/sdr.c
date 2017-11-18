@@ -32,7 +32,7 @@ enum paging_signal;
 #include "../libsample/sample.h"
 #include "../libfm/fm.h"
 #include "../libtimer/timer.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 #include "sdr_config.h"
 #include "sdr.h"
 #ifdef HAVE_UHD

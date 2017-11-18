@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../libsample/sample.h"
-#include "../common/main_mobile.h"
+#include "../libmobile/main_mobile.h"
 #include "../common/debug.h"
-#include "../common/call.h"
+#include "../libmobile/call.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"

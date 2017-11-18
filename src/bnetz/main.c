@@ -25,8 +25,8 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../common/debug.h"
-#include "../common/call.h"
-#include "../common/main_mobile.h"
+#include "../libmobile/call.h"
+#include "../libmobile/main_mobile.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
 #include "bnetz.h"

@@ -23,7 +23,7 @@
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 #include "../libfft/fft.h"
 
 #define HEIGHT	20

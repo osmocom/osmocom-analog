@@ -1,6 +1,6 @@
 #include "../libcompandor/compandor.h"
 #include "../libtimer/timer.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 #include "fsk_demod.h"
 #include "../libscrambler/scrambler.h"
 #include "transaction.h"

@@ -13,10 +13,10 @@ tacs_SOURCES = \
 tacs_LDADD = \
 	$(COMMON_LA) \
 	../amps/libamps.a \
+	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
-	$(top_builddir)/src/common/libmobile.a \
 	$(top_builddir)/src/common/libcommon.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \

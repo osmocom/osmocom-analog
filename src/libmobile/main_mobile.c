@@ -31,7 +31,7 @@
 #include <getopt.h>
 #include "../libsample/sample.h"
 #include "main_mobile.h"
-#include "debug.h"
+#include "../common/debug.h"
 #include "sender.h"
 #include "../libtimer/timer.h"
 #include "call.h"

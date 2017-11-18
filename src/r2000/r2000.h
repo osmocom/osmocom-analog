@@ -1,7 +1,7 @@
 #include "../libcompandor/compandor.h"
 #include "../libtimer/timer.h"
-#include "../common/sender.h"
-#include "../common/call.h"
+#include "../libmobile/sender.h"
+#include "../libmobile/call.h"
 #include "../libfsk/fsk.h"
 
 enum dsp_mode {

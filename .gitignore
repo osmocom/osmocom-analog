@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/libmobile/libmobile.a
 src/libimage/libimage.a
 src/libcompandor/libcompandor.a
 src/libgoertzel/libgoertzel.a
@@ -41,7 +42,6 @@ src/libsound/libsound.a
 src/libsdr/libsdr.a
 src/libsample/libsample.a
 src/common/libcommon.a
-src/common/libmobile.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz

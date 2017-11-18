@@ -25,7 +25,7 @@
 #include <sys/ioctl.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "sender.h"
+#include "../libmobile/sender.h"
 
 #define MAX_NAME_LEN	16
 #define MAX_UNIT_LEN	16

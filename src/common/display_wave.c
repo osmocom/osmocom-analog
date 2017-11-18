@@ -24,7 +24,7 @@
 #include <math.h>
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
-#include "sender.h"
+#include "../libmobile/sender.h"
 
 #define HEIGHT	11
 

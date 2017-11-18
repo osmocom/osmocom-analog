@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include "../libsample/sample.h"
 #include "../common/debug.h"
-#include "../common/call.h"
+#include "../libmobile/call.h"
 #include "cause.h"
 #include "mncc.h"
 #include "mncc_cross.h"

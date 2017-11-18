@@ -1,6 +1,6 @@
 #include "../libsquelch/squelch.h"
 #include "../libgoertzel/goertzel.h"
-#include "../common/sender.h"
+#include "../libmobile/sender.h"
 
 enum dsp_mode {
 	DSP_MODE_SILENCE,	/* send silence to transmitter, block audio from receiver */
