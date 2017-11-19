@@ -49,6 +49,7 @@ int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitud
 	/* generate ramp up with ramp_length */
 	for (i = 0; i < mod->ramp_length; i++)
 		mod->ramp_tab[i] = 0.5 - cos(M_PI * i / mod->ramp_length) / 2.0;
+	mod->ramp_tab[0] = mod->ramp_tab[1] / 2.0; /* never be 0 */
 
 #ifdef FAST_SINE
 	mod->sin_tab = calloc(65536+16384, sizeof(*mod->sin_tab));
@@ -177,10 +178,31 @@ again:
 				mod->state = MOD_STATE_RAMP_UP;
 				break;
 			}
-			frequency++;
+			/* deviation is defined by the frequency value and the offset */
+			dev = offset + *frequency++;
 			power++;
 			length--;
-			baseband += 2;
+			/* somehow we need to have some value, otherwise IIR filter will be very slow!
+			 * we still continue with a carrier, but it has very low amplitude.
+			 * the low amplitude is set in ramp_tab[0]
+			 */
+#ifdef FAST_SINE
+			phase += 65536.0 * dev / rate;
+			if (phase < 0.0)
+				phase += 65536.0;
+			else if (phase >= 65536.0)
+				phase -= 65536.0;
+			*baseband++ += cos_tab[(uint16_t)phase] * ramp_tab[ramp];
+			*baseband++ += sin_tab[(uint16_t)phase] * ramp_tab[ramp];
+#else
+			phase += 2.0 * M_PI * dev / rate;
+			if (phase < 0.0)
+				phase += 2.0 * M_PI;
+			else if (phase >= 2.0 * M_PI)
+				phase -= 2.0 * M_PI;
+			*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
+			*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
+#endif
 		}
 		break;
 	case MOD_STATE_RAMP_UP:
