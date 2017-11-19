@@ -25,6 +25,8 @@
 #include "../libsample/sample.h"
 #include "iir_filter.h"
 
+//#define DEBUG_NAN
+
 #define PI M_PI
 
 void iir_lowpass_init(iir_filter_t *filter, double frequency, int samplerate, int iterations)
@@ -47,6 +49,9 @@ void iir_lowpass_init(iir_filter_t *filter, double frequency, int samplerate, in
 	filter->a2 = filter->a0;
 	filter->b1 = 2 * (K * K - 1) * norm;
 	filter->b2 = (1 - K / Q + K * K) * norm;
+#ifdef DEBUG_NAN
+	printf("%p\n", filter);
+#endif
 }
 
 void iir_highpass_init(iir_filter_t *filter, double frequency, int samplerate, int iterations)
@@ -132,6 +137,11 @@ void iir_process(iir_filter_t *filter, sample_t *samples, int length)
 	}
 }
 
+#ifdef DEBUG_NAN
+#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+#endif
+
 void iir_process_baseband(iir_filter_t *filter, float *baseband, int length)
 {
 	double a0, a1, a2, b1, b2;
@@ -156,8 +166,30 @@ void iir_process_baseband(iir_filter_t *filter, float *baseband, int length)
 		in = *baseband;
 		for (j = 0; j < iterations; j++) {
 			out = in * a0 + z1[j];
+#ifdef DEBUG_NAN
+			if (!(out > -100 && out < 100)) {
+				printf("%p\n", filter);
+				printf("1. i=%d j=%d z=%.5f in=%.5f a0=%.5f out=%.5f\n", i, j, z1[j], in, a0, out);
+				abort();
+			}
+#endif
 			z1[j] = in * a1 + z2[j] - b1 * out;
+#ifdef DEBUG_NAN
+			if (!(z1[j] > -100 && z1[j] < 100)) {
+				printf("%p\n", filter);
+				printf("2. i=%d j=%d z1=%.5f z2=%.5f in=%.5f a1=%.5f out=%.5f b1=%.5f\n", i, j, z1[j], z2[j], in, a1, out, b1);
+				abort();
+			}
+#endif
 			z2[j] = in * a2 - b2 * out;
+#ifdef DEBUG_NAN
+			if (!(z2[j] > -100 && z2[j] < 100)) {
+				printf("%p\n", filter);
+				printf("%.5f\n", (in * a2) - (b2 * out));
+				printf("3. i=%d j=%d z2=%.5f in=%.5f a2=%.5f b2=%.5f out=%.5f\n", i, j, z2[j], in, a2, b2, out);
+				abort();
+			}
+#endif
 			in = out;
 		}
 		*baseband = in;
@@ -165,3 +197,6 @@ void iir_process_baseband(iir_filter_t *filter, float *baseband, int length)
 	}
 }
 
+#ifdef DEBUG_NAN
+#pragma GCC pop_options
+#endif
