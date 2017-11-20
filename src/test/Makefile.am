@@ -5,6 +5,7 @@ noinst_PROGRAMS = \
 	test_sendevolumenregler \
 	test_compandor \
 	test_emphasis \
+	test_dtmf \
 	test_dms \
 	test_sms \
 	test_performance \
@@ -79,6 +80,15 @@ test_emphasis_LDADD += \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS)
 endif
+
+test_dtmf_SOURCES = dummy.x test_dtmf.c
+
+test_dtmf_LDADD = \
+	$(COMMON_LA) \
+	$(top_builddir)/src/libdtmf/libdtmf.a \
+	$(top_builddir)/src/libfm/libfm.a \
+	$(top_builddir)/src/libfilter/libfilter.a \
+	-lm
 
 test_dms_SOURCES = test_dms.c dummy.c
 
