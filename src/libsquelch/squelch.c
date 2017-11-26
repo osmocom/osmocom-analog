@@ -43,7 +43,8 @@
  * loss_time, the 'loss' condition is returned.
  */
 
-#define SQUELCH_INIT_TIME	1.0	/* wait some time before performing squelch */
+/* NOTE: SQUELCH must be calibrated !AFTER! DC bias, to get the actual noise floor */
+#define SQUELCH_INIT_TIME	1.1	/* wait some time before performing squelch */
 #define SQUELCH_AUTO_TIME	1.0	/* duration of squelch quelch calibration */
 #define SQUELCH_AUTO_OFFSET	6.0	/* auto calibration: offset above noise floor */
 

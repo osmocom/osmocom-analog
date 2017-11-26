@@ -626,6 +626,11 @@ next_char:
 			/* dump info */
 			dump_info();
 			goto next_char;
+#ifdef HAVE_SDR
+		case 'B':
+			calibrate_bias();
+			goto next_char;
+#endif
 		}
 
 		/* process call control */

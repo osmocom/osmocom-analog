@@ -391,6 +391,39 @@ error:
 	return NULL;
 }
 
+double bias_I, bias_Q; /* calculated bias */
+int bias_count = -1; /* number of calculations */
+
+void calibrate_bias(void)
+{
+	bias_count = 0;
+	bias_I = 0.0;
+	bias_Q = 0.0;
+}
+
+static void sdr_bias(float *buffer, int count)
+{
+	int i;
+
+	if (bias_count < sdr_config->samplerate) {
+		for (i = 0; i < count; i++) {
+			bias_I += *buffer++;
+			bias_Q += *buffer++;
+		}
+		bias_count += count;
+		if (bias_count >= sdr_config->samplerate) {
+			bias_I /= bias_count;
+			bias_Q /= bias_count;
+			PDEBUG(DSDR, DEBUG_INFO, "DC bias calibration finished.\n");
+		}
+	} else {
+		for (i = 0; i < count; i++) {
+			*buffer++ -= bias_I;
+			*buffer++ -= bias_Q;
+		}
+	}
+}
+
 static void *sdr_write_child(void *arg)
 {
 	sdr_t *sdr = (sdr_t *)arg;
@@ -461,6 +494,8 @@ static void *sdr_read_child(void *arg)
 			if (sdr_config->soapy)
 				count = soapy_receive(sdr->thread_read.buffer2, num);
 #endif
+			if (bias_count >= 0)
+				sdr_bias(sdr->thread_read.buffer2, count);
 			if (count > 0) {
 #ifdef DEBUG_BUFFER
 				printf("Thread read %d samples from SDR and writes them to read buffer.\n", count);
@@ -767,6 +802,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 		if (sdr_config->soapy)
 			count = soapy_receive(buff, num);
 #endif
+		if (bias_count >= 0)
+			sdr_bias(buff, count);
 		if (count <= 0)
 			return count;
 	}

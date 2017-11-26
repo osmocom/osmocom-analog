@@ -42,4 +42,5 @@ void sighandler(int sigset);
 void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits);
 
 void dump_info(void);
+void calibrate_bias(void);
 
