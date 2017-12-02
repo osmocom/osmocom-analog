@@ -28,7 +28,8 @@
 
 #define HEIGHT	20
 
-static double buffer_max[MAX_DISPLAY_SPECTRUM];
+static double buffer_delay[MAX_DISPLAY_SPECTRUM];
+static double buffer_hold[MAX_DISPLAY_SPECTRUM];
 static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
 static uint8_t screen_color[HEIGHT][MAX_DISPLAY_WIDTH];
 static int spectrum_on = 0;
@@ -44,7 +45,7 @@ void display_spectrum_init(int samplerate, double _center_frequency)
 	/* should not happen due to low interval */
 	if (disp.interval_max < MAX_DISPLAY_SPECTRUM - 1)
 		disp.interval_max = MAX_DISPLAY_SPECTRUM - 1;
-	memset(buffer_max, 0, sizeof(buffer_max));
+	memset(buffer_delay, 0, sizeof(buffer_delay));
 
 	center_frequency = _center_frequency;
 	frequency_range = (double)samplerate;
@@ -59,6 +60,7 @@ void display_spectrum_on(int on)
 
 	if (spectrum_on) {
 		memset(&screen, ' ', sizeof(screen));
+		memset(&buffer_hold, 0, sizeof(buffer_hold));
 		printf("\0337\033[H");
 		for (j = 0; j < HEIGHT; j++) {
 			screen[j][w] = '\0';
@@ -68,7 +70,7 @@ void display_spectrum_on(int on)
 	}
 
 	if (on < 0) {
-		if (++spectrum_on == 2)
+		if (++spectrum_on == 3)
 			spectrum_on = 0;
 	} else
 		spectrum_on = on;
@@ -126,7 +128,7 @@ void display_spectrum(float *samples, int length)
 		abort();
 	}
 
-	int heigh[fft_size], low[fft_size];
+	int hold[fft_size], delay[fft_size], current[fft_size];
 
 	pos = disp.interval_pos;
 	max = disp.interval_max;
@@ -154,36 +156,51 @@ void display_spectrum(float *samples, int length)
 				if (v < 0)
 					v = 0;
 				v /= db;
-				buffer_max[j] -= DISPLAY_INTERVAL / 10.0;
-				if (v > buffer_max[j])
-					buffer_max[j] = v;
-				
-				/* heigh is the maximum value */
-				heigh[j] = (double)(HEIGHT * 2 - 1) * (1.0 - buffer_max[j]);
-				if (heigh[j] < 0)
-					heigh[j] = 0;
-				if (heigh[j] >= (HEIGHT * 2))
-					heigh[j] = (HEIGHT * 2) - 1;
-				/* low is the current value */
-				low[j] = (double)(HEIGHT * 2 - 1) * (1.0 - v);
-				if (low[j] < 0)
-					low[j] = 0;
-				if (low[j] >= (HEIGHT * 2))
-					low[j] = (HEIGHT * 2) - 1;
+				/* delayed */
+				buffer_delay[j] -= DISPLAY_INTERVAL / 10.0;
+				if (v > buffer_delay[j])
+					buffer_delay[j] = v;
+				delay[j] = (double)(HEIGHT * 2 - 1) * (1.0 - buffer_delay[j]);
+				if (delay[j] < 0)
+					delay[j] = 0;
+				if (delay[j] >= (HEIGHT * 2))
+					delay[j] = (HEIGHT * 2) - 1;
+				/* hold */
+				if (spectrum_on == 2) {
+					if (v > buffer_hold[j])
+						buffer_hold[j] = v;
+					hold[j] = (double)(HEIGHT * 2 - 1) * (1.0 - buffer_hold[j]);
+					if (hold[j] < 0)
+						hold[j] = 0;
+					if (hold[j] >= (HEIGHT * 2))
+						hold[j] = (HEIGHT * 2) - 1;
+				}
+				/* current */
+				current[j] = (double)(HEIGHT * 2 - 1) * (1.0 - v);
+				if (current[j] < 0)
+					current[j] = 0;
+				if (current[j] >= (HEIGHT * 2))
+					current[j] = (HEIGHT * 2) - 1;
 			}
 			/* plot scaled buffer */
 			memset(&screen, ' ', sizeof(screen));
 			memset(&screen_color, 7, sizeof(screen_color)); /* all white */
-			sprintf(screen[0], "(spectrum log %.0f dB", db);
+			sprintf(screen[0], "(spectrum log %.0f dB%s", db, (spectrum_on == 2) ? " HOLD" : "");
 			*strchr(screen[0], '\0') = ')';
+			for (j = 2; j < HEIGHT; j += 2) {
+				memset(screen_color[j], 4, 7); /* blue */
+				sprintf(screen[j], "%4.0f dB", -(double)(j+1) * db / (double)(HEIGHT - 1));
+				screen[j][7] = ' ';
+			}
 			o = (width - fft_size) / 2; /* offset from left border */
 			for (j = 0; j < fft_size; j++) {
-				s = l = n = low[j];
-				/* get last and next value */
+				/* show current spectrum in yellow */
+				s = l = n = current[j];
+					/* get last and next value */
 				if (j > 0)
-					l = (low[j - 1] + s) / 2;
+					l = (current[j - 1] + s) / 2;
 				if (j < fft_size - 1)
-					n = (low[j + 1] + s) / 2;
+					n = (current[j + 1] + s) / 2;
 				if (s > l && s > n) {
 					/* current value is a minimum */
 					e = s;
@@ -225,8 +242,9 @@ void display_spectrum(float *samples, int length)
 						screen_color[k][j + o] = 13;
 					}
 				}
+				/* show delayed spectrum in blue */
 				e = s;
-				s = heigh[j];
+				s = delay[j];
 				if ((s >> 1) < (e >> 1)) {
 					if ((s & 1) == 0)
 						screen[s >> 1][j + o] = '|';
@@ -238,14 +256,65 @@ void display_spectrum(float *samples, int length)
 						screen_color[k][j + o] = 4;
 					}
 				}
+				if (spectrum_on == 2) {
+					/* show hold spectrum in white */
+					s = l = n = hold[j];
+						/* get last and next value */
+					if (j > 0)
+						l = (hold[j - 1] + s) / 2;
+					if (j < fft_size - 1)
+						n = (hold[j + 1] + s) / 2;
+					if (s > l && s > n) {
+						/* hold value is a minimum */
+						e = s;
+						s = (l < n) ? (l + 1) : (n + 1);
+					} else if (s < l && s < n) {
+						/* hold value is a maximum */
+						e = (l > n) ? l : n;
+					} else if (l < n) {
+						/* last value is higher, next value is lower */
+						s = l + 1;
+						e = n;
+					} else if (l > n) {
+						/* last value is lower, next value is higher */
+						s = n + 1;
+						e = l;
+					} else {
+						/* hold, last and next values are equal */
+						e = s;
+					}
+					if (s == e) {
+						if ((s & 1) == 0)
+							screen[s >> 1][j + o] = '\'';
+						else
+							screen[s >> 1][j + o] = '.';
+						screen_color[s >> 1][j + o] = 17;
+					} else {
+						if ((s & 1) == 0)
+							screen[s >> 1][j + o] = '|';
+						else
+							screen[s >> 1][j + o] = '.';
+						screen_color[s >> 1][j + o] = 17;
+						if ((e & 1) == 0)
+							screen[e >> 1][j + o] = '\'';
+						else
+							screen[e >> 1][j + o] = '|';
+						screen_color[e >> 1][j + o] = 17;
+						for (k = (s >> 1) + 1; k < (e >> 1); k++) {
+							screen[k][j + o] = '|';
+							screen_color[k][j + o] = 17;
+						}
+					}
+				}
 			}
+			/* add channel positions in spectrum */
 			for (sender = sender_head; sender; sender = sender->next) {
 				j = (int)((sender->empfangsfrequenz - center_frequency) / frequency_range * (double) fft_size + width / 2 + 0.5);
 				if (j < 0 || j >= width) /* check out-of-range, should not happen */
 					continue;
 				for (k = 0; k < HEIGHT; k++) {
-					/* skip yellow graph */
-					if (screen_color[k][j] == 13)
+					/* skip yellow/white graph */
+					if (screen_color[k][j] == 13 || screen_color[k][j] == 17)
 						continue;
 					screen[k][j] = ':';
 					screen_color[k][j] = 12;
