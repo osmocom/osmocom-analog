@@ -41,18 +41,17 @@ static int new_callref = 0x40000000;
 
 /* mobile originating call */
 #define CARRIER_TO		0.08	/* 80 ms search for carrier */
-#define DIALING_TO		3.8	/* timeout after channel allocation "Kanalbelegung" */
+#define DIALING_TO		3.8	/* timeout after channel allocation "Kanalbelegung" (according to FTZ 1727 Pfl 32 Clause 3.2.2.2.8) */
 #define DIALING_TO2		0.5	/* timeout while receiving digits */
 
 /* mobile terminating call */
-#define ALERTING_TO		60	/* timeout after 60 seconds alerting the MS */
-#define PAGING_TO		2.1	/* 700..2100 ms timeout after paging "Selektivruf" */
-#define PAGE_TRIES		2	/* two tries */
+#define ALERTING_TO		60	/* timeout after 60 seconds alerting the MS (according to FTZ 1727 Pfl 32 Clause 3.2.2.2.7) */
+#define PAGING_TO		2.1	/* 700..2100 ms timeout after paging "Selektivruf" (according to FTZ 1727 Pfl 32 Clause 3.2.2.2.4.3) */
+#define PAGE_TRIES		2	/* two tries (see Clause 3.2.2.2.4.3) */
 #define SWITCH19_TIME		1.0	/* time to switch channel (radio should be tansmitting after that) */
 #define SWITCHBACK_TIME		0.1	/* time to wait until switching back (latency of sound device shall be lower) */
 
-#define TRENN_COUNT		4	/* min. 350 ms disconnect "Trennsignal" */
-#define TRENN_COUNT_NA		96	/* 12 s disconnect "Trennsignal" if no answer */
+#define TRENN_COUNT		5	/* min. 720 ms release 'Trennsignal' (according to FTZ 1727 Pfl 32 Clause 3.2.2.2.6) */
 
 #define METERING_DURATION	0.140	/* duration of metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.1) */
 #define METERING_START		1.0	/* start metering 1 second after call start */
@@ -270,7 +269,7 @@ void bnetz_destroy(sender_t *sender)
 	free(bnetz);
 }
 
-/* Abort connection towards mobile station by sending idle digits. */
+/* releaseing connection towards mobile station by sending idle digits. */
 static void bnetz_go_idle(bnetz_t *bnetz)
 {
 	timer_stop(&bnetz->timer);
@@ -490,7 +489,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 				bnetz->dial_type = DIAL_TYPE_METER_MUENZ;
 				break;
 			default:
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -500,7 +499,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 			break;
 		case DIAL_MODE_STATIONID:
 			if (digit < '0' || digit > '9') {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid station id digit, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid station id digit, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -525,12 +524,12 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 				break;
 			}
 			if (digit < '0' || digit > '9') {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid number digit, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid number digit, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_pos == sizeof(bnetz->dial_number) - 1) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -540,27 +539,27 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 			switch (digit) {
 			case 's':
 				if (bnetz->dial_type != DIAL_TYPE_NOMETER) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (no metering support), aborting.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (no metering support), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			case 'S':
 				if (bnetz->dial_type != DIAL_TYPE_METER) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support), aborting.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			case 'U':
 				if (bnetz->dial_type != DIAL_TYPE_METER_MUENZ) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support, payphone), aborting.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support, payphone), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			default:
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -569,12 +568,12 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 			break;
 		case DIAL_MODE_STATIONID2:
 			if (digit < '0' || digit > '9') {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid station id digit, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid station id digit, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->station_id[bnetz->dial_pos++] != digit) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received station id does not match first one, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received station id does not match first one, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -592,7 +591,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 				strcpy(dialing + 1, bnetz->dial_number);
 
 				if (bnetz->dial_pos != (int)strlen(bnetz->dial_number)) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too few number digits the second time, aborting.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too few number digits the second time, releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
@@ -624,17 +623,17 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 				break;
 			}
 			if (digit < '0' || digit > '9') {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid number digit, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received message that is not a valid number digit, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_pos == (int)strlen(bnetz->dial_number)) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too many number digits, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
 			if (bnetz->dial_number[bnetz->dial_pos++] != digit) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received number does not match first one, aborting.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received number does not match first one, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -673,7 +672,7 @@ static void bnetz_timeout(struct timer *timer)
 		break;
 #endif
 	case BNETZ_WAHLABRUF:
-		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while receiving call setup from mobile station, aborting.\n");
+		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while receiving call setup from mobile station, releasing.\n");
 		bnetz_release(bnetz, TRENN_COUNT);
 		break;
 	case BNETZ_SELEKTIVRUF_EIN:
@@ -688,7 +687,7 @@ static void bnetz_timeout(struct timer *timer)
 		break;
 	case BNETZ_RUFBESTAETIGUNG:
 		if (bnetz->page_try == PAGE_TRIES) {
-			PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for call acknowledge from mobile station, going idle.\n");
+			PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for call acknowledge from mobile station, releasing.\n");
 			bnetz_release(bnetz, TRENN_COUNT);
 			call_up_release(bnetz->callref, CAUSE_OUTOFORDER);
 			bnetz->callref = 0;
@@ -699,7 +698,7 @@ static void bnetz_timeout(struct timer *timer)
 		break;
 	case BNETZ_RUFHALTUNG:
 		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while waiting for answer of mobile station, releasing.\n");
-		bnetz_release(bnetz, TRENN_COUNT_NA);
+		bnetz_release(bnetz, TRENN_COUNT);
 		call_up_release(bnetz->callref, CAUSE_NOANSWER);
 		bnetz->callref = 0;
 		break;
