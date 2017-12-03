@@ -36,3 +36,8 @@ int parse_debug_opt(const char *opt);
 
 extern int debuglevel;
 
+extern void (*clear_console_text)(void);
+extern void (*print_console_text)(void);
+
+extern int debug_limit_scroll;
+

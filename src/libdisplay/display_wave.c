@@ -25,6 +25,7 @@
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
 #include "../libmobile/sender.h"
+#include "../libdebug/debug.h"
 
 #define HEIGHT	11
 
@@ -82,20 +83,11 @@ void display_wave_on(int on)
 		wave_on = 1 - wave_on;
 	else
 		wave_on = on;
-}
 
-void display_wave_limit_scroll(int on)
-{
-	int w, h;
-
-	if (!wave_on)
-		return;
-
-	get_win_size(&w, &h);
-
-	printf("\0337");
-	printf("\033[%d;%dr", (on) ? num_sender * HEIGHT + 1 : 1, h);
-	printf("\0338");
+	if (wave_on)
+		debug_limit_scroll = HEIGHT * num_sender;
+	else
+		debug_limit_scroll = 0;
 }
 
 /*

@@ -34,7 +34,8 @@ static void gen_samples(sample_t *samples, double freq)
 	}
 }
 
-extern void main_mobile();
+int num_kanal;
+int get_win_size;
 
 int main(void)
 {
@@ -44,11 +45,6 @@ int main(void)
 	double level;
 	int iter = 2;
 	int i;
-
-	/* this is never called, it forces the linker to add mobile functions */
-	if (debuglevel == -1000) main_mobile();
-
-	debuglevel = DEBUG_DEBUG;
 
 	printf("testing low-pass filter with %d iterations\n", iter);
 

@@ -45,8 +45,6 @@ void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 
-void clear_console_text() {}
-void print_console_text() {}
 void display_status_limit_scroll() {}
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 

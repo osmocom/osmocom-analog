@@ -35,7 +35,9 @@ static void gen_samples(sample_t *samples, double freq)
 	}
 }
 
-extern void main_mobile();
+int num_kanal;
+int get_win_size;
+
 
 int main(void)
 {
@@ -44,11 +46,6 @@ int main(void)
 	sample_t samples[SAMPLERATE];
 	double level;
 	double i;
-
-	/* this is never called, it forces the linker to add mobile functions */
-	if (debuglevel == -1000) main_mobile();
-
-	debuglevel = DEBUG_DEBUG;
 
 	init_emphasis(&estate, SAMPLERATE, cut_off);
 

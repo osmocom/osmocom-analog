@@ -27,7 +27,6 @@
 #include "../libsample/sample.h"
 #include "debug.h"
 #include "../libdisplay/display.h"
-#include "../libmncc/mncc_console.h"
 
 const char *debug_level[] = {
 	"debug  ",
@@ -67,12 +66,18 @@ int debuglevel = DEBUG_INFO;
 uint64_t debug_mask = ~0;
 extern int num_kanal;
 
+void (*clear_console_text)(void) = NULL;
+void (*print_console_text)(void) = NULL;
+
+int debug_limit_scroll = 0;
+
 void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, int chan, const char *fmt, ...)
 {
 	char buffer[4096], *b = buffer;
 	int s = sizeof(buffer) - 1;
 	const char *p;
 	va_list args;
+	int w, h;
 
 	if (debuglevel > level)
 		return;
@@ -96,24 +101,17 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	while ((p = strchr(file, '/')))
 		file = p + 1;
 
-	clear_console_text();
-//	printf("%s%s:%d %s() %s: %s\033[0;39m", debug_cat[cat].color, file, line, function, debug_level[level], buffer);
-	display_wave_limit_scroll(1);
-	display_status_limit_scroll(1);
-	display_measurements_limit_scroll(1);
-#ifdef HAVE_SDR
-	display_iq_limit_scroll(1);
-	display_spectrum_limit_scroll(1);
-#endif
+	if (clear_console_text)
+		clear_console_text();
+	if (debug_limit_scroll) {
+		get_win_size(&w, &h);
+		printf("\0337\033[%d;%dr\0338", debug_limit_scroll + 1, h);
+	}
 	printf("%s%s:%d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
-	display_wave_limit_scroll(0);
-	display_status_limit_scroll(0);
-	display_measurements_limit_scroll(0);
-#ifdef HAVE_SDR
-	display_iq_limit_scroll(0);
-	display_spectrum_limit_scroll(0);
-#endif
-	print_console_text();
+	if (debug_limit_scroll)
+		printf("\0337\033[%d;%dr\0338", 1, h);
+	if (print_console_text)
+		print_console_text();
 	fflush(stdout);
 }
 

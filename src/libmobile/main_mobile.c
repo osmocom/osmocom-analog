@@ -396,7 +396,8 @@ void sighandler(int sigset)
 	if (sigset == SIGPIPE)
 		return;
 
-	clear_console_text();
+	if (clear_console_text)
+		clear_console_text();
 	printf("Signal received: %d\n", sigset);
 
 	quit = 1;
@@ -570,7 +571,8 @@ next_char:
 		switch (c) {
 		case 3:
 			/* quit */
-			clear_console_text();
+			if (clear_console_text)
+				clear_console_text();
 			printf("CTRL+c received, quitting!\n");
 			*quit = 1;
 			goto next_char;
@@ -664,7 +666,8 @@ next_char:
 	signal(SIGPIPE, SIG_DFL);
 
 	/* get rid of last entry */
-	clear_console_text();
+	if (clear_console_text)
+		clear_console_text();
 
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);

@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include "../libsample/sample.h"
 #include "../libmobile/sender.h"
+#include "../libdebug/debug.h"
 
 /* must be odd value! */
 #define SIZE	23
@@ -70,20 +71,11 @@ void display_iq_on(int on)
 			iq_on = 0;
 	} else
 		iq_on = on;
-}
 
-void display_iq_limit_scroll(int on)
-{
-	int w, h;
-
-	if (!iq_on)
-		return;
-
-	get_win_size(&w, &h);
-
-	printf("\0337");
-	printf("\033[%d;%dr", (on) ? SIZE + 1 : 1, h);
-	printf("\0338");
+	if (iq_on)
+		debug_limit_scroll = SIZE;
+	else
+		debug_limit_scroll = 0;
 }
 
 /*

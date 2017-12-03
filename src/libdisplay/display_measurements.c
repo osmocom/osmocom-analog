@@ -26,6 +26,7 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libmobile/sender.h"
+#include "../libdebug/debug.h"
 
 #define MAX_NAME_LEN	16
 #define MAX_UNIT_LEN	16
@@ -240,6 +241,8 @@ static void print_measurements(int on)
 	}
 	/* reset color and position */
 	printf("\033[0;39m\0338"); fflush(stdout);
+
+	debug_limit_scroll = lines_total;
 }
 
 void display_measurements_on(int on)
@@ -251,20 +254,8 @@ void display_measurements_on(int on)
 		measurements_on = 1 - measurements_on;
 	else
 		measurements_on = on;
-}
 
-void display_measurements_limit_scroll(int on)
-{
-	int w, h;
-
-	if (!measurements_on)
-		return;
-
-	get_win_size(&w, &h);
-
-	printf("\0337");
-	printf("\033[%d;%dr", (on) ? lines_total + 1 : 1, h);
-	printf("\0338");
+	debug_limit_scroll = 0;
 }
 
 /* add new parameter on startup to the list of measurements */

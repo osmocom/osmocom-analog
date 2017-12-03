@@ -16,28 +16,8 @@ test_filter_SOURCES = test_filter.c dummy.c
 test_filter_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libdebug/libdebug.a \
-	$(top_builddir)/src/libmobile/libmobile.a \
-	$(top_builddir)/src/libdisplay/libdisplay.a \
-	$(top_builddir)/src/libjitter/libjitter.a \
-	$(top_builddir)/src/libtimer/libtimer.a \
-	$(top_builddir)/src/libsamplerate/libsamplerate.a \
-	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
-	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libmncc/libmncc.a \
-	$(top_builddir)/src/libsound/libsound.a \
-	$(top_builddir)/src/libsample/libsample.a \
-	$(ALSA_LIBS) \
 	-lm
-
-if HAVE_SDR
-test_filter_LDADD += \
-	$(top_builddir)/src/libsdr/libsdr.a \
-	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS)
-endif
 
 test_sendevolumenregler_SOURCES = test_sendevolumenregler.c
 
@@ -58,28 +38,9 @@ test_emphasis_SOURCES = test_emphasis.c dummy.c
 test_emphasis_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libdebug/libdebug.a \
-	$(top_builddir)/src/libmobile/libmobile.a \
-	$(top_builddir)/src/libdisplay/libdisplay.a \
-	$(top_builddir)/src/libjitter/libjitter.a \
-	$(top_builddir)/src/libtimer/libtimer.a \
-	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
-	$(top_builddir)/src/libwave/libwave.a \
-	$(top_builddir)/src/libmncc/libmncc.a \
-	$(top_builddir)/src/libsound/libsound.a \
-	$(top_builddir)/src/libsample/libsample.a \
-	$(ALSA_LIBS) \
 	-lm
-
-if HAVE_SDR
-test_emphasis_LDADD += \
-	$(top_builddir)/src/libsdr/libsdr.a \
-	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libfm/libfm.a \
-	$(UHD_LIBS) \
-	$(SOAPY_LIBS)
-endif
 
 test_dtmf_SOURCES = dummy.x test_dtmf.c
 

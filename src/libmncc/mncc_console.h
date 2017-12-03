@@ -4,7 +4,5 @@ void console_cleanup(void);
 int console_open_audio(int latspl);
 int console_start_audio(void);
 void console_process(int c);
-void clear_console_text(void);
-void print_console_text(void);
 void process_console(int c);
 

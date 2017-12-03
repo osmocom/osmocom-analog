@@ -223,11 +223,38 @@ static int console_mncc_up(uint8_t *buf, int length)
 	return 0;
 }
 
+static char console_text[256];
+static char console_clear[256];
+static int console_len = 0;
+
+static void _clear_console_text(void)
+{
+	if (!console_len)
+		return;
+
+	fwrite(console_clear, console_len, 1, stdout);
+	// note: fflused by user of this function
+	console_len = 0;
+}
+
+static void _print_console_text(void)
+{
+	if (!console_len)
+		return;
+
+	printf("\033[1;37m");
+	fwrite(console_text, console_len, 1, stdout);
+	printf("\033[0;39m");
+}
+
 int console_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int echo_test)
 {
 	int rc = 0;
 
 	init_testton();
+
+	clear_console_text = _clear_console_text;
+	print_console_text = _print_console_text;
 
 	memset(&console, 0, sizeof(console));
 	strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
@@ -294,10 +321,6 @@ void console_cleanup(void)
 
 	jitter_destroy(&console.dejitter);
 }
-
-static char console_text[256];
-static char console_clear[256];
-static int console_len = 0;
 
 static void process_ui(int c)
 {
@@ -393,26 +416,6 @@ dial_after_hangup:
 	console_clear[len - 1] = '\r';
 	print_console_text();
 	fflush(stdout);
-}
-
-void clear_console_text(void)
-{
-	if (!console_len)
-		return;
-
-	fwrite(console_clear, console_len, 1, stdout);
-	// note: fflused by user of this function
-	console_len = 0;
-}
-
-void print_console_text(void)
-{
-	if (!console_len)
-		return;
-
-	printf("\033[1;37m");
-	fwrite(console_text, console_len, 1, stdout);
-	printf("\033[0;39m");
 }
 
 /* get keys from keyboad to control call via console

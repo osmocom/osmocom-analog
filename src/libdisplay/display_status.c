@@ -24,6 +24,7 @@
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
 #include "../libmobile/sender.h"
+#include "../libdebug/debug.h"
 
 static int status_on = 0;
 static int line_count = 0;
@@ -70,20 +71,11 @@ void display_status_on(int on)
 
 	if (status_on)
 		print_status(1);
-}
 
-void display_status_limit_scroll(int on)
-{
-	int w, h;
-
-	if (!status_on)
-		return;
-
-	get_win_size(&w, &h);
-
-	printf("\0337");
-	printf("\033[%d;%dr", (on) ? lines_total + 1 : 1, h);
-	printf("\0338");
+	if (status_on)
+		debug_limit_scroll = lines_total;
+	else
+		debug_limit_scroll = 0;
 }
 
 /* start status display */
@@ -142,6 +134,8 @@ void display_status_end(void)
 		print_status(1);
 	/* set new total lines */
 	lines_total = line_count;
+	if (status_on)
+		debug_limit_scroll = lines_total;
 }
 
 

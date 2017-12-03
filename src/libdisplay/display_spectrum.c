@@ -25,6 +25,7 @@
 #include "../libsample/sample.h"
 #include "../libmobile/sender.h"
 #include "../libfft/fft.h"
+#include "../libdebug/debug.h"
 
 #define HEIGHT	20
 
@@ -74,20 +75,11 @@ void display_spectrum_on(int on)
 			spectrum_on = 0;
 	} else
 		spectrum_on = on;
-}
 
-void display_spectrum_limit_scroll(int on)
-{
-	int w, h;
-
-	if (!spectrum_on)
-		return;
-
-	get_win_size(&w, &h);
-
-	printf("\0337");
-	printf("\033[%d;%dr", (on) ? HEIGHT + 1 : 1, h);
-	printf("\0338");
+	if (spectrum_on)
+		debug_limit_scroll = HEIGHT;
+	else
+		debug_limit_scroll = 0;
 }
 
 /*

@@ -22,7 +22,6 @@
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
 #include "../libfilter/iir_filter.h"
 #include "emphasis.h"
 
@@ -61,7 +60,7 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 	/* exp (-2 * PI * CUT_OFF * delta_t) */
 	factor = exp(-2.0 * PI * cut_off / (double)samplerate); /* 1/samplerate == delta_t */
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Emphasis factor = %.3f\n", factor);
+//	printf("Emphasis factor = %.3f\n", factor);
 	state->p.factor = factor;
 	state->p.amp = 1.0;
 	state->d.factor = factor;
