@@ -368,9 +368,11 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	display_iq_init(samplerate);
 	display_spectrum_init(samplerate, rx_center_frequency);
 
+	PDEBUG(DSDR, DEBUG_INFO, "Using local oscillator offseet: %.0f Hz\n", sdr_config->lo_offset);
+
 #ifdef HAVE_UHD
 	if (sdr_config->uhd) {
-		rc = uhd_open(sdr_config->channel, sdr_config->device_args, sdr_config->stream_args, sdr_config->tune_args, sdr_config->tx_antenna, sdr_config->rx_antenna, tx_center_frequency, rx_center_frequency, sdr_config->samplerate, sdr_config->tx_gain, sdr_config->rx_gain, sdr_config->bandwidth, sdr_config->uhd_tx_timestamps);
+		rc = uhd_open(sdr_config->channel, sdr_config->device_args, sdr_config->stream_args, sdr_config->tune_args, sdr_config->tx_antenna, sdr_config->rx_antenna, tx_center_frequency, rx_center_frequency, sdr_config->lo_offset, sdr_config->samplerate, sdr_config->tx_gain, sdr_config->rx_gain, sdr_config->bandwidth, sdr_config->uhd_tx_timestamps);
 		if (rc)
 			goto error;
 	}
@@ -378,7 +380,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 #ifdef HAVE_SOAPY
 	if (sdr_config->soapy) {
-		rc = soapy_open(sdr_config->channel, sdr_config->device_args, sdr_config->stream_args, sdr_config->tune_args, sdr_config->tx_antenna, sdr_config->rx_antenna, tx_center_frequency, rx_center_frequency, sdr_config->samplerate, sdr_config->tx_gain, sdr_config->rx_gain, sdr_config->bandwidth);
+		rc = soapy_open(sdr_config->channel, sdr_config->device_args, sdr_config->stream_args, sdr_config->tune_args, sdr_config->tx_antenna, sdr_config->rx_antenna, tx_center_frequency, rx_center_frequency, sdr_config->lo_offset, sdr_config->samplerate, sdr_config->tx_gain, sdr_config->rx_gain, sdr_config->bandwidth);
 		if (rc)
 			goto error;
 	}

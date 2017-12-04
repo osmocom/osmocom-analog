@@ -7,6 +7,7 @@ typedef struct sdr_config {
 			*stream_args,
 			*tune_args;
 	int		samplerate;		/* ADC/DAC sample rate */
+	double		lo_offset;		/* LO frequency offset */
 	double		bandwidth;		/* IF bandwidth */
 	double		tx_gain,		/* gain */
 			rx_gain;
@@ -22,7 +23,7 @@ typedef struct sdr_config {
 
 extern sdr_config_t *sdr_config;
 
-void sdr_config_init(void);
+void sdr_config_init(double lo_offset);
 void sdr_config_print_help(void);
 void sdr_config_print_hotkeys(void);
 extern struct option sdr_config_long_options[];

@@ -77,9 +77,7 @@ In case of B-Netz, I use the following parameters:
 # bnetz --sdr-soapy \
         --sdr-tx-gain 50 \
         --sdr-rx-gain 30 \
-        --sdr-bandwidth 5000000 \
         --sdr-samplerate 5000000 \
-        --sdr-tune-args "OFFSET=1000000" \
         -s 100000 \
         -k 17
 
@@ -89,10 +87,10 @@ In case of B-Netz, I use the following parameters:
 In order to change from analog sound card to SDR, you need <b>--sdr-soapy</b> option.
 In my setup I use antennas directly connected to the SDR.
 Being about 1-10 meters away, I use the <b>gain</b> as defined above.
-The IF filter requires a minimum <b>bandwidth</b> of 5 MHz.
 The <b>sample rate</b> must be 5 MHz minimum.
+The default <b>bandwidth</b> follows the sample rate, if not specified using <b>--sdr-bandwidth</b>.
 Higher sample rate causes more CPU, RAM and USB load.
-The local oscillator frequency causes the transmitted signal to be noisy, so I shift it 1 MHz away, using an <b>offset</b>.
+The local oscillator frequency causes the transmitted signal to be noisy, so I shift it 1 MHz away, using the default <b>--sdr-lo-offset</b>.
 The audio processing rate of 100 KHz (<b>-s 100000</b>) is used to generate two channels: <b>17</b> and 19.
 Note that channel 19 is not given here, but will be used automatically.
 With B-Netz, the transmitter switches from any voice channel to the paging channel (19) whenever the phone gets paged.
@@ -174,9 +172,7 @@ Because C-Netz uses only odd channel numbers for 10 KHz spacing, we use channel 
 # cnetz --sdr-soapy \
         --sdr-rx-gain 50 \
 	--sdr-tx-gain 30 \
-        --sdr-bandwidth 5000000 \
         --sdr-samplerate 5000000 \
-        --sdr-tune-args "OFFSET=1000000" \
 	-s 100000 \
 	-k 131 -k 135 \
 	-C 0,0
@@ -192,7 +188,7 @@ Give PAL 'FUBK' test image on TV channel 21.
 
 # osmotv --sdr-soapy \
          --sdr-tx-gain 60 \
-	 --sdr-tune-args "OFFSET=-3000000" \
+	 --sdr-bandwidth 60000000 \
 	 -r 13750000  \
 	 -c 21  \
 	 tx-fubk

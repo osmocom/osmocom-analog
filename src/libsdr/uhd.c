@@ -49,7 +49,7 @@ static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
 static int			tx_timestamps;
 
-int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double rate, double tx_gain, double rx_gain, double bandwidth, int _tx_timestamps)
+int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth, int _tx_timestamps)
 {
 	uhd_error error;
 	double got_frequency, got_rate, got_gain, got_bandwidth;
@@ -153,7 +153,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			uhd_close();
 			return -EIO;
 		}
-		if (fabs(got_rate - rate) > 0.001) {
+		if (fabs(got_rate - rate) > 1.0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %.0f Hz\n", rate, got_rate);
 			uhd_close();
 			return -EINVAL;
@@ -182,7 +182,11 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* set frequency */
 		memset(&tune_request, 0, sizeof(tune_request));
 		tune_request.target_freq = tx_frequency;
-		tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
+		if (lo_offset) {
+			tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_MANUAL;
+			tune_request.rf_freq = tx_frequency + lo_offset;
+		} else
+			tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 		tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 		tune_request.args = strdup(_tune_args);
 		error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
@@ -219,7 +223,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			uhd_close();
 			return -EIO;
 		}
-		if (fabs(got_bandwidth - bandwidth) > 0.001) {
+		if (fabs(got_bandwidth - bandwidth) > 100.0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
 			uhd_close();
 			return -EINVAL;
@@ -337,7 +341,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			uhd_close();
 			return -EIO;
 		}
-		if (fabs(got_rate - rate) > 0.001) {
+		if (fabs(got_rate - rate) > 1.0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %.0f Hz\n", rate, got_rate);
 			uhd_close();
 			return -EINVAL;
@@ -366,7 +370,11 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* set frequency */
 		memset(&tune_request, 0, sizeof(tune_request));
 		tune_request.target_freq = rx_frequency;
-		tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
+		if (lo_offset) {
+			tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_MANUAL;
+			tune_request.rf_freq = rx_frequency + lo_offset;
+		} else
+			tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 		tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 		tune_request.args = strdup(_tune_args);
 		error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
@@ -403,7 +411,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			uhd_close();
 			return -EIO;
 		}
-		if (fabs(got_bandwidth - bandwidth) > 0.001) {
+		if (fabs(got_bandwidth - bandwidth) > 100.0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
 			uhd_close();
 			return -EINVAL;

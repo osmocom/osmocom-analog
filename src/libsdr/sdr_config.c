@@ -32,13 +32,14 @@ static int got_init = 0;
 extern int use_sdr;
 sdr_config_t *sdr_config = NULL;
 
-void sdr_config_init(void)
+void sdr_config_init(double lo_offset)
 {
 	sdr_config = calloc(1, sizeof(*sdr_config));
 	memset(sdr_config, 0, sizeof(*sdr_config));
 	sdr_config->device_args = "";
 	sdr_config->stream_args = "";
 	sdr_config->tune_args = "";
+	sdr_config->lo_offset = lo_offset;
 
 	got_init = 1;
 }
@@ -65,6 +66,9 @@ void sdr_config_print_help(void)
 	printf("    --sdr-samplerate <samplerate>\n");
 	printf("        Sample rate to use with SDR. By default it equals the regular sample\n");
 	printf("        rate.\n");
+	printf("    --sdr-lo-offset <Hz>\n");
+	printf("        Give frequency offset in Hz to move the local oscillator away from the\n");
+	printf("        target frequency. (default = %.0f)\n", sdr_config->lo_offset);
 	printf("    --sdr-bandwidth <bandwidth>\n");
 	printf("        Give IF filter bandwidth to use. If not, sample rate is used.\n");
 	printf("    --sdr-rx-antenna <name>\n");
@@ -109,13 +113,14 @@ void sdr_config_print_hotkeys(void)
 #define	OPT_SDR_RX_GAIN		1508
 #define	OPT_SDR_TX_GAIN		1509
 #define	OPT_SDR_SAMPLERATE	1510
-#define	OPT_SDR_BANDWIDTH	1511
-#define	OPT_WRITE_IQ_RX_WAVE	1512
-#define	OPT_WRITE_IQ_TX_WAVE	1513
-#define	OPT_READ_IQ_RX_WAVE	1514
-#define	OPT_READ_IQ_TX_WAVE	1515
-#define	OPT_SDR_SWAP_LINKS	1516
-#define OPT_SDR_UHD_TX_TS	1517
+#define	OPT_SDR_LO_OFFSET	1511
+#define	OPT_SDR_BANDWIDTH	1512
+#define	OPT_WRITE_IQ_RX_WAVE	1513
+#define	OPT_WRITE_IQ_TX_WAVE	1514
+#define	OPT_READ_IQ_RX_WAVE	1515
+#define	OPT_READ_IQ_TX_WAVE	1516
+#define	OPT_SDR_SWAP_LINKS	1517
+#define OPT_SDR_UHD_TX_TS	1518
 
 struct option sdr_config_long_options[] = {
 	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
@@ -125,6 +130,7 @@ struct option sdr_config_long_options[] = {
 	{"sdr-stream-args", 1, 0, OPT_SDR_STREAM_ARGS},
 	{"sdr-tune-args", 1, 0, OPT_SDR_TUNE_ARGS},
 	{"sdr-samplerate", 1, 0, OPT_SDR_SAMPLERATE},
+	{"sdr-lo-offset", 1, 0, OPT_SDR_LO_OFFSET},
 	{"sdr-bandwidth", 1, 0, OPT_SDR_BANDWIDTH},
 	{"sdr-rx-antenna", 1, 0, OPT_SDR_RX_ANTENNA},
 	{"sdr-tx-antenna", 1, 0, OPT_SDR_TX_ANTENNA},
@@ -182,6 +188,10 @@ int sdr_config_opt_switch(int c, int *skip_args)
 		break;
 	case OPT_SDR_SAMPLERATE:
 		sdr_config->samplerate = atoi(optarg);
+		*skip_args += 2;
+		break;
+	case OPT_SDR_LO_OFFSET:
+		sdr_config->lo_offset = atof(optarg);
 		*skip_args += 2;
 		break;
 	case OPT_SDR_BANDWIDTH:

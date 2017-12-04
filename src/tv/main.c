@@ -41,6 +41,8 @@ enum paging_signal;
 #include "tv_modulate.h"
 #include "channels.h"
 
+#define DEFAULT_LO_OFFSET -3000000.0
+
 void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
@@ -454,7 +456,7 @@ int main(int argc, char *argv[])
 	debuglevel = 0;
 
 #ifdef HAVE_SDR
-	sdr_config_init();
+	sdr_config_init(DEFAULT_LO_OFFSET);
 #endif
 
 	skip_args = handle_options(argc, argv);

@@ -62,7 +62,7 @@ static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 	return 0;
 }
 
-int soapy_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double rate, double tx_gain, double rx_gain, double bandwidth)
+int soapy_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth)
 {
 	double got_frequency, got_rate, got_gain, got_bandwidth;
 	const char *got_antenna;
@@ -87,6 +87,13 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	rc = parse_args(&tune_args, _tune_args);
 	if (rc < 0)
 		return rc;
+
+	if (lo_offset) {
+		char val[32];
+		snprintf(val, sizeof(val), "%.0f", lo_offset);
+		val[sizeof(val) - 1] = '\0';
+		SoapySDRKwargs_set(&tune_args, "OFFSET", val);
+	}
 
 	/* create SoapySDR device */
 	sdr = SoapySDRDevice_make(&device_args);
