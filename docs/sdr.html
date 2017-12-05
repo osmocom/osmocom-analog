@@ -145,11 +145,11 @@ Multiple Channels
 
 <p>
 Multiple channels can be useful, to keep the control channel, while establishing one or even multiple voice channels.
-One nice things about SDR is that a spectrum is transmitted and not just one modulated carrier.
-Because the carrier is actually generated in software, we can generate multiple carriers that fit in our bandwidth.
+One nice feature of SDR is that a spectrum is transmitted and not just one modulated carrier.
+Because the carrier is actually generated in software, we can generate multiple carriers that fit in our spectrum.
 I suggest to have at least one channel space between channels you want to generate.
 I suggest to use channel 1 and 3 or even channel 1 and 4 for NMT system.
-The software will notice you, if the channels wont fit into the bandwidth.
+The software will notice you, if the channels wont fit into the spectrum.
 In this case increase the sample rate (-s) to generate a wider spectrum. (--sdr-samplerate must not need to be changed)
 </p>
 
@@ -161,7 +161,7 @@ I suggest to stay below 60% for each threads.
 </p>
 
 <p>
-Example: C-Netz<br>
+<b>Example: C-Netz</b><br>
 Two channes are created, one the OgK (control channel) and one SpK (speech channel).
 The distance between channels is 20 KHz (two channels).
 Because C-Netz uses only odd channel numbers for 10 KHz spacing, we use channel 131 (OgK) and 135 (SpK).
@@ -180,8 +180,8 @@ Because C-Netz uses only odd channel numbers for 10 KHz spacing, we use channel 
 </pre>
 
 <p>
-Example: Test TV signal<br>
-Give PAL 'FUBK' test image on TV channel 21.
+<b>Example: Test TV signal</b><br>
+Transmit PAL 'FUBK' test image on TV channel 21.
 </p>
 
 <pre>

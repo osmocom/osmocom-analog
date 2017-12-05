@@ -1,7 +1,9 @@
 This software implements base station protocol of classic mobile phones. With
 radio transmitter and receiver connected to one sound card and a headset
 connected to another sound card, it is possible to make and receive calls to
-and from mobile phone. Currently supported networks:
+and from mobile phone. With SDR (software defined radio) it can be use without
+radio equipment connected to a sound card, and even multiple channels can be
+generated simultaniously using SDR. Currently supported networks:
 
  * A-Netz
  * B-Netz (ATF-1)
@@ -9,7 +11,9 @@ and from mobile phone. Currently supported networks:
  * NMT 450 / 900 (Nordic Mobile Telephone)
  * AMPS (Advanced Mobile Phone System)
  * TACS (Total Access Communication System)
+ * JTACS (Japanese version of TACS)
  * Radiocom 2000 (French network)
+ * JollyCom (Unofficial network, invented by the author)
 
 
 USE AT YOUR OWN RISK!
@@ -49,6 +53,6 @@ providing memory cards to be programmed for older C-Netz phone.
 
 Dieter Spaar providing TACS recordings to verify and debug TACS support.
 
-Hans Wigger providing Radiocom 2000 recordings to reverse-enigeer the signalling
-system.
+Hans Wigger providing Radiocom 2000 recordings, to reverse-enigeer the standard,
+which seems not to exist anymore...
 
