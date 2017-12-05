@@ -44,9 +44,9 @@
  */
 
 /* NOTE: SQUELCH must be calibrated !AFTER! DC bias, to get the actual noise floor */
-#define SQUELCH_INIT_TIME	1.1	/* wait some time before performing squelch */
-#define SQUELCH_AUTO_TIME	1.0	/* duration of squelch quelch calibration */
-#define SQUELCH_AUTO_OFFSET	6.0	/* auto calibration: offset above noise floor */
+#define SQUELCH_INIT_TIME	0.1	/* wait some time before performing squelch */
+#define SQUELCH_AUTO_TIME	0.5	/* duration of squelch quelch calibration */
+#define SQUELCH_AUTO_OFFSET	10.0	/* auto calibration: offset above noise floor */
 
 void squelch_init(squelch_t *squelch, int chan, double threshold_db, double mute_time, double loss_time)
 {
@@ -89,12 +89,19 @@ enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double durat
 		squelch->auto_count += duration;
 		squelch->auto_level_sum += rf_level_db;
 		squelch->auto_level_count++;
-		if (squelch->auto_count < SQUELCH_AUTO_TIME)
-			return SQUELCH_MUTE;
-		squelch->threshold_db = squelch->auto_level_sum / (double) squelch->auto_level_count;
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal measurement: %.1f dB noise floor, using threshold of %.1f dB\n", squelch->threshold_db, squelch->threshold_db + SQUELCH_AUTO_OFFSET);
-		squelch->threshold_db += SQUELCH_AUTO_OFFSET;
-		squelch->auto_state = 0;
+		if (squelch->auto_count >= SQUELCH_AUTO_TIME) {
+			double noise_db, threshold_db;
+			noise_db = squelch->auto_level_sum / (double) squelch->auto_level_count;
+			threshold_db = noise_db + SQUELCH_AUTO_OFFSET;
+			/* must be 0.1 dB smaller, so we prevent repeated debugging message with similar value */
+			if (threshold_db < squelch->threshold_db - 0.1) {
+				squelch->threshold_db = threshold_db;
+				PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal measurement: %.1f dB noise floor, using squelch threshold of %.1f dB\n", noise_db, threshold_db);
+			}
+			squelch->auto_count = 0.0;
+			squelch->auto_level_count = 0;
+			squelch->auto_level_sum = 0.0;
+		}
 	}
 
 	/* enough RF level, so we unmute when mute_count reched 0 */
