@@ -481,14 +481,18 @@ static const char *param_ta_450(uint64_t value, int ndigits, enum nmt_direction 
 	return result;
 }
 
-static const char *param_ta_900(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+static const char *param_ta_900(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
-	static char result[32];
+	static char result[64];
 
-	if ((value & 0x80))
-		sprintf(result, "%" PRIu64 " (Channel No. + 1024)", value & 0x7f);
-	else
-		sprintf(result, "%" PRIu64, value);
+	if ((value & 0x80)) {
+		nmt_value2digits(value & 0x7f, result, ndigits);
+		result[ndigits] = '\0';
+		strcat(result, " (Channel No. + 1024)");
+	} else {
+		nmt_value2digits(value, result, ndigits);
+		result[ndigits] = '\0';
+	}
 
 	return result;
 }
@@ -722,16 +726,9 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 				return NMT_MESSAGE_21b;
 			return NMT_MESSAGE_4;
 		case 4:
-			switch((digits[13] << 8) + (digits[14] << 4) + digits[15]) {
-			case 0x3f3:
-			case 0x3f4:
-			case 0x3f5:
-			case 0x3f6:
-			case 0x000:
+			if (digits[6] || digits[7] || digits[8] || digits[9] || digits[10] || digits[11] || digits[12])
 				return NMT_MESSAGE_2e;
-			default:
-				return NMT_MESSAGE_1b;
-			}
+			return NMT_MESSAGE_1b;
 		case 5:
 			if (digits[6] == 15)
 				return NMT_MESSAGE_21c;

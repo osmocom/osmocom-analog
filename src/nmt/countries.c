@@ -95,7 +95,7 @@ static struct nmt_frequency frq_900_tr[] = {
 
 /* channel allocation used in France */
 static struct nmt_frequency frq_900_f[] = {
-	{   1,	540,	430.050,	0.025,	1.0,	-10.0,	0 },
+	{   1,	540,	440.0125,	0.025,	1.0,	-10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
@@ -156,7 +156,7 @@ static struct nmt_country {
 	{ 900, 0, 5, 1,9,	"CH",	"Switzerland",		"PTT",				frq_900_scandinavia },
 	{ 900, 0, 6, 1,15,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_900_nl },
 	{ 900, 0, 1, 1,9,	"TR",	"Turkey",		"Turkcell",			frq_900_tr },
-	{ 900, 0, 0, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
+	{ 900, 0,10, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
 	{ 900, 0, 1, 1,9,	"F1",	"France (Group 1)",	"France Telecom",		frq_900_f },
 	{ 900, 0, 2, 1,9,	"F2",	"France (Group 2)",	"France Telecom",		frq_900_f },
 	{ 900, 0, 3, 1,9,	"F3",	"France (Group 3)",	"France Telecom",		frq_900_f },

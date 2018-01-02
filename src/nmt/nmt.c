@@ -389,37 +389,35 @@ void nmt_check_channels(int __attribute__((unused)) nmt_system)
 		}
 	}
 	if ((cca || ccb) && !tc) {
-		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call is possible.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use at least one 'TC'!\n");
 		note = 1;
 	}
 	if (tc && !(cca || ccb)) {
-		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC'!\n");
 		note = 1;
 	}
 	if (cca && !ccb) {
-		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling of MS type A only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type B phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control of MS type A only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type B phone is possible.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' instead!\n");
 		note = 1;
 	}
 	if (!cca && ccb) {
-		if (note)
-			PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for calling of MS type B only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type A phone is possible on this channel.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control of MS type B only.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type A phone is possible.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' instead!\n");
 		note = 1;
 	}
+	if (note)
+		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 }
 
 /* Destroy transceiver instance and unlink from list. */

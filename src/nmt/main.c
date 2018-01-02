@@ -71,6 +71,7 @@ void print_help(const char *arg0)
     } else {
 	printf("        NMT-900: 3/2 = 6 W, 1 = 1.5 W, 0 = 150 mW\n");
     }
+	printf("        Note: Power level < 2 causes mobile to search longer for a cell.\n");
 	printf(" -Y --traffic-area <traffic area> | list\n");
 	printf("        NOTE: MUST MATCH WITH YOUR ROAMING SETTINGS IN THE PHONE!\n");
 	printf("              Your phone will not connect, if country code is different!\n");
@@ -314,9 +315,16 @@ int main(int argc, char *argv[])
 		num_audiodev = num_kanal;
 		/* set channel types for more than 1 channel */
 		if (num_kanal > 1 && num_chan_type == 0) {
-			chan_type[0] = CHAN_TYPE_CC;
-			for (i = 1; i < num_kanal; i++)
-				chan_type[i] = CHAN_TYPE_TC;
+			if (loopback)
+				chan_type[0] = CHAN_TYPE_TEST;
+			else
+				chan_type[0] = CHAN_TYPE_CC;
+			for (i = 1; i < num_kanal; i++) {
+				if (loopback)
+					chan_type[i] = CHAN_TYPE_TEST;
+				else
+					chan_type[i] = CHAN_TYPE_TC;
+			}
 			num_chan_type = num_kanal;
 		}
 		if (num_supervisory == 0) {
@@ -332,8 +340,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
-	if (num_kanal == 1 && num_chan_type == 0)
+	if (num_kanal == 1 && num_chan_type == 0) {
 		num_chan_type = 1; /* use default */
+		if (loopback)
+			chan_type[0] = CHAN_TYPE_TEST;
+	}
 	if (num_kanal != num_chan_type) {
 		fprintf(stderr, "You need to specify as many channel types as you have channels.\n");
 		exit(0);
@@ -404,7 +415,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(nmt_system, country, kanal[i], (loopback) ? CHAN_TYPE_TEST : chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
+		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;

@@ -64,7 +64,7 @@
 #define F1			1200.0
 #define MAX_DISPLAY		1.4	/* something above dBm0 */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
-#define TX_PEAK_DIALTONE	0.5	/* dial tone peak FIXME */
+#define TX_PEAK_DIALTONE	1.0	/* dial tone peak FIXME: Not found in the specs! */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
 #define SUPER_LOST_COUNT	4	/* number of measures to loose supervisory signal */
 #define SUPER_DETECT_COUNT	6	/* number of measures to detect supervisory signal */
