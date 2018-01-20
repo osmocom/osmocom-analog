@@ -47,7 +47,6 @@ void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 
-void display_status_limit_scroll() {}
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
 static double __attribute__((__unused__)) modulation = 0.7; /* level of modulation for I/Q amplitudes */
