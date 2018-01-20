@@ -166,7 +166,7 @@ error:
 	return rc;
 }
 
-int wave_create_playback(wave_play_t *play, const char *filename, int samplerate, int channels, double max_deviation)
+int wave_create_playback(wave_play_t *play, const char *filename, int *samplerate_p, int *channels_p, double max_deviation)
 {
 	uint8_t buffer[256];
 	struct fmt fmt;
@@ -176,7 +176,6 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 
 	memset(&fmt, 0, sizeof(fmt));
 	memset(play, 0, sizeof(*play));
-	play->channels = channels;
 	play->max_deviation = max_deviation;
 
 	play->fp = fopen(filename, "r");
@@ -266,23 +265,27 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 		rc = -EINVAL;
 		goto error;
 	}
-	if (fmt.channels !=channels) {
-		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: We expect %d cannel(s), but wave file only has %d channel(s)\n", channels, fmt.channels);
+	if (*channels_p == 0)
+		*channels_p = fmt.channels;
+	if (fmt.channels != *channels_p) {
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: We expect %d cannel(s), but wave file only has %d channel(s)\n", *channels_p, fmt.channels);
 		rc = -EINVAL;
 		goto error;
 	}
-	if ((int)fmt.sample_rate != samplerate) {
-		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's sample rate (%d) does not match our sample rate (%d)!\n", fmt.sample_rate, samplerate);
+	if (*samplerate_p == 0)
+		*samplerate_p = fmt.sample_rate;
+	if ((int)fmt.sample_rate != *samplerate_p) {
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's sample rate (%d) does not match our sample rate (%d)!\n", fmt.sample_rate, *samplerate_p);
 		rc = -EINVAL;
 		goto error;
 	}
-	if ((int)fmt.data_rate != 2 * channels * samplerate) {
-		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's data rate is only %d bytes per second, but we expect %d bytes per second (2 bytes per sample * channels * samplerate)!\n", fmt.data_rate, 2 * channels * samplerate);
+	if ((int)fmt.data_rate != 2 * *channels_p * *samplerate_p) {
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's data rate is only %d bytes per second, but we expect %d bytes per second (2 bytes per sample * channels * samplerate)!\n", fmt.data_rate, 2 * *channels_p * *samplerate_p);
 		rc = -EINVAL;
 		goto error;
 	}
-	if (fmt.bytes_sample != 2 * channels) {
-		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's bytes per sample is only %d, but we expect %d bytes sample (2 bytes per sample * channels)!\n", fmt.bytes_sample, 2 * channels);
+	if (fmt.bytes_sample != 2 * *channels_p) {
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's bytes per sample is only %d, but we expect %d bytes sample (2 bytes per sample * channels)!\n", fmt.bytes_sample, 2 * *channels_p);
 		rc = -EINVAL;
 		goto error;
 	}
@@ -292,9 +295,10 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 		goto error;
 	}
 
-	play->left = chunk / 2 / channels;
+	play->channels = *channels_p;
+	play->left = chunk / 2 / *channels_p;
 
-	play->buffer_size = samplerate * 2 * channels;
+	play->buffer_size = *samplerate_p * 2 * *channels_p;
 	play->buffer = calloc(play->buffer_size, 1);
 	if (!play->buffer) {
 		PDEBUG(DWAVE, DEBUG_ERROR, "No mem!\n");

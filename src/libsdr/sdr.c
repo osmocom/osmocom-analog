@@ -126,7 +126,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 
 	bandwidth = 2.0 * (max_deviation + max_modulation);
-	PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of each channel is 2 * (%.1f deviation + %.1f modulation) = %.1f KHz\n", max_deviation / 1e3, max_modulation / 1e3, bandwidth / 1e3);
+	if (bandwidth)
+		PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of each channel is 2 * (%.1f deviation + %.1f modulation) = %.1f KHz\n", max_deviation / 1e3, max_modulation / 1e3, bandwidth / 1e3);
 
 	if (channels < 1) {
 		PDEBUG(DSDR, DEBUG_ERROR, "No channel given, please fix!\n");
@@ -286,7 +287,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			}
 		}
 		if (sdr_config->read_iq_tx_wave) {
-			rc = wave_create_playback(&sdr->wave_tx_play, sdr_config->read_iq_tx_wave, samplerate, 2, 1.0);
+			int two = 2;
+			rc = wave_create_playback(&sdr->wave_tx_play, sdr_config->read_iq_tx_wave, &samplerate, &two, 1.0);
 			if (rc < 0) {
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;
@@ -340,7 +342,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			}
 		}
 		if (sdr_config->read_iq_rx_wave) {
-			rc = wave_create_playback(&sdr->wave_rx_play, sdr_config->read_iq_rx_wave, samplerate, 2, 1.0);
+			int two = 2;
+			rc = wave_create_playback(&sdr->wave_rx_play, sdr_config->read_iq_rx_wave, &samplerate, &two, 1.0);
 			if (rc < 0) {
 				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;

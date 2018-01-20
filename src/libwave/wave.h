@@ -29,7 +29,7 @@ typedef struct wave_play {
 } wave_play_t;
 
 int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, int channels, double max_deviation);
-int wave_create_playback(wave_play_t *play, const char *filename, int samplerate, int channels, double max_deviation);
+int wave_create_playback(wave_play_t *play, const char *filename, int *samplerate_p, int *channels_p, double max_deviation);
 int wave_read(wave_play_t *play, sample_t **samples, int length);
 int wave_write(wave_rec_t *rec, sample_t **samples, int length);
 void wave_destroy_record(wave_rec_t *rec);

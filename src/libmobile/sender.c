@@ -199,14 +199,14 @@ int sender_open_audio(int latspl)
 			}
 		}
 		if (master->read_rx_wave) {
-			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, master->samplerate, channels, master->max_deviation);
+			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, &master->samplerate, &channels, master->max_deviation);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
 			}
 		}
 		if (master->read_tx_wave) {
-			rc = wave_create_playback(&master->wave_tx_play, master->read_tx_wave, master->samplerate, channels, master->max_deviation);
+			rc = wave_create_playback(&master->wave_tx_play, master->read_tx_wave, &master->samplerate, &channels, master->max_deviation);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
