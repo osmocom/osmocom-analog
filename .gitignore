@@ -60,6 +60,7 @@ src/jtacs/jtacs
 src/r2000/radiocom2000
 src/jolly/jollycom
 src/tv/osmotv
+src/radio/osmoradio
 sim/cnetz_sim
 src/test/test_filter
 src/test/test_sendevolumenregler

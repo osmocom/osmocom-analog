@@ -85,6 +85,7 @@ AC_OUTPUT(
     src/r2000/Makefile
     src/jolly/Makefile
     src/tv/Makefile
+    src/radio/Makefile
     src/test/Makefile
     src/Makefile
     sim/Makefile

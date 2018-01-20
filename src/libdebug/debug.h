@@ -25,6 +25,7 @@
 #define DUHD		18
 #define DSOAPY		19
 #define DWAVE		20
+#define DRADIO		21
 
 void get_win_size(int *w, int *h);
 

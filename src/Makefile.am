@@ -47,5 +47,6 @@ SUBDIRS += \
 	r2000 \
 	jolly \
 	tv \
+	radio \
 	test
 

@@ -62,6 +62,7 @@ struct debug_cat {
 	{ "uhd", "\033[1;35m" },
 	{ "soapy", "\033[1;35m" },
 	{ "wave", "\033[1;33m" },
+	{ "radio", "\033[1;34m" },
 	{ NULL, NULL }
 };
 
