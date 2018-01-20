@@ -22,7 +22,8 @@ SUBDIRS = \
 	libfilter \
 	libwave \
 	libfft \
-	libmncc
+	libmncc \
+	libclipper
 
 if HAVE_ALSA
 SUBDIRS += \

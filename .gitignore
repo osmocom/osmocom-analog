@@ -44,6 +44,7 @@ src/libmncc/libmncc.a
 src/libsound/libsound.a
 src/libsdr/libsdr.a
 src/libsample/libsample.a
+src/libclipper/libclipper.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz

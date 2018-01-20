@@ -73,6 +73,7 @@ AC_OUTPUT(
     src/libsound/Makefile
     src/libsdr/Makefile
     src/libsample/Makefile
+    src/libclipper/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
     src/cnetz/Makefile
