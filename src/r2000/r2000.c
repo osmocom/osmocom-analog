@@ -464,7 +464,8 @@ int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const ch
 
 	r2000->pre_emphasis = pre_emphasis;
 	r2000->de_emphasis = de_emphasis;
-	rc = init_emphasis(&r2000->estate, samplerate, CUT_OFF_EMPHASIS_R2000);
+	/* we don't know anything about frequency response, so we use NMT defaults */
+	rc = init_emphasis(&r2000->estate, samplerate, CUT_OFF_EMPHASIS_R2000, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
 		goto error;
 

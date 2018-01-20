@@ -27,9 +27,6 @@
 
 #define PI		M_PI
 
-#define CUT_OFF_H	100.0	/* cut-off frequency for high-pass filter */
-#define CUT_OFF_L	4000.0	/* cut-off frequency for low-pass filter */
-
 static void gen_sine(sample_t *samples, int num, int samplerate, double freq)
 {
 	int i;
@@ -50,7 +47,13 @@ static double get_level(sample_t *samples, int num)
 	return envelope;
 }
 
-int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
+/* calculate cut off from time constant in uS */
+double timeconstant2cutoff(double time_constant_us)
+{
+	return 1.0 / (2.0 * PI * time_constant_us / 1e6);
+}
+
+int init_emphasis(emphasis_t *state, int samplerate, double cut_off, double cut_off_h, double cut_off_l)
 {
 	double factor;
 	sample_t test_samples[samplerate / 10];
@@ -67,10 +70,12 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off)
 	state->d.amp = 1.0;
 
 	/* do not de-emphasis below CUT_OFF_H */
-	iir_highpass_init(&state->d.hp, CUT_OFF_H, samplerate, 1);
+	iir_highpass_init(&state->d.hp, cut_off_h, samplerate, 1);
 
-	/* do not pre-emphasis above CUT_OFF_L */
-	iir_lowpass_init(&state->p.lp, CUT_OFF_L, samplerate, 1);
+	/* do not pre-emphasis above CUT_OFF_L
+	 * Mobile network specifications want -18 dB per octave.
+	 * With two interations we have 24 dB, - 6 dB (from emphasis). */
+	iir_lowpass_init(&state->p.lp, cut_off_l, samplerate, 2);
 
 	/* calibrate amplification to be neutral at 1000 Hz */
 	gen_sine(test_samples, sizeof(test_samples) / sizeof(test_samples[0]), samplerate, 1000.0);

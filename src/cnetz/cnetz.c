@@ -358,7 +358,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 
 	cnetz->pre_emphasis = pre_emphasis;
 	cnetz->de_emphasis = de_emphasis;
-	rc = init_emphasis(&cnetz->estate, samplerate, CUT_OFF_EMPHASIS_CNETZ);
+	rc = init_emphasis(&cnetz->estate, samplerate, CUT_OFF_EMPHASIS_CNETZ, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
 		goto error;
 

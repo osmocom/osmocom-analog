@@ -142,7 +142,7 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 		goto error;
 	}
 
-	rc = init_emphasis(&sender->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT);
+	rc = init_emphasis(&sender->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
 		goto error;
 

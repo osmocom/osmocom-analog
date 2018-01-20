@@ -45,7 +45,7 @@ int main(void)
 	double level;
 	double i;
 
-	init_emphasis(&estate, SAMPLERATE, cut_off);
+	init_emphasis(&estate, SAMPLERATE, cut_off, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 
 	printf("testing pre-emphasis filter with cut-off frequency %.1f\n", cut_off);
 

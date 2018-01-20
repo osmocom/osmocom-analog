@@ -587,7 +587,8 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 
 	amps->pre_emphasis = pre_emphasis;
 	amps->de_emphasis = de_emphasis;
-	rc = init_emphasis(&amps->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT);
+	/* the AMPS uses a frequency rage of 300..3000 Hz, but we still use the default low pass filter, wich is not too far above */
+	rc = init_emphasis(&amps->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
 		goto error;
 
