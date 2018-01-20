@@ -431,7 +431,8 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 		if (!sender)
 			continue;
 		display_measurements_update(sound->dmp[i], log10((double)max[i] / 32768.0) * 20, 0.0);
-		rf_level_db[i] = 0.0;
+		if (rf_level_db)
+			rf_level_db[i] = 0.0;
 	}
 
 	return rc;

@@ -445,7 +445,6 @@ void process_console(int c)
 	/* handle audio, if sound device is used */
 	sample_t samples[console.latspl + 10], *samples_list[1];
 	uint8_t *power_list[1];
-	double rf_level_db[1];
 	int count;
 	int rc;
 
@@ -469,7 +468,7 @@ void process_console(int c)
 		}
 	}
 	samples_list[0] = samples;
-	count = sound_read(console.sound, samples_list, console.latspl, 1, rf_level_db);
+	count = sound_read(console.sound, samples_list, console.latspl, 1, NULL);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)
