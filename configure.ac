@@ -65,6 +65,7 @@ AC_OUTPUT(
     src/libscrambler/Makefile
     src/libemphasis/Makefile
     src/libfsk/Makefile
+    src/libam/Makefile
     src/libfm/Makefile
     src/libfilter/Makefile
     src/libwave/Makefile

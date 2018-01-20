@@ -18,6 +18,7 @@ SUBDIRS = \
 	libscrambler \
 	libemphasis \
 	libfsk \
+	libam \
 	libfm \
 	libfilter \
 	libwave \
