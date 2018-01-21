@@ -22,8 +22,12 @@ SUBDIRS = \
 	libfilter \
 	libwave \
 	libfft \
-	libmncc \
+	libmncc
+
+if HAVE_ALSA
+SUBDIRS += \
 	libsound
+endif
 
 if HAVE_SDR
 SUBDIRS += \

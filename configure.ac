@@ -27,8 +27,6 @@ AC_CANONICAL_HOST
 AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([pthread], [main])
 
-PKG_CHECK_MODULES(ALSA, alsa >= 1.0)
-
 # disabled due to problems with api compatibilty with imagemagick
 #AC_ARG_ENABLE(graphicsmagick,
 #	[AS_HELP_STRING(
@@ -63,13 +61,17 @@ fi
 AM_CONDITIONAL(ENABLE_MAGICK, test x"$somethingmagick" = x"yes")
 
 with_sdr=no
+AC_ARG_WITH([alsa], [AS_HELP_STRING([--with-alsa], [compile with Alsa driver @<:@default=check@:>@]) ], [], [with_alsa="check"])
 AC_ARG_WITH([uhd], [AS_HELP_STRING([--with-uhd], [compile with UHD driver @<:@default=check@:>@]) ], [], [with_uhd="check"])
 AC_ARG_WITH([soapy], [AS_HELP_STRING([--with-soapy], [compile with SoapySDR driver @<:@default=check@:>@]) ], [], [with_soapy="check"])
+AS_IF([test "x$with_alsa" != xno], [PKG_CHECK_MODULES(ALSA, alsa >= 1.0, with_alsa=yes, with_alsa=no)])
 AS_IF([test "x$with_uhd" != xno], [PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, with_sdr=yes with_uhd=yes, with_uhd=no)])
 AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.6.0, with_sdr=yes with_soapy=yes, with_soapy=no)])
+AM_CONDITIONAL(HAVE_ALSA, test "x$with_alsa" == "xyes" )
 AM_CONDITIONAL(HAVE_UHD, test "x$with_uhd" == "xyes" )
 AM_CONDITIONAL(HAVE_SOAPY, test "x$with_soapy" == "xyes" )
 AM_CONDITIONAL(HAVE_SDR, test "x$with_sdr" == "xyes" )
+AS_IF([test "x$with_alsa" == "xyes"],[AC_MSG_NOTICE( Compiling with Alsa support )], [AC_MSG_NOTICE( Alsa sound card not supported. Consider adjusting the PKG_CONFIG_PATH environment variable if you installed software in a non-standard prefix. )])
 AS_IF([test "x$with_uhd" == "xyes"],[AC_MSG_NOTICE( Compiling with UHD SDR support )], [AC_MSG_NOTICE( UHD SDR not supported. Consider adjusting the PKG_CONFIG_PATH environment variable if you installed software in a non-standard prefix. )])
 AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR support )], [AC_MSG_NOTICE( SoapySDR not supported. Consider adjusting the PKG_CONFIG_PATH environment variable if you installed software in a non-standard prefix. )])
 AS_IF([test "x$somethingmagick" == "xyes"],[AC_MSG_NOTICE( Compiling with ImageMagick )],[AC_MSG_NOTICE( ImageMagick not supported )])

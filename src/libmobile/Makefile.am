@@ -7,6 +7,10 @@ libmobile_a_SOURCES = \
 	call.c \
 	main_mobile.c
 
+if HAVE_ALSA
+AM_CPPFLAGS += -DHAVE_ALSA
+endif
+
 if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR
 endif

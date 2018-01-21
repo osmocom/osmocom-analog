@@ -27,10 +27,14 @@ bnetz_LDADD = \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
-	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
-	$(ALSA_LIBS) \
 	-lm
+
+if HAVE_ALSA
+bnetz_LDADD += \
+	$(top_builddir)/src/libsound/libsound.a \
+	$(ALSA_LIBS)
+endif
 
 if HAVE_SDR
 bnetz_LDADD += \

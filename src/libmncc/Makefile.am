@@ -8,3 +8,8 @@ libmncc_a_SOURCES = \
 	mncc_sock.c \
 	testton.c \
 	cause.c
+
+if HAVE_ALSA
+AM_CPPFLAGS += -DHAVE_ALSA
+endif
+

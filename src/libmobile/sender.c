@@ -115,12 +115,18 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 		} else
 #endif
 		{
+#ifdef HAVE_ALSA
 			sender->audio_open = sound_open;
 			sender->audio_start = sound_start;
 			sender->audio_close = sound_close;
 			sender->audio_read = sound_read;
 			sender->audio_write = sound_write;
 			sender->audio_get_tosend = sound_get_tosend;
+#else
+			PDEBUG(DSENDER, DEBUG_ERROR, "No sound card support compiled in!\n");
+			rc = -ENOTSUP;
+			goto error;
+#endif
 		}
 	}
 

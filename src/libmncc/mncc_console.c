@@ -33,7 +33,9 @@
 #include "mncc_console.h"
 #include "cause.h"
 #include "../libmobile/call.h"
+#ifdef HAVE_ALSA
 #include "../libsound/sound.h"
+#endif
 
 static int new_callref = 0; /* toward mobile */
 
@@ -289,11 +291,12 @@ error:
 	return rc;
 }
 
-int console_open_audio(int latspl)
+int console_open_audio(int __attribute__((unused)) latspl)
 {
 	if (!console.audiodev[0])
 		return 0;
 
+#ifdef HAVE_ALSA
 	/* open sound device for call control */
 	/* use factor 1.4 of speech level for complete range of sound card */
 	console.sound = sound_open(console.audiodev, NULL, NULL, 1, 0.0, console.samplerate, latspl, 1.4, 4000.0);
@@ -301,6 +304,10 @@ int console_open_audio(int latspl)
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 		return -EIO;
 	}
+#else
+	PDEBUG(DSENDER, DEBUG_ERROR, "No sound card support compiled in!\n");
+	return -ENOTSUP;
+#endif
 
 	return 0;
 }
@@ -310,14 +317,20 @@ int console_start_audio(void)
 	if (!console.audiodev[0])
 		return 0;
 
+#ifdef HAVE_ALSA
 	return sound_start(console.sound);
+#else
+	return -EINVAL;
+#endif
 }
 
 void console_cleanup(void)
 {
+#ifdef HAVE_ALSA
 	/* close sound devoice */
 	if (console.sound)
 		sound_close(console.sound);
+#endif
 
 	jitter_destroy(&console.dejitter);
 }
@@ -428,6 +441,7 @@ void process_console(int c)
 	if (!console.sound)
 		return;
 
+#ifdef HAVE_ALSA
 	/* handle audio, if sound device is used */
 	sample_t samples[console.latspl + 10], *samples_list[1];
 	uint8_t *power_list[1];
@@ -487,5 +501,6 @@ void process_console(int c)
 			}
 		}
 	}
+#endif
 }
 

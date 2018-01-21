@@ -66,10 +66,14 @@ test_dms_LDADD = \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
-	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
-	$(ALSA_LIBS) \
 	-lm
+
+if HAVE_ALSA
+test_dms_LDADD += \
+	$(top_builddir)/src/libsound/libsound.a \
+	$(ALSA_LIBS)
+endif
 
 if HAVE_SDR
 test_dms_LDADD += \
@@ -95,10 +99,14 @@ test_sms_LDADD = \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
-	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
-	$(ALSA_LIBS) \
 	-lm
+
+if HAVE_ALSA
+test_sms_LDADD += \
+	$(top_builddir)/src/libsound/libsound.a \
+	$(ALSA_LIBS)
+endif
 
 if HAVE_SDR
 test_sms_LDADD += \

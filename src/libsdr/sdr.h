@@ -1,4 +1,6 @@
 
+enum paging_signal;
+
 int sdr_start(void *inst);
 void *sdr_open(const char *audiodev, double *tx_frequency, double *rx_frequency, int channels, double paging_frequency, int samplerate, int latspl, double bandwidth, double sample_deviation);
 void sdr_close(void *inst);

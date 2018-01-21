@@ -24,11 +24,15 @@ jollycom_LDADD = \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
-	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(top_builddir)/src/libfm/libfm.a \
-	$(ALSA_LIBS) \
 	-lm
+
+if HAVE_ALSA
+jollycom_LDADD += \
+	$(top_builddir)/src/libsound/libsound.a \
+	$(ALSA_LIBS)
+endif
 
 if HAVE_SDR
 jollycom_LDADD += \
