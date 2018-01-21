@@ -100,11 +100,11 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 	bnetz->meter_phaseshift65536 = 65536.0 / ((double)bnetz->sender.samplerate / METERING_HZ);
 	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", bnetz->meter_phaseshift65536);
 
-	bnetz->dmp_tone_level = display_measurements_add(&bnetz->sender, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	bnetz->dmp_tone_quality = display_measurements_add(&bnetz->sender, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
-	bnetz->dmp_frame_level = display_measurements_add(&bnetz->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	bnetz->dmp_frame_stddev = display_measurements_add(&bnetz->sender, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
-	bnetz->dmp_frame_quality = display_measurements_add(&bnetz->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	bnetz->dmp_tone_level = display_measurements_add(&bnetz->sender.dispmeas, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	bnetz->dmp_tone_quality = display_measurements_add(&bnetz->sender.dispmeas, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	bnetz->dmp_frame_level = display_measurements_add(&bnetz->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	bnetz->dmp_frame_stddev = display_measurements_add(&bnetz->sender.dispmeas, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	bnetz->dmp_frame_quality = display_measurements_add(&bnetz->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	return 0;
 }

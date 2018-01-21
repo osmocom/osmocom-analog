@@ -191,8 +191,8 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 		printf("**** Writing decoder debug file '%s' ****\n", debug_filename);
 #endif
 
-	fsk->dmp_frame_level = display_measurements_add(&cnetz->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	fsk->dmp_frame_stddev = display_measurements_add(&cnetz->sender, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	fsk->dmp_frame_level = display_measurements_add(&cnetz->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	fsk->dmp_frame_stddev = display_measurements_add(&cnetz->sender.dispmeas, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	return 0;
 

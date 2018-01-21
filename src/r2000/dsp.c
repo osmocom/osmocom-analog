@@ -108,11 +108,11 @@ int dsp_init_sender(r2000_t *r2000)
 	iir_highpass_init(&r2000->super_tx_hp, SUPER_CUTOFF_H, r2000->sender.samplerate, 2);
 	iir_highpass_init(&r2000->super_rx_hp, SUPER_CUTOFF_H, r2000->sender.samplerate, 2);
 
-	r2000->dmp_frame_level = display_measurements_add(&r2000->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	r2000->dmp_frame_quality = display_measurements_add(&r2000->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	r2000->dmp_frame_level = display_measurements_add(&r2000->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	r2000->dmp_frame_quality = display_measurements_add(&r2000->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 	if (r2000->sysinfo.chan_type == CHAN_TYPE_TC || r2000->sysinfo.chan_type == CHAN_TYPE_CC_TC) {
-		r2000->dmp_super_level = display_measurements_add(&r2000->sender, "Super Level", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-		r2000->dmp_super_quality = display_measurements_add(&r2000->sender, "Super Quality", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+		r2000->dmp_super_level = display_measurements_add(&r2000->sender.dispmeas, "Super Level", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+		r2000->dmp_super_quality = display_measurements_add(&r2000->sender.dispmeas, "Super Quality", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 	}
 
 	return 0;

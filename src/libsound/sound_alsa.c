@@ -196,7 +196,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 			sender = get_sender_by_empfangsfrequenz(sound->rx_frequency[i]);
 			if (!sender)
 				continue;
-			sound->dmp[i] = display_measurements_add(sender, "RX Level", "%.1f dB", DISPLAY_MEAS_PEAK, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
+			sound->dmp[i] = display_measurements_add(&sender->dispmeas, "RX Level", "%.1f dB", DISPLAY_MEAS_PEAK, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
 		}
 	}
 

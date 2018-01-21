@@ -24,8 +24,8 @@
 #include <math.h>
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
-#include "../libmobile/sender.h"
 #include "../libdebug/debug.h"
+#include "../libdisplay/display.h"
 
 #define HEIGHT	11
 
@@ -51,13 +51,12 @@ void get_win_size(int *w, int *h)
 		*w = MAX_DISPLAY_WIDTH - 1;
 }
 
-void display_wave_init(sender_t *sender, int samplerate)
+void display_wave_init(dispwav_t *disp, int samplerate, int kanal)
 {
-	dispwav_t *disp = &sender->dispwav;
-
 	memset(disp, 0, sizeof(*disp));
 	disp->offset = (num_sender++) * HEIGHT;
 	disp->interval_max = (double)samplerate * DISPLAY_INTERVAL + 0.5;
+	disp->kanal = kanal;
 }
 
 void display_wave_on(int on)
@@ -105,9 +104,8 @@ void display_wave_on(int on)
  * y is in range of 0..4, so these are 5 steps, where 2 is the
  * center line. this is calculated by (HEIGHT * 2 - 1)
  */
-void display_wave(sender_t *sender, sample_t *samples, int length, double range)
+void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 {
-	dispwav_t *disp = &sender->dispwav;
 	int pos, max;
 	sample_t *buffer;
 	int i, j, k, s, e;
@@ -218,7 +216,7 @@ void display_wave(sender_t *sender, sample_t *samples, int length, double range)
 						screen[k][j] = '|';
 				}
 			}
-			sprintf(screen[0], "(chan %d", sender->kanal);
+			sprintf(screen[0], "(chan %d", disp->kanal);
 			*strchr(screen[0], '\0') = ')';
 			printf("\0337\033[H");
 			for (j = 0; j < disp->offset; j++)

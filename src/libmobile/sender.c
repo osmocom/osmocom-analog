@@ -143,8 +143,8 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	*sender_tailp = sender;
 	sender_tailp = &sender->next;
 
-	display_wave_init(sender, samplerate);
-	display_measurements_init(sender, samplerate);
+	display_wave_init(&sender->dispwav, samplerate, sender->kanal);
+	display_measurements_init(&sender->dispmeas, samplerate, sender->kanal);
 
 	return 0;
 error:
@@ -214,6 +214,13 @@ int sender_open_audio(int latspl)
 			return -EIO;
 		}
 	}
+
+#ifdef HAVE_SDR
+	/* in case of initialized spectrum display (SDR), we add all channels.
+	 * if spectrum display was not initialized (sound card), function call is ignored */
+	for (inst = sender_head; inst; inst = inst->next)
+		display_spectrum_add_mark(inst->kanal, inst->empfangsfrequenz);
+#endif
 
 	return 0;
 }
@@ -336,7 +343,7 @@ cant_recover:
 				sender_send(inst, samples[i], power[i], count);
 			/* internal loopback: loop back TX audio to RX */
 			if (inst->loopback == 1) {
-				display_wave(inst, samples[i], count, inst->max_display);
+				display_wave(&inst->dispwav, samples[i], count, inst->max_display);
 				sender_receive(inst, samples[i], count, 0.0);
 			}
 			/* do pre emphasis towards radio */
@@ -409,7 +416,7 @@ cant_recover:
 				de_emphasis(&inst->estate, samples[i], count);
 			}
 			if (inst->loopback != 1) {
-				display_wave(inst, samples[i], count, inst->max_display);
+				display_wave(&inst->dispwav, samples[i], count, inst->max_display);
 				sender_receive(inst, samples[i], count, rf_level_db[i]);
 			}
 			if (inst->loopback == 3)

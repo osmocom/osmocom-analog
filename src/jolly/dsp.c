@@ -123,8 +123,8 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	}
 
 
-	jolly->dmp_dtmf_low = display_measurements_add(&jolly->sender, "DTMF Low", "%.1f dB (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -30.0, 6.0, 0.0);
-	jolly->dmp_dtmf_high = display_measurements_add(&jolly->sender, "DTMF High", "%.1f dB (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -30.0, 6.0, 0.0);
+	jolly->dmp_dtmf_low = display_measurements_add(&jolly->sender.dispmeas, "DTMF Low", "%.1f dB (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -30.0, 6.0, 0.0);
+	jolly->dmp_dtmf_high = display_measurements_add(&jolly->sender.dispmeas, "DTMF High", "%.1f dB (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -30.0, 6.0, 0.0);
 
 	return 0;
 

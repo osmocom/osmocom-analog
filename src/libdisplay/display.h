@@ -3,9 +3,8 @@
 
 #define MAX_DISPLAY_WIDTH 1024
 
-typedef struct sender sender_t;
-
 typedef struct display_wave {
+	int	kanal;
 	int	interval_pos;
 	int	interval_max;
 	int	offset;
@@ -43,7 +42,9 @@ typedef struct display_measurements_param {
 } dispmeasparam_t;
 
 typedef struct display_measurements {
-	dispmeasparam_t *head;
+	struct display_measurements *next;
+	int	kanal;
+	dispmeasparam_t *param;
 } dispmeas_t;
 
 #define MAX_DISPLAY_IQ 1024
@@ -56,20 +57,27 @@ typedef struct display_iq {
 
 #define MAX_DISPLAY_SPECTRUM 1024
 
+typedef struct display_spectrum_mark {
+	struct display_spectrum_mark *next;
+	int	kanal;
+	double	frequency;
+} dispspectrum_mark_t;
+
 typedef struct display_spectrum {
 	int	interval_pos;
 	int	interval_max;
 	double	buffer_I[MAX_DISPLAY_SPECTRUM];
 	double	buffer_Q[MAX_DISPLAY_SPECTRUM];
+	dispspectrum_mark_t *mark;
 } dispspectrum_t;
 
 #define MAX_HEIGHT_STATUS 32
 
 void get_win_size(int *w, int *h);
 
-void display_wave_init(sender_t *sender, int samplerate);
+void display_wave_init(dispwav_t *disp, int samplerate, int kanal);
 void display_wave_on(int on);
-void display_wave(sender_t *sender, sample_t *samples, int length, double range);
+void display_wave(dispwav_t *disp, sample_t *samples, int length, double range);
 
 void display_status_on(int on);
 void display_status_start(void);
@@ -77,10 +85,10 @@ void display_status_channel(int channel, const char *type, const char *state);
 void display_status_subscriber(const char *number, const char *state);
 void display_status_end(void);
 
-void display_measurements_init(sender_t *sender, int samplerate);
-void display_measurements_exit(sender_t *sender);
+void display_measurements_init(dispmeas_t *disp, int samplerate, int kanal);
+void display_measurements_exit(dispmeas_t *disp);
 void display_measurements_on(int on);
-dispmeasparam_t *display_measurements_add(sender_t *sender, char *name, char *format, enum display_measurements_type type, enum display_measurements_bar bar, double min, double max, double mark);
+dispmeasparam_t *display_measurements_add(dispmeas_t *disp, char *name, char *format, enum display_measurements_type type, enum display_measurements_bar bar, double min, double max, double mark);
 void display_measurements_update(dispmeasparam_t *param, double value, double value2);
 void display_measurements(double elapsed);
 
@@ -89,6 +97,8 @@ void display_iq_on(int on);
 void display_iq(float *samples, int length);
 
 void display_spectrum_init(int samplerate, double center_frequency);
+void display_spectrum_add_mark(int kanal, double frequency);
+void display_spectrum_exit(void);
 void display_spectrum_on(int on);
 void display_spectrum(float *samples, int length);
 

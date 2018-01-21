@@ -23,8 +23,8 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
-#include "../libmobile/sender.h"
 #include "../libdebug/debug.h"
+#include "../libdisplay/display.h"
 
 static int status_on = 0;
 static int line_count = 0;

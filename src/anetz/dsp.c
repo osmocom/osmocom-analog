@@ -111,8 +111,8 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 	anetz->tone_phaseshift65536 = 65536.0 / ((double)anetz->sender.samplerate / tone);
 	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", tone, anetz->tone_phaseshift65536);
 
-	anetz->dmp_tone_level = display_measurements_add(&anetz->sender, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	anetz->dmp_tone_quality = display_measurements_add(&anetz->sender, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	anetz->dmp_tone_level = display_measurements_add(&anetz->sender.dispmeas, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	anetz->dmp_tone_quality = display_measurements_add(&anetz->sender.dispmeas, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	return 0;
 }

@@ -267,8 +267,8 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	/* be more tolerant when syncing */
 	amps->fsk_rx_sync_tolerant = tolerant;
 
-	amps->dmp_frame_level = display_measurements_add(&amps->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	amps->dmp_frame_quality = display_measurements_add(&amps->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	amps->dmp_frame_level = display_measurements_add(&amps->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	amps->dmp_frame_quality = display_measurements_add(&amps->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	return 0;
 

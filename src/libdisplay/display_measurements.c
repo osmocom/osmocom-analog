@@ -25,8 +25,8 @@
 #include <sys/ioctl.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libmobile/sender.h"
 #include "../libdebug/debug.h"
+#include "../libdisplay/display.h"
 
 #define MAX_NAME_LEN	16
 #define MAX_UNIT_LEN	16
@@ -38,27 +38,34 @@ static int lines_total = 0;
 static char line[MAX_DISPLAY_WIDTH];
 static char line_color[MAX_DISPLAY_WIDTH];
 
-void display_measurements_init(sender_t *sender, int __attribute__((unused)) samplerate)
+dispmeas_t *meas_head = NULL;
+
+void display_measurements_init(dispmeas_t *disp, int __attribute__((unused)) samplerate, int kanal)
 {
-	dispmeas_t *disp = &sender->dispmeas;
+	dispmeas_t **disp_p;
 
 	memset(disp, 0, sizeof(*disp));
+	disp->kanal = kanal;
 	has_init = 1;
 	lines_total = 0;
 	time_elapsed = 0.0;
+
+	disp_p = &meas_head;
+	while (*disp_p)
+		disp_p = &((*disp_p)->next);
+	*disp_p = disp;
 }
 
-void display_measurements_exit(sender_t *sender)
+void display_measurements_exit(dispmeas_t *disp)
 {
-	dispmeas_t *disp = &sender->dispmeas;
-	dispmeasparam_t *param = disp->head, *temp;
+	dispmeasparam_t *param = disp->param, *temp;
 
 	while (param) {
 		temp = param;
 		param = param->next;
 		free(temp);
 	}
-	disp->head = NULL;
+	disp->param = NULL;
 	has_init = 0;
 }
 
@@ -86,7 +93,7 @@ static void display_line(int on, int w)
 
 static void print_measurements(int on)
 {
-	sender_t *sender;
+	dispmeas_t *disp;
 	dispmeasparam_t *param;
 	int i, j;
 	int width, h;
@@ -104,13 +111,13 @@ static void print_measurements(int on)
 	lines_total = 0;
 	color = -1;
 	printf("\0337\033[H");
-	for (sender = sender_head; sender; sender = sender->next) {
+	for (disp = meas_head; disp; disp = disp->next) {
 		memset(line, ' ', width);
 		memset(line_color, 7, width);
-		sprintf(line, "(chan %d", sender->kanal);
+		sprintf(line, "(chan %d", disp->kanal);
 		*strchr(line, '\0') = ')';
 		display_line(on, width);
-		for (param = sender->dispmeas.head; param; param = param->next) {
+		for (param = disp->param; param; param = param->next) {
 			memset(line, ' ', width);
 			memset(line_color, 7, width);
 			memset(line_color, 3, MAX_NAME_LEN); /* yellow */
@@ -259,10 +266,9 @@ void display_measurements_on(int on)
 }
 
 /* add new parameter on startup to the list of measurements */
-dispmeasparam_t *display_measurements_add(sender_t *sender, char *name, char *format, enum display_measurements_type type, enum display_measurements_bar bar, double min, double max, double mark)
+dispmeasparam_t *display_measurements_add(dispmeas_t *disp, char *name, char *format, enum display_measurements_type type, enum display_measurements_bar bar, double min, double max, double mark)
 {
-	dispmeas_t *disp = &sender->dispmeas;
-	dispmeasparam_t *param, **param_p = &disp->head;
+	dispmeasparam_t *param, **param_p = &disp->param;
 	int i;
 
 	if (!has_init) {

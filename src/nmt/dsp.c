@@ -151,8 +151,8 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	/* dtmf, generate tone relative to speech level */
 	dtmf_encode_init(&nmt->dtmf, 8000, 1.0 / SPEECH_LEVEL);
 
-	nmt->dmp_frame_level = display_measurements_add(&nmt->sender, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
-	nmt->dmp_frame_quality = display_measurements_add(&nmt->sender, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	nmt->dmp_frame_level = display_measurements_add(&nmt->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	nmt->dmp_frame_quality = display_measurements_add(&nmt->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	return 0;
 }

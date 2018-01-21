@@ -23,12 +23,13 @@
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libmobile/sender.h"
 #include "../libfft/fft.h"
 #include "../libdebug/debug.h"
+#include "../libdisplay/display.h"
 
 #define HEIGHT	20
 
+static int has_init = 0;
 static double buffer_delay[MAX_DISPLAY_SPECTRUM];
 static double buffer_hold[MAX_DISPLAY_SPECTRUM];
 static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
@@ -50,6 +51,42 @@ void display_spectrum_init(int samplerate, double _center_frequency)
 
 	center_frequency = _center_frequency;
 	frequency_range = (double)samplerate;
+
+	has_init = 1;
+}
+
+void display_spectrum_add_mark(int kanal, double frequency)
+{
+	dispspectrum_mark_t *mark, **mark_p;
+
+	if (!has_init)
+		return;
+
+	mark = calloc(1, sizeof(*mark));
+	if (!mark) {
+		fprintf(stderr, "no mem!");
+		abort();
+	}
+	mark->kanal = kanal;
+	mark->frequency = frequency;
+
+	mark_p = &disp.mark;
+	while (*mark_p)
+		mark_p = &((*mark_p)->next);
+	*mark_p = mark;
+}
+
+void display_spectrum_exit(void)
+{
+	dispspectrum_mark_t *mark = disp.mark, *temp;
+
+	while (mark) {
+		temp = mark;
+		mark = mark->next;
+		free(temp);
+	}
+	disp.mark = NULL;
+	has_init = 0;
 }
 
 void display_spectrum_on(int on)
@@ -88,7 +125,7 @@ void display_spectrum_on(int on)
  */
 void display_spectrum(float *samples, int length)
 {
-	sender_t *sender;
+	dispspectrum_mark_t *mark;
 	char print_channel[32], print_frequency[32];
 	int width, h;
 	int pos, max;
@@ -300,8 +337,8 @@ void display_spectrum(float *samples, int length)
 				}
 			}
 			/* add channel positions in spectrum */
-			for (sender = sender_head; sender; sender = sender->next) {
-				j = (int)((sender->empfangsfrequenz - center_frequency) / frequency_range * (double) fft_size + width / 2 + 0.5);
+			for (mark = disp.mark; mark; mark = mark->next) {
+				j = (int)((mark->frequency - center_frequency) / frequency_range * (double) fft_size + width / 2 + 0.5);
 				if (j < 0 || j >= width) /* check out-of-range, should not happen */
 					continue;
 				for (k = 0; k < HEIGHT; k++) {
@@ -311,7 +348,7 @@ void display_spectrum(float *samples, int length)
 					screen[k][j] = ':';
 					screen_color[k][j] = 12;
 				}
-				sprintf(print_channel, "Ch%d", sender->kanal);
+				sprintf(print_channel, "Ch%d", mark->kanal);
 				for (o = 0; o < (int)strlen(print_channel); o++) {
 					s = j - strlen(print_channel) + o;
 					if (s >= 0 && s < width) {
@@ -319,10 +356,10 @@ void display_spectrum(float *samples, int length)
 						screen_color[HEIGHT - 1][s] = 7;
 					}
 				}
-				if (fmod(sender->empfangsfrequenz, 1000.0))
-					sprintf(print_frequency, "%.4f", sender->empfangsfrequenz / 1e6);
+				if (fmod(mark->frequency, 1000.0))
+					sprintf(print_frequency, "%.4f", mark->frequency / 1e6);
 				else
-					sprintf(print_frequency, "%.3f", sender->empfangsfrequenz / 1e6);
+					sprintf(print_frequency, "%.3f", mark->frequency / 1e6);
 				for (o = 0; o < (int)strlen(print_frequency); o++) {
 					s = j + o + 1;
 					if (s >= 0 && s < width) {

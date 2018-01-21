@@ -351,9 +351,9 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			sender_t *sender = get_sender_by_empfangsfrequenz(sdr->chan[c].rx_frequency);
 			if (!sender)
 				continue;
-			sdr->chan[c].dmp_rf_level = display_measurements_add(sender, "RF Level", "%.1f dB", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
-			sdr->chan[c].dmp_freq_offset = display_measurements_add(sender, "Freq. Offset", "%+.2f KHz", DISPLAY_MEAS_AVG, DISPLAY_MEAS_CENTER, -max_deviation / 1000.0 * 2.0, max_deviation / 1000.0 * 2.0, 0.0);
-			sdr->chan[c].dmp_deviation = display_measurements_add(sender, "Deviation", "%.2f KHz", DISPLAY_MEAS_PEAK2PEAK, DISPLAY_MEAS_LEFT, 0.0, max_deviation / 1000.0 * 1.5, max_deviation / 1000.0);
+			sdr->chan[c].dmp_rf_level = display_measurements_add(&sender->dispmeas, "RF Level", "%.1f dB", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
+			sdr->chan[c].dmp_freq_offset = display_measurements_add(&sender->dispmeas, "Freq. Offset", "%+.2f KHz", DISPLAY_MEAS_AVG, DISPLAY_MEAS_CENTER, -max_deviation / 1000.0 * 2.0, max_deviation / 1000.0 * 2.0, 0.0);
+			sdr->chan[c].dmp_deviation = display_measurements_add(&sender->dispmeas, "Deviation", "%.2f KHz", DISPLAY_MEAS_PEAK2PEAK, DISPLAY_MEAS_LEFT, 0.0, max_deviation / 1000.0 * 1.5, max_deviation / 1000.0);
 		}
 	}
 
@@ -644,6 +644,8 @@ void sdr_close(void *inst)
 		free(sdr);
 		sdr = NULL;
 	}
+
+	display_spectrum_exit();
 }
 
 int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
