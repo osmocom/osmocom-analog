@@ -384,7 +384,8 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 				memset(samples + count, 0, sizeof(*samples) * (length - count));
 			break;
 		}
-		/* fall through, in case of no voice */
+		/* in case of no voice: */
+		/* FALLTHRU */
 	default:
 		memset(power, 1, length);
 		dial_tone(jolly, samples, length);

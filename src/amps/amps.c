@@ -704,7 +704,7 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 	case TRANS_CALL:
 		if (!tone)
 			break;
-		/* fall through */
+		/* FALLTHRU */
 	case TRANS_CALL_RELEASE:
 	case TRANS_CALL_RELEASE_SEND:
 		/* also loosing singaling tone indicates release confirm (after alerting) */

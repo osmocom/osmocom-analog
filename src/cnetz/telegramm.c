@@ -454,7 +454,7 @@ int init_telegramm(void)
 
 const char *telegramm2rufnummer(telegramm_t *telegramm)
 {
-	static char rufnummer[9];
+	static char rufnummer[32]; /* make GCC happy (overflow check) */
 
 	sprintf(rufnummer, "%d%d%05d", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 

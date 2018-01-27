@@ -379,7 +379,7 @@ got_sync:
 		break;
 	case FSK_SYNC_NEGATIVE:
 		bit = 1 - bit;
-		/* fall through */
+		/* FALLTHRU */
 	case FSK_SYNC_POSITIVE:
 		fsk->rx_buffer[fsk->rx_buffer_count] = bit + '0';
 		if (++fsk->rx_buffer_count == 150) {

@@ -30,7 +30,7 @@
 
 const char *transaction2rufnummer(transaction_t *trans)
 {
-	static char rufnummer[9];
+	static char rufnummer[32]; /* make GCC happy (overflow check) */
 
 	sprintf(rufnummer, "%d%d%05d", trans->futln_nat, trans->futln_fuvst, trans->futln_rest);
 

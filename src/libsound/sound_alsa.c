@@ -239,7 +239,7 @@ static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum p
 	case PAGING_SIGNAL_NOTONE:
 		/* no tone if paging signal is on */
 		on = !on;
-		// fall through
+		/* FALLTHRU */
 	case PAGING_SIGNAL_TONE:
 		/* tone if paging signal is on */
 		if (on) {
@@ -261,7 +261,7 @@ static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum p
 	case PAGING_SIGNAL_NEGATIVE:
 		/* negative signal if paging signal is on */
 		on = !on;
-		// fall through
+		/* FALLTHRU */
 	case PAGING_SIGNAL_POSITIVE:
 		/* positive signal if paging signal is on */
 		if (on)

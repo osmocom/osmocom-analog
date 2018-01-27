@@ -553,6 +553,7 @@ static void fsk_rx_bit(amps_t *amps, sample_t *spl, int len, int pos, int begin,
 		case 0x01:
 			if (!amps->fsk_rx_sync_tolerant)
 				break;
+			/* FALLTHRU */
 		case 0x00:
 #ifdef DEBUG_DECODER
 			printf("Sync word detected (positive)\n");
@@ -568,6 +569,7 @@ prepare_frame:
 		case 0x81:
 			if (!amps->fsk_rx_sync_tolerant)
 				break;
+			/* FALLTHRU */
 		case 0x80:
 #ifdef DEBUG_DECODER
 			printf("Sync word detected (negative)\n");

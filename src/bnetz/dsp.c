@@ -219,7 +219,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 	switch (squelch(&bnetz->squelch, rf_level_db, (double)length / (double)bnetz->sender.samplerate)) {
 	case SQUELCH_LOSS:
 		bnetz_loss_indication(bnetz, LOSS_TIME);
-		// fall through:
+		/* FALLTHRU */
 	case SQUELCH_MUTE:
 		memset(samples, 0, sizeof(*samples) * length);
 		break;
