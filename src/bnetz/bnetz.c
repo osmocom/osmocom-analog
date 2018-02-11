@@ -177,6 +177,11 @@ int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 		return -EINVAL;
 	}
 
+	if (kanal >= 38 && kanal <= 39)
+		PDEBUG(DBNETZ, DEBUG_NOTICE, "Selected channel ('Kanal') number %d may not be supported by older B1-Network phones.\n", kanal);
+	if (kanal >= 50)
+		PDEBUG(DBNETZ, DEBUG_NOTICE, "Selected channel ('Kanal') number %d belongs to B2-Network and is not supported by B1 phones.\n", kanal);
+
 	if ((gfs < 1 || gfs > 19)) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Given 'Gruppenfreisignal' %d invalid.\n", gfs);
 		return -EINVAL;
