@@ -73,8 +73,6 @@ typedef struct display_spectrum {
 
 #define MAX_HEIGHT_STATUS 32
 
-void get_win_size(int *w, int *h);
-
 void display_wave_init(dispwav_t *disp, int samplerate, int kanal);
 void display_wave_on(int on);
 void display_wave(dispwav_t *disp, sample_t *samples, int length, double range);

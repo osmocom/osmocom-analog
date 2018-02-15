@@ -33,24 +33,6 @@ static int num_sender = 0;
 static char screen[HEIGHT][MAX_DISPLAY_WIDTH];
 static int wave_on = 0;
 
-void get_win_size(int *w, int *h)
-{
-	struct winsize win;
-	int rc;
-
-	rc = ioctl(0, TIOCGWINSZ, &win);
-	if (rc) {
-		*w = 80;
-		*h = 25;
-		return;
-	}
-
-	*h = win.ws_row;
-	*w = win.ws_col;
-	if (*w > MAX_DISPLAY_WIDTH - 1)
-		*w = MAX_DISPLAY_WIDTH - 1;
-}
-
 void display_wave_init(dispwav_t *disp, int samplerate, int kanal)
 {
 	memset(disp, 0, sizeof(*disp));

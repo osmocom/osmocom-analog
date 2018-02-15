@@ -36,8 +36,6 @@ static void gen_samples(sample_t *samples, double freq)
 }
 
 int num_kanal;
-int get_win_size;
-
 
 int main(void)
 {

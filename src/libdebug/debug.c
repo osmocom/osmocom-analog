@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <math.h>
+#include <sys/ioctl.h>
 #include "../libsample/sample.h"
 #include "debug.h"
 #include "../libdisplay/display.h"
@@ -71,6 +72,24 @@ void (*clear_console_text)(void) = NULL;
 void (*print_console_text)(void) = NULL;
 
 int debug_limit_scroll = 0;
+
+void get_win_size(int *w, int *h)
+{
+	struct winsize win;
+	int rc;
+
+	rc = ioctl(0, TIOCGWINSZ, &win);
+	if (rc) {
+		*w = 80;
+		*h = 25;
+		return;
+	}
+
+	*h = win.ws_row;
+	*w = win.ws_col;
+	if (*w > MAX_DISPLAY_WIDTH - 1)
+		*w = MAX_DISPLAY_WIDTH - 1;
+}
 
 void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, int chan, const char *fmt, ...)
 {
