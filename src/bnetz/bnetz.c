@@ -32,9 +32,6 @@
 #include "telegramm.h"
 #include "dsp.h"
 
-// Uncomment this to generate a dial sequnce (for testing)
-//#define GEN_DIALSEQUENCE
-
 /* Call reference for calls from mobile station to network
    This offset of 0x400000000 is required for MNCC interface. */
 static int new_callref = 0x40000000;
@@ -284,12 +281,6 @@ static void bnetz_go_idle(bnetz_t *bnetz)
 	bnetz_new_state(bnetz, BNETZ_FREI);
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 	switch_channel_19(bnetz, 0);
-#ifdef GEN_DIALSEQUENCE
-	if (bnetz->sender.loopback) {
-		bnetz_set_dsp_mode(bnetz, DSP_MODE_0);
-		timer_start(&bnetz->timer, 0.6);
-	}
-#endif
 }
 
 /* Release connection towards mobile station by sending release digits. */
@@ -326,21 +317,10 @@ const char *bnetz_get_telegramm(bnetz_t *bnetz)
 	struct impulstelegramm *it = NULL;
 
 	if (bnetz->sender.loopback) {
-#ifdef GEN_DIALSEQUENCE
-		char *dialstring="s50993310es50993310e", c;
-		c = dialstring[bnetz->loopback_count++];
-		if (c) {
-			it = bnetz_telegramm(c);
-		} else {
-			bnetz_set_dsp_mode(bnetz, DSP_MODE_SILENCE);
-			return NULL;
-		}
-#else
 		bnetz->loopback_time[bnetz->loopback_count] = get_time();
 		it = bnetz_digit2telegramm(bnetz->loopback_count + '0');
 		if (++bnetz->loopback_count > 9)
 			bnetz->loopback_count = 0;
-#endif
 	} else
 	switch(bnetz->state) {
 	case BNETZ_FREI:
@@ -490,7 +470,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 			case 'S':
 				bnetz->dial_type = DIAL_TYPE_METER;
 				break;
-			case 'U':
+			case 'M':
 				bnetz->dial_type = DIAL_TYPE_METER_MUENZ;
 				break;
 			default:
@@ -556,7 +536,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_av
 					return;
 				}
 				break;
-			case 'U':
+			case 'M':
 				if (bnetz->dial_type != DIAL_TYPE_METER_MUENZ) {
 					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support, payphone), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
@@ -671,11 +651,6 @@ static void bnetz_timeout(struct timer *timer)
 	bnetz_t *bnetz = (bnetz_t *)timer->priv;
 
 	switch (bnetz->state) {
-#ifdef GEN_DIALSEQUENCE
-	case BNETZ_FREI:
-		bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
-		break;
-#endif
 	case BNETZ_WAHLABRUF:
 		PDEBUG_CHAN(DBNETZ, DEBUG_NOTICE, "Timeout while receiving call setup from mobile station, releasing.\n");
 		bnetz_release(bnetz, TRENN_COUNT);

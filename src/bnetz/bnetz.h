@@ -68,7 +68,7 @@ typedef struct bnetz {
 	int			callref;		/* call reference */
 	enum dial_mode		dial_mode;		/* sub state while dialing is received */
 	enum dial_type		dial_type;		/* defines if mobile supports metering pulses */
-	char			dial_number[14];	/* dial string received */
+	char			dial_number[14];	/* dial string received (13 digits + termination, first 0-digit not included) */
 	int			dial_pos;		/* current position while receiving digits */
 	char			station_id[6];		/* current station ID */
 	int			station_id_pos;		/* position while transmitting */

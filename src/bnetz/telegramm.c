@@ -38,7 +38,7 @@ static struct impulstelegramm impulstelegramme[] = {
 	/* Signale */
 	{ 's',	"0111001000100010", 0x0000, "Funkwahl ohne Gebuehrenuebermittlung" },
 	{ 'S',	"0111000100100100", 0x0000, "Funkwahl mit Gebuehrenuebermittlung" },
-	{ 'U',	"0111000010101000", 0x0000, "Funkwahl mit Gebuehrenuebermittlung (Muenzfernsprecher)" },
+	{ 'M',	"0111000010101000", 0x0000, "Funkwahl mit Gebuehrenuebermittlung (Muenzfernsprecher)" },
 	{ 'e',	"0111010000100001", 0x0000, "Funkwahlende" },
 	{ 't',	"0111010101010101", 0x0000, "Trennsignal/Schlusssignal" },
 	/* Kanalbefehl B1 */
