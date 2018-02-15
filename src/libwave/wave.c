@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "../libsample/sample.h"
+#include "../libdebug/debug.h"
 #include "wave.h"
 
 /* NOTE: No locking required for writing and reading buffer pointers, since 'int' is atomic on >=32 bit machines */
@@ -51,7 +52,7 @@ static void *record_child(void *arg)
 		/* quit on error */
 		if (len < 0) {
 error:
-			fprintf(stderr, "Failed to write to recording WAVE file! (errno %d)\n", errno);
+			PDEBUG(DWAVE, DEBUG_ERROR, "Failed to write to recording WAVE file! (errno %d)\n", errno);
 			rec->finish = 1;
 			return NULL;
 		}
@@ -87,7 +88,7 @@ static void *playback_child(void *arg)
 		len = fread(play->buffer + play->buffer_writep, 1, to_read, play->fp);
 		/* quit on error */
 		if (len < 0) {
-			fprintf(stderr, "Failed to read from playback WAVE file! (errno %d)\n", errno);
+			PDEBUG(DWAVE, DEBUG_ERROR, "Failed to read from playback WAVE file! (errno %d)\n", errno);
 			play->finish = 1;
 			return NULL;
 		}
@@ -128,7 +129,7 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 
 	rec->fp = fopen(filename, "w");
 	if (!rec->fp) {
-		fprintf(stderr, "Failed to open recording file '%s'! (errno %d)\n", filename, errno);
+		PDEBUG(DWAVE, DEBUG_ERROR, "Failed to open recording file '%s'! (errno %d)\n", filename, errno);
 		return -errno;
 	}
 
@@ -138,18 +139,18 @@ int wave_create_record(wave_rec_t *rec, const char *filename, int samplerate, in
 	rec->buffer_size = samplerate * 2 * channels;
 	rec->buffer = calloc(rec->buffer_size, 1);
 	if (!rec->buffer) {
-		fprintf(stderr, "No mem!\n");
+		PDEBUG(DWAVE, DEBUG_NOTICE, "No mem!\n");
 		rc = ENOMEM;
 		goto error;
 	}
 
 	rc = pthread_create(&rec->tid, NULL, record_child, rec);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to create thread to record WAVE file! (errno %d)\n", errno);
+		PDEBUG(DWAVE, DEBUG_ERROR, "Failed to create thread to record WAVE file! (errno %d)\n", errno);
 		goto error;
 	}
 
-	printf("*** Writing WAVE file to %s.\n", filename);
+	PDEBUG(DWAVE, DEBUG_NOTICE, "*** Writing WAVE file to %s.\n", filename);
 
 	return 0;
 
@@ -180,50 +181,50 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 
 	play->fp = fopen(filename, "r");
 	if (!play->fp) {
-		fprintf(stderr, "Failed to open playback file '%s'! (errno %d)\n", filename, errno);
+		PDEBUG(DWAVE, DEBUG_ERROR, "Failed to open playback file '%s'! (errno %d)\n", filename, errno);
 		return -errno;
 	}
 
 	len = fread(buffer, 1, 12, play->fp);
 	if (len != 12) {
-		fprintf(stderr, "Failed to read RIFF header!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "Failed to read RIFF header!\n");
 		rc = -EIO;
 		goto error;
 	}
 	if (!!strncmp((char *)buffer, "RIFF", 4)) {
-		fprintf(stderr, "Missing RIFF header, seems that this is no WAVE file!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "Missing RIFF header, seems that this is no WAVE file!\n");
 		rc = -EINVAL;
 		goto error;
 	}
 	size = buffer[4] + (buffer[5] << 8) + (buffer[6] << 16) + (buffer[7] << 24);
 	if (!!strncmp((char *)buffer + 8, "WAVE", 4)) {
-		fprintf(stderr, "Missing WAVE header, seems that this is no WAVE file!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "Missing WAVE header, seems that this is no WAVE file!\n");
 		rc = -EINVAL;
 		goto error;
 	}
 	size -= 4;
 	while (size) {
 		if (size < 8) {
-			fprintf(stderr, "Short read of WAVE file!\n");
+			PDEBUG(DWAVE, DEBUG_ERROR, "Short read of WAVE file!\n");
 			rc = -EINVAL;
 			goto error;
 		}
 		len = fread(buffer, 1, 8, play->fp);
 		if (len != 8) {
-			fprintf(stderr, "Failed to read chunk of WAVE file!\n");
+			PDEBUG(DWAVE, DEBUG_ERROR, "Failed to read chunk of WAVE file!\n");
 			rc = -EIO;
 			goto error;
 		}
 		chunk = buffer[4] + (buffer[5] << 8) + (buffer[6] << 16) + (buffer[7] << 24);
 		size -= 8 + chunk;
 		if (size < 0) {
-			fprintf(stderr, "WAVE error: Chunk '%c%c%c%c' overflows file size!\n", buffer[4], buffer[5], buffer[6], buffer[7]);
+			PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: Chunk '%c%c%c%c' overflows file size!\n", buffer[4], buffer[5], buffer[6], buffer[7]);
 			rc = -EIO;
 			goto error;
 		}
 		if (!strncmp((char *)buffer, "fmt ", 4)) {
 			if (chunk < 16 || chunk > (int)sizeof(buffer)) {
-				fprintf(stderr, "WAVE error: Short or corrupt 'fmt' chunk!\n");
+				PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: Short or corrupt 'fmt' chunk!\n");
 				rc = -EINVAL;
 				goto error;
 			}
@@ -238,7 +239,7 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 		} else
 		if (!strncmp((char *)buffer, "data", 4)) {
 			if (!gotfmt) {
-				fprintf(stderr, "WAVE error: 'data' without 'fmt' chunk!\n");
+				PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: 'data' without 'fmt' chunk!\n");
 				rc = -EINVAL;
 				goto error;
 			}
@@ -255,38 +256,38 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 	}
 
 	if (!gotfmt || !gotdata) {
-		fprintf(stderr, "WAVE error: Missing 'data' or 'fmt' chunk!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: Missing 'data' or 'fmt' chunk!\n");
 		rc = -EINVAL;
 		goto error;
 	}
 
 	if (fmt.format != 1) {
-		fprintf(stderr, "WAVE error: We support only PCM files!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: We support only PCM files!\n");
 		rc = -EINVAL;
 		goto error;
 	}
 	if (fmt.channels !=channels) {
-		fprintf(stderr, "WAVE error: We expect %d cannel(s), but wave file only has %d channel(s)\n", channels, fmt.channels);
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: We expect %d cannel(s), but wave file only has %d channel(s)\n", channels, fmt.channels);
 		rc = -EINVAL;
 		goto error;
 	}
 	if ((int)fmt.sample_rate != samplerate) {
-		fprintf(stderr, "WAVE error: The WAVE file's sample rate (%d) does not match our sample rate (%d)!\n", fmt.sample_rate, samplerate);
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's sample rate (%d) does not match our sample rate (%d)!\n", fmt.sample_rate, samplerate);
 		rc = -EINVAL;
 		goto error;
 	}
 	if ((int)fmt.data_rate != 2 * channels * samplerate) {
-		fprintf(stderr, "WAVE error: The WAVE file's data rate is only %d bytes per second, but we expect %d bytes per second (2 bytes per sample * channels * samplerate)!\n", fmt.data_rate, 2 * channels * samplerate);
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's data rate is only %d bytes per second, but we expect %d bytes per second (2 bytes per sample * channels * samplerate)!\n", fmt.data_rate, 2 * channels * samplerate);
 		rc = -EINVAL;
 		goto error;
 	}
 	if (fmt.bytes_sample != 2 * channels) {
-		fprintf(stderr, "WAVE error: The WAVE file's bytes per sample is only %d, but we expect %d bytes sample (2 bytes per sample * channels)!\n", fmt.bytes_sample, 2 * channels);
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: The WAVE file's bytes per sample is only %d, but we expect %d bytes sample (2 bytes per sample * channels)!\n", fmt.bytes_sample, 2 * channels);
 		rc = -EINVAL;
 		goto error;
 	}
 	if (fmt.bits_sample != 16) {
-		fprintf(stderr, "WAVE error: We support only 16 bit files!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "WAVE error: We support only 16 bit files!\n");
 		rc = -EINVAL;
 		goto error;
 	}
@@ -296,18 +297,18 @@ int wave_create_playback(wave_play_t *play, const char *filename, int samplerate
 	play->buffer_size = samplerate * 2 * channels;
 	play->buffer = calloc(play->buffer_size, 1);
 	if (!play->buffer) {
-		fprintf(stderr, "No mem!\n");
+		PDEBUG(DWAVE, DEBUG_ERROR, "No mem!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
 
 	rc = pthread_create(&play->tid, NULL, playback_child, play);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to create thread to playback WAVE file! (errno %d)\n", errno);
+		PDEBUG(DWAVE, DEBUG_ERROR, "Failed to create thread to playback WAVE file! (errno %d)\n", errno);
 		goto error;
 	}
 
-	printf("*** Reading WAVE file from %s.\n", filename);
+	PDEBUG(DWAVE, DEBUG_NOTICE, "*** Reading WAVE file from %s.\n", filename);
 
 	return 0;
 
@@ -339,7 +340,7 @@ int wave_write(wave_rec_t *rec, sample_t **samples, int length)
 	to_write = (rec->buffer_size + rec->buffer_readp - rec->buffer_writep - 1) % rec->buffer_size;
 	to_write /= 2 * rec->channels;
 	if (to_write < length)
-		fprintf(stderr, "Record WAVE buffer overflow.\n");
+		PDEBUG(DWAVE, DEBUG_NOTICE, "Record WAVE buffer overflow.\n");
 	else
 		to_write = length;
 	if (to_write == 0)
@@ -392,7 +393,7 @@ read_empty:
 
 	if (to_read == 0 && play->finish) {
 		if (play->left) {
-			printf("*** Finished reading WAVE file. (short read)\n");
+			PDEBUG(DWAVE, DEBUG_NOTICE, "*** Finished reading WAVE file. (short read)\n");
 			play->left = 0;
 		}
 		goto read_empty;
@@ -411,7 +412,7 @@ read_empty:
 	play->left -= to_read;
 
 	if (!play->left)
-		printf("*** Finished reading WAVE file.\n");
+		PDEBUG(DWAVE, DEBUG_NOTICE, "*** Finished reading WAVE file.\n");
 
 	if (to_read < length)
 		goto read_empty;
@@ -492,7 +493,7 @@ void wave_destroy_record(wave_rec_t *rec)
 	fclose(rec->fp);
 	rec->fp = NULL;
 
-	printf("*** WAVE file written.\n");
+	PDEBUG(DWAVE, DEBUG_NOTICE, "*** WAVE file written.\n");
 }
 
 void wave_destroy_playback(wave_play_t *play)
