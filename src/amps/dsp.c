@@ -217,7 +217,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->fsk_tx_buffer_size = amps->fsk_bitduration + 10; /* 10 extra to avoid overflow due to rounding */
 	spl = calloc(sizeof(*spl), amps->fsk_tx_buffer_size);
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -233,7 +233,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level right of edge: %d..%d\n", amps->fsk_rx_window_half, amps->fsk_rx_window_end - 1);
 	spl = calloc(sizeof(*amps->fsk_rx_window), amps->fsk_rx_window_length);
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}

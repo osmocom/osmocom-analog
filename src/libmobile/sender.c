@@ -321,7 +321,7 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 #endif
 	count = sender->audio_get_tosend(sender->audio, latspl);
 	if (count < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
+		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE) {
 			if (cant_recover) {
 cant_recover:

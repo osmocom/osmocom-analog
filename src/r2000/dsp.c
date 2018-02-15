@@ -87,7 +87,7 @@ int dsp_init_sender(r2000_t *r2000)
 
 	/* init fsk */
 	if (fsk_init(&r2000->fsk, r2000, fsk_send_bit, fsk_receive_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1, FSK_BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (r2000->sender.loopback)
@@ -97,7 +97,7 @@ int dsp_init_sender(r2000_t *r2000)
 
 	/* init supervisorty fsk */
 	if (fsk_init(&r2000->super_fsk, r2000, super_send_bit, super_receive_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0, SUPER_BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 

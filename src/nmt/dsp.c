@@ -121,7 +121,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 
 	/* init fsk */
 	if (fsk_init(&nmt->fsk, nmt, fsk_send_bit, fsk_receive_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1, BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 

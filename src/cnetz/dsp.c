@@ -112,7 +112,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	cnetz->fsk_tx_buffer_size = size * 1.1; /* more to compensate clock speed */
 	cnetz->fsk_tx_buffer = calloc(sizeof(sample_t), cnetz->fsk_tx_buffer_size);
 	if (!cnetz->fsk_tx_buffer) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -127,7 +127,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	/* create speech buffer */
 	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), (int)(cnetz->fsk_bitduration * 70.0)); /* more to compensate clock speed. we just need it to fill 62 bits (60 bits, including pause bits). */
 	if (!cnetz->dsp_speech_buffer) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "No memory!\n");
+		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}

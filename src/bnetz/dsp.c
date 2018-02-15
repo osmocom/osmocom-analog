@@ -90,7 +90,7 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 
 	/* init fsk */
 	if (fsk_init(&bnetz->fsk, bnetz, fsk_send_bit, fsk_receive_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 0, BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK init failed!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 
