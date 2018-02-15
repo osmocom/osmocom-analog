@@ -47,6 +47,7 @@ src/libsample/libsample.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz
+src/bnetz/bnetz-dialer
 src/cnetz/cnetz
 src/nmt/libdmssms.a
 src/nmt/nmt
