@@ -5,7 +5,7 @@
 
 int save_depth = 16;
 
-#ifdef WITH_MAGICK
+#ifdef HAVE_MAGICK
 #include <magick/api.h>
 
 /* load given image to memory. return short RGB values */
@@ -256,7 +256,7 @@ int save_img_array(double *array, int width, int height, int alpha, const char *
 	unsigned short *img = NULL;
 	int components;
 
-#ifndef WITH_MAGICK
+#ifndef HAVE_MAGICK
 	if (alpha) {
 		printf("%s:warning, cannot save alpha component with PPM support only\n", __func__);
 		alpha = 0;
