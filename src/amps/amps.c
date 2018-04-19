@@ -209,7 +209,7 @@ void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2)
 		*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
 	} else {
 		/* MIN1 */
-		*min1 = (number[0] - '0') << 20;
+		*min1 = digit2binary(number[0]) << 20;
 		*min1 |= (digit2binary(number[1]) * 100 + digit2binary(number[2]) * 10 + digit2binary(number[3]) - 111) << 10;
 		*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
 	}
@@ -262,10 +262,10 @@ const char *amps_min12number(uint32_t min1)
 		}
 	} else {
 		/* MIN1 */
-		if ((min1 >> 20) > 9)
+		if ((min1 >> 20) < 1 || (min1 >> 20) > 10)
 			number[0] = '?';
 		else
-			number[0] = '0' + (min1 >> 20);
+			number[0] = binary2digit(min1 >> 20);
 		if (((min1 >> 10) & 0x3ff) > 999)
 			strcpy(number +  1, "???");
 		else {
