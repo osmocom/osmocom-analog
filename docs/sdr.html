@@ -79,16 +79,11 @@ In case of B-Netz, I use the following parameters:
         --sdr-rx-gain 30 \
         --sdr-tx-gain 30 \
         --sdr-samplerate 5000000 \
+	--sdr-bandwidth 15000000 \
         -s 100000 \
         -k 17
 
 </pre>
-
-<p>
-Be sure to select the right RX antenna input.
-The frequencies we use require the low frequency filter network, so I suggest to connect your antenna to RX_1_L and select "--sdr-rx-antenna LNAL".
-Different versions of LimeSuite have different default antenna inputs, so be sure to set your RX antenna.
-</p>
 
 <p>
 In order to change from analog sound card to SDR, you need <b>--sdr-soapy</b> option.
@@ -101,6 +96,30 @@ The local oscillator frequency causes the transmitted signal to be noisy, so I s
 The audio processing rate of 100 KHz (<b>-s 100000</b>) is used to generate two channels: <b>17</b> and 19.
 Note that channel 19 is not given here, but will be used automatically.
 With B-Netz, the transmitter switches from any voice channel to the paging channel (19) whenever the phone gets paged.
+</p>
+
+<p>
+Alternatively you can have these options pre-set by just a single option: <b>--limesdr</b>
+But still you can add any SDR option afterwards to set or modify them.
+</p>
+
+<pre>
+
+# bnetz --limesdr -k 17
+
+</pre>
+
+<p>
+Be sure to select the right RX antenna input.
+The frequencies we use require the low frequency filter network, so I suggest to connect your antenna to RX_1_L and select "--sdr-rx-antenna LNAL".
+Different versions of LimeSuite have different default antenna inputs, so be sure to set your RX antenna.
+</p>
+
+<p>
+My LimeSDR setup causes a bad RX signal, when the RX frequency of the channel (uplink) equals the center frequency of the RX spectrum.
+This center frequency is used as RX frequency, when only one channel is created for the base station.
+By creating two channels ('-k 15 -k 17') or an even number would eliminate the problem.
+The center frequency is between the channels now.
 </p>
 
 <center><img src="display-iq.png"/></center>
@@ -161,6 +180,12 @@ In this case increase the sample rate (-s) to generate a wider spectrum. (--sdr-
 </p>
 
 <p>
+If multiple channels are defined, the channel type for the first channel is automatically set to the control channel,
+the other channels to voice channels.
+You may still alter this by specifying channel type for each channel.
+</p>
+
+<p>
 Note that the CPU usage increases for the main thread.
 I suggest to monitor the usage using "top -H".
 You will see each thread. Be sure not to get too close to 100 percent.
@@ -181,6 +206,7 @@ Because C-Netz uses only odd channel numbers for 10 KHz spacing, we use channel 
         --sdr-rx-gain 30 \
 	--sdr-tx-gain 30 \
         --sdr-samplerate 5000000 \
+	--sdr-bandwidth 15000000 \
 	-s 100000 \
 	-k 131 -k 135 \
 	-C 0,0
@@ -200,6 +226,24 @@ Transmit PAL 'FUBK' test image on TV channel 21.
 	 -s 13750000  \
 	 -c 21  \
 	 tx-fubk
+
+</pre>
+
+<p>
+<b>Example: Receive or transmit a radio broacast channel</b><br>
+Receive radio station at 105.6 MHz with German stereo carrier (Pilot-Tone) and output it on sound card 0, device 0.
+If you replace <b>--rx</b> by <b>--tx</b>, you will transmit from sound card.
+</p>
+
+<pre>
+
+# osmoradio --limesdr \
+            -f 105600000
+            -M fm
+            -s 500000
+            -S
+            -a hw:0,0
+            --rx
 
 </pre>
 
