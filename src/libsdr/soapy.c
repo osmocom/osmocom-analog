@@ -297,6 +297,10 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 			}
 		}
 
+		/* hack to make limesdr tune rx to tx */
+		if (tx_frequency == rx_frequency)
+			rx_frequency += 1.0;
+
 		/* set frequency */
 		if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_RX, channel, rx_frequency, &tune_args) != 0) {
 			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
