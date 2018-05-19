@@ -10,6 +10,7 @@ osmoradio_SOURCES = \
 	main.c
 osmoradio_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \

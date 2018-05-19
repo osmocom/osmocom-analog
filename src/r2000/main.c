@@ -19,16 +19,17 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
 #include "../libdebug/debug.h"
+#include "../liboptions/options.h"
 #include "r2000.h"
 #include "dsp.h"
 #include "frame.h"
@@ -102,179 +103,154 @@ void print_help(const char *arg0)
 #define OPT_TAXE	258
 #define OPT_DESTRUCTION	259
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
 {
-	int skip_args = 0;
+	main_mobile_add_options();
+	option_add('B', "band", 1);
+	option_add(OPT_BANDE, "bande", 1);
+	option_add('T', "channel-type", 1);
+	option_add('R', "relais", 1);
+	option_add(OPT_DEPORT, "deport", 1);
+	option_add('I', "agi", 1);
+	option_add('P', "sm-power", 1);
+	option_add(OPT_TAXE, "taxe", 1);
+	option_add('C', "crins", 1);
+	option_add(OPT_DESTRUCTION, "destruction", 1);
+	option_add('N', "nconv", 1);
+	option_add('S', "recall", 1);
+}
 
-	static struct option long_options_special[] = {
-		{"band", 1, 0, 'B'},
-		{"bande", 1, 0, OPT_BANDE},
-		{"channel-type", 1, 0, 'T'},
-		{"relais", 1, 0, 'R'},
-		{"deport", 1, 0, OPT_DEPORT},
-		{"agi", 1, 0, 'I'},
-		{"sm-power", 1, 0, 'P'},
-		{"taxe", 1, 0, OPT_TAXE},
-		{"crins", 1, 0, 'C'},
-		{"destruction", 1, 0, OPT_DESTRUCTION},
-		{"nconv", 1, 0, 'N'},
-		{"recall", 1, 0, 'S'},
-		{0, 0, 0, 0}
-	};
+static int handle_options(int short_option, int argi, char **argv)
+{
+	int rc;
 
-	main_mobile_set_options("B:T:R:I:P:C:N:S", long_options_special);
-
-	while (1) {
-		int option_index = 0, c, rc;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'B':
-		case OPT_BANDE:
-			if (!strcmp(optarg, "list")) {
-				r2000_band_list();
-				exit(0);
-			}
-			band = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'T':
-			if (!strcmp(optarg, "list")) {
-				r2000_channel_list();
-				exit(0);
-			}
-			rc = r2000_channel_by_short_name(optarg);
-			if (rc < 0) {
-				fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", optarg);
-				exit(0);
-			}
-			OPT_ARRAY(num_chan_type, chan_type, rc)
-			skip_args += 2;
-			break;
-		case 'R':
-			relais = atoi(optarg);
-			if (relais > 511)
-				relais = 511;
-			if (relais < 1)
-				relais = 1;
-			skip_args += 2;
-			break;
-		case OPT_DEPORT:
-			deport = atoi(optarg);
-			if (deport > 7)
-				deport = 7;
-			if (deport < 0)
-				deport = 0;
-			skip_args += 2;
-			break;
-		case 'I':
-			if (!strcmp(optarg, "list")) {
-				int i;
-
-				printf("\nList of possible AGI (inscription permission) codes:\n\n");
-				printf("Value\tDescription\n");
-				printf("------------------------------------------------------------------------\n");
-				for (i = 0; i < 8; i++)
-					printf("%d\t%s\n", i, param_agi(i));
-				exit(0);
-			}
-			agi = atoi(optarg);
-			if (agi < 0 || agi > 7) {
-				fprintf(stderr, "Error, given inscription permission (AGI) %d is invalid, use 'list' to get a list of values!\n", agi);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'P':
-			sm_power = atoi(optarg);
-			if (sm_power > 1)
-				sm_power = 1;
-			if (sm_power < 0)
-				sm_power = 0;
-			skip_args += 2;
-			break;
-		case OPT_TAXE:
-			taxe = atoi(optarg);
-			if (taxe > 1)
-				taxe = 1;
-			if (taxe < 0)
-				taxe = 0;
-			skip_args += 2;
-			break;
-#if 0
-		case 'A':
-			if (!strcmp(optarg, "list")) {
-				int i;
-
-				printf("\nList of possible AGA (call permission) codes:\n\n");
-				printf("Value\tDescription\n");
-				printf("------------------------------------------------------------------------\n");
-				for (i = 0; i < 4; i++)
-					printf("%d\t%s\n", i, param_aga(i));
-				exit(0);
-			}
-			aga = atoi(optarg);
-			if (aga < 0 || aga > 3) {
-				fprintf(stderr, "Error, given call permission (AGA) %d is invalid, use 'list' to get a list of values!\n", aga);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-#endif
-		case 'C':
-			if (!strcmp(optarg, "list")) {
-				int i;
-
-				printf("\nList of possible CRINS (inscription response) codes:\n\n");
-				printf("Value\tDescription\n");
-				printf("------------------------------------------------------------------------\n");
-				for (i = 0; i < 8; i++)
-					printf("%d\t%s\n", i, param_crins(i));
-				exit(0);
-			}
-			crins = atoi(optarg);
-			if (crins < 0 || crins > 7) {
-				fprintf(stderr, "Error, given inscription response (CRINS) %d is invalid, use 'list' to get a list of values!\n", crins);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case OPT_DESTRUCTION:
-			if (!strcmp(optarg, "YES")) {
-				destruction = 2342;
-			}
-			skip_args += 2;
-			break;
-		case 'N':
-			nconv = atoi(optarg);
-			if (nconv > 7)
-				nconv = 7;
-			if (nconv < 0)
-				nconv = 0;
-			skip_args += 2;
-			break;
-		case 'S':
-			recall = 1;
-			skip_args += 1;
-			break;
-		default:
-			main_mobile_opt_switch(c, argv[0], &skip_args);
+	switch (short_option) {
+	case 'B':
+	case OPT_BANDE:
+		if (!strcmp(argv[argi], "list")) {
+			r2000_band_list();
+			return 0;
 		}
+		band = atoi(argv[argi]);
+		break;
+	case 'T':
+		if (!strcmp(argv[argi], "list")) {
+			r2000_channel_list();
+			return 0;
+		}
+		rc = r2000_channel_by_short_name(argv[argi]);
+		if (rc < 0) {
+			fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", argv[argi]);
+			return -EINVAL;
+		}
+		OPT_ARRAY(num_chan_type, chan_type, rc)
+		break;
+	case 'R':
+		relais = atoi(argv[argi]);
+		if (relais > 511)
+			relais = 511;
+		if (relais < 1)
+			relais = 1;
+		break;
+	case OPT_DEPORT:
+		deport = atoi(argv[argi]);
+		if (deport > 7)
+			deport = 7;
+		if (deport < 0)
+			deport = 0;
+		break;
+	case 'I':
+		if (!strcmp(argv[argi], "list")) {
+			int i;
+
+			printf("\nList of possible AGI (inscription permission) codes:\n\n");
+			printf("Value\tDescription\n");
+			printf("------------------------------------------------------------------------\n");
+			for (i = 0; i < 8; i++)
+				printf("%d\t%s\n", i, param_agi(i));
+			return 0;
+		}
+		agi = atoi(argv[argi]);
+		if (agi < 0 || agi > 7) {
+			fprintf(stderr, "Error, given inscription permission (AGI) %d is invalid, use 'list' to get a list of values!\n", agi);
+			return -EINVAL;
+		}
+		break;
+	case 'P':
+		sm_power = atoi(argv[argi]);
+		if (sm_power > 1)
+			sm_power = 1;
+		if (sm_power < 0)
+			sm_power = 0;
+		break;
+	case OPT_TAXE:
+		taxe = atoi(argv[argi]);
+		if (taxe > 1)
+			taxe = 1;
+		if (taxe < 0)
+			taxe = 0;
+		break;
+#if 0
+	case 'A':
+		if (!strcmp(argv[argi], "list")) {
+			int i;
+
+			printf("\nList of possible AGA (call permission) codes:\n\n");
+			printf("Value\tDescription\n");
+			printf("------------------------------------------------------------------------\n");
+			for (i = 0; i < 4; i++)
+				printf("%d\t%s\n", i, param_aga(i));
+			return 0;
+		}
+		aga = atoi(argv[argi]);
+		if (aga < 0 || aga > 3) {
+			fprintf(stderr, "Error, given call permission (AGA) %d is invalid, use 'list' to get a list of values!\n", aga);
+			return -EINVAL;
+		}
+		break;
+#endif
+	case 'C':
+		if (!strcmp(argv[argi], "list")) {
+			int i;
+
+			printf("\nList of possible CRINS (inscription response) codes:\n\n");
+			printf("Value\tDescription\n");
+			printf("------------------------------------------------------------------------\n");
+			for (i = 0; i < 8; i++)
+				printf("%d\t%s\n", i, param_crins(i));
+			return 0;
+		}
+		crins = atoi(argv[argi]);
+		if (crins < 0 || crins > 7) {
+			fprintf(stderr, "Error, given inscription response (CRINS) %d is invalid, use 'list' to get a list of values!\n", crins);
+			return -EINVAL;
+		}
+		break;
+	case OPT_DESTRUCTION:
+		if (!strcmp(argv[argi], "YES")) {
+			destruction = 2342;
+		}
+		break;
+	case 'N':
+		nconv = atoi(argv[argi]);
+		if (nconv > 7)
+			nconv = 7;
+		if (nconv < 0)
+			nconv = 0;
+		break;
+	case 'S':
+		recall = 1;
+		break;
+	default:
+		return main_mobile_handle_options(short_option, argi, argv);
 	}
 
-	free(long_options);
-
-	return skip_args;
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
-	int rc;
-	int skip_args;
+	int rc, argi;
 	const char *station_id = "";
 	int mandatory = 0;
 	int i;
@@ -284,12 +260,17 @@ int main(int argc, char *argv[])
 
 	main_mobile_init();
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/radiocom2000.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc > 1) {
-		station_id = argv[1];
+	if (argi < argc) {
+		station_id = argv[argi];
 		if (strlen(station_id) != 9) {
 			printf("Given station ID '%s' does not have 9 digits\n", station_id);
 			return 0;
@@ -328,7 +309,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mandatory) {
-		print_help(argv[-skip_args]);
+		print_help(argv[0]);
 		return 0;
 	}
 

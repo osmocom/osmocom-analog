@@ -19,10 +19,10 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include "../libsample/sample.h"
 #include "../libfsk/fsk.h"
 #include "../libwave/wave.h"
@@ -30,6 +30,7 @@
 #ifdef HAVE_ALSA
 #include "../libsound/sound.h"
 #endif
+#include "../liboptions/options.h"
 #include "telegramm.h"
 
 #define MAX_PAUSE	0.5	/* pause before and after dialing sequence */
@@ -92,7 +93,6 @@ static void print_help(const char *arg0)
 	printf(" -a --audio-device hw:<card>,<device>\n");
 	printf("        Sound card and device number (default = '%s')\n", audiodev);
 #endif
-	printf("        Don't set it for SDR!\n");
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
 	printf(" -w --write-tx-wave <file>\n");
@@ -106,70 +106,50 @@ static void print_help(const char *arg0)
 	printf("        Indicate to base station that we are a pay phone. ('Muenztelefon')\n");
 }
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
 {
-	const char *optstring;
-	int skip_args = 0;
+	option_add('h', "help", 0);
+	option_add('i', "station-id", 1);
+	option_add('a', "audio-device", 1);
+	option_add('s', "samplerate", 1);
+	option_add('w', "write-tx-wave", 1);
+	option_add('g', "gebuehrenimpuls", 0);
+	option_add(OPT_METERING, "metering", 0);
+	option_add('m', "muenztelefon", 0);
+	option_add(OPT_COIN_BOX, "coin-box", 0);
+}
 
-	static struct option long_options[] = {
-		{"help", 0, 0, 'h'},
-		{"station-id", 1, 0, 'i'},
-		{"audio-device", 1, 0, 'a'},
-		{"samplerate", 1, 0, 's'},
-		{"write-tx-wave", 1, 0, 'w'},
-		{"gebuehrenimpuls", 0, 0, 'g'},
-		{"metering", 0, 0, OPT_METERING},
-		{"muenztelefon", 0, 0, 'm'},
-		{"coin-box", 0, 0, OPT_COIN_BOX},
-		{0, 0, 0, 0},
-	};
-
-	optstring = "hi:a:s:w:gm";
-
-	while (1) {
-		int option_index = 0, c;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'h':
-			print_help(argv[0]);
-			exit(0);
-		case 'i':
-			station_id = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'a':
-			audiodev = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 's':
-			samplerate = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'w':
-			write_tx_wave = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'g':
-		case OPT_METERING:
-			start_digit = 'S';
-			skip_args += 1;
-			break;
-		case 'm':
-		case OPT_COIN_BOX:
-			start_digit = 'M';
-			skip_args += 1;
-			break;
-		default:
-			break;
-		}
+static int handle_options(int short_option, int __attribute__((unused)) argi, char **argv)
+{
+	switch (short_option) {
+	case 'h':
+		print_help(argv[0]);
+		return 0;
+	case 'i':
+		station_id = strdup(argv[argi]);
+		break;
+	case 'a':
+		audiodev = strdup(argv[argi]);
+		break;
+	case 's':
+		samplerate = atoi(argv[argi]);
+		break;
+	case 'w':
+		write_tx_wave = strdup(argv[argi]);
+		break;
+	case 'g':
+	case OPT_METERING:
+		start_digit = 'S';
+		break;
+	case 'm':
+	case OPT_COIN_BOX:
+		start_digit = 'M';
+		break;
+	default:
+		return -EINVAL;
 	}
 
-	return skip_args;
+	return 1;
 }
 
 
@@ -301,10 +281,8 @@ static void process_signal(void)
 
 int main(int argc, char *argv[])
 {
-	const char *arg0 = argv[0];
-	int skip_args;
 	int i;
-	int rc;
+	int rc, argi;
 
 	/* init */
 	bnetz_init_telegramm();
@@ -313,13 +291,15 @@ int main(int argc, char *argv[])
 	/* latency of send buffer in samples */
 	latspl = samplerate * latency / 1000;
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc <= 1) {
+	if (argi >= argc) {
 		printf("No phone number given!\n\n");
-		print_help(arg0);
+		print_help(argv[0]);
 		goto exit;
 	}
 
@@ -336,7 +316,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* check for valid phone number */
-	dialing = argv[1];
+	dialing = argv[argi];
 	if (strlen(dialing) < 4) {
 		printf("Given phone number '%s' has too few digits! (less than minimum of 4 digits)\n", dialing);
 		goto exit;

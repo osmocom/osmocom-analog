@@ -49,6 +49,7 @@ AS_IF([test "x$with_imagemagick" == "xyes"],[AC_MSG_NOTICE( Compiling with Image
 AS_IF([test "x$with_alsa" != "xyes" -a "x$with_sdr" != "xyes"],[AC_MSG_FAILURE( Without sound nor SDR support this project does not make sense. Please support sound card for analog transceivers or better SDR!" )],[])
 
 AC_OUTPUT(
+    src/liboptions/Makefile
     src/libdebug/Makefile
     src/libmobile/Makefile
     src/libdisplay/Makefile

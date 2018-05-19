@@ -19,16 +19,17 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
 #include "../libdebug/debug.h"
+#include "../liboptions/options.h"
 #include "nmt.h"
 #include "frame.h"
 #include "dsp.h"
@@ -97,141 +98,118 @@ void print_help(const char *arg0)
 	main_mobile_print_hotkeys();
 }
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
 {
+	main_mobile_add_options();
+	option_add('N', "nmt-system", 1);
+	option_add('T', "channel-type", 1);
+	option_add('P', "ms-power", 1);
+	option_add('Y', "traffic-area", 1);
+	option_add('A', "area-number", 1);
+	option_add('C', "compandor", 1);
+	option_add('0', "supervisory", 1);
+	option_add('S', "smsc-number", 1);
+	option_add('I', "caller-id", 1);
+}
+
+static int handle_options(int short_option, int argi, char **argv)
+{
+	int rc;
 	char *p;
 	int super;
-	int skip_args = 0;
 
-	static struct option long_options_special[] = {
-		{"nmt-system", 1, 0, 'N'},
-		{"channel-type", 1, 0, 'T'},
-		{"ms-power", 1, 0, 'P'},
-		{"traffic-area", 1, 0, 'Y'},
-		{"area-number", 1, 0, 'A'},
-		{"compandor", 1, 0, 'C'},
-		{"supervisory", 1, 0, '0'},
-		{"smsc-number", 1, 0, 'S'},
-		{"caller-id", 1, 0, 'I'},
-		{0, 0, 0, 0}
-	};
-
-	main_mobile_set_options("N:T:P:Y:A:C:0:S:I:", long_options_special);
-
-	while (1) {
-		int option_index = 0, c, rc;
-		static int first_option = 1;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'N':
-			nmt_system = atoi(optarg);
-			if (nmt_system != 450 && nmt_system != 900) {
-				fprintf(stderr, "Error, NMT system type '%s' unknown. Please use '-N 450' for NMT-450 or '-N 900' for NMT-900.\n", optarg);
-				exit(0);
-			}
-			if (nmt_system == 900)
-				ms_power = 0;
-			if (!first_option) {
-				fprintf(stderr, "Please specify the NMT system (-N) as first command line option!\n");
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'T':
-			if (!strcmp(optarg, "list")) {
-				nmt_channel_list(nmt_system);
-				exit(0);
-			}
-			rc = nmt_channel_by_short_name(nmt_system, optarg);
-			if (rc < 0) {
-				fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", optarg);
-				exit(0);
-			}
-			OPT_ARRAY(num_chan_type, chan_type, rc)
-			skip_args += 2;
-			break;
-		case 'P':
-			ms_power = atoi(optarg);
-			if (ms_power > 3)
-				ms_power = 3;
-			if (ms_power < 0)
-				ms_power = 0;
-			skip_args += 2;
-			break;
-		case 'Y':
-
-			if (!strcmp(optarg, "list")) {
-				nmt_country_list(nmt_system);
-				exit(0);
-			}
-			/* digits */
-			strncpy(country, optarg, sizeof(country) - 1);
-			country[sizeof(country) - 1] = '\0';
-			p = strchr(country, ',');
-			if (!p) {
-				fprintf(stderr, "Illegal traffic area '%s', see '-h' for help\n", optarg);
-				exit(0);
-			}
-			*p++ = '\0';
-			rc = nmt_country_by_short_name(nmt_system, country);
-			if (rc < 0) {
-error_ta:
-				fprintf(stderr, "Invalid traffic area '%s', use '-Y list' for a list of valid areas\n", optarg);
-				exit(0);
-			}
-			traffic_area[0] = rc + '0';
-			if (p[strlen(p) - 1] != '!') {
-				rc = nmt_ta_by_short_name(nmt_system, country, atoi(p));
-				if (rc < 0)
-					goto error_ta;
-			}
-			nmt_value2digits(atoi(p), traffic_area + 1, 1);
-			traffic_area[2] = '\0';
-			skip_args += 2;
-			break;
-		case 'A':
-			area_no = optarg[0] - '0';
-			if (area_no > 4) {
-				fprintf(stderr, "Area number '%s' out of range, please use 1..4 or 0 for no area\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'C':
-			compandor = atoi(optarg);
-			skip_args += 2;
-			break;
-		case '0':
-			super = atoi(optarg);
-			if (super < 0 || super > 4) {
-				fprintf(stderr, "Given supervisory signal is wrong, use '-h' for help!\n");
-				exit(0);
-			}
-			OPT_ARRAY(num_supervisory, supervisory, super)
-			skip_args += 2;
-			break;
-		case 'S':
-			smsc_number = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'I':
-			send_callerid = atoi(optarg);
-			skip_args += 2;
-			break;
-		default:
-			main_mobile_opt_switch(c, argv[0], &skip_args);
+	switch (short_option) {
+	case 'N':
+		nmt_system = atoi(argv[argi]);
+		if (nmt_system != 450 && nmt_system != 900) {
+			fprintf(stderr, "Error, NMT system type '%s' unknown. Please use '-N 450' for NMT-450 or '-N 900' for NMT-900.\n", argv[argi]);
+			return -EINVAL;
 		}
-		first_option = 0;
+		if (nmt_system == 900)
+			ms_power = 0;
+		if (!option_is_first()) {
+			fprintf(stderr, "Please specify the NMT system (-N) as first command line option!\n");
+			return -EINVAL;
+		}
+		break;
+	case 'T':
+		if (!strcmp(argv[argi], "list")) {
+			nmt_channel_list(nmt_system);
+			return 0;
+		}
+		rc = nmt_channel_by_short_name(nmt_system, argv[argi]);
+		if (rc < 0) {
+			fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", argv[argi]);
+			return -EINVAL;
+		}
+		OPT_ARRAY(num_chan_type, chan_type, rc)
+		break;
+	case 'P':
+		ms_power = atoi(argv[argi]);
+		if (ms_power > 3)
+			ms_power = 3;
+		if (ms_power < 0)
+			ms_power = 0;
+		break;
+	case 'Y':
+
+		if (!strcmp(argv[argi], "list")) {
+			nmt_country_list(nmt_system);
+			return 0;
+		}
+		/* digits */
+		strncpy(country, argv[argi], sizeof(country) - 1);
+		country[sizeof(country) - 1] = '\0';
+		p = strchr(country, ',');
+		if (!p) {
+			fprintf(stderr, "Illegal traffic area '%s', see '-h' for help\n", argv[argi]);
+			return -EINVAL;
+		}
+		*p++ = '\0';
+		rc = nmt_country_by_short_name(nmt_system, country);
+		if (rc < 0) {
+error_ta:
+			fprintf(stderr, "Invalid traffic area '%s', use '-Y list' for a list of valid areas\n", argv[argi]);
+			return -EINVAL;
+		}
+		traffic_area[0] = rc + '0';
+		if (p[strlen(p) - 1] != '!') {
+			rc = nmt_ta_by_short_name(nmt_system, country, atoi(p));
+			if (rc < 0)
+				goto error_ta;
+		}
+		nmt_value2digits(atoi(p), traffic_area + 1, 1);
+		traffic_area[2] = '\0';
+		break;
+	case 'A':
+		area_no = argv[argi][0] - '0';
+		if (area_no > 4) {
+			fprintf(stderr, "Area number '%s' out of range, please use 1..4 or 0 for no area\n", argv[argi]);
+			return -EINVAL;
+		}
+		break;
+	case 'C':
+		compandor = atoi(argv[argi]);
+		break;
+	case '0':
+		super = atoi(argv[argi]);
+		if (super < 0 || super > 4) {
+			fprintf(stderr, "Given supervisory signal is wrong, use '-h' for help!\n");
+			return -EINVAL;
+		}
+		OPT_ARRAY(num_supervisory, supervisory, super)
+		break;
+	case 'S':
+		smsc_number = strdup(argv[argi]);
+		break;
+	case 'I':
+		send_callerid = atoi(argv[argi]);
+		break;
+	default:
+		return main_mobile_handle_options(short_option, argi, argv);
 	}
 
-	free(long_options);
-
-	return skip_args;
+	return 1;
 }
 
 static void myhandler(void)
@@ -280,8 +258,7 @@ int submit_sms(const char *sms)
 
 int main(int argc, char *argv[])
 {
-	int rc;
-	int skip_args;
+	int rc, argi;
 	const char *station_id = "";
 	int mandatory = 0;
 	int i;
@@ -292,12 +269,17 @@ int main(int argc, char *argv[])
 
 	main_mobile_init();
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/nmt.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc > 1) {
-		station_id = argv[1];
+	if (argi < argc) {
+		station_id = argv[argi];
 		if (strlen(station_id) != 7) {
 			printf("Given station ID '%s' does not have 7 digits\n", station_id);
 			return 0;
@@ -338,7 +320,7 @@ int main(int argc, char *argv[])
 		num_audiodev = 1; /* use default */
 	if (num_kanal != num_audiodev) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
-		exit(0);
+		return -EINVAL;
 	}
 	if (num_kanal == 1 && num_chan_type == 0) {
 		num_chan_type = 1; /* use default */
@@ -347,14 +329,14 @@ int main(int argc, char *argv[])
 	}
 	if (num_kanal != num_chan_type) {
 		fprintf(stderr, "You need to specify as many channel types as you have channels.\n");
-		exit(0);
+		return -EINVAL;
 	}
 	if (num_kanal == 1 && num_supervisory == 0)
 		num_supervisory = 1; /* use default */
 	if (num_kanal != num_supervisory) {
 		fprintf(stderr, "You need to specify as many supervisory signals as you have channels.\n");
 		fprintf(stderr, "They shall be different at channels that are close to each other.\n");
-		exit(0);
+		return -EINVAL;
 	}
 	if (num_kanal) {
 		uint8_t super[5] = { 0, 0, 0, 0, 0 };
@@ -378,7 +360,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mandatory) {
-		print_help(argv[-skip_args]);
+		print_help(argv[0]);
 		return 0;
 	}
 

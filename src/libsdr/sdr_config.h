@@ -26,8 +26,7 @@ extern sdr_config_t *sdr_config;
 void sdr_config_init(double lo_offset);
 void sdr_config_print_help(void);
 void sdr_config_print_hotkeys(void);
-extern struct option sdr_config_long_options[];
-extern const char *sdr_config_optstring;
-int sdr_config_opt_switch(int c, int *skip_args);
+void sdr_config_add_options(void);
+int sdr_config_handle_options(int short_option, int argi, char **argv);
 int sdr_configure(int samplerate);
 

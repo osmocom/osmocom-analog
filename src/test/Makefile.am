@@ -57,6 +57,7 @@ test_dms_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
@@ -90,6 +91,7 @@ test_sms_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/libjitter/libjitter.a \

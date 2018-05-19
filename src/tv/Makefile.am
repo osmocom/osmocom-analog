@@ -14,6 +14,7 @@ osmotv_SOURCES = \
 	main.c
 osmotv_LDADD = \
 	$(COMMON_LA) \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libimage/libimage.a \
 	$(top_builddir)/src/libfm/libfm.a \

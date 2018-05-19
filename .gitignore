@@ -20,6 +20,7 @@ compile
 .libs
 .dirstamp
 m4
+src/liboptions/liboptions.a
 src/libdebug/libdebug.a
 src/libmobile/libmobile.a
 src/libdisplay/libdisplay.a

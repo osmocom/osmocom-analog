@@ -4,28 +4,29 @@
 #define DEBUG_NOTICE	2 /* something unexpected happens */
 #define DEBUG_ERROR	3 /* there is an error with this software */
 
-#define DSENDER		0
-#define DSOUND		1
-#define DDSP		2
-#define DANETZ		3
-#define DBNETZ		4
-#define DCNETZ		5
-#define DNMT		6
-#define DAMPS		7
-#define DR2000		8
-#define DJOLLY		9
-#define DFRAME		10
-#define DCALL		11
-#define DMNCC		12
-#define DDB		13
-#define DTRANS		14
-#define DDMS		15
-#define DSMS		16
-#define DSDR		17
-#define DUHD		18
-#define DSOAPY		19
-#define DWAVE		20
-#define DRADIO		21
+#define DOPTIONS	0
+#define DSENDER		1
+#define DSOUND		2
+#define DDSP		3
+#define DANETZ		4
+#define DBNETZ		5
+#define DCNETZ		6
+#define DNMT		7
+#define DAMPS		8
+#define DR2000		9
+#define DJOLLY		10
+#define DFRAME		11
+#define DCALL		12
+#define DMNCC		13
+#define DDB		14
+#define DTRANS		15
+#define DDMS		16
+#define DSMS		17
+#define DSDR		18
+#define DUHD		19
+#define DSOAPY		20
+#define DWAVE		21
+#define DRADIO		22
 
 void get_win_size(int *w, int *h);
 

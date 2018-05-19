@@ -22,6 +22,7 @@ nmt_SOURCES = \
 nmt_LDADD = \
 	$(COMMON_LA) \
 	libdmssms.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \

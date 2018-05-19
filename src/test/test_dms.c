@@ -43,7 +43,7 @@ void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 {
 	printf("(getting %d digits from DMS layer)\n", length);
 
-	assert(!memcmp((const char *)data, check_sequence, length), "Expecting received data to macht");
+	assert(!memcmp((const char *)data, check_sequence, length), "Expecting received data to match");
 
 	check_sequence += length;
 	check_length = length;

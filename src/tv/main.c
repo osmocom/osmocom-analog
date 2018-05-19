@@ -1,4 +1,4 @@
-/* main function
+/* JollyTV main function
  *
  * (C) 2017 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -24,8 +24,8 @@ enum paging_signal;
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <signal.h>
+#include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
@@ -37,6 +37,7 @@ enum paging_signal;
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
 #endif
+#include "../liboptions/options.h"
 #include "bas.h"
 #include "tv_modulate.h"
 #include "channels.h"
@@ -114,149 +115,104 @@ void print_help(const char *arg0)
 	printf("        Give exactly 12 characters to display as Station ID.\n");
 	printf("        (default = \"%s\")\n", station_id);
 #ifdef HAVE_SDR
+	printf("    --limesdr\n");
+	printf("        Auto-select several required options for LimeSDR\n");
 	sdr_config_print_help();
 #endif
 }
 
-static struct option long_options_common[] = {
-	{"help", 0, 0, 'h'},
-	{"frequency", 1, 0, 'f'},
-	{"channel", 1, 0, 'c'},
-	{"samplerate", 1, 0, 'r'},
-	{"wave-file", 1, 0, 'w'},
-	{"fbas", 1, 0, 'F'},
-	{"tone", 1, 0, 'T'},
-	{"circle-radius", 1, 0, 'R'},
-	{"color-bar", 1, 0, 'C'},
-	{"grid-only", 1, 0, 'G'},
-	{"station-id", 1, 0, 'I'},
-	{0, 0, 0, 0}
-};
+#define OPT_LIMESDR		1100
 
-static const char *optstring_common = "hf:c:r:w:F:T:R:C:G:I:";
-
-struct option *long_options;
-char *optstring;
-
-static void check_duplicate_option(int num, struct option *option)
+static void add_options(void)
 {
-	int i;
-
-	for (i = 0; i < num; i++) {
-		if (long_options[i].val == option->val) {
-			fprintf(stderr, "Duplicate option %d. Please fix!\n", option->val);
-			abort();
-		}
-	}
-}
-
-void set_options_common(void)
-{
-	int i = 0, j;
-
-	long_options = calloc(sizeof(*long_options), 256);
-	for (j = 0; long_options_common[i].name; i++, j++) {
-		check_duplicate_option(i, &long_options_common[j]);
-		memcpy(&long_options[i], &long_options_common[j], sizeof(*long_options));
-	}
+	option_add('h', "help", 0);
+	option_add('f', "frequency", 1);
+	option_add('c', "channel", 1);
+	option_add('r', "samplerate", 1);
+	option_add('w', "wave-file", 1);
+	option_add('F', "fbas", 1);
+	option_add('T', "tone", 1);
+	option_add('R', "circle-radius", 1);
+	option_add('C', "color-bar", 1);
+	option_add('G', "grid-only", 1);
+	option_add('I', "station-id", 1);
 #ifdef HAVE_SDR
-	for (j = 0; sdr_config_long_options[j].name; i++, j++) {
-		check_duplicate_option(i, &sdr_config_long_options[j]);
-		memcpy(&long_options[i], &sdr_config_long_options[j], sizeof(*long_options));
-	}
-#endif
-	
-	optstring = calloc(256, 2);
-	strcpy(optstring, optstring_common);
-#ifdef HAVE_SDR
-	strcat(optstring, sdr_config_optstring);
+	option_add(OPT_LIMESDR, "limesdr", 0);
+	sdr_config_add_options();
 #endif
 }
 
-static int handle_options(int argc, char **argv)
+static int handle_options(int short_option, int argi, char **argv)
 {
-	int skip_args = 0;
-#ifdef HAVE_SDR
-	int rc;
-#endif
-
-	set_options_common();
-
-	while (1) {
-		int option_index = 0, c;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'h':
-			print_help(argv[0]);
-			exit(0);
-		case 'f':
-			frequency = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'c':
-			if (!strcmp(optarg, "list")) {
-				list_tv_channels();
-				exit(0);
-			}
-			frequency = get_tv_video_frequency(atoi(optarg));
-			if (frequency == 0.0) {
-				fprintf(stderr, "Given channel number unknown, use \"-c list\" to get a list.\n");
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'r':
-			samplerate = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'w':
-			wave_file = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'F':
-			fbas = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'T':
-			tone = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'R':
-			circle_radius = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'C':
-			color_bar = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'G':
-			grid_only = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'I':
-			station_id = strdup(optarg);
-			if (strlen(station_id) != 12) {
-				fprintf(stderr, "Given station ID must be exactly 12 charaters long. (Use spaces to fill it.)\n");
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		default:
-#ifdef HAVE_SDR
-			rc = sdr_config_opt_switch(c, &skip_args);
-			if (rc < 0)
-				exit(0);
-#endif
-			break;
+	switch (short_option) {
+	case 'h':
+		print_help(argv[0]);
+		return 0;
+	case 'f':
+		frequency = atof(argv[argi]);
+		break;
+	case 'c':
+		if (!strcmp(argv[argi], "list")) {
+			list_tv_channels();
+			return 0;
 		}
+		frequency = get_tv_video_frequency(atoi(argv[argi]));
+		if (frequency == 0.0) {
+			fprintf(stderr, "Given channel number unknown, use \"-c list\" to get a list.\n");
+			return -EINVAL;
+		}
+		break;
+	case 'r':
+		samplerate = atof(argv[argi]);
+		break;
+	case 'w':
+		wave_file = strdup(argv[argi]);
+		break;
+	case 'F':
+		fbas = atoi(argv[argi]);
+		break;
+	case 'T':
+		tone = atoi(argv[argi]);
+		break;
+	case 'R':
+		circle_radius = atof(argv[argi]);
+		break;
+	case 'C':
+		color_bar = atoi(argv[argi]);
+		break;
+	case 'G':
+		grid_only = atoi(argv[argi]);
+		break;
+	case 'I':
+		station_id = strdup(argv[argi]);
+		if (strlen(station_id) != 12) {
+			fprintf(stderr, "Given station ID must be exactly 12 charaters long. (Use spaces to fill it.)\n");
+			return -EINVAL;
+		}
+		break;
+#ifdef HAVE_SDR
+	case OPT_LIMESDR:
+		{
+			char *argv_lime[] = { argv[0],
+				"--sdr-soapy",
+				"--sdr-tx-gain", "50",
+				"--sdr-lo-offset", "-3000000",
+				"--sdr-bandwidth", "60000000",
+				"-r", "13750000",
+			};
+			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
+			return options_command_line(argc_lime, argv_lime, handle_options);
+		}
+#endif
+	default:
+#ifdef HAVE_SDR
+		return sdr_config_handle_options(short_option, argi, argv);
+#else
+		return -EINVAL;
+#endif
 	}
 
-	return skip_args;
+	return 1;
 }
 
 static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *sample_tone, __attribute__((__unused__)) uint8_t *power_tone, int samples)
@@ -448,9 +404,7 @@ error:
 
 int main(int argc, char *argv[])
 {
-	int skip_args;
-	int __attribute__((__unused__)) rc;
-	const char *arg0 = argv[0];
+	int __attribute__((__unused__)) rc, argi;
 
 	debuglevel = 0;
 
@@ -458,12 +412,17 @@ int main(int argc, char *argv[])
 	sdr_config_init(DEFAULT_LO_OFFSET);
 #endif
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args + 1;
-	argv += skip_args + 1;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/osmotv.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
 	if (frequency == 0.0 && !wave_file) {
-		print_help(arg0);
+		print_help(argv[0]);
 		exit(0);
 	}
 
@@ -475,22 +434,22 @@ int main(int argc, char *argv[])
 #endif
 	}
 
-	if (argc < 1) {
-		fprintf(stderr, "Expecting command, see help!\n");
+	if (argi >= argc) {
+		fprintf(stderr, "Expecting command, use '-h' for help!\n");
 		exit(0);
-	} else if (!strcmp(argv[0], "tx-fubk")) {
+	} else if (!strcmp(argv[argi], "tx-fubk")) {
 		tx_test_picture(BAS_FUBK);
-	} else if (!strcmp(argv[0], "tx-vcr")) {
+	} else if (!strcmp(argv[argi], "tx-vcr")) {
 		tx_test_picture(BAS_VCR);
-	} else if (!strcmp(argv[0], "tx-img")) {
-		if (argc < 2) {
-			fprintf(stderr, "Expecting image file, see help!\n");
-			exit(0);
+	} else if (!strcmp(argv[argi], "tx-img")) {
+		if (argi + 1 >= argc) {
+			fprintf(stderr, "Expecting image file, use '-h' for help!\n");
+			return -EINVAL;
 		}
-		tx_img(argv[1]);
+		tx_img(argv[argi + 1]);
 	} else {
-		fprintf(stderr, "Unknown command '%s', see help!\n", argv[0]);
-		exit(0);
+		fprintf(stderr, "Unknown command '%s', use '-h' for help!\n", argv[argi]);
+		return -EINVAL;
 	}
 
 	return 0;

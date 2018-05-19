@@ -23,8 +23,9 @@ enum paging_signal;
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <getopt.h>
+#include <errno.h>
 #include "../libsample/sample.h"
+#include "../liboptions/options.h"
 #include "sdr.h"
 #include "sdr_config.h"
 
@@ -122,43 +123,40 @@ void sdr_config_print_hotkeys(void)
 #define	OPT_SDR_SWAP_LINKS	1517
 #define OPT_SDR_UHD_TX_TS	1518
 
-struct option sdr_config_long_options[] = {
-	{"sdr-uhd", 0, 0, OPT_SDR_UHD},
-	{"sdr-soapy", 0, 0, OPT_SDR_SOAPY},
-	{"sdr-channel", 1, 0, OPT_SDR_CHANNEL},
-	{"sdr-device-args", 1, 0, OPT_SDR_DEVICE_ARGS},
-	{"sdr-stream-args", 1, 0, OPT_SDR_STREAM_ARGS},
-	{"sdr-tune-args", 1, 0, OPT_SDR_TUNE_ARGS},
-	{"sdr-samplerate", 1, 0, OPT_SDR_SAMPLERATE},
-	{"sdr-lo-offset", 1, 0, OPT_SDR_LO_OFFSET},
-	{"sdr-bandwidth", 1, 0, OPT_SDR_BANDWIDTH},
-	{"sdr-rx-antenna", 1, 0, OPT_SDR_RX_ANTENNA},
-	{"sdr-tx-antenna", 1, 0, OPT_SDR_TX_ANTENNA},
-	{"sdr-rx-gain", 1, 0, OPT_SDR_RX_GAIN},
-	{"sdr-tx-gain", 1, 0, OPT_SDR_TX_GAIN},
-	{"write-iq-rx-wave", 1, 0, OPT_WRITE_IQ_RX_WAVE},
-	{"write-iq-tx-wave", 1, 0, OPT_WRITE_IQ_TX_WAVE},
-	{"read-iq-rx-wave", 1, 0, OPT_READ_IQ_RX_WAVE},
-	{"read-iq-tx-wave", 1, 0, OPT_READ_IQ_TX_WAVE},
-	{"sdr-swap-links", 0, 0, OPT_SDR_SWAP_LINKS},
-	{"sdr-uhd-tx-timestamps", 0, 0, OPT_SDR_UHD_TX_TS},
-	{0, 0, 0, 0}
-};
-
-const char *sdr_config_optstring = "";
-
-int sdr_config_opt_switch(int c, int *skip_args)
+void sdr_config_add_options(void)
 {
-	switch (c) {
+	option_add(OPT_SDR_UHD, "sdr-uhd", 0);
+	option_add(OPT_SDR_SOAPY, "sdr-soapy", 0);
+	option_add(OPT_SDR_CHANNEL, "sdr-channel", 1);
+	option_add(OPT_SDR_DEVICE_ARGS, "sdr-device-args", 1);
+	option_add(OPT_SDR_STREAM_ARGS, "sdr-stream-args", 1);
+	option_add(OPT_SDR_TUNE_ARGS, "sdr-tune-args", 1);
+	option_add(OPT_SDR_SAMPLERATE, "sdr-samplerate", 1);
+	option_add(OPT_SDR_LO_OFFSET, "sdr-lo-offset", 1);
+	option_add(OPT_SDR_BANDWIDTH, "sdr-bandwidth", 1);
+	option_add(OPT_SDR_RX_ANTENNA, "sdr-rx-antenna", 1);
+	option_add(OPT_SDR_TX_ANTENNA, "sdr-tx-antenna", 1);
+	option_add(OPT_SDR_RX_GAIN, "sdr-rx-gain", 1);
+	option_add(OPT_SDR_TX_GAIN, "sdr-tx-gain", 1);
+	option_add(OPT_WRITE_IQ_RX_WAVE, "write-iq-rx-wave", 1);
+	option_add(OPT_WRITE_IQ_TX_WAVE, "write-iq-tx-wave", 1);
+	option_add(OPT_READ_IQ_RX_WAVE, "read-iq-rx-wave", 1);
+	option_add(OPT_READ_IQ_TX_WAVE, "read-iq-tx-wave", 1);
+	option_add(OPT_SDR_SWAP_LINKS, "sdr-swap-links", 0);
+	option_add(OPT_SDR_UHD_TX_TS, "sdr-uhd-tx-timestamps", 0);
+}
+
+int sdr_config_handle_options(int short_option, int argi, char **argv)
+{
+	switch (short_option) {
 	case OPT_SDR_UHD:
 #ifdef HAVE_UHD
 		sdr_config->uhd = 1;
 		use_sdr = 1;
 #else
 		fprintf(stderr, "UHD SDR support not compiled in!\n");
-		exit(0);
+		return -EINVAL;
 #endif
-		*skip_args += 1;
 		break;
 	case OPT_SDR_SOAPY:
 #ifdef HAVE_SOAPY
@@ -166,83 +164,65 @@ int sdr_config_opt_switch(int c, int *skip_args)
 		use_sdr = 1;
 #else
 		fprintf(stderr, "SoapySDR support not compiled in!\n");
-		exit(0);
+		return -EINVAL;
 #endif
-		*skip_args += 1;
 		break;
 	case OPT_SDR_CHANNEL:
-		sdr_config->channel = atoi(optarg);
-		*skip_args += 2;
+		sdr_config->channel = atoi(argv[argi]);
 		break;
 	case OPT_SDR_DEVICE_ARGS:
-		sdr_config->device_args = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->device_args = strdup(argv[argi]);
 		break;
 	case OPT_SDR_STREAM_ARGS:
-		sdr_config->stream_args = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->stream_args = strdup(argv[argi]);
 		break;
 	case OPT_SDR_TUNE_ARGS:
-		sdr_config->tune_args = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->tune_args = strdup(argv[argi]);
 		break;
 	case OPT_SDR_SAMPLERATE:
-		sdr_config->samplerate = atoi(optarg);
-		*skip_args += 2;
+		sdr_config->samplerate = atoi(argv[argi]);
 		break;
 	case OPT_SDR_LO_OFFSET:
-		sdr_config->lo_offset = atof(optarg);
-		*skip_args += 2;
+		sdr_config->lo_offset = atof(argv[argi]);
 		break;
 	case OPT_SDR_BANDWIDTH:
-		sdr_config->bandwidth = atof(optarg);
-		*skip_args += 2;
+		sdr_config->bandwidth = atof(argv[argi]);
 		break;
 	case OPT_SDR_RX_ANTENNA:
-		sdr_config->rx_antenna = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->rx_antenna = strdup(argv[argi]);
 		break;
 	case OPT_SDR_TX_ANTENNA:
-		sdr_config->tx_antenna = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->tx_antenna = strdup(argv[argi]);
 		break;
 	case OPT_SDR_RX_GAIN:
-		sdr_config->rx_gain = atof(optarg);
-		*skip_args += 2;
+		sdr_config->rx_gain = atof(argv[argi]);
 		break;
 	case OPT_SDR_TX_GAIN:
-		sdr_config->tx_gain = atof(optarg);
-		*skip_args += 2;
+		sdr_config->tx_gain = atof(argv[argi]);
 		break;
 	case OPT_WRITE_IQ_RX_WAVE:
-		sdr_config->write_iq_rx_wave = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->write_iq_rx_wave = strdup(argv[argi]);
 		break;
 	case OPT_WRITE_IQ_TX_WAVE:
-		sdr_config->write_iq_tx_wave = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->write_iq_tx_wave = strdup(argv[argi]);
 		break;
 	case OPT_READ_IQ_RX_WAVE:
-		sdr_config->read_iq_rx_wave = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->read_iq_rx_wave = strdup(argv[argi]);
 		break;
 	case OPT_READ_IQ_TX_WAVE:
-		sdr_config->read_iq_tx_wave = strdup(optarg);
-		*skip_args += 2;
+		sdr_config->read_iq_tx_wave = strdup(argv[argi]);
 		break;
 	case OPT_SDR_SWAP_LINKS:
 		sdr_config->swap_links = 1;
-		*skip_args += 1;
 		break;
 	case OPT_SDR_UHD_TX_TS:
 		sdr_config->uhd_tx_timestamps = 1;
-		*skip_args += 1;
 		break;
 	default:
-		return -1;
+		return -EINVAL;
 	}
 
-	return 0;
+	return 1;
 }
 
 int sdr_configure(int samplerate)

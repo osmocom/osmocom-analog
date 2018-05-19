@@ -1,4 +1,4 @@
-/* main
+/* JollyCom main
  *
  * (C) 2017 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -19,11 +19,11 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <math.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -34,6 +34,7 @@
 #include "../libmncc/mncc_sock.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
+#include "../liboptions/options.h"
 #include "jolly.h"
 #include "dsp.h"
 #include "voice.h"
@@ -70,73 +71,55 @@ void print_help(const char *arg0)
 	main_mobile_print_hotkeys();
 }
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
 {
-	int skip_args = 0;
+	main_mobile_add_options();
+	option_add('F', "frequency", 1);
+	option_add('S', "squelch", 1);
+	option_add('N', "nbfm", 0);
+	option_add('R', "repeater", 0);
+}
 
-	static struct option long_options_special[] = {
-		{"frequency", 1, 0, 'F'},
-		{"squelch", 1, 0, 'S'},
-		{"nbfm", 0, 0, 'N'},
-		{"repeater", 0, 0, 'R'},
-		{0, 0, 0, 0}
-	};
+static int handle_options(int short_option, int argi, char **argv)
+{
+	char *string, *string_dl, *string_ul, *string_step;
 
-	main_mobile_set_options("F:S:NR", long_options_special);
-
-	while (1) {
-		int option_index = 0, c;
-		char *string, *string_dl, *string_ul, *string_step;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'F':
-			string = strdup(optarg);
-			string_dl = strsep(&string, ",");
-			string_ul = strsep(&string, ",");
-			string_step = strsep(&string, ",");
-			if (!string_dl || !string_ul || !string_step) {
-				fprintf(stderr, "Please give 3 values for --frequency, seperated by comma and no space!\n");
-				exit(0);
-			}
-			dl_freq = atof(string_dl);
-			ul_freq = atof(string_ul);
-			step = atof(string_step);
-			skip_args += 2;
-			break;
-		case 'S':
-			if (!strcasecmp(optarg, "auto"))
-				squelch_db = 0.0;
-			else
-				squelch_db = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'N':
-			nbfm = 1;
-			skip_args += 1;
-			break;
-		case 'R':
-			repeater = 1;
-			skip_args += 1;
-			break;
-		default:
-			main_mobile_opt_switch(c, argv[0], &skip_args);
+	switch (short_option) {
+	case 'F':
+		string = strdup(argv[argi]);
+		string_dl = strsep(&string, ",");
+		string_ul = strsep(&string, ",");
+		string_step = strsep(&string, ",");
+		if (!string_dl || !string_ul || !string_step) {
+			fprintf(stderr, "Please give 3 values for --frequency, seperated by comma and no space!\n");
+			exit(0);
 		}
+		dl_freq = atof(string_dl);
+		ul_freq = atof(string_ul);
+		step = atof(string_step);
+		break;
+	case 'S':
+		if (!strcasecmp(argv[argi], "auto"))
+			squelch_db = 0.0;
+		else
+			squelch_db = atof(argv[argi]);
+		break;
+	case 'N':
+		nbfm = 1;
+		break;
+	case 'R':
+		repeater = 1;
+		break;
+	default:
+		return main_mobile_handle_options(short_option, argi, argv);
 	}
 
-	free(long_options);
-
-	return skip_args;
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
-	int rc;
-	int skip_args;
+	int rc, argi;
 	const char *station_id = "";
 	int mandatory = 0;
 	int i;
@@ -148,12 +131,17 @@ int main(int argc, char *argv[])
 
 	main_mobile_init();
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/jollycom.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc > 1) {
-		station_id = argv[1];
+	if (argi < argc) {
+		station_id = argv[argi];
 		if (strlen(station_id) != 4) {
 			printf("Given station ID '%s' does not have 4 digits\n", station_id);
 			return 0;
@@ -178,7 +166,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mandatory) {
-		print_help(argv[-skip_args]);
+		print_help(argv[0]);
 		return 0;
 	}
 

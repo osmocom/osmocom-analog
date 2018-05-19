@@ -25,7 +25,6 @@ enum paging_signal;
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include <getopt.h>
 #define __USE_GNU
 #include <pthread.h>
 #include <unistd.h>

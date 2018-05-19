@@ -19,15 +19,16 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
+#include "../liboptions/options.h"
 #include "cnetz.h"
 #include "database.h"
 #include "sysinfo.h"
@@ -216,198 +217,174 @@ static int atoi_limit(const char *p, int l1, int l2)
 
 #define OPT_WARTESCHLANGE	256
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
 {
-	int skip_args = 0;
+	main_mobile_add_options();
+	option_add('T', "channel-type", 1);
+	option_add('M', "measure-speed", 0);
+	option_add('C', "clock-speed", 1);
+	option_add('F', "flip-polarity", 1);
+	option_add('P', "ms-power", 1);
+	option_add('A', "authentication", 0);
+	option_add('Q', "queue", 1);
+	option_add(OPT_WARTESCHLANGE, "warteschlange", 1);
+	option_add('G', "gebuehren", 1);
+	option_add('S', "sysinfo", 1);
+	option_add('D', "demod", 1);
+}
+
+static int handle_options(int short_option, int argi, char **argv)
+{
 	int rc;
 	const char *p;
 
-	static struct option long_options_special[] = {
-		{"channel-type", 1, 0, 'T'},
-		{"measure-speed", 0, 0, 'M'},
-		{"clock-speed", 1, 0, 'C'},
-		{"flip-polarity", 1, 0, 'F'},
-		{"ms-power", 1, 0, 'P'},
-		{"authentication", 0, 0, 'A'},
-		{"queue", 1, 0, 'Q'},
-		{"warteschlange", 1, 0, OPT_WARTESCHLANGE},
-		{"gebuehren", 1, 0, 'G'},
-		{"sysinfo", 1, 0, 'S'},
-		{"demod", 1, 0, 'D'},
-		{0, 0, 0, 0}
-	};
-
-	main_mobile_set_options("T:MC:F:P:AQ:G:S:D:", long_options_special);
-
-	while (1) {
-		int option_index = 0, c;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'T':
-			if (!strcmp(optarg, "list")) {
-				cnetz_channel_list();
-				exit(0);
-			}
-			rc = cnetz_channel_by_short_name(optarg);
-			if (rc < 0) {
-				fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", optarg);
-				exit(0);
-			}
-			OPT_ARRAY(num_chan_type, chan_type, rc)
-			skip_args += 2;
-			break;
-		case 'M':
-			measure_speed = 1;
-			skip_args++;
-			break;
-		case 'C':
-			p = strchr(optarg, ',');
-			if (!p) {
-				fprintf(stderr, "Illegal clock speed, use two values, seperated by comma and no spaces!\n");
-				exit(0);
-			}
-			clock_speed[0] = strtold(optarg, NULL);
-			clock_speed[1] = strtold(p + 1, NULL);
-			set_clock_speed = 1;
-			skip_args += 2;
-			break;
-		case 'F':
-			if (!strcasecmp(optarg, "no"))
-				flip_polarity = "no";
-			else if (!strcasecmp(optarg, "yes"))
-				flip_polarity = "yes";
-			else if (!strcasecmp(optarg, "auto"))
-				flip_polarity = "auto";
-			else {
-				fprintf(stderr, "Given polarity '%s' is illegal, see help!\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'P':
-			ms_power = atoi_limit(optarg, 0, 3);
-			skip_args += 2;
-			break;
-		case 'A':
-			auth = 1;
-			skip_args += 1;
-			break;
-		case 'Q':
-		case OPT_WARTESCHLANGE:
-			warteschlange = atoi_limit(optarg, 0, 1);;
-			skip_args += 2;
-			break;
-		case 'G':
-			metering = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'S':
-			p = strchr(optarg, '=');
-			if (!p) {
-				fprintf(stderr, "Given sysinfo parameter '%s' requires '=' character to set value, see help!\n", optarg);
-				exit(0);
-			}
-			p++;
-			if (!strncasecmp(optarg, "fuz-nat=", p - optarg)) {
-				fuz_nat = atoi_limit(p, 0, 7);
-			} else
-			if (!strncasecmp(optarg, "fuz-fuvst=", p - optarg)) {
-				fuz_fuvst = atoi_limit(p, 0, 32);
-			} else
-			if (!strncasecmp(optarg, "fuz-rest=", p - optarg)) {
-				fuz_rest = atoi_limit(p, 0, 255);
-			} else
-			if (!strncasecmp(optarg, "kennung-fufst=", p - optarg)) {
-				kennung_fufst = atoi_limit(p, 0, 3);
-			} else
-			if (!strncasecmp(optarg, "ws-kennung=", p - optarg)) {
-				ws_kennung = atoi_limit(p, 0, 3);
-			} else
-			if (!strncasecmp(optarg, "fuvst-sperren=", p - optarg)) {
-				fuvst_sperren = atoi_limit(p, 0, 3);
-			} else
-			if (!strncasecmp(optarg, "grenz-einbuchen=", p - optarg)) {
-				grenz_einbuchen = atoi_limit(p, 0, 7);
-			} else
-			if (!strncasecmp(optarg, "grenz-umschalten=", p - optarg)) {
-				grenz_umschalten = atoi_limit(p, 0, 15);
-			} else
-			if (!strncasecmp(optarg, "grenz-ausloesen=", p - optarg)) {
-				grenz_ausloesen = atoi_limit(p, 0, 15);
-			} else
-			if (!strncasecmp(optarg, "mittel-umschalten=", p - optarg)) {
-				mittel_umschalten = atoi_limit(p, 0, 5);
-			} else
-			if (!strncasecmp(optarg, "mittel-ausloesen=", p - optarg)) {
-				mittel_ausloesen = atoi_limit(p, 0, 5);
-			} else
-			if (!strncasecmp(optarg, "genauigkeit=", p - optarg)) {
-				genauigkeit = atoi_limit(p, 0, 1);
-			} else
-			if (!strncasecmp(optarg, "bewertung=", p - optarg)) {
-				bewertung = atoi_limit(p, 0, 1);
-			} else
-			if (!strncasecmp(optarg, "entfernung=", p - optarg)) {
-				entfernung = atoi_limit(p, 0, 15);
-			} else
-			if (!strncasecmp(optarg, "nachbar-prio=", p - optarg)) {
-				nachbar_prio = atoi_limit(p, 0, 1);
-			} else
-			if (!strncasecmp(optarg, "futln-sperre=", p - optarg)) {
-				char value[128], *v, *q;
-				strncpy(value, p, sizeof(value) - 1);
-				value[sizeof(value) - 1] = '\0';
-				v = value;
-				q = strchr(value, '-');
-				if (q)
-					*q++ = '\0';
-				if (strlen(v) > 5)
-					v += strlen(v) - 5;
-				futln_sperre_start = atoi(v) & 0xf;
-				if (q) {
-					if (strlen(q) > 5)
-						q += strlen(q) - 5;
-					futln_sperre_end = atoi(q) & 0xf;
-				}
-			} else
-			{
-				fprintf(stderr, "Given sysinfo parameter '%s' unknown, see help!\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'D':
-			if (!strcasecmp(optarg, "auto"))
-				demod = FSK_DEMOD_AUTO;
-			else if (!strcasecmp(optarg, "slope"))
-				demod = FSK_DEMOD_SLOPE;
-			else if (!strcasecmp(optarg, "level"))
-				demod = FSK_DEMOD_LEVEL;
-			else {
-				fprintf(stderr, "Given demodulation type '%s' is illegal, see help!\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		default:
-			main_mobile_opt_switch(c, argv[0], &skip_args);
+	switch (short_option) {
+	case 'T':
+		if (!strcmp(argv[argi], "list")) {
+			cnetz_channel_list();
+			return 0;
 		}
+		rc = cnetz_channel_by_short_name(argv[argi]);
+		if (rc < 0) {
+			fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", argv[argi]);
+			return -EINVAL;
+		}
+		OPT_ARRAY(num_chan_type, chan_type, rc)
+		break;
+	case 'M':
+		measure_speed = 1;
+		break;
+	case 'C':
+		p = strchr(argv[argi], ',');
+		if (!p) {
+			fprintf(stderr, "Illegal clock speed, use two values, seperated by comma and no spaces!\n");
+			return -EINVAL;
+		}
+		clock_speed[0] = strtold(argv[argi], NULL);
+		clock_speed[1] = strtold(p + 1, NULL);
+		set_clock_speed = 1;
+		break;
+	case 'F':
+		if (!strcasecmp(argv[argi], "no"))
+			flip_polarity = "no";
+		else if (!strcasecmp(argv[argi], "yes"))
+			flip_polarity = "yes";
+		else if (!strcasecmp(argv[argi], "auto"))
+			flip_polarity = "auto";
+		else {
+			fprintf(stderr, "Given polarity '%s' is illegal, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		break;
+	case 'P':
+		ms_power = atoi_limit(argv[argi], 0, 3);
+		break;
+	case 'A':
+		auth = 1;
+		break;
+	case 'Q':
+	case OPT_WARTESCHLANGE:
+		warteschlange = atoi_limit(argv[argi], 0, 1);;
+		break;
+	case 'G':
+		metering = atoi(argv[argi]);
+		break;
+	case 'S':
+		p = strchr(argv[argi], '=');
+		if (!p) {
+			fprintf(stderr, "Given sysinfo parameter '%s' requires '=' character to set value, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		p++;
+		if (!strncasecmp(argv[argi], "fuz-nat=", p - argv[argi])) {
+			fuz_nat = atoi_limit(p, 0, 7);
+		} else
+		if (!strncasecmp(argv[argi], "fuz-fuvst=", p - argv[argi])) {
+			fuz_fuvst = atoi_limit(p, 0, 32);
+		} else
+		if (!strncasecmp(argv[argi], "fuz-rest=", p - argv[argi])) {
+			fuz_rest = atoi_limit(p, 0, 255);
+		} else
+		if (!strncasecmp(argv[argi], "kennung-fufst=", p - argv[argi])) {
+			kennung_fufst = atoi_limit(p, 0, 3);
+		} else
+		if (!strncasecmp(argv[argi], "ws-kennung=", p - argv[argi])) {
+			ws_kennung = atoi_limit(p, 0, 3);
+		} else
+		if (!strncasecmp(argv[argi], "fuvst-sperren=", p - argv[argi])) {
+			fuvst_sperren = atoi_limit(p, 0, 3);
+		} else
+		if (!strncasecmp(argv[argi], "grenz-einbuchen=", p - argv[argi])) {
+			grenz_einbuchen = atoi_limit(p, 0, 7);
+		} else
+		if (!strncasecmp(argv[argi], "grenz-umschalten=", p - argv[argi])) {
+			grenz_umschalten = atoi_limit(p, 0, 15);
+		} else
+		if (!strncasecmp(argv[argi], "grenz-ausloesen=", p - argv[argi])) {
+			grenz_ausloesen = atoi_limit(p, 0, 15);
+		} else
+		if (!strncasecmp(argv[argi], "mittel-umschalten=", p - argv[argi])) {
+			mittel_umschalten = atoi_limit(p, 0, 5);
+		} else
+		if (!strncasecmp(argv[argi], "mittel-ausloesen=", p - argv[argi])) {
+			mittel_ausloesen = atoi_limit(p, 0, 5);
+		} else
+		if (!strncasecmp(argv[argi], "genauigkeit=", p - argv[argi])) {
+			genauigkeit = atoi_limit(p, 0, 1);
+		} else
+		if (!strncasecmp(argv[argi], "bewertung=", p - argv[argi])) {
+			bewertung = atoi_limit(p, 0, 1);
+		} else
+		if (!strncasecmp(argv[argi], "entfernung=", p - argv[argi])) {
+			entfernung = atoi_limit(p, 0, 15);
+		} else
+		if (!strncasecmp(argv[argi], "nachbar-prio=", p - argv[argi])) {
+			nachbar_prio = atoi_limit(p, 0, 1);
+		} else
+		if (!strncasecmp(argv[argi], "futln-sperre=", p - argv[argi])) {
+			char value[128], *v, *q;
+			strncpy(value, p, sizeof(value) - 1);
+			value[sizeof(value) - 1] = '\0';
+			v = value;
+			q = strchr(value, '-');
+			if (q)
+				*q++ = '\0';
+			if (strlen(v) > 5)
+				v += strlen(v) - 5;
+			futln_sperre_start = atoi(v) & 0xf;
+			if (q) {
+				if (strlen(q) > 5)
+					q += strlen(q) - 5;
+				futln_sperre_end = atoi(q) & 0xf;
+			}
+		} else
+		{
+			fprintf(stderr, "Given sysinfo parameter '%s' unknown, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		break;
+	case 'D':
+		if (!strcasecmp(argv[argi], "auto"))
+			demod = FSK_DEMOD_AUTO;
+		else if (!strcasecmp(argv[argi], "slope"))
+			demod = FSK_DEMOD_SLOPE;
+		else if (!strcasecmp(argv[argi], "level"))
+			demod = FSK_DEMOD_LEVEL;
+		else {
+			fprintf(stderr, "Given demodulation type '%s' is illegal, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		break;
+	default:
+		return main_mobile_handle_options(short_option, argi, argv);
 	}
 
-	free(long_options);
-
-	return skip_args;
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
-	int rc;
-	int skip_args;
+	int rc, argi;
 	const char *station_id = "";
 	int mandatory = 0;
 	int polarity;
@@ -422,12 +399,17 @@ int main(int argc, char *argv[])
 
 	main_mobile_init();
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/cnetz.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc > 1) {
-		station_id = argv[1];
+	if (argi < argc) {
+		station_id = argv[argi];
 		if (strlen(station_id) != 7) {
 			printf("Given station ID '%s' does not have 7 digits\n", station_id);
 			return 0;
@@ -470,7 +452,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (mandatory) {
-		print_help(argv[-skip_args]);
+		print_help(argv[0]);
 		return 0;
 	}
 

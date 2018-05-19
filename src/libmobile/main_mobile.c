@@ -19,7 +19,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -28,7 +27,6 @@
 #include <math.h>
 #include <termios.h>
 #include <errno.h>
-#include <getopt.h>
 #include "../libsample/sample.h"
 #include "main_mobile.h"
 #include "../libdebug/debug.h"
@@ -42,6 +40,7 @@
 #include "../libsdr/sdr.h"
 #include "../libsdr/sdr_config.h"
 #endif
+#include "../liboptions/options.h"
 
 #define DEFAULT_LO_OFFSET -1000000.0
 
@@ -153,6 +152,8 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("    --read-tx-wave <file>\n");
 	printf("        Replace transmitted audio by given wave file.\n");
 #ifdef HAVE_SDR
+	printf("    --limesdr\n");
+	printf("        Auto-select several required options for LimeSDR\n");
 	sdr_config_print_help();
 #endif
 	printf("\nNetwork specific options:\n");
@@ -178,214 +179,167 @@ void main_mobile_print_hotkeys(void)
 #define	OPT_READ_TX_WAVE	1004
 #define	OPT_CALL_SAMPLERATE	1005
 #define	OPT_MNCC_NAME		1006
+#define	OPT_LIMESDR		1100
 
-static struct option main_mobile_long_options[] = {
-	{"help", 0, 0, 'h'},
-	{"debug", 1, 0, 'v'},
-	{"kanal", 1, 0, 'k'},
-	{"channel", 1, 0, OPT_CHANNEL},
-	{"audio-device", 1, 0, 'a'},
-	{"samplerate", 1, 0, 's'},
-	{"interval", 1, 0, 'i'},
-	{"buffer", 1, 0, 'b'},
-	{"pre-emphasis", 0, 0, 'p'},
-	{"de-emphasis", 0, 0, 'd'},
-	{"rx-gain", 1, 0, 'g'},
-	{"echo-test", 0, 0, 'e'},
-	{"mncc-cross", 0, 0, 'x'},
-	{"mncc-sock", 0, 0, 'm'},
-	{"mncc-name", 1, 0, OPT_MNCC_NAME},
-	{"call-device", 1, 0, 'c'},
-	{"call-samplerate", 1, 0, OPT_CALL_SAMPLERATE},
-	{"tones", 0, 0, 't'},
-	{"loopback", 1, 0, 'l'},
-	{"realtime", 1, 0, 'r'},
-	{"write-rx-wave", 1, 0, OPT_WRITE_RX_WAVE},
-	{"write-tx-wave", 1, 0, OPT_WRITE_TX_WAVE},
-	{"read-rx-wave", 1, 0, OPT_READ_RX_WAVE},
-	{"read-tx-wave", 1, 0, OPT_READ_TX_WAVE},
-	{0, 0, 0, 0}
+void main_mobile_add_options(void)
+{
+	option_add('h', "help", 0);
+	option_add('v', "debug", 1);
+	option_add('k', "kanal", 1);
+	option_add(OPT_CHANNEL, "channel", 1);
+	option_add('a', "audio-device", 1);
+	option_add('s', "samplerate", 1);
+	option_add('i', "interval", 1);
+	option_add('b', "buffer", 1);
+	option_add('p', "pre-emphasis", 0);
+	option_add('d', "de-emphasis", 0);
+	option_add('g', "rx-gain", 1);
+	option_add('e', "echo-test", 0);
+	option_add('x', "mncc-cross", 0);
+	option_add('m', "mncc-sock", 0);
+	option_add(OPT_MNCC_NAME, "mncc-name", 1);
+	option_add('c', "call-device", 1);
+	option_add(OPT_CALL_SAMPLERATE, "call-samplerate", 1);
+	option_add('t', "tones", 0);
+	option_add('l', "loopback", 1);
+	option_add('r', "realtime", 1);
+	option_add(OPT_WRITE_RX_WAVE, "write-rx-wave", 1);
+	option_add(OPT_WRITE_TX_WAVE, "write-tx-wave", 1);
+	option_add(OPT_READ_RX_WAVE, "read-rx-wave", 1);
+	option_add(OPT_READ_TX_WAVE, "read-tx-wave", 1);
+#ifdef HAVE_SDR
+	option_add(OPT_LIMESDR, "limesdr", 0);
+	sdr_config_add_options();
+#endif
 };
-
-static const char *main_mobile_optstring = "hv:k:a:s:i:b:pdg:exmc:t:l:r:";
-
-struct option *long_options;
-char *optstring;
-
-static void check_duplicate_option(int num, struct option *option)
-{
-	int i;
-
-	for (i = 0; i < num; i++) {
-		if (long_options[i].val == option->val) {
-			fprintf(stderr, "Duplicate option %d. Please fix!\n", option->val);
-			abort();
-		}
-	}
-}
-
-void main_mobile_set_options(const char *optstring_special, struct option *long_options_special)
-{
-	int i = 0, j;
-
-	long_options = calloc(sizeof(*long_options), 256);
-	for (j = 0; main_mobile_long_options[j].name; i++, j++) {
-		check_duplicate_option(i, &main_mobile_long_options[j]);
-		memcpy(&long_options[i], &main_mobile_long_options[j], sizeof(*long_options));
-	}
-#ifdef HAVE_SDR
-	for (j = 0; sdr_config_long_options[j].name; i++, j++) {
-		check_duplicate_option(i, &sdr_config_long_options[j]);
-		memcpy(&long_options[i], &sdr_config_long_options[j], sizeof(*long_options));
-	}
-#endif
-	for (; long_options_special->name; i++) {
-		check_duplicate_option(i, long_options_special);
-		memcpy(&long_options[i], long_options_special++, sizeof(*long_options));
-	}
-	
-	optstring = calloc(256, 2);
-	strcpy(optstring, main_mobile_optstring);
-#ifdef HAVE_SDR
-	strcat(optstring, sdr_config_optstring);
-#endif
-	strcat(optstring, optstring_special);
-}
 
 void print_help(const char *arg0);
 
-void main_mobile_opt_switch(int c, char *arg0, int *skip_args)
+int main_mobile_handle_options(int short_option, int argi, char **argv)
 {
 	double gain_db;
-#ifdef HAVE_SDR
 	int rc;
-#endif
 
-	switch (c) {
+	switch (short_option) {
 	case 'h':
-		print_help(arg0);
-		exit(0);
+		print_help(argv[0]);
+		return 0;
 	case 'v':
-		if (!strcasecmp(optarg, "list")) {
+		if (!strcasecmp(argv[argi], "list")) {
 	                debug_list_cat();
-			exit(0);
+			return 0;
 		}
-		if (parse_debug_opt(optarg)) {
+		rc = parse_debug_opt(argv[argi]);
+		if (rc < 0) {
 			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
-			exit(0);
+			return rc;
 		}
-		*skip_args += 2;
 		break;
 	case 'k':
 	case OPT_CHANNEL:
-		OPT_ARRAY(num_kanal, kanal, atoi(optarg))
-		*skip_args += 2;
+		OPT_ARRAY(num_kanal, kanal, atoi(argv[argi]))
 		break;
 	case 'a':
-		OPT_ARRAY(num_audiodev, audiodev, strdup(optarg))
-		*skip_args += 2;
+		OPT_ARRAY(num_audiodev, audiodev, strdup(argv[argi]))
 		break;
 	case 's':
-		samplerate = atoi(optarg);
-		*skip_args += 2;
+		samplerate = atoi(argv[argi]);
 		break;
 	case 'i':
-		interval = atoi(optarg);
-		*skip_args += 2;
+		interval = atoi(argv[argi]);
 		if (interval < 1)
 			interval = 1;
 		if (interval > 25)
 			interval = 25;
 		break;
 	case 'b':
-		latency = atoi(optarg);
-		*skip_args += 2;
+		latency = atoi(argv[argi]);
 		break;
 	case 'p':
 		if (!uses_emphasis) {
 			no_emph:
 			fprintf(stderr, "This network does not use emphasis, please do not enable pre- or de-emphasis! Disable emphasis on transceiver, if possible.\n");
-			exit(0);
+			return -EINVAL;
 		}
 		do_pre_emphasis = 1;
-		*skip_args += 1;
 		break;
 	case 'd':
 		if (!uses_emphasis)
 			goto no_emph;
 		do_de_emphasis = 1;
-		*skip_args += 1;
 		break;
 	case 'g':
-		gain_db = atof(optarg);
+		gain_db = atof(argv[argi]);
 		if (gain_db < 0.0) {
 			fprintf(stderr, "Given gain is below 0. To reduce RX signal, use sound card's mixer (or resistor net)!\n");
-			exit(0);
+			return -EINVAL;
 		}
 		rx_gain = pow(10, gain_db / 20.0);
-		*skip_args += 2;
 		break;
 	case 'e':
 		echo_test = 1;
-		*skip_args += 1;
 		break;
 	case 'x':
 		use_mncc_cross = 1;
-		*skip_args += 1;
 		break;
 	case 'm':
 		use_mncc_sock = 1;
-		*skip_args += 1;
 		break;
 	case OPT_MNCC_NAME:
-		mncc_name = strdup(optarg);
-		*skip_args += 2;
+		mncc_name = strdup(argv[argi]);
 		break;
 	case 'c':
-		call_audiodev = strdup(optarg);
-		*skip_args += 2;
+		call_audiodev = strdup(argv[argi]);
 		break;
 	case OPT_CALL_SAMPLERATE:
-		call_samplerate = atoi(optarg);
-		*skip_args += 2;
+		call_samplerate = atoi(argv[argi]);
 		break;
 	case 't':
-		send_patterns = atoi(optarg);
-		*skip_args += 2;
+		send_patterns = atoi(argv[argi]);
 		break;
 	case 'l':
-		loopback = atoi(optarg);
-		*skip_args += 2;
+		loopback = atoi(argv[argi]);
 		break;
 	case 'r':
-		rt_prio = atoi(optarg);
-		*skip_args += 2;
+		rt_prio = atoi(argv[argi]);
 		break;
 	case OPT_WRITE_RX_WAVE:
-		write_rx_wave = strdup(optarg);
-		*skip_args += 2;
+		write_rx_wave = strdup(argv[argi]);
 		break;
 	case OPT_WRITE_TX_WAVE:
-		write_tx_wave = strdup(optarg);
-		*skip_args += 2;
+		write_tx_wave = strdup(argv[argi]);
 		break;
 	case OPT_READ_RX_WAVE:
-		read_rx_wave = strdup(optarg);
-		*skip_args += 2;
+		read_rx_wave = strdup(argv[argi]);
 		break;
 	case OPT_READ_TX_WAVE:
-		read_tx_wave = strdup(optarg);
-		*skip_args += 2;
+		read_tx_wave = strdup(argv[argi]);
 		break;
+#ifdef HAVE_SDR
+	case OPT_LIMESDR:
+		{
+			char *argv_lime[] = { argv[0],
+				"--sdr-soapy",
+				"--sdr-rx-antenna", "LNAL",
+				"--sdr-rx-gain", "30",
+				"--sdr-tx-gain", "30",
+				"--sdr-samplerate", "5000000",
+				"--sdr-bandwidth", "15000000",
+				"-s", "200000",
+			};
+			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
+			return options_command_line(argc_lime, argv_lime, main_mobile_handle_options);
+		}
+#endif
 	default:
 #ifdef HAVE_SDR
-		rc = sdr_config_opt_switch(c, skip_args);
-		if (rc < 0)
-			exit (0);
-		
+		return sdr_config_handle_options(short_option, argi, argv);
+#else
+		return -EINVAL;
 #endif
-		break;
 	}
+
+	return 1;
 }
 
 /* global variable to quit main loop */

@@ -19,13 +19,14 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
+#include "../liboptions/options.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
@@ -103,152 +104,132 @@ void print_help(const char *arg0)
 	main_mobile_print_hotkeys();
 }
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
+{
+	main_mobile_add_options();
+	option_add('T', "channel-type", 1);
+	option_add('F', "flip-polarity", 1);
+	option_add('P', "ms-power", 1);
+	option_add('D', "dtx", 1);
+	option_add('S', "sysinfo", 1);
+	option_add('O', "tolerant", 0);
+}
+
+static int handle_options(int short_option, int argi, char **argv)
 {
 	const char *p;
-	int skip_args = 0;
 	int rc;
 
-	static struct option long_options_special[] = {
-		{"channel-type", 1, 0, 'T'},
-		{"flip-polarity", 1, 0, 'F'},
-		{"ms-power", 1, 0, 'P'},
-		{"dtx", 1, 0, 'D'},
-		{"sysinfo", 1, 0, 'S'},
-		{"tolerant", 0, 0, 'O'},
-		{0, 0, 0, 0}
-	};
-
-	main_mobile_set_options("T:F:P:D:S:O", long_options_special);
-
-	while (1) {
-		int option_index = 0, c;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'T':
-			if (!strcmp(optarg, "list")) {
-				amps_channel_list();
-				exit(0);
-			}
-			rc = amps_channel_by_short_name(optarg);
-			if (rc < 0) {
-				fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", optarg);
-				exit(0);
-			}
-			OPT_ARRAY(num_chan_type, chan_type, rc)
-			skip_args += 2;
-			break;
-		case 'F':
-			if (!strcasecmp(optarg, "no"))
-				flip_polarity = "no";
-			else if (!strcasecmp(optarg, "yes"))
-				flip_polarity = "yes";
-			else {
-				fprintf(stderr, "Given polarity '%s' is illegal, see help!\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'P':
-			ms_power = atoi(optarg);
-			if (ms_power > 7)
-				ms_power = 7;
-			if (ms_power < 0)
-				ms_power = 0;
-			skip_args += 2;
-			break;
-		case 'D':
-			dtx = atoi(optarg);
-			if (dtx > 3)
-				dtx = 3;
-			if (dtx < 0)
-				dtx = 0;
-			skip_args += 2;
-			break;
-		case 'S':
-			p = strchr(optarg, '=');
-			if (!p) {
-				fprintf(stderr, "Given sysinfo parameter '%s' requires '=' character to set value, see help!\n", optarg);
-				exit(0);
-			}
-			p++;
-			if (!strncasecmp(optarg, "sid=", p - optarg)
-			 || !strncasecmp(optarg, "aid=", p - optarg)) {
-				if (!strcasecmp(p, "list")) {
-					list_stations();
-					exit(0);
-				}
-				sid = atoi(p);
-				if (sid > 32767)
-					sid = 32767;
-				if (sid < 0)
-					sid = 0;
-			} else
-			if (!strncasecmp(optarg, "dcc=", p - optarg)) {
-				dcc = atoi(p);
-				if (dcc > 3)
-					dcc = 3;
-				if (dcc < 0)
-					dcc = 0;
-			} else
-			if (!strncasecmp(optarg, "scc=", p - optarg)) {
-				scc = atoi(p);
-				if (scc > 2)
-					scc = 2;
-				if (scc < 0)
-					scc = 0;
-			} else
-			if (!strncasecmp(optarg, "regincr=", p - optarg)) {
-				regincr = atoi(p);
-			} else
-			if (!strncasecmp(optarg, "pureg=", p - optarg)) {
-				pureg = atoi(p) & 1;
-			} else
-			if (!strncasecmp(optarg, "pdreg=", p - optarg)) {
-				pdreg = atoi(p) & 1;
-			} else
-			if (!strncasecmp(optarg, "locaid=", p - optarg)) {
-				locaid = atoi(p);
-				if (locaid > 4095)
-					locaid = 4095;
-			} else
-			if (!strncasecmp(optarg, "regh=", p - optarg)) {
-				regh = atoi(p) & 1;
-			} else
-			if (!strncasecmp(optarg, "regr=", p - optarg)) {
-				regr = atoi(p) & 1;
-			} else
-			if (!strncasecmp(optarg, "bis=", p - optarg)) {
-				bis = atoi(p) & 1;
-			} else {
-				fprintf(stderr, "Given sysinfo parameter '%s' unknown, see help!\n", optarg);
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'O':
-			tolerant = 1;
-			skip_args += 1;
-			break;
-		default:
-			main_mobile_opt_switch(c, argv[0], &skip_args);
+	switch (short_option) {
+	case 'T':
+		if (!strcmp(argv[argi], "list")) {
+			amps_channel_list();
+			return 0;
 		}
+		rc = amps_channel_by_short_name(argv[argi]);
+		if (rc < 0) {
+			fprintf(stderr, "Error, channel type '%s' unknown. Please use '-t list' to get a list. I suggest to use the default.\n", argv[argi]);
+			return -EINVAL;
+		}
+		OPT_ARRAY(num_chan_type, chan_type, rc)
+		break;
+	case 'F':
+		if (!strcasecmp(argv[argi], "no"))
+			flip_polarity = "no";
+		else if (!strcasecmp(argv[argi], "yes"))
+			flip_polarity = "yes";
+		else {
+			fprintf(stderr, "Given polarity '%s' is illegal, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		break;
+	case 'P':
+		ms_power = atoi(argv[argi]);
+		if (ms_power > 7)
+			ms_power = 7;
+		if (ms_power < 0)
+			ms_power = 0;
+		break;
+	case 'D':
+		dtx = atoi(argv[argi]);
+		if (dtx > 3)
+			dtx = 3;
+		if (dtx < 0)
+			dtx = 0;
+		break;
+	case 'S':
+		p = strchr(argv[argi], '=');
+		if (!p) {
+			fprintf(stderr, "Given sysinfo parameter '%s' requires '=' character to set value, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		p++;
+		if (!strncasecmp(argv[argi], "sid=", p - argv[argi])
+		 || !strncasecmp(argv[argi], "aid=", p - argv[argi])) {
+			if (!strcasecmp(p, "list")) {
+				list_stations();
+				return 0;
+			}
+			sid = atoi(p);
+			if (sid > 32767)
+				sid = 32767;
+			if (sid < 0)
+				sid = 0;
+		} else
+		if (!strncasecmp(argv[argi], "dcc=", p - argv[argi])) {
+			dcc = atoi(p);
+			if (dcc > 3)
+				dcc = 3;
+			if (dcc < 0)
+				dcc = 0;
+		} else
+		if (!strncasecmp(argv[argi], "scc=", p - argv[argi])) {
+			scc = atoi(p);
+			if (scc > 2)
+				scc = 2;
+			if (scc < 0)
+				scc = 0;
+		} else
+		if (!strncasecmp(argv[argi], "regincr=", p - argv[argi])) {
+			regincr = atoi(p);
+		} else
+		if (!strncasecmp(argv[argi], "pureg=", p - argv[argi])) {
+			pureg = atoi(p) & 1;
+		} else
+		if (!strncasecmp(argv[argi], "pdreg=", p - argv[argi])) {
+			pdreg = atoi(p) & 1;
+		} else
+		if (!strncasecmp(argv[argi], "locaid=", p - argv[argi])) {
+			locaid = atoi(p);
+			if (locaid > 4095)
+				locaid = 4095;
+		} else
+		if (!strncasecmp(argv[argi], "regh=", p - argv[argi])) {
+			regh = atoi(p) & 1;
+		} else
+		if (!strncasecmp(argv[argi], "regr=", p - argv[argi])) {
+			regr = atoi(p) & 1;
+		} else
+		if (!strncasecmp(argv[argi], "bis=", p - argv[argi])) {
+			bis = atoi(p) & 1;
+		} else {
+			fprintf(stderr, "Given sysinfo parameter '%s' unknown, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
+		break;
+	case 'O':
+		tolerant = 1;
+		break;
+	default:
+		return main_mobile_handle_options(short_option, argi, argv);
 	}
 
-	free(long_options);
-
-	return skip_args;
+	return 1;
 }
 
 int main_amps_tacs(int argc, char *argv[])
 {
-	int rc;
-	int skip_args;
+	int rc, argi;
 	const char *station_id = "";
 	int polarity;
 	int i;
@@ -258,12 +239,24 @@ int main_amps_tacs(int argc, char *argv[])
 
 	main_mobile_init();
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+    if (!tacs) {
+	rc = options_config_file("~/.osmocom/analog/amps.conf", handle_options);
+    } else if (!jtacs) {
+	rc = options_config_file("~/.osmocom/analog/tacs.conf", handle_options);
+    } else {
+	rc = options_config_file("~/.osmocom/analog/jtacs.conf", handle_options);
+    }
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc > 1) {
-		station_id = argv[1];
+
+	if (argi < argc) {
+		station_id = argv[argi];
 		if (strlen(station_id) != 10) {
 			printf("Given station ID '%s' does not have 10 digits\n", station_id);
 			return 0;
@@ -272,7 +265,7 @@ int main_amps_tacs(int argc, char *argv[])
 
 	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", (!tacs) ? 334 : 323);
-		print_help(argv[-skip_args]);
+		print_help(argv[0]);
 		return 0;
 	}
 	if (use_sdr) {
@@ -380,7 +373,7 @@ int main_amps_tacs(int argc, char *argv[])
 	else if (use_sdr)
 		polarity = 1; /* SDR is always positive */
 	else {
-		fprintf(stderr, "You must define, if the the TX deviation polarity has to be flipped. (-F yes | no) See help.\n");
+		fprintf(stderr, "You must define, if the the TX deviation polarity has to be flipped. (-F yes | no) use '-h' for help.\n");
 		exit(0);
 	}
 

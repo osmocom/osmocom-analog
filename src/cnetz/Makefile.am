@@ -17,6 +17,7 @@ cnetz_SOURCES = \
 cnetz_LDADD = \
 	$(COMMON_LA) \
 	../anetz/libgermanton.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \

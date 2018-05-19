@@ -67,7 +67,7 @@ LimeSDR
 </p>
 
 <p>
-If you have this device, you need to install the SoapySDR, then the LimeSuit and finally run configure with Osmocom Analog, compile and install.
+If you have this device, you need to install the SoapySDR, then the LimeSuite and finally run configure with Osmocom Analog, compile and install.
 Run Osmocom Analog with --help again, and you should see a bunch of option for SDR.
 In case of B-Netz, I use the following parameters:
 </p>
@@ -75,13 +75,20 @@ In case of B-Netz, I use the following parameters:
 <pre>
 
 # bnetz --sdr-soapy \
-        --sdr-tx-gain 50 \
+	--sdr-rx-antenna LNAL \
         --sdr-rx-gain 30 \
+        --sdr-tx-gain 30 \
         --sdr-samplerate 5000000 \
         -s 100000 \
         -k 17
 
 </pre>
+
+<p>
+Be sure to select the right RX antenna input.
+The frequencies we use require the low frequency filter network, so I suggest to connect your antenna to RX_1_L and select "--sdr-rx-antenna LNAL".
+Different versions of LimeSuite have different default antenna inputs, so be sure to set your RX antenna.
+</p>
 
 <p>
 In order to change from analog sound card to SDR, you need <b>--sdr-soapy</b> option.
@@ -170,7 +177,8 @@ Because C-Netz uses only odd channel numbers for 10 KHz spacing, we use channel 
 <pre>
 
 # cnetz --sdr-soapy \
-        --sdr-rx-gain 50 \
+	--sdr-rx-antenna LNAL \
+        --sdr-rx-gain 30 \
 	--sdr-tx-gain 30 \
         --sdr-samplerate 5000000 \
 	-s 100000 \

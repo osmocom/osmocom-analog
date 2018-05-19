@@ -1,4 +1,4 @@
-/* main function
+/* Radio main function
  *
  * (C) 2018 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -24,8 +24,8 @@ enum paging_signal;
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <signal.h>
+#include <errno.h>
 #include <math.h>
 #include <termios.h>
 #include <unistd.h>
@@ -34,6 +34,7 @@ enum paging_signal;
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
 #include "../libdisplay/display.h"
+#include "../liboptions/options.h"
 #include "radio.h"
 
 #define DEFAULT_LO_OFFSET -1000000.0
@@ -137,170 +138,121 @@ void print_help(const char *arg0)
 	printf(" -S --stereo\n");
 	printf("        Enables stereo carrier for frequency modulated UHF broadcast.\n");
 	printf("        It uses the 'Pilot-tone' system.\n");
+	printf("    --limesdr\n");
+	printf("        Auto-select several required options for LimeSDR\n");
 	sdr_config_print_help();
 }
 
-static struct option long_options_common[] = {
-	{"help", 0, 0, 'h'},
-	{"frequency", 1, 0, 'f'},
-	{"samplerate", 1, 0, 's'},
-	{"tx-wave-file", 1, 0, 'r'},
-	{"rx-wave-file", 1, 0, 'w'},
-	{"audio-device", 1, 0, 'a'},
-	{"modulation", 1, 0, 'M'},
-	{"rx", 0, 0, 'R'},
-	{"tx", 0, 0, 'T'},
-	{"bandwidth", 1, 0, 'B'},
-	{"deviation", 1, 0, 'D'},
-	{"modulation-index", 1, 0, 'I'},
-	{"emphasis", 1, 0, 'E'},
-	{"stereo", 0, 0, 'S'},
-	{0, 0, 0, 0}
-};
+#define OPT_LIMESDR		1100
 
-static const char *optstring_common = "hf:s:r:w:a:M:RTB:D:I:E:S";
-
-struct option *long_options;
-char *optstring;
-
-static void check_duplicate_option(int num, struct option *option)
+static void add_options(void)
 {
-	int i;
-
-	for (i = 0; i < num; i++) {
-		if (long_options[i].val == option->val) {
-			fprintf(stderr, "Duplicate option %d. Please fix!\n", option->val);
-			abort();
-		}
-	}
+	option_add('h', "help", 0);
+	option_add('f', "frequency", 1);
+	option_add('s', "samplerate", 1);
+	option_add('r', "tx-wave-file", 1);
+	option_add('w', "rx-wave-file", 1);
+	option_add('a', "audio-device", 1);
+	option_add('M', "modulation", 1);
+	option_add('R', "rx", 0);
+	option_add('T', "tx", 0);
+	option_add('B', "bandwidth", 1);
+	option_add('D', "deviation", 1);
+	option_add('I', "modulation-index", 1);
+	option_add('E', "emphasis", 1);
+	option_add('S', "stereo", 0);
+	option_add(OPT_LIMESDR, "limesdr", 0);
+        sdr_config_add_options();
 }
 
-void set_options_common(void)
+static int handle_options(int short_option, int argi, char **argv)
 {
-	int i = 0, j;
-
-	long_options = calloc(sizeof(*long_options), 256);
-	for (j = 0; long_options_common[i].name; i++, j++) {
-		check_duplicate_option(i, &long_options_common[j]);
-		memcpy(&long_options[i], &long_options_common[j], sizeof(*long_options));
-	}
-	for (j = 0; sdr_config_long_options[j].name; i++, j++) {
-		check_duplicate_option(i, &sdr_config_long_options[j]);
-		memcpy(&long_options[i], &sdr_config_long_options[j], sizeof(*long_options));
-	}
-	
-	optstring = calloc(256, 2);
-	strcpy(optstring, optstring_common);
-	strcat(optstring, sdr_config_optstring);
-}
-
-static int handle_options(int argc, char **argv)
-{
-	int skip_args = 0;
-	int rc;
-
-	set_options_common();
-
-	while (1) {
-		int option_index = 0, c;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'h':
-			print_help(argv[0]);
-			exit(0);
-		case 'f':
-			frequency = atof(optarg);
-			skip_args += 2;
-			break;
-		case 's':
-			samplerate = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'r':
-			tx_wave_file = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'w':
-			rx_wave_file = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'a':
-			tx_audiodev = strdup(optarg);
-			rx_audiodev = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'M':
-			if (!strcasecmp(optarg, "fm"))
-				modulation = MODULATION_FM;
-			else
-			if (!strcasecmp(optarg, "am"))
-				modulation = MODULATION_AM_DSB;
-			else
-			if (!strcasecmp(optarg, "usb"))
-				modulation = MODULATION_AM_USB;
-			else
-			if (!strcasecmp(optarg, "lsb"))
-				modulation = MODULATION_AM_LSB;
-			else
-			{
-				fprintf(stderr, "Invalid modulation option, see help!\n");
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'R':
-			rx = 1;
-			skip_args += 1;
-			break;
-		case 'T':
-			tx = 1;
-			skip_args += 1;
-			break;
-		case 'B':
-			bandwidth = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'D':
-			deviation = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'I':
-			modulation_index = atof(optarg);
-			if (modulation_index < 0.0 || modulation_index > 1.0) {
-				fprintf(stderr, "Invalid modulation index, see help!\n");
-				exit(0);
-			}
-			skip_args += 2;
-			break;
-		case 'E':
-			time_constant_us = atof(optarg);
-			skip_args += 2;
-			break;
-		case 'S':
-			stereo = 1;
-			skip_args += 1;
-			break;
-		default:
-			rc = sdr_config_opt_switch(c, &skip_args);
-			if (rc < 0)
-				exit(0);
-			break;
+	switch (short_option) {
+	case 'h':
+		print_help(argv[0]);
+		return 0;
+	case 'f':
+		frequency = atof(argv[argi]);
+		break;
+	case 's':
+		samplerate = atof(argv[argi]);
+		break;
+	case 'r':
+		tx_wave_file = strdup(argv[argi]);
+		break;
+	case 'w':
+		rx_wave_file = strdup(argv[argi]);
+		break;
+	case 'a':
+		tx_audiodev = strdup(argv[argi]);
+		rx_audiodev = strdup(argv[argi]);
+		break;
+	case 'M':
+		if (!strcasecmp(argv[argi], "fm"))
+			modulation = MODULATION_FM;
+		else
+		if (!strcasecmp(argv[argi], "am"))
+			modulation = MODULATION_AM_DSB;
+		else
+		if (!strcasecmp(argv[argi], "usb"))
+			modulation = MODULATION_AM_USB;
+		else
+		if (!strcasecmp(argv[argi], "lsb"))
+			modulation = MODULATION_AM_LSB;
+		else
+		{
+			fprintf(stderr, "Invalid modulation option, use '-h' for help!\n");
+			return -EINVAL;
 		}
+		break;
+	case 'R':
+		rx = 1;
+		break;
+	case 'T':
+		tx = 1;
+		break;
+	case 'B':
+		bandwidth = atof(argv[argi]);
+		break;
+	case 'D':
+		deviation = atof(argv[argi]);
+		break;
+	case 'I':
+		modulation_index = atof(argv[argi]);
+		if (modulation_index < 0.0 || modulation_index > 1.0) {
+			fprintf(stderr, "Invalid modulation index, use '-h' for help!\n");
+			return -EINVAL;
+		}
+		break;
+	case 'E':
+		time_constant_us = atof(argv[argi]);
+		break;
+	case 'S':
+		stereo = 1;
+		break;
+	case OPT_LIMESDR:
+		{
+			char *argv_lime[] = { argv[0],
+				"--sdr-soapy",
+				"--sdr-rx-antenna", "LNAL",
+				"--sdr-rx-gain", "50",
+				"--sdr-tx-gain", "50",
+				"--sdr-samplerate", "5000000",
+				"--sdr-bandwidth", "15000000",
+			};
+			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
+			return options_command_line(argc_lime, argv_lime, handle_options);
+		}
+	default:
+		return sdr_config_handle_options(short_option, argi, argv);
 	}
 
-	return skip_args;
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
-	int skip_args;
-	int rc;
-	const char *arg0 = argv[0];
+	int rc, argi;
 	radio_t radio;
 	struct termios term, term_orig;
 	int c;
@@ -310,13 +262,18 @@ int main(int argc, char *argv[])
 
 	sdr_config_init(DEFAULT_LO_OFFSET);
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args + 1;
-	argv += skip_args + 1;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/radio.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
 	if (frequency == 0.0) {
 		printf("No frequency given, I suggest to use 100000000 (100 MHz) and FM\n\n");
-		print_help(arg0);
+		print_help(argv[0]);
 		exit(0);
 	}
 
@@ -324,12 +281,12 @@ int main(int argc, char *argv[])
 	if (rc < 0)
 		return rc;
 	if (rc == 0) {
-		fprintf(stderr, "Please select SDR, see help!\n");
+		fprintf(stderr, "Please select SDR, use '-h' for help!\n");
 		exit(0);
 	}
 
 	if (modulation == MODULATION_NONE) {
-		fprintf(stderr, "Please select modulation, see help!\n");
+		fprintf(stderr, "Please select modulation, use '-h' for help!\n");
 		exit(0);
 	}
 
@@ -341,18 +298,18 @@ int main(int argc, char *argv[])
 	}
 
 	if (stereo && modulation != MODULATION_FM) {
-		fprintf(stderr, "Stereo works with FM only, see help!\n");
+		fprintf(stderr, "Stereo works with FM only, use '-h' for help!\n");
 		exit(0);
 	}
 	if (!rx && !tx) {
-		fprintf(stderr, "You need to specify --rx (receiver) and/or --tx (transmitter), see help!\n");
+		fprintf(stderr, "You need to specify --rx (receiver) and/or --tx (transmitter), use '-h' for help!\n");
 		exit(0);
 	}
 	if (stereo && bandwidth != 15000.0) {
 		fprintf(stderr, "Warning: Stereo works with bandwidth of 15 KHz only, using this bandwidth!\n");
 	}
 	if (stereo && time_constant_us != 75.0 && time_constant_us != 50.0) {
-		fprintf(stderr, "Stereo works with time constant of 50 uS or 75 uS only, see help!\n");
+		fprintf(stderr, "Stereo works with time constant of 50 uS or 75 uS only, use '-h' for help!\n");
 		exit(0);
 	}
 

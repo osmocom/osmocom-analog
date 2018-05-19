@@ -22,10 +22,8 @@ extern const char *read_tx_wave;
 void main_mobile_init(void);
 void main_mobile_print_help(const char *arg0, const char *ext_usage);
 void main_mobile_print_hotkeys(void);
-extern struct option *long_options;
-extern char *optstring;
-void main_mobile_set_options(const char *optstring_special, struct option *long_options_special);
-void main_mobile_opt_switch(int c, char *arg0, int *skip_args);
+void main_mobile_add_options(void);
+int main_mobile_handle_options(int short_option, int argi, char **argv);
 
 #define OPT_ARRAY(num_name, name, value) \
 { \

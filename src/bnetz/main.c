@@ -19,9 +19,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
@@ -29,6 +29,7 @@
 #include "../libmobile/main_mobile.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
+#include "../liboptions/options.h"
 #include "bnetz.h"
 #include "dsp.h"
 #include "stations.h"
@@ -79,70 +80,54 @@ void print_help(const char *arg0)
 	main_mobile_print_hotkeys();
 }
 
-static int handle_options(int argc, char **argv)
+static void add_options(void)
 {
-	int skip_args = 0;
+	main_mobile_add_options();
+	option_add('G', "gfs", 1);
+	option_add('M', "gebuehrenimpuls", 1);
+	option_add('P', "paging", 1);
+	option_add('S', "squelch", 1);
+}
+
+static int handle_options(int short_option, int argi, char **argv)
+{
 	char *p;
 
-	static struct option long_options_special[] = {
-		{"gfs", 1, 0, 'G'},
-		{"gebuehrenimpuls", 1, 0, 'M'},
-		{"paging", 1, 0, 'P'},
-		{"squelch", 1, 0, 'S'},
-		{0, 0, 0, 0},
-	};
-
-	main_mobile_set_options("G:M:P:S:", long_options_special);
-
-	while (1) {
-		int option_index = 0, c;
-
-		c = getopt_long(argc, argv, optstring, long_options, &option_index);
-
-		if (c == -1)
-			break;
-
-		switch (c) {
-		case 'G':
-			if (!strcasecmp(optarg, "list")) {
-				station_list();
-				exit(0);
-			}
-			if ((p = strchr(optarg, ','))) {
-				gfs = get_station_by_coordinates(atof(optarg), atof(p + 1));
-				if (gfs == 0)
-					exit(0);
-			} else
-				gfs = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'M':
-			metering = atoi(optarg);
-			skip_args += 2;
-			break;
-		case 'P':
-			paging = strdup(optarg);
-			skip_args += 2;
-			break;
-		case 'S':
-			if (!strcasecmp(optarg, "auto"))
-				squelch_db = 0.0;
-			else
-				squelch_db = atof(optarg);
-			skip_args += 2;
-			break;
-		default:
-			main_mobile_opt_switch(c, argv[0], &skip_args);
+	switch (short_option) {
+	case 'G':
+		if (!strcasecmp(argv[argi], "list")) {
+			station_list();
+			return 0;
 		}
+		if ((p = strchr(argv[argi], ','))) {
+			gfs = get_station_by_coordinates(atof(argv[argi]), atof(p + 1));
+			if (gfs == 0)
+				return -EINVAL;
+		} else
+			gfs = atoi(argv[argi]);
+		break;
+	case 'M':
+		metering = atoi(argv[argi]);
+		break;
+	case 'P':
+		paging = strdup(argv[argi]);
+		break;
+	case 'S':
+		if (!strcasecmp(argv[argi], "auto"))
+			squelch_db = 0.0;
+		else
+			squelch_db = atof(argv[argi]);
+		break;
+	default:
+		return main_mobile_handle_options(short_option, argi, argv);
 	}
 
-	return skip_args;
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
-	int rc;
-	int skip_args;
+	int rc, argi;
 	const char *station_id = "";
 	int i;
 
@@ -153,12 +138,17 @@ int main(int argc, char *argv[])
 
 	main_mobile_init();
 
-	skip_args = handle_options(argc, argv);
-	argc -= skip_args;
-	argv += skip_args;
+	/* handle options / config file */
+	add_options();
+	rc = options_config_file("~/.osmocom/analog/bnetz.conf", handle_options);
+	if (rc < 0)
+		return 0;
+	argi = options_command_line(argc, argv, handle_options);
+	if (argi <= 0)
+		return argi;
 
-	if (argc > 1) {
-		station_id = argv[1];
+	if (argi < argc) {
+		station_id = argv[argi];
 		if (strlen(station_id) != 5) {
 			printf("Given station ID '%s' does not have 5 digits\n", station_id);
 			return 0;
@@ -167,7 +157,7 @@ int main(int argc, char *argv[])
 
 	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel 1 (sound card) or 17 (SDR).\n\n");
-		print_help(argv[-skip_args]);
+		print_help(argv[0]);
 		return 0;
 	}
 	if (use_sdr) {
