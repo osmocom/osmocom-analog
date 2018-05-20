@@ -161,7 +161,7 @@ int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 {
 	bnetz_t *bnetz;
 	enum paging_signal paging_signal = PAGING_SIGNAL_NONE;
-	char paging_file[256] = "", paging_on[256] = "", paging_off[256] = "";
+	char paging_file[255] = "", paging_on[255] = "", paging_off[255] = "";
 	int rc;
 
 	if (!(kanal >= 1 && kanal <= 39) && !(kanal >= 50 && kanal <= 86)) {

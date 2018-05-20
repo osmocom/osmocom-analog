@@ -562,7 +562,7 @@ int sdr_start(void *inst)
 			return rc;
 		}
 		pthread_getname_np(tid, tname, sizeof(tname));
-		strncat(tname, "-sdr_tx", sizeof(tname));
+		strncat(tname, "-sdr_tx", sizeof(tname) - 1);
 		tname[sizeof(tname) - 1] = '\0';
 		pthread_setname_np(tid, tname);
 		sdr->thread_read.running = 1;
@@ -574,7 +574,7 @@ int sdr_start(void *inst)
 			return rc;
 		}
 		pthread_getname_np(tid, tname, sizeof(tname));
-		strncat(tname, "-sdr_rx", sizeof(tname));
+		strncat(tname, "-sdr_rx", sizeof(tname) - 1);
 		tname[sizeof(tname) - 1] = '\0';
 		pthread_setname_np(tid, tname);
 	}

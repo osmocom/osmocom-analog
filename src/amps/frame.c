@@ -3343,7 +3343,7 @@ static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 {
 	int i, j, k;
 
-	strncpy(bits + 0, dotting, 10);
+	memcpy(bits + 0, dotting, 10);
 	bits[10] = 'i';
 	strcpy(bits + 11, sync_word);
 	bits[22] = 'i';
@@ -3391,10 +3391,10 @@ static void amps_encode_fvc_bits(uint64_t word_a, char *bits)
 	k = 0;
 	for (i = 0; i < 11; i++) {
 		if (i == 0) {
-			strncpy(bits + k, dotting, 101);
+			memcpy(bits + k, dotting, 101);
 			k += 101;
 		} else {
-			strncpy(bits + k, dotting, 37);
+			memcpy(bits + k, dotting, 37);
 			k += 37;
 		}
 		strcpy(bits + k, sync_word);

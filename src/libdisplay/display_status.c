@@ -83,7 +83,7 @@ void display_status_start(void)
 {
 	memset(screen, ' ', sizeof(screen));
 	memset(screen[0], '-', sizeof(screen[0]));
-	strncpy(screen[0] + 4, "Channel Status", 14);
+	memcpy(screen[0] + 4, "Channel Status", 14);
 	line_count = 1;
 }
 
@@ -103,7 +103,7 @@ void display_status_channel(int channel, const char *type, const char *state)
 	else
 		snprintf(line, sizeof(line), "Channel: %d State: %s", channel, state);
 	line[sizeof(line) - 1] = '\0';
-	strncpy(screen[line_count++], line, strlen(line));
+	memcpy(screen[line_count++], line, strlen(line));
 }
 
 void display_status_subscriber(const char *number, const char *state)
@@ -118,7 +118,7 @@ void display_status_subscriber(const char *number, const char *state)
 	else
 		snprintf(line, sizeof(line), "  Subscriber: %s", number);
 	line[sizeof(line) - 1] = '\0';
-	strncpy(screen[line_count++], line, strlen(line));
+	memcpy(screen[line_count++], line, strlen(line));
 }
 
 void display_status_end(void)

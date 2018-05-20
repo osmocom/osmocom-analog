@@ -40,7 +40,7 @@ typedef struct transaction {
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
 	int			extended;		/* extended frequency capability */
-	char			dialing[17];		/* number dialed by the phone */
+	char			dialing[18];		/* number dialed by the phone */
 	int64_t			state;			/* state of transaction */
 	int8_t			release_cause;		/* reason for release, (c-netz coding) */
 	int			try;			/* counts resending messages */

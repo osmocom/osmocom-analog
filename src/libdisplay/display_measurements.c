@@ -202,7 +202,7 @@ static void print_measurements(int on)
 				break;
 			}
 			/* "Deviation ::::::::::............   4.5 KHz" */
-			strncpy(line, param->name, (strlen(param->name) < MAX_NAME_LEN) ? strlen(param->name) : MAX_NAME_LEN);
+			memcpy(line, param->name, (strlen(param->name) < MAX_NAME_LEN) ? strlen(param->name) : MAX_NAME_LEN);
 			if (isinf(value) || isnan(value)) {
 				bar_left = -1;
 				bar_right = -1;
