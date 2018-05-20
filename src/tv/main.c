@@ -25,6 +25,7 @@ enum paging_signal;
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sched.h>
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
@@ -47,6 +48,7 @@ enum paging_signal;
 void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
+int rt_prio = 1;
 
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
@@ -58,7 +60,7 @@ static double circle_radius = 6.7;
 static int color_bar = 0;
 static int grid_only = 0;
 static const char *station_id = "Jolly  Roger";
-static int __attribute__((__unused__)) latency = 30;
+static int __attribute__((__unused__)) latency = 200;
 static double samplerate = 10e6;
 static const char *wave_file = NULL;
 
@@ -94,10 +96,12 @@ void print_help(const char *arg0)
 	printf(" -c --channel <channel>\n");
 	printf("        Or give channel number.\n");
 	printf("        Use 'list' to get a channel list.\n");
-	printf(" -r --samplerate <frequency>\n");
+	printf(" -s --samplerate <frequency>\n");
 	printf("        Give sample rate in Hertz.\n");
 	printf(" -w --wave-file <filename>\n");
 	printf("        Output to wave file instead of SDR\n");
+	printf(" -r --realtime <prio>\n");
+	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
 	printf("\nsignal options:\n");
 	printf(" -F --fbas 1 | 0\n");
 	printf("        Turn color on or off. (default = %d)\n", fbas);
@@ -128,8 +132,9 @@ static void add_options(void)
 	option_add('h', "help", 0);
 	option_add('f', "frequency", 1);
 	option_add('c', "channel", 1);
-	option_add('r', "samplerate", 1);
+	option_add('s', "samplerate", 1);
 	option_add('w', "wave-file", 1);
+	option_add('r', "realtime", 1);
 	option_add('F', "fbas", 1);
 	option_add('T', "tone", 1);
 	option_add('R', "circle-radius", 1);
@@ -162,11 +167,14 @@ static int handle_options(int short_option, int argi, char **argv)
 			return -EINVAL;
 		}
 		break;
-	case 'r':
+	case 's':
 		samplerate = atof(argv[argi]);
 		break;
 	case 'w':
 		wave_file = strdup(argv[argi]);
+		break;
+	case 'r':
+		rt_prio = atoi(argv[argi]);
 		break;
 	case 'F':
 		fbas = atoi(argv[argi]);
@@ -198,7 +206,7 @@ static int handle_options(int short_option, int argi, char **argv)
 				"--sdr-tx-gain", "50",
 				"--sdr-lo-offset", "-3000000",
 				"--sdr-bandwidth", "60000000",
-				"-r", "13750000",
+				"-s", "13750000",
 			};
 			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
 			return options_command_line(argc_lime, argv_lime, handle_options);
@@ -272,6 +280,18 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 			fm_modulate_complex(&mod, sample_tone, power_tone, samples, buff);
 		}
 
+		/* real time priority */
+		if (rt_prio > 0) {
+			struct sched_param schedp;
+			int rc;
+
+			memset(&schedp, 0, sizeof(schedp));
+			schedp.sched_priority = rt_prio;
+			rc = sched_setscheduler(0, SCHED_RR, &schedp);
+			if (rc)
+				fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
+		}
+
 		double tx_frequencies[1], rx_frequencies[1];
 		tx_frequencies[0] = frequency;
 		rx_frequencies[0] = frequency;
@@ -302,6 +322,16 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		}
 
 	error:
+
+		/* reset real time prio */
+		if (rt_prio > 0) {
+			struct sched_param schedp;
+
+			memset(&schedp, 0, sizeof(schedp));
+			schedp.sched_priority = 0;
+			sched_setscheduler(0, SCHED_OTHER, &schedp);
+		}
+
 		free(sendbuff);
 		free(buff);
 		if (sdr)
