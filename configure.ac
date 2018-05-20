@@ -35,7 +35,7 @@ AC_ARG_WITH([imagemagick], [AS_HELP_STRING([--with-imagemagick], [compile with I
 AS_IF([test "x$with_alsa" != xno], [PKG_CHECK_MODULES(ALSA, alsa >= 1.0, with_alsa=yes, with_alsa=no)])
 AS_IF([test "x$with_uhd" != xno], [PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, with_sdr=yes with_uhd=yes, with_uhd=no)])
 AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.6.0, with_sdr=yes with_soapy=yes, with_soapy=no)])
-AS_IF([test "x$with_imagemagick" != xno], [PKG_CHECK_MODULES(IMAGEMAGICK, ImageMagick >= 6.0.0, with_imagemagick=yes, with_imagemagick=no)])
+AS_IF([test "x$with_imagemagick" != xno], [PKG_CHECK_MODULES(IMAGEMAGICK, ImageMagick >= 7.0.0, with_imagemagick=yes, with_imagemagick=no)])
 AM_CONDITIONAL(HAVE_ALSA, test "x$with_alsa" == "xyes" )
 AM_CONDITIONAL(HAVE_UHD, test "x$with_uhd" == "xyes" )
 AM_CONDITIONAL(HAVE_SOAPY, test "x$with_soapy" == "xyes" )

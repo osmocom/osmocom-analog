@@ -6,24 +6,24 @@
 int save_depth = 16;
 
 #ifdef HAVE_MAGICK
-#include <magick/api.h>
+#include <MagickCore/MagickCore.h>
 
 /* load given image to memory. return short RGB values */
 unsigned short *load_img(int *width, int *height, const char *filename, int index)
 {
 	Image *image = NULL;
 	ImageInfo *imageinfo = NULL;
-	ExceptionInfo exception;
+	ExceptionInfo *exception;
 	unsigned short *img = NULL;
 
 	MagickCoreGenesis(NULL, MagickFalse);
 //	InitializeMagick(NULL);
 	imageinfo = CloneImageInfo(0);
-	GetExceptionInfo(&exception);
+	exception = AcquireExceptionInfo();
 
 	sprintf(imageinfo->filename, filename, index);
 
-	image = ReadImage(imageinfo, &exception);
+	image = ReadImage(imageinfo, exception);
 	if (!image) {
 //		printf("failed to read image '%s' via *magick\n", filename);
 		goto exit;
@@ -48,6 +48,9 @@ exit:
 	if (imageinfo)
 		DestroyImageInfo(imageinfo);
 
+	if (exception)
+		DestroyExceptionInfo(exception);
+
 	MagickCoreTerminus();
 //	DestroyMagick();
 
@@ -60,18 +63,18 @@ int save_img(unsigned short *img, int width, int height, int alpha, const char *
 	int rc = -1;
 	Image *image = NULL;
 	ImageInfo *imageinfo = NULL;
-	ExceptionInfo exception;
+	ExceptionInfo *exception;
 
 	MagickCoreGenesis(NULL, MagickFalse);
 //	InitializeMagick(NULL);
 	imageinfo = CloneImageInfo(0);
-	GetExceptionInfo(&exception);
+	exception = AcquireExceptionInfo();
 
 	imageinfo->quality = 100;
 	if (strlen(filename) >= 4 && !strcmp(filename + strlen(filename) - 4, ".png"))
 		imageinfo->quality = 1;
 
-	image=ConstituteImage(width, height, (alpha)?"RGBA":"RGB", ShortPixel, img, &exception);
+	image=ConstituteImage(width, height, (alpha)?"RGBA":"RGB", ShortPixel, img, exception);
 	if (!image) {
 		printf("%s:failed to prepare to write image\n", __func__);
 		goto exit;
@@ -81,7 +84,7 @@ int save_img(unsigned short *img, int width, int height, int alpha, const char *
 	image->depth = save_depth;
 
 	sprintf(image->filename, filename, index); /* ACHTUNG: nicht imageinfo!!! */
-	if (!WriteImage(imageinfo, image)) {
+	if (!WriteImage(imageinfo, image, exception)) {
 		printf("%s:failed to write image\n", __func__);
 		goto exit;
 	}
@@ -94,6 +97,9 @@ exit:
 
 	if (imageinfo)
 		DestroyImageInfo(imageinfo);
+
+	if (exception)
+		DestroyExceptionInfo(exception);
 
 	MagickCoreTerminus();
 //	DestroyMagick();

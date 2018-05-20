@@ -377,7 +377,7 @@ static int tx_img(const char *filename)
 
 	img = load_img(&width, &height, filename, 0);
 	if (!img) {
-		fprintf(stderr, "Failed to load grey image '%s'\n", filename);
+		fprintf(stderr, "Failed to load image '%s'\n", filename);
 		return -1;
 	}
 
