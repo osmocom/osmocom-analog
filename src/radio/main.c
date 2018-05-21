@@ -25,6 +25,7 @@ enum paging_signal;
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sched.h>
 #include <errno.h>
 #include <math.h>
 #include <termios.h>
@@ -42,6 +43,7 @@ enum paging_signal;
 void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
+int rt_prio = 1;
 
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
@@ -331,6 +333,18 @@ int main(int argc, char *argv[])
 		goto error;
 	}
 
+	/* real time priority */
+	if (rt_prio > 0) {
+		struct sched_param schedp;
+		int rc;
+
+		memset(&schedp, 0, sizeof(schedp));
+		schedp.sched_priority = rt_prio;
+		rc = sched_setscheduler(0, SCHED_RR, &schedp);
+		if (rc)
+			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
+	}
+
 	double tx_frequencies[1], rx_frequencies[1];
 	tx_frequencies[0] = frequency;
 	rx_frequencies[0] = frequency;
@@ -369,20 +383,21 @@ int main(int argc, char *argv[])
 			if (got < 0)
 				break;
 		}
-		if (tx) {
-			tosend = sdr_get_tosend(sdr, latspl);
-			if (tosend > latspl / 10)
-				tosend = latspl / 10;
-			if (tosend == 0) {
-				continue;
-			}
-			/* perform radio modulation */
-			tosend = radio_tx(&radio, sendbuff, tosend);
-			if (tosend < 0)
-				break;
-			/* write to SDR */
-			sdr_write(sdr, (void *)sendbuff, NULL, tosend, NULL, NULL, 0);
+		tosend = sdr_get_tosend(sdr, latspl);
+		if (tosend > latspl / 10)
+			tosend = latspl / 10;
+		if (tosend == 0) {
+			continue;
 		}
+		/* perform radio modulation */
+		if (tx)
+			tosend = radio_tx(&radio, sendbuff, tosend);
+		else
+			memset(sendbuff, 0, tosend * sizeof(*sendbuff) * 2);
+		if (tosend < 0)
+			break;
+		/* write to SDR */
+		sdr_write(sdr, (void *)sendbuff, NULL, tosend, NULL, NULL, 0);
 
 		/* process keyboard input */
 next_char:
@@ -435,6 +450,15 @@ next_char:
 	tcsetattr(0, TCSANOW, &term_orig);
 	
 error:
+	/* reset real time prio */
+	if (rt_prio > 0) {
+		struct sched_param schedp;
+
+		memset(&schedp, 0, sizeof(schedp));
+		schedp.sched_priority = 0;
+		sched_setscheduler(0, SCHED_OTHER, &schedp);
+	}
+
 	free(sendbuff);
 	if (sdr)
 		sdr_close(sdr);
