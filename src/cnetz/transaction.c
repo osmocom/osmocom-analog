@@ -274,6 +274,7 @@ const char *trans_short_state_name(uint64_t state)
 	case TRANS_WBN:
 		return "DIALING";
 	case TRANS_VAG:
+	case TRANS_WSK:
 	case TRANS_VAK:
 	case TRANS_BQ:
 	case TRANS_VHQ:
@@ -284,9 +285,17 @@ const char *trans_short_state_name(uint64_t state)
 		return "DS";
 	case TRANS_AHQ:
 		return "AHQ";
+	case TRANS_VA:
 	case TRANS_AF:
 	case TRANS_AT:
+	case TRANS_ATQ:
 		return "RELEASE";
+	case TRANS_MO_QUEUE:
+	case TRANS_MO_DELAY:
+		return "OUT QUEUE";
+	case TRANS_MT_QUEUE:
+	case TRANS_MT_DELAY:
+		return "IN QUEUE";
 	default:
 		return "<invald transaction state>";
 	}
