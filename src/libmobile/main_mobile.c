@@ -200,7 +200,7 @@ void main_mobile_add_options(void)
 	option_add(OPT_MNCC_NAME, "mncc-name", 1);
 	option_add('c', "call-device", 1);
 	option_add(OPT_CALL_SAMPLERATE, "call-samplerate", 1);
-	option_add('t', "tones", 0);
+	option_add('t', "tones", 1);
 	option_add('l', "loopback", 1);
 	option_add('r', "realtime", 1);
 	option_add(OPT_WRITE_RX_WAVE, "write-rx-wave", 1);
