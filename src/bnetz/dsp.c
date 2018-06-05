@@ -53,7 +53,9 @@
 #define F0		2070.0
 #define F1		1950.0
 #define METERING_HZ	2900	/* metering pulse frequency */
-#define TONE_DETECT_TH	7	/* 70 milliseconds to detect continuous tone */
+#define TONE_DETECT_CNT	7	/* 70 milliseconds to detect continuous tone */
+#define TONE_LOST_CNT	14	/* we use twice of the detect time, so we bridge a loss of "TONE_DETECT_CNT duration" */
+#define	TONE_STDDEV_TH	0.2	/* threshold of bad quality (standard deviation) to reject tone */
 
 /* carrier loss detection */
 #define MUTE_TIME	0.1	/* time to mute after loosing signal */
@@ -80,6 +82,11 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
 
+	if (TONE_DETECT_CNT > sizeof(bnetz->rx_tone_quality) / sizeof(bnetz->rx_tone_quality[0])) {
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "buffer for tone quality is too small, please fix!\n");
+		return -EINVAL;
+	}
+
 	/* init squelch */
 	squelch_init(&bnetz->squelch, bnetz->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
 
@@ -101,6 +108,7 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", bnetz->meter_phaseshift65536);
 
 	bnetz->dmp_tone_level = display_measurements_add(&bnetz->sender.dispmeas, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+	bnetz->dmp_tone_stddev = display_measurements_add(&bnetz->sender.dispmeas, "Tone Stddev", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 	bnetz->dmp_tone_quality = display_measurements_add(&bnetz->sender.dispmeas, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 	bnetz->dmp_frame_level = display_measurements_add(&bnetz->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
 	bnetz->dmp_frame_stddev = display_measurements_add(&bnetz->sender.dispmeas, "Frame Stddev", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
@@ -117,31 +125,38 @@ void dsp_cleanup_sender(bnetz_t *bnetz)
 	fsk_cleanup(&bnetz->fsk);
 }
 
-/* Count duration of tone and indicate detection/loss to protocol handler. */
-static void fsk_receive_tone(bnetz_t *bnetz, int bit, int goodtone, double level, double quality)
+/* If good tone is received, we just set this tone, if not already and reset counters.
+ * If band tone was received, we just unset this tone, if not already.
+ * Count duration of tone and indicate detection/loss to protocol handler.
+ */
+static void fsk_receive_tone(bnetz_t *bnetz, int tone, int goodtone, double level_avg, double level_stddev, double quality_avg)
 {
-	/* lost tone because it is not good anymore or has changed */
-	if (!goodtone || bit != bnetz->tone_detected) {
-		if (bnetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Lost F%d tone after %d ms.\n", bnetz->tone_detected, bnetz->tone_count);
-			bnetz_receive_tone(bnetz, -1);
-		}
-		if (goodtone)
-			bnetz->tone_detected = bit;
-		else
-			bnetz->tone_detected = -1;
-		bnetz->tone_count = 0;
+	/* count duration of the tone being detected */
+	bnetz->tone_duration++;
 
-		return;
+	/* check if we have a good tone that was not previously detected
+	 * in the previous function we already checked for TONE_DETECT_CNT intervals so we directly mark the tone as detected */
+	if (goodtone) {
+		bnetz->tone_count = 0;
+		/* if tone was undetected or has changed, we set new detected tone */
+		if (tone != bnetz->tone_detected) {
+			/* set duration to TONE_DETECT_CNT, because it took that long to detect the tone */
+			bnetz->tone_duration = TONE_DETECT_CNT;
+			bnetz->tone_detected = tone;
+			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous tone: F%d Level=%3.0f%% standard deviation=%.0f%% Quality=%3.0f%%\n", bnetz->tone_detected, level_avg * 100.0, level_stddev / level_avg * 100.0, quality_avg * 100.0);
+			bnetz_receive_tone(bnetz, bnetz->tone_detected);
+		}
 	}
 
-	bnetz->tone_count++;
-
-	if (bnetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous tone: F%d Level=%3.0f%% Quality=%3.0f%%\n", bnetz->tone_detected, level * 100.0, quality * 100.0);
-		/* must reset, so we will not get corrupt first digit */
-		bnetz->rx_telegramm = bnetz->tone_detected * 0xffff;
-		bnetz_receive_tone(bnetz, bnetz->tone_detected);
+	/* lost detected tone because it is not good anymore or has changed */
+	if (!goodtone && bnetz->tone_detected > -1) {
+		bnetz->tone_count++;
+		if (bnetz->tone_count == TONE_LOST_CNT) {
+			/* substract TONE_LOST_CNT from duration, because it took that long to detect loss of tone */
+			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Lost F%d tone after %.2f seconds.\n", bnetz->tone_detected, (double)(bnetz->tone_duration - TONE_LOST_CNT) / 100.0);
+			bnetz->tone_detected = -1;
+			bnetz_receive_tone(bnetz, -1);
+		}
 	}
 }
 
@@ -155,53 +170,96 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	/* normalize FSK level */
 	level /= TX_PEAK_FSK;
 
-	/* update measurements */
-	display_measurements_update(bnetz->dmp_tone_level, level * 100.0 , 0.0);
-	display_measurements_update(bnetz->dmp_tone_quality, quality * 100.0, 0.0);
+	/* store level and quality to tone buffer */
+	bnetz->rx_tone_quality[bnetz->rx_tone_qualidx] = quality;
+	bnetz->rx_tone_level[bnetz->rx_tone_qualidx] = level;
+	if (++bnetz->rx_tone_qualidx == TONE_DETECT_CNT)
+		bnetz->rx_tone_qualidx = 0;
 
-	/* continuous tone detection */
-	if (level > 0.10 && quality > 0.10) {
-		fsk_receive_tone(bnetz, bit, 1, level, quality);
-	} else
-		fsk_receive_tone(bnetz, bit, 0, level, quality);
+	/* average level and quality of tone */
+	level_avg = level_stddev = quality_avg = 0;
+	for (i = 0; i < TONE_DETECT_CNT; i++) {
+		level_avg += bnetz->rx_tone_level[i];
+		quality_avg += bnetz->rx_tone_quality[i];
+	}
+	level_avg /= TONE_DETECT_CNT; quality_avg /= TONE_DETECT_CNT;
+	for (i = 0; i < TONE_DETECT_CNT; i++) {
+		level = bnetz->rx_tone_level[i];
+		level_stddev += (level - level_avg) * (level - level_avg);
+	}
+	level_stddev = sqrt(level_stddev / TONE_DETECT_CNT);
 
-	/* collect bits */
-	if (level < 0.05)
-		return;
-	bnetz->rx_telegramm = (bnetz->rx_telegramm << 1) | bit;
+	/* update tone measurements */
+	display_measurements_update(bnetz->dmp_tone_level, level_avg * 100.0, 0.0);
+	display_measurements_update(bnetz->dmp_tone_stddev, level_stddev / level_avg * 100.0, 0.0);
+	display_measurements_update(bnetz->dmp_tone_quality, quality_avg * 100.0, 0.0);
+
+	/* collect bits, and check for level and continous tone */
+	bnetz->rx_tone = (bnetz->rx_tone << 1) | bit;
+	for (i = 0; i < TONE_DETECT_CNT; i++) {
+		if (((bnetz->rx_tone >> i) & 1) != bit)
+			break;
+		if (bnetz->rx_tone_level[i] < 0.05)
+			break;
+	}
+
+	/* continuous tone detection:
+	 * 1. The quality must be good enough.
+	 * 2. All bits must be the same (continuous tone).
+	 */
+	if (level_stddev / level_avg > TONE_STDDEV_TH || i < TONE_DETECT_CNT)
+		fsk_receive_tone(bnetz, bit, 0, level_avg, level_stddev, quality_avg);
+	else
+		fsk_receive_tone(bnetz, bit, 1, level_avg, level_stddev, quality_avg);
+
+	/* store level and quality to telegram buffer */
 	bnetz->rx_telegramm_quality[bnetz->rx_telegramm_qualidx] = quality;
 	bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx] = level;
 	if (++bnetz->rx_telegramm_qualidx == 16)
 		bnetz->rx_telegramm_qualidx = 0;
 
+	/* average level and quality of frame */
+	level_avg = level_stddev = quality_avg = 0;
+	for (i = 0; i < 16; i++) {
+		level_avg += bnetz->rx_telegramm_level[i];
+		quality_avg += bnetz->rx_telegramm_quality[i];
+	}
+	level_avg /= 16.0; quality_avg /= 16.0;
+	for (i = 0; i < 16; i++) {
+		level = bnetz->rx_telegramm_level[i];
+		level_stddev += (level - level_avg) * (level - level_avg);
+	}
+	level_stddev = sqrt(level_stddev / 16.0);
+
+	/* collect bits */
+	bnetz->rx_telegramm = (bnetz->rx_telegramm << 1) | bit;
+
 	/* check if pattern 01110xxxxxxxxxxx matches */
 	if ((bnetz->rx_telegramm & 0xf800) != 0x7000)
 		return;
 
-	/* average level and quality */
-	level_avg = level_stddev = quality_avg = 0;
+	/* collect bits, and check for level */
 	for (i = 0; i < 16; i++) {
-		level_avg += bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx];
-		quality_avg += bnetz->rx_telegramm_quality[bnetz->rx_telegramm_qualidx];
-		if (++bnetz->rx_telegramm_qualidx == 16)
-			bnetz->rx_telegramm_qualidx = 0;
+		if (bnetz->rx_telegramm_level[i] < 0.05)
+			break;
 	}
-	level_avg /= 16.0; quality_avg /= 16.0;
-	for (i = 0; i < 16; i++) {
-		level = bnetz->rx_telegramm_level[bnetz->rx_telegramm_qualidx];
-		level_stddev += (level - level_avg) * (level - level_avg);
-		if (++bnetz->rx_telegramm_qualidx == 16)
-			bnetz->rx_telegramm_qualidx = 0;
-	}
-	level_stddev = sqrt(level_stddev / 16.0);
 
-	/* update measurements */
+	if (i == 16)
+		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK  Valid bits: %d / %d  Level: %.0f%%  Stddev: %.0f%%\n", i, 16, level_avg * 100.0, level_stddev / level_avg * 100.0);
+
+        /* drop any telegramm that is too bad */
+	if (level_stddev / level_avg > TONE_STDDEV_TH || i < 16)
+		return;
+
+	/* update telegramm measurements */
 	display_measurements_update(bnetz->dmp_frame_level, level_avg * 100.0 , 0.0);
 	display_measurements_update(bnetz->dmp_frame_stddev, level_stddev / level_avg * 100.0, 0.0);
 	display_measurements_update(bnetz->dmp_frame_quality, quality_avg * 100.0, 0.0);
 
+	PDEBUG_CHAN(DDSP, DEBUG_INFO, "Telegramm RX Level: average=%.0f%% standard deviation=%.0f%% Quality: %.0f%%\n", level_avg * 100.0, level_stddev / level_avg * 100.0, quality_avg * 100.0);
+
 	/* receive telegramm */
-	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm, level_avg, level_stddev, quality_avg);
+	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm);
 }
 
 /* Process received audio stream from radio unit. */

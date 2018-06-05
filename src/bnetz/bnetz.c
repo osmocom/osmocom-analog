@@ -399,6 +399,8 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			bnetz->dial_mode = DIAL_MODE_START;
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_1);
 			timer_start(&bnetz->timer, DIALING_TO);
+			/* must reset, so we will not get corrupt first digit */
+			bnetz->rx_telegramm = bnetz->tone_detected * 0xffff;
 			break;
 		}
 		break;
@@ -431,16 +433,10 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 }
 
 /* A digit was received. */
-void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_stddev, double quality_avg)
+void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 {
 	struct impulstelegramm *it;
 	int digit = 0;
-
-	/* drop any telegramm that is too bad */
-	if (level_stddev / level_avg > 0.2)
-		return;
-
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: average=%.0f%% standard deviation=%.0f%% Quality: %.0f%%\n", level_avg * 100.0, level_stddev / level_avg * 100.0, quality_avg * 100.0);
 
 	it = bnetz_telegramm2digit(telegramm);
 	if (it) {

@@ -79,6 +79,7 @@ typedef struct bnetz {
 
 	/* display measurements */
 	dispmeasparam_t		*dmp_tone_level;
+	dispmeasparam_t		*dmp_tone_stddev;
 	dispmeasparam_t		*dmp_tone_quality;
 	dispmeasparam_t		*dmp_frame_level;
 	dispmeasparam_t		*dmp_frame_stddev;
@@ -91,8 +92,13 @@ typedef struct bnetz {
 	double			rx_telegramm_quality[16];/* quality of each bit in telegramm */
 	double			rx_telegramm_level[16];	/* level of each bit in telegramm */
 	int			rx_telegramm_qualidx;	/* index of quality array above */
+	uint16_t		rx_tone;		/* rx shift register for receiveing continous tone */
+	double			rx_tone_quality[16];	/* quality of tone fragment (100th of second) */
+	double			rx_tone_level[16];	/* level of tone fragment (100th of second) */
+	int			rx_tone_qualidx;	/* index of quality array above */
 	int			tone_detected;		/* what tone has been detected */
 	int			tone_count;		/* how long has that tone been detected */
+	int			tone_duration;		/* how long has that tone been detected */
 	const char		*tx_telegramm;		/* carries bits of one frame to transmit */
 	int			tx_telegramm_pos;
 	double			meter_phaseshift65536;	/* how much the phase of sine wave changes per sample */
@@ -110,6 +116,6 @@ int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 void bnetz_destroy(sender_t *sender);
 void bnetz_loss_indication(bnetz_t *bnetz, double loss_time);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);
-void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm, double level_avg, double level_dev, double quality_avg);
+void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm);
 const char *bnetz_get_telegramm(bnetz_t *bnetz);
 
