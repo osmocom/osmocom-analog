@@ -76,6 +76,8 @@ void sdr_config_print_help(void)
 	printf("        SDR device's RX antenna name, use 'list' to get a list\n");
 	printf("    --sdr-tx-antenna <name>\n");
 	printf("        SDR device's TX antenna name, use 'list' to get a list\n");
+	printf("    --sdr-clock-source <name>\n");
+	printf("        SDR device's clock sourc name, use 'list' to get a list\n");
 	printf("    --sdr-rx-gain <gain>\n");
 	printf("        SDR device's RX gain in dB (default = %.1f)\n", sdr_config->rx_gain);
 	printf("    --sdr-tx-gain <gain>\n");
@@ -111,17 +113,18 @@ void sdr_config_print_hotkeys(void)
 #define	OPT_SDR_TUNE_ARGS	1505
 #define	OPT_SDR_RX_ANTENNA	1506
 #define	OPT_SDR_TX_ANTENNA	1507
-#define	OPT_SDR_RX_GAIN		1508
-#define	OPT_SDR_TX_GAIN		1509
-#define	OPT_SDR_SAMPLERATE	1510
-#define	OPT_SDR_LO_OFFSET	1511
-#define	OPT_SDR_BANDWIDTH	1512
-#define	OPT_WRITE_IQ_RX_WAVE	1513
-#define	OPT_WRITE_IQ_TX_WAVE	1514
-#define	OPT_READ_IQ_RX_WAVE	1515
-#define	OPT_READ_IQ_TX_WAVE	1516
-#define	OPT_SDR_SWAP_LINKS	1517
-#define OPT_SDR_UHD_TX_TS	1518
+#define	OPT_SDR_CLOCK_SOURCE	1508
+#define	OPT_SDR_RX_GAIN		1509
+#define	OPT_SDR_TX_GAIN		1510
+#define	OPT_SDR_SAMPLERATE	1511
+#define	OPT_SDR_LO_OFFSET	1512
+#define	OPT_SDR_BANDWIDTH	1513
+#define	OPT_WRITE_IQ_RX_WAVE	1514
+#define	OPT_WRITE_IQ_TX_WAVE	1515
+#define	OPT_READ_IQ_RX_WAVE	1516
+#define	OPT_READ_IQ_TX_WAVE	1517
+#define	OPT_SDR_SWAP_LINKS	1518
+#define	OPT_SDR_UHD_TX_TS	1519
 
 void sdr_config_add_options(void)
 {
@@ -136,6 +139,7 @@ void sdr_config_add_options(void)
 	option_add(OPT_SDR_BANDWIDTH, "sdr-bandwidth", 1);
 	option_add(OPT_SDR_RX_ANTENNA, "sdr-rx-antenna", 1);
 	option_add(OPT_SDR_TX_ANTENNA, "sdr-tx-antenna", 1);
+	option_add(OPT_SDR_CLOCK_SOURCE, "sdr-clock-source", 1);
 	option_add(OPT_SDR_RX_GAIN, "sdr-rx-gain", 1);
 	option_add(OPT_SDR_TX_GAIN, "sdr-tx-gain", 1);
 	option_add(OPT_WRITE_IQ_RX_WAVE, "write-iq-rx-wave", 1);
@@ -193,6 +197,9 @@ int sdr_config_handle_options(int short_option, int argi, char **argv)
 		break;
 	case OPT_SDR_TX_ANTENNA:
 		sdr_config->tx_antenna = strdup(argv[argi]);
+		break;
+	case OPT_SDR_CLOCK_SOURCE:
+		sdr_config->clock_source = strdup(argv[argi]);
 		break;
 	case OPT_SDR_RX_GAIN:
 		sdr_config->rx_gain = atof(argv[argi]);

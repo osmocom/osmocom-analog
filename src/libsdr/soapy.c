@@ -62,10 +62,10 @@ static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 	return 0;
 }
 
-int soapy_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth)
+int soapy_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, const char *clock_source, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth)
 {
 	double got_frequency, got_rate, got_gain, got_bandwidth;
-	const char *got_antenna;
+	const char *got_antenna, *got_clock;
 	size_t num_channels;
 	SoapySDRKwargs device_args;
 	SoapySDRKwargs stream_args;
@@ -101,6 +101,42 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to create SoapySDR\n");
 		soapy_close();
 		return -EIO;
+	}
+
+	/* clock source */
+	if (clock_source && clock_source[0]) {
+		if (!strcasecmp(clock_source, "list")) {
+			char **clocks;
+			size_t clocks_length;
+			int i;
+			clocks = SoapySDRDevice_listClockSources(sdr, &clocks_length);
+			if (!clocks) {
+				PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to request list of clock sources!\n");
+				soapy_close();
+				return -EIO;
+			}
+			if (clocks_length) {
+				for (i = 0; i < (int)clocks_length; i++)
+					PDEBUG(DSOAPY, DEBUG_NOTICE, "Clock source: '%s'\n", clocks[i]);
+				got_clock = SoapySDRDevice_getClockSource(sdr);
+				PDEBUG(DSOAPY, DEBUG_NOTICE, "Default clock source: '%s'\n", got_clock);
+			} else
+				PDEBUG(DSOAPY, DEBUG_NOTICE, "There are no clock sources configurable for this device.\n");
+			soapy_close();
+			return 1;
+		}
+
+		if (SoapySDRDevice_setClockSource(sdr, clock_source) != 0) {
+			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set clock source to '%s'\n", clock_source);
+			soapy_close();
+			return -EIO;
+		}
+		got_clock = SoapySDRDevice_getClockSource(sdr);
+		if (!!strcasecmp(clock_source, got_clock)) {
+			PDEBUG(DSOAPY, DEBUG_NOTICE, "Given clock source '%s' was accepted, but driver claims to use '%s'\n", clock_source, got_clock);
+			soapy_close();
+			return -EINVAL;
+		}
 	}
 
 	if (rx_frequency) {

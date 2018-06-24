@@ -49,11 +49,11 @@ static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
 static int			tx_timestamps;
 
-int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth, int _tx_timestamps)
+int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, const char *clock_source, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth, int _tx_timestamps)
 {
 	uhd_error error;
 	double got_frequency, got_rate, got_gain, got_bandwidth;
-	char got_antenna[64];
+	char got_antenna[64], got_clock[64];
 
 	samplerate = rate;
 	tx_timestamps = _tx_timestamps;
@@ -69,6 +69,64 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		PDEBUG(DUHD, DEBUG_ERROR, "Failed to create USRP\n");
 		uhd_close();
 		return -EIO;
+	}
+
+	/* clock source */
+	if (clock_source && clock_source[0]) {
+		if (!strcasecmp(clock_source, "list")) {
+			uhd_string_vector_handle clocks;
+			size_t clocks_length;
+			int i;
+			error = uhd_string_vector_make(&clocks);
+			if (error) {
+				clock_vector_error:
+				PDEBUG(DUHD, DEBUG_ERROR, "Failed to hande UHD vector, please fix!\n");
+				uhd_close();
+				return -EIO;
+			}
+			error = uhd_usrp_get_clock_sources(usrp, 0, &clocks);
+			if (error) {
+				PDEBUG(DUHD, DEBUG_ERROR, "Failed to request list of clock sources!\n");
+				uhd_close();
+				return -EIO;
+			}
+			error = uhd_string_vector_size(clocks, &clocks_length);
+			if (error)
+				goto clock_vector_error;
+			for (i = 0; i < (int)clocks_length; i++) {
+				error = uhd_string_vector_at(clocks, i, got_clock, sizeof(got_clock));
+				if (error)
+					goto clock_vector_error;
+				PDEBUG(DUHD, DEBUG_NOTICE, "Clock source: '%s'\n", got_clock);
+			}
+			uhd_string_vector_free(&clocks);
+			error = uhd_usrp_get_clock_source(usrp, 0, got_clock, sizeof(got_clock));
+			if (error) {
+				PDEBUG(DUHD, DEBUG_ERROR, "Failed to get clock source\n");
+				uhd_close();
+				return -EINVAL;
+			}
+			PDEBUG(DUHD, DEBUG_NOTICE, "Default clock source: '%s'\n", got_clock);
+			uhd_close();
+			return 1;
+		}
+		error = uhd_usrp_set_clock_source(usrp, clock_source, 0);
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set clock source to '%s'\n", clock_source);
+			uhd_close();
+			return -EIO;
+		}
+		error = uhd_usrp_get_clock_source(usrp, 0, got_clock, sizeof(got_clock));
+		if (error) {
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get clock source\n");
+			uhd_close();
+			return -EINVAL;
+		}
+		if (!!strcasecmp(clock_source, got_clock)) {
+			PDEBUG(DUHD, DEBUG_NOTICE, "Given clock source '%s' was accepted, but driver claims to use '%s'\n", clock_source, got_clock);
+			uhd_close();
+			return -EINVAL;
+		}
 	}
 
 	if (tx_frequency) {

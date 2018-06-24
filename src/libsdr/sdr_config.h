@@ -13,6 +13,7 @@ typedef struct sdr_config {
 			rx_gain;
 	const char	*tx_antenna,		/* list/override antennas */
 			*rx_antenna;
+	const char	*clock_source;		/* list/override clock source */
 	const char	*write_iq_tx_wave;	/* wave recording and playback */
 	const char	*write_iq_rx_wave;
 	const char	*read_iq_tx_wave;
