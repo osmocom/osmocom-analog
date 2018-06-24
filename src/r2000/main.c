@@ -117,7 +117,7 @@ static void add_options(void)
 	option_add('C', "crins", 1);
 	option_add(OPT_DESTRUCTION, "destruction", 1);
 	option_add('N', "nconv", 1);
-	option_add('S', "recall", 1);
+	option_add('S', "recall", 0);
 }
 
 static int handle_options(int short_option, int argi, char **argv)
