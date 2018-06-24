@@ -53,7 +53,7 @@ int rt_prio = 1;
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
 static double __attribute__((__unused__)) modulation = 0.7; /* level of modulation for I/Q amplitudes */
-static double frequency = 0.0;
+static double frequency = 0.0, audio_offset;
 static int fbas = 1;
 static int tone = 1;
 static double circle_radius = 6.7;
@@ -161,7 +161,7 @@ static int handle_options(int short_option, int argi, char **argv)
 			list_tv_channels();
 			return 0;
 		}
-		frequency = get_tv_video_frequency(atoi(argv[argi]));
+		frequency = get_tv_frequency(atoi(argv[argi]), &audio_offset);
 		if (frequency == 0.0) {
 			fprintf(stderr, "Given channel number unknown, use \"-c list\" to get a list.\n");
 			return -EINVAL;
@@ -275,7 +275,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		if (sample_tone) {
 			/* bandwidth is 2*(deviation + 2*f(sig)) = 2 * (50 + 2*15) = 160khz */
 			fm_mod_t mod;
-			fm_mod_init(&mod, samplerate, 5500000.0, modulation * 0.1);
+			fm_mod_init(&mod, samplerate, audio_offset, modulation * 0.1);
 			mod.state = MOD_STATE_ON; /* do not ramp up */
 			fm_modulate_complex(&mod, sample_tone, power_tone, samples, buff);
 		}

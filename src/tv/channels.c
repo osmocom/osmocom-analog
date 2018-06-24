@@ -69,13 +69,15 @@ static struct tv_channels {
 	{ 0,	0,	0,	}
 };
 
-double get_tv_video_frequency(int channel)
+double get_tv_frequency(int channel, double *audio_offset)
 {
 	int i;
 
 	for (i = 0; tv_channels[i].channel; i++) {
-		if (tv_channels[i].channel == channel)
+		if (tv_channels[i].channel == channel) {
+			*audio_offset = (tv_channels[i].audio_mhz - tv_channels[i].video_mhz) * 1e6;
 			return tv_channels[i].video_mhz * 1e6;
+		}
 	}
 
 	return 0.0;
