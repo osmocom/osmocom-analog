@@ -1428,6 +1428,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (trans->state != TRANS_DS)
 			break;
 		cnetz->scrambler = telegramm->betriebs_art;
+		cnetz->scrambler_switch = 0;
 		timer_stop(&trans->timer);
 		break;
 	case OPCODE_VH_K:
@@ -1469,6 +1470,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (trans->state == TRANS_AHQ || trans->state == TRANS_VHQ || trans->state == TRANS_AF)
 			break;
 		cnetz->scrambler = telegramm->betriebs_art;
+		cnetz->scrambler_switch = 0;
 		trans_new_state(trans, TRANS_AHQ);
 		trans->repeat = 0;
 		timer_stop(&trans->timer);
@@ -1602,7 +1604,15 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 			break;
 		}
 		valid_frame = 1;
-		cnetz->scrambler = telegramm->betriebs_art;
+		if (cnetz->scrambler != telegramm->betriebs_art) {
+			/* if the scrambler mode changes, we wait 3 frames */
+			/* i guess that this was implemented to prevent switching by one corrupt frame. */
+			if (++cnetz->scrambler_switch >= 3) {
+				cnetz->scrambler = telegramm->betriebs_art;
+				cnetz->scrambler_switch = 0;
+			}
+		} else
+			cnetz->scrambler_switch = 0;
 		break;
 	case OPCODE_AT_V:
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
@@ -1616,7 +1626,6 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		/* if already received this frame, if we are releasing */
 		if (trans->state == TRANS_AT || trans->state == TRANS_AF)
 			break;
-		cnetz->scrambler = telegramm->betriebs_art;
 		trans_new_state(trans, TRANS_AT);
 		trans->repeat = 0;
 		timer_stop(&trans->timer);

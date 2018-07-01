@@ -107,6 +107,7 @@ typedef struct cnetz {
 	double			fsk_tx_phase;		/* current bit position */
 	uint64_t		fsk_tx_scount;		/* sample counter (used to sync multiple channels) */
 	int			scrambler;		/* 0 = normal speech, 1 = scrambled speech */
+	int			scrambler_switch;	/* counter to switch after 3 frames with new scrabler state */
 	sample_t		*dsp_speech_buffer;	/* samples in one chunk */
 	int			dsp_speech_length;	/* number of samples */
 	int			dsp_speech_pos;		/* current position in buffer */
