@@ -46,6 +46,8 @@ static const char *param_ja[] = {
 static const char *param_betriebsart[] = {
 	"Sprache klar",
 	"Sprache invertiert",
+	"Illegaler Parameter 2",
+	"Illegaler Parameter 3",
 };
 
 static const char *param_gespraechsende[] = {
@@ -56,8 +58,8 @@ static const char *param_gespraechsende[] = {
 static const char *param_frequenz[2048];
 
 static const char *param_anpassen[] = {
-	"Sendeleistung erhoehen",
 	"Sendeleistung erniedrigen",
+	"Sendeleistung erhoehen",
 };
 
 static const char *param_opcode[64];
@@ -277,7 +279,7 @@ static struct definition_parameter {
 	{ 'b',"Chipkarten-FuTelG-Bit",			 1, param_chipkarte },
 	{ 'c',"Ausloesegrund",				 2, param_ausloesegrund },
 	{ 'd',"Bedingte Genauigkeit der FuFSt",		 1, param_genauigkeit },
-	{ 'e',"Entfernung",				 8, param_entfernung },
+	{ 'e',"Entfernung (generic value)",		 8, NULL },
 	{ 'f',"Grenzwert fuer Einbuchen und Umbuchen",	 3, param_grenzwert },
 	{ 'g',"Nachbarschafts-Prioritaets-Bit",		 1, NULL },
 	{ 'h',"Herstellerkennung",			 5, NULL },
