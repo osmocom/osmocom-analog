@@ -12,7 +12,7 @@
 
 <ul>
 	<li><a href="#intro">Introduction</a>
-	<li><a href="#limesdr">LimeSDR</a>
+	<li><a href="#limesdr">LimeSDR and LimeSDR Mini</a>
 	<li><a href="#uhd">UHD</a>
 	<li><a href="#mchan">Multiple channels</a>
 </ul>
@@ -63,7 +63,7 @@ and so on...
 
 <p class="toppic">
 <a name="limesdr"></a>
-LimeSDR
+LimeSDR and LimeSDR-Mini
 </p>
 
 <p>
@@ -76,7 +76,7 @@ In case of B-Netz, I use the following parameters:
 
 # bnetz --sdr-soapy \
 	--sdr-rx-antenna LNAL \
-        --sdr-rx-gain 30 \
+        --sdr-rx-gain 25 \
         --sdr-tx-gain 30 \
         --sdr-samplerate 5000000 \
 	--sdr-bandwidth 15000000 \
@@ -106,6 +106,27 @@ But still you can add any SDR option afterwards to set or modify them.
 <pre>
 
 # bnetz --limesdr -k 17
+
+</pre>
+
+<p>
+LimeSDR-Mini does need some different antenna setting:
+</p>
+
+<pre>
+	...
+	--sdr-rx-antenna LNAW \
+	--sdr-tx-antenna BAND2 \
+	...
+</pre>
+
+<p>
+As above, you can have these options pre-set by just a single option: <b>--limesdr-mini</b>
+</p>
+
+<pre>
+
+# bnetz --limesdr-mini -k 17
 
 </pre>
 

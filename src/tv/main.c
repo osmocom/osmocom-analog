@@ -121,11 +121,14 @@ void print_help(const char *arg0)
 #ifdef HAVE_SDR
 	printf("    --limesdr\n");
 	printf("        Auto-select several required options for LimeSDR\n");
+	printf("    --limesdr-mini\n");
+	printf("        Auto-select several required options for LimeSDR Mini\n");
 	sdr_config_print_help();
 #endif
 }
 
 #define OPT_LIMESDR		1100
+#define OPT_LIMESDR_MINI	1101
 
 static void add_options(void)
 {
@@ -143,6 +146,7 @@ static void add_options(void)
 	option_add('I', "station-id", 1);
 #ifdef HAVE_SDR
 	option_add(OPT_LIMESDR, "limesdr", 0);
+	option_add(OPT_LIMESDR_MINI, "limesdr-mini", 0);
 	sdr_config_add_options();
 #endif
 }
@@ -203,6 +207,19 @@ static int handle_options(int short_option, int argi, char **argv)
 		{
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
+				"--sdr-tx-gain", "50",
+				"--sdr-lo-offset", "-3000000",
+				"--sdr-bandwidth", "60000000",
+				"-s", "13750000",
+			};
+			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
+			return options_command_line(argc_lime, argv_lime, handle_options);
+		}
+	case OPT_LIMESDR_MINI:
+		{
+			char *argv_lime[] = { argv[0],
+				"--sdr-soapy",
+				"--sdr-tx-antenna", "BAND2",
 				"--sdr-tx-gain", "50",
 				"--sdr-lo-offset", "-3000000",
 				"--sdr-bandwidth", "60000000",

@@ -142,10 +142,13 @@ void print_help(const char *arg0)
 	printf("        It uses the 'Pilot-tone' system.\n");
 	printf("    --limesdr\n");
 	printf("        Auto-select several required options for LimeSDR\n");
+	printf("    --limesdr-mini\n");
+	printf("        Auto-select several required options for LimeSDR Mini\n");
 	sdr_config_print_help();
 }
 
 #define OPT_LIMESDR		1100
+#define OPT_LIMESDR_MINI	1101
 
 static void add_options(void)
 {
@@ -164,6 +167,7 @@ static void add_options(void)
 	option_add('E', "emphasis", 1);
 	option_add('S', "stereo", 0);
 	option_add(OPT_LIMESDR, "limesdr", 0);
+	option_add(OPT_LIMESDR_MINI, "limesdr-mini", 0);
         sdr_config_add_options();
 }
 
@@ -237,6 +241,20 @@ static int handle_options(int short_option, int argi, char **argv)
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
 				"--sdr-rx-antenna", "LNAL",
+				"--sdr-rx-gain", "50",
+				"--sdr-tx-gain", "50",
+				"--sdr-samplerate", "5000000",
+				"--sdr-bandwidth", "15000000",
+			};
+			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
+			return options_command_line(argc_lime, argv_lime, handle_options);
+		}
+	case OPT_LIMESDR_MINI:
+		{
+			char *argv_lime[] = { argv[0],
+				"--sdr-soapy",
+				"--sdr-rx-antenna", "LNAW",
+				"--sdr-tx-antenna", "BAND2",
 				"--sdr-rx-gain", "50",
 				"--sdr-tx-gain", "50",
 				"--sdr-samplerate", "5000000",

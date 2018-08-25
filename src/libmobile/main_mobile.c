@@ -154,6 +154,8 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 #ifdef HAVE_SDR
 	printf("    --limesdr\n");
 	printf("        Auto-select several required options for LimeSDR\n");
+	printf("    --limesdr-mini\n");
+	printf("        Auto-select several required options for LimeSDR Mini\n");
 	sdr_config_print_help();
 #endif
 	printf("\nNetwork specific options:\n");
@@ -180,6 +182,7 @@ void main_mobile_print_hotkeys(void)
 #define	OPT_CALL_SAMPLERATE	1005
 #define	OPT_MNCC_NAME		1006
 #define	OPT_LIMESDR		1100
+#define	OPT_LIMESDR_MINI	1101
 
 void main_mobile_add_options(void)
 {
@@ -209,6 +212,7 @@ void main_mobile_add_options(void)
 	option_add(OPT_READ_TX_WAVE, "read-tx-wave", 1);
 #ifdef HAVE_SDR
 	option_add(OPT_LIMESDR, "limesdr", 0);
+	option_add(OPT_LIMESDR_MINI, "limesdr-mini", 0);
 	sdr_config_add_options();
 #endif
 };
@@ -322,6 +326,21 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 				"--sdr-soapy",
 				"--sdr-rx-antenna", "LNAL",
 				"--sdr-rx-gain", "30",
+				"--sdr-tx-gain", "30",
+				"--sdr-samplerate", "5000000",
+				"--sdr-bandwidth", "15000000",
+				"-s", "200000",
+			};
+			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
+			return options_command_line(argc_lime, argv_lime, main_mobile_handle_options);
+		}
+	case OPT_LIMESDR_MINI:
+		{
+			char *argv_lime[] = { argv[0],
+				"--sdr-soapy",
+				"--sdr-rx-antenna", "LNAW",
+				"--sdr-tx-antenna", "BAND2",
+				"--sdr-rx-gain", "25",
 				"--sdr-tx-gain", "30",
 				"--sdr-samplerate", "5000000",
 				"--sdr-bandwidth", "15000000",
