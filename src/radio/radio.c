@@ -177,6 +177,10 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 		PDEBUG(DRADIO, DEBUG_ERROR, "No sound card support compiled in!\n");
 		goto error;
 #endif
+	} else {
+		rc = -ENOTSUP;
+		PDEBUG(DRADIO, DEBUG_ERROR, "No RX audio sink is selected, try \"--audio-device default\"!\n");
+		goto error;
 	}
 
 	/* check if sample rate is too low */
