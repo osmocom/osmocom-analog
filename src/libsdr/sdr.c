@@ -51,6 +51,9 @@ enum paging_signal;
 /* usable bandwidth of IQ rate, because no filter is perfect */
 #define USABLE_BANDWIDTH	0.75
 
+/* limit the IQ level to prevent IIR filter from exceeding range of -1 .. 1 */
+#define LIMIT_IQ_LEVEL		0.95
+
 int sdr_rx_overflow = 0;
 
 typedef struct sdr_thread {
@@ -446,8 +449,8 @@ static void *sdr_write_child(void *arg)
 			out = sdr->thread_write.out;
 			for (s = 0, ss = 0; s < num; s++) {
 				for (o = 0; o < sdr->oversample; o++) {
-					sdr->thread_write.buffer2[ss++] = sdr->thread_write.buffer[out];
-					sdr->thread_write.buffer2[ss++] = sdr->thread_write.buffer[out + 1];
+					sdr->thread_write.buffer2[ss++] = sdr->thread_write.buffer[out] * LIMIT_IQ_LEVEL;
+					sdr->thread_write.buffer2[ss++] = sdr->thread_write.buffer[out + 1] * LIMIT_IQ_LEVEL;
 				}
 				out = (out + 2) % sdr->thread_write.buffer_size;
 			}
