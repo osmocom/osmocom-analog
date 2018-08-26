@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	if (!set_clock_speed && !measure_speed) {
+	if (!set_clock_speed && !measure_speed && !use_sdr) {
 		printf("No clock speed given. You need to measure clock using '-M' and later correct clock using '-S <rx ppm>,<tx ppm>'. See documentation for help!\n\n");
 		mandatory = 1;
 	}
