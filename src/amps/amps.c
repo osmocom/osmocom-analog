@@ -571,19 +571,12 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 		goto error;
 	}
 
-	/* init audio processing */
-	rc = dsp_init_sender(amps, tolerant);
-	if (rc < 0) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init audio processing!\n");
-		goto error;
-	}
-
-	if (polarity < 0)
-		amps->flip_polarity = 1;
-
 	amps->chan_type = chan_type;
 	memcpy(&amps->si, si, sizeof(amps->si));
 	amps->sat = sat;
+
+	if (polarity < 0)
+		amps->flip_polarity = 1;
 
 	amps->pre_emphasis = pre_emphasis;
 	amps->de_emphasis = de_emphasis;
@@ -591,6 +584,13 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	rc = init_emphasis(&amps->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
 		goto error;
+
+	/* init audio processing */
+	rc = dsp_init_sender(amps, tolerant);
+	if (rc < 0) {
+		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init audio processing!\n");
+		goto error;
+	}
 
 	/* go into idle state */
 	amps_go_idle(amps);

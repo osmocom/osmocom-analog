@@ -66,6 +66,7 @@
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
 #define TX_PEAK_DIALTONE	1.0	/* dial tone peak FIXME: Not found in the specs! */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
+#define SUPER_PRINT		2	/* print supervisory signal measurement every 0.5 seconds */
 #define SUPER_LOST_COUNT	4	/* number of measures to loose supervisory signal */
 #define SUPER_DETECT_COUNT	6	/* number of measures to detect supervisory signal */
 #define MUTE_DURATION		0.280	/* a tiny bit more than two frames */
@@ -153,6 +154,10 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 
 	nmt->dmp_frame_level = display_measurements_add(&nmt->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
 	nmt->dmp_frame_quality = display_measurements_add(&nmt->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	if (nmt->sysinfo.chan_type == CHAN_TYPE_TC || nmt->sysinfo.chan_type == CHAN_TYPE_AC_TC || nmt->sysinfo.chan_type == CHAN_TYPE_CC_TC) {
+		nmt->dmp_super_level = display_measurements_add(&nmt->sender.dispmeas, "Super Level", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+		nmt->dmp_super_quality = display_measurements_add(&nmt->sender.dispmeas, "Super Quality", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	}
 
 	return 0;
 }
@@ -257,17 +262,28 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 /* compare supervisory signal against noise floor on 3900 Hz */
 static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 {
-	double result[2], quality;
+	double result[2], level, quality;
 
 	audio_goertzel(&nmt->super_goertzel[nmt->supervisory - 1], samples, length, 0, &result[0], 1);
 	audio_goertzel(&nmt->super_goertzel[4], samples, length, 0, &result[1], 1); /* noise floor detection */
+
+	/* normalize supervisory level */
+	level = result[0] / 0.63662 / TX_PEAK_SUPER;
 
 	quality = (result[0] - result[1]) / result[0];
 	if (quality < 0)
 		quality = 0;
 
-	if (nmt->state == STATE_ACTIVE)
-		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", result[0] / 0.63662 / TX_PEAK_SUPER * 100.0, quality * 100.0);
+	if (nmt->state == STATE_ACTIVE) {
+		if (++nmt->super_print == SUPER_PRINT) {
+			nmt->super_print = 0;
+			PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", level * 100.0, quality * 100.0);
+		}
+		/* update measurements (if dmp_* params are NULL, we omit this) */
+		display_measurements_update(nmt->dmp_super_level, level * 100.0, 0.0);
+		display_measurements_update(nmt->dmp_super_quality, quality * 100.0, 0.0);
+	}
+
 	if (quality > 0.7) {
 		if (nmt->super_detected == 0) {
 			nmt->super_detect_count++;

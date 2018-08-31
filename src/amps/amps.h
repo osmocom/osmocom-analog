@@ -50,6 +50,8 @@ typedef struct amps {
 	/* display measurements */
 	dispmeasparam_t		*dmp_frame_level;
 	dispmeasparam_t		*dmp_frame_quality;
+	dispmeasparam_t		*dmp_sat_level;
+	dispmeasparam_t		*dmp_sat_quality;
 
 	/* system info */
 	amps_si			si;
@@ -144,6 +146,7 @@ typedef struct amps {
 	int			sat_filter_pos;		/* current sample position in filter_spl */
 	double			sat_phaseshift65536[3];	/* how much the phase of sine wave changes per sample */
 	double			sat_phase65536;		/* current phase */
+	int			sat_print;		/* counts when to print result */
 	int			dtx_state;		/* 1 = high (fast sat detection) */
 	int			sat_detected;		/* current detection state flag (delayed detection) */
 	int			sat_detect_count;	/* current number of consecutive detections/losses */

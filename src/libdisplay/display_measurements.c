@@ -347,9 +347,9 @@ void display_measurements(double elapsed)
 
 	/* count and check if we need to display this time */
 	time_elapsed += elapsed;
-	if (time_elapsed < DISPLAY_INTERVAL)
+	if (time_elapsed < DISPLAY_MEAS_INTERVAL)
 		return;
-	time_elapsed = fmod(time_elapsed, DISPLAY_INTERVAL);
+	time_elapsed = fmod(time_elapsed, DISPLAY_MEAS_INTERVAL);
 
 	print_measurements(1);
 }

@@ -117,6 +117,7 @@
 #define TACS_BITRATE		8000
 #define SAT_DURATION		0.05	/* duration of SAT signal measurement */
 #define SAT_QUALITY		0.85	/* quality needed to detect SAT signal */
+#define SAT_PRINT		10	/* print sat measurement every 0.5 seconds */
 #define DTX_LEVEL		0.50	/* SAT level needed to mute/unmute */
 #define SIG_QUALITY		0.80	/* quality needed to detect Signaling Tone */
 #define SAT_DETECT_COUNT	5	/* number of measures to detect SAT signal (specs say 250ms) */
@@ -269,6 +270,10 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 
 	amps->dmp_frame_level = display_measurements_add(&amps->sender.dispmeas, "Frame Level", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
 	amps->dmp_frame_quality = display_measurements_add(&amps->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	if (amps->chan_type == CHAN_TYPE_VC || amps->chan_type == CHAN_TYPE_CC_PC_VC) {
+		amps->dmp_sat_level = display_measurements_add(&amps->sender.dispmeas, "SAT Level", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
+		amps->dmp_sat_quality = display_measurements_add(&amps->sender.dispmeas, "SAT Quality", "%.1f %%", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	}
 
 	return 0;
 
@@ -733,35 +738,54 @@ static void sender_receive_frame(amps_t *amps, sample_t *samples, int length)
 /* compare supervisory signal against noise floor on 5800 Hz */
 static void sat_decode(amps_t *amps, sample_t *samples, int length)
 {
-	double result[3], quality[2];
+	double result[3], sat_quality, sig_quality, sat_level, sig_level;
 
 	audio_goertzel(&amps->sat_goertzel[amps->sat], samples, length, 0, &result[0], 1);
 	audio_goertzel(&amps->sat_goertzel[3], samples, length, 0, &result[1], 1);
 	audio_goertzel(&amps->sat_goertzel[4], samples, length, 0, &result[2], 1);
 
-	quality[0] = (result[0] - result[1]) / result[0];
-	if (quality[0] < 0)
-		quality[0] = 0;
-	quality[1] = (result[2] - result[1]) / result[2];
-	if (quality[1] < 0)
-		quality[1] = 0;
+	/* normalize sat level and signaling tone level */
+	sat_level = result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION) / 0.63662;
+	sig_level = result[2] / ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 0.63662;
 
-	PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION) / 0.63662 * 100.0, quality[0] * 100.0);
-	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
-		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", result[2] / ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 0.63662 * 100.0, quality[1] * 100.0);
+	/* get normalized quality of SAT and signaling tone */
+	sat_quality = (result[0] - result[1]) / result[0];
+	if (sat_quality < 0)
+		sat_quality = 0;
+	sig_quality = (result[2] - result[1]) / result[2];
+	if (sig_quality < 0)
+		sig_quality = 0;
+
+	/* debug SAT */
+	if (++amps->sat_print == SAT_PRINT) {
+		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", sat_level * 100.0, sat_quality * 100.0);
+		amps->sat_print = 0;
 	}
-	if (quality[0] > SAT_QUALITY && result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION) / 0.63662 > DTX_LEVEL)
+
+	/* update measurements (if dmp_* params are NULL, we omit this) */
+	display_measurements_update(amps->dmp_sat_level, sat_level * 100.0, 0.0);
+	display_measurements_update(amps->dmp_sat_quality, sat_quality * 100.0, 0.0);
+
+	/* debug signaling tone */
+	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
+		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", sig_level * 100.0, sig_quality * 100.0);
+	}
+
+	/* mute if SAT quality or level is below threshold */
+	if (sat_quality > SAT_QUALITY && sat_level > DTX_LEVEL)
 		amps->dtx_state = 1;
 	else
 		amps->dtx_state = 0;
-	if (quality[0] > SAT_QUALITY) {
+
+	/* detect SAT */
+	if (sat_quality > SAT_QUALITY) {
 		if (amps->sat_detected == 0) {
 			amps->sat_detect_count++;
 			if (amps->sat_detect_count == SAT_DETECT_COUNT) {
 				amps->sat_detected = 1;
 				amps->sat_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 * 100.0, quality[0] * 100.0);
-				amps_rx_sat(amps, 1, quality[0]);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT signal detected with level=%.0f%%, quality=%.0f%%.\n", sat_level * 100.0, sat_quality * 100.0);
+				amps_rx_sat(amps, 1, sat_quality);
 			}
 		} else
 			amps->sat_detect_count = 0;
@@ -777,14 +801,16 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 		} else
 			amps->sat_detect_count = 0;
 	}
-	if (quality[1] > SIG_QUALITY) {
+
+	/* detect signaling tone */
+	if (sig_quality > SIG_QUALITY) {
 		if (amps->sig_detected == 0) {
 			amps->sig_detect_count++;
 			if (amps->sig_detect_count == SIG_DETECT_COUNT) {
 				amps->sig_detected = 1;
 				amps->sig_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", result[2] / 0.63662 * 100.0, quality[1] * 100.0);
-				amps_rx_signaling_tone(amps, 1, quality[1]);
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", sig_level * 100.0, sig_quality * 100.0);
+				amps_rx_signaling_tone(amps, 1, sig_quality);
 			}
 		} else
 			amps->sig_detect_count = 0;

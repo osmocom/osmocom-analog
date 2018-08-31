@@ -1,5 +1,6 @@
-#define DISPLAY_INTERVAL	0.04	/* time (in seconds) for each interval */
-#define DISPLAY_PARAM_HISTORIES	25	/* number of intervals (should result in one seconds) */
+#define DISPLAY_MEAS_INTERVAL	0.1	/* time (in seconds) for each measurement values interval */
+#define DISPLAY_INTERVAL	0.04	/* time (in seconds) for each other interval */
+#define DISPLAY_PARAM_HISTORIES	10	/* number of intervals (should result in one seconds) */
 
 #define MAX_DISPLAY_WIDTH 1024
 

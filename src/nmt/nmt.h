@@ -94,6 +94,8 @@ typedef struct nmt {
 	/* display measurements */
 	dispmeasparam_t		*dmp_frame_level;
 	dispmeasparam_t		*dmp_frame_quality;
+	dispmeasparam_t		*dmp_super_level;
+	dispmeasparam_t		*dmp_super_quality;
 
 	/* features */
 	int			compandor;		/* if compandor shall be used */
@@ -109,6 +111,7 @@ typedef struct nmt {
 	int			super_filter_pos;	/* current sample position in filter_spl */
 	double			super_phaseshift65536[4];/* how much the phase of sine wave changes per sample */
 	double			super_phase65536;	/* current phase */
+	int			super_print;		/* counts when to print result */
 	double			dial_phaseshift65536;	/* how much the phase of sine wave changes per sample */
 	double			dial_phase65536;	/* current phase */
 	uint16_t		rx_sync;		/* shift register to detect sync */
