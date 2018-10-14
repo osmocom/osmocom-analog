@@ -43,7 +43,6 @@
 #define MAX_DEVIATION	4000.0
 #define MAX_MODULATION	3000.0
 #define DBM0_DEVIATION	4000.0	/* deviation of dBm0 at 1 kHz */
-#define COMPANDOR_0DB	1.0	/* A level of 0dBm (1.0) shall be unaccected */
 #define FSK_DEVIATION	(2500.0 / DBM0_DEVIATION) /* no emphasis */
 #define MAX_DISPLAY	1.4	/* something above dBm0, no emphasis */
 #define BITRATE		5280.0	/* bits per second */
@@ -151,7 +150,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 
 	/* init compandor, according to C-Netz specs, attack and recovery time
 	 * shall not exceed according to ITU G.162 */
-	init_compandor(&cnetz->cstate, 8000, 5.0, 22.5, COMPANDOR_0DB);
+	init_compandor(&cnetz->cstate, 8000, 5.0, 22.5);
 
 	/* use this filter to compensate level changes between two subsequent audio chunks */
 	RC = 1.0 / (CUT_OFF_OFFSET * 2.0 *3.14);

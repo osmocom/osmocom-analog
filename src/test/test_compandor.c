@@ -72,7 +72,7 @@ int main(void)
 	sample_t samples[SAMPLERATE * 2];
 	int f;
 
-	init_compandor(&cstate, SAMPLERATE, ATTACK_MS, RECOVERY_MS, 1.0);
+	init_compandor(&cstate, SAMPLERATE, ATTACK_MS, RECOVERY_MS);
 
 	for (f = 0; f < 3; f++) {
 		/* -16 and -4 dB */

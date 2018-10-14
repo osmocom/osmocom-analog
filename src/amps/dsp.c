@@ -99,7 +99,6 @@
 
 #define PI			M_PI
 
-#define COMPANDOR_0DB		1.0     /* A level of 0dBm (1.0) shall be unaccected */
 #define AMPS_MAX_DEVIATION	8000.0
 #define AMPS_MAX_MODULATION	10000.0
 #define AMPS_DBM0_DEVIATION	2900.0  /* deviation of dBm0 at 1 kHz */
@@ -195,7 +194,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	int half;
 
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
-	init_compandor(&amps->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
+	init_compandor(&amps->cstate, 8000, 3.0, 13.5);
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
 

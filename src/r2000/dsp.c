@@ -48,7 +48,6 @@
 #define MAX_DEVIATION		2500.0
 #define MAX_MODULATION		2550.0
 #define DBM0_DEVIATION		1500.0	/* deviation of dBm0 at 1 kHz */
-#define COMPANDOR_0DB		1.0	/* A level of 0dBm (1.0) shall be unaccected */
 #define TX_PEAK_FSK		(1425.0 / 1500.0 * 1000.0 / DBM0_DEVIATION) /* with emphasis */
 #define TX_PEAK_SUPER		(300.0 / DBM0_DEVIATION) /* no emphasis */
 #define FSK_BIT_RATE		1200.0
@@ -76,7 +75,7 @@ static void super_receive_bit(void *inst, int bit, double quality, double level)
 int dsp_init_sender(r2000_t *r2000)
 {
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
-	init_compandor(&r2000->cstate, 8000, 3.0, 13.5, COMPANDOR_0DB);
+	init_compandor(&r2000->cstate, 8000, 3.0, 13.5);
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
