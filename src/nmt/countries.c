@@ -95,7 +95,8 @@ static struct nmt_frequency frq_900_tr[] = {
 
 /* channel allocation used in France */
 static struct nmt_frequency frq_900_f[] = {
-	{   1,	540,	440.0125,	0.025,	1.0,	-10.0,	0 },
+	{   400,578,	440.025,	0.025,	1.0,	-10.0,	0 },
+	{   1423,1601,	440.0125,	0.025,	1.0,	-10.0,	0 },
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
@@ -146,6 +147,14 @@ static struct nmt_country {
 	{ 900, 1, 2, 1,9,	"SE",	"Sweden",		"Telia Mobitel",		frq_900_scandinavia },
 	{ 900, 1, 3, 1,9,	"NO",	"Norway",		"Telenor Mobil",		frq_900_scandinavia },
 	{ 900, 1, 4, 1,9,	"FI",	"Finland",		"Telecom Finland",		frq_900_scandinavia },
+	{ 900, 1,10, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 1, 1,9,	"F1",	"France (Group 1)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 2, 1,9,	"F2",	"France (Group 2)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 3, 1,9,	"F3",	"France (Group 3)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 4, 1,9,	"F4",	"France (Group 4)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 5, 1,9,	"F5",	"France (Group 5)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 6, 1,9,	"F6",	"France (Group 6)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 7, 1,9,	"F7",	"France (Group 7)",	"France Telecom",		frq_900_f },
 	/* untested... */
 	{ 450, 0, 8, 8,8,	"MAL",	"Malaysia",		"Jabatan Telekom Malaysia",	frq_450_mal },
 	{ 450, 0, 4, 1,9,	"T",	"Thailand",		"Telephone Organization of Thailand",frq_450_t_ri },
@@ -156,14 +165,6 @@ static struct nmt_country {
 	{ 900, 0, 5, 1,9,	"CH",	"Switzerland",		"PTT",				frq_900_scandinavia },
 	{ 900, 0, 6, 1,15,	"NL",	"Netherlands",		"Royal Dutch Post & Telecom",	frq_900_nl },
 	{ 900, 0, 1, 1,9,	"TR",	"Turkey",		"Turkcell",			frq_900_tr },
-	{ 900, 0,10, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 1, 1,9,	"F1",	"France (Group 1)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 2, 1,9,	"F2",	"France (Group 2)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 3, 1,9,	"F3",	"France (Group 3)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 4, 1,9,	"F4",	"France (Group 4)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 5, 1,9,	"F5",	"France (Group 5)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 6, 1,9,	"F6",	"France (Group 6)",	"France Telecom",		frq_900_f },
-	{ 900, 0, 7, 1,9,	"F7",	"France (Group 7)",	"France Telecom",		frq_900_f },
 	{ 0,0, 0, 0,0,		NULL,	NULL,			NULL,				NULL }
 };
 
@@ -171,10 +172,10 @@ void nmt_country_list(int nmt_system)
 {
 	int i, j;
 	int ch_from = 0, ch_to = 0;
-	char ch_string[32];
+	char ch_string[256];
 
-	printf("TA from\tTA to\tYY Code\tChannels\tShort\tCountry (Provider)\n");
-	printf("--------------------------------------------------------------------------------\n");
+	printf("TA from\tTA to\tYY Code\tChannels\t\tShort\tCountry (Provider)\n");
+	printf("------------------------------------------------------------------------------------------------\n");
 	for (i = 0; nmt_country[i].short_name; i++) {
 		if (nmt_system != nmt_country[i].system)
 			continue;
@@ -182,14 +183,14 @@ void nmt_country_list(int nmt_system)
 		if (nmt_country[i].first_ta != nmt_country[i].last_ta)
 			printf("%s,%d", nmt_country[i].short_name, nmt_country[i].last_ta);
 		printf("\t%02x..%02x", (nmt_country[i].y << 4) | nmt_country[i].first_ta, (nmt_country[i].y << 4) | nmt_country[i].last_ta);
+		ch_string[0] = '\0';
 		for (j = 0; nmt_country[i].nmt_frequency[j].first_frequency; j++) {
-			if (j == 0 || nmt_country[i].nmt_frequency[j].first_channel < ch_from)
-				ch_from = nmt_country[i].nmt_frequency[j].first_channel;
-			if (j == 0 || nmt_country[i].nmt_frequency[j].last_channel > ch_to)
-				ch_to = nmt_country[i].nmt_frequency[j].last_channel;
+			ch_from = nmt_country[i].nmt_frequency[j].first_channel;
+			ch_to = nmt_country[i].nmt_frequency[j].last_channel;
+			sprintf(strchr(ch_string, '\0'), "%d-%d ", ch_from, ch_to);
 		}
-		sprintf(ch_string, "%d-%d                ", ch_from, ch_to);
-		ch_string[14] = '\0';
+		strcpy(strchr(ch_string, '\0'), "                              ");
+		ch_string[30] = '\0';
 		printf("\t%s", ch_string);
 		if (nmt_country[i].long_name[0])
 			printf("\t%s (%s)\n", nmt_country[i].long_name, nmt_country[i].provider_name);
