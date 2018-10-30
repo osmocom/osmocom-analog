@@ -46,8 +46,8 @@ uint64_t nmt_encode_channel(int nmt_system, int channel, int power)
 		value |= power << 9;
 	} else {
 		/* interleaved channels are indicated in traffic area */
-		if (value >= 1024)
-			value -= 1024;
+		if (channel >= 1024)
+			channel -= 1024;
 		value |= channel;
 		/* if channel >= 512, set upper bit */
 		if (value & 0x200)
