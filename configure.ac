@@ -15,7 +15,7 @@ AC_PROG_MAKE_SET
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
-LT_INIT
+AC_PROG_RANLIB
 
 dnl checks for header files
 AC_HEADER_STDC
@@ -34,7 +34,7 @@ AC_ARG_WITH([soapy], [AS_HELP_STRING([--with-soapy], [compile with SoapySDR driv
 AC_ARG_WITH([imagemagick], [AS_HELP_STRING([--with-imagemagick], [compile with ImageMagick support @<:@default=check@:>@]) ], [], [with_imagemagick="check"])
 AS_IF([test "x$with_alsa" != xno], [PKG_CHECK_MODULES(ALSA, alsa >= 1.0, with_alsa=yes, with_alsa=no)])
 AS_IF([test "x$with_uhd" != xno], [PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, with_sdr=yes with_uhd=yes, with_uhd=no)])
-AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.6.0, with_sdr=yes with_soapy=yes, with_soapy=no)])
+AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.5.0, with_sdr=yes with_soapy=yes, with_soapy=no)])
 AS_IF([test "x$with_imagemagick" != xno], [PKG_CHECK_MODULES(IMAGEMAGICK, ImageMagick >= 7.0.0, with_imagemagick=yes, with_imagemagick=no)])
 AM_CONDITIONAL(HAVE_ALSA, test "x$with_alsa" == "xyes" )
 AM_CONDITIONAL(HAVE_UHD, test "x$with_uhd" == "xyes" )

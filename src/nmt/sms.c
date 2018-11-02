@@ -252,7 +252,7 @@ static int encode_userdata(uint8_t *data, const char *message)
 	j = 0;
 	pos = 0;
 	for (i = 0; message[i]; i++) {
-		if (message[i] >= 0)
+		if ((int8_t)message[i] >= 0)
 			character = message[i]; /* 0..127 */
 		else
 			character = '?'; /* 128..255 */

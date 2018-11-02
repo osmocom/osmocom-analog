@@ -1,0 +1,24 @@
+You need to have the folowing packages install:
+
+* automake, gcc for compilation
+* libasound2 for sound card support, which is what you need!
+* libsoapysdr or libuhd (developer) to support SDR
+* -> SoapySDR modules to support your SDR hardware
+* libimagamagick version >= 7 (developer) optionally for TV image display
+
+
+Generate "configure":
+
+$ autoreconf -if
+
+
+Run "configure":
+
+$ ./configure
+
+
+Build and install:
+
+$ make
+$ make install
+
