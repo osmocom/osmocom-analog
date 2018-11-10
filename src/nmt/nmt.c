@@ -1272,7 +1272,7 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 		}
 		if (trans->dms_call) {
 			time_t ti = time(NULL);
-			sms_deliver(nmt, sms_ref, trans->caller_id, trans->caller_type, SMS_PLAN_ISDN_TEL, ti, trans->sms_string);
+			sms_deliver(nmt, sms_ref, trans->caller_id, trans->caller_type, SMS_PLAN_ISDN_TEL, ti, 1, trans->sms_string);
 		}
 	}
 }

@@ -163,9 +163,9 @@ static int encode_address(uint8_t *data, const char *address, uint8_t type, uint
 }
 
 /* encode time stamp */
-static int encode_time(uint8_t *data, time_t timestamp)
+static int encode_time(uint8_t *data, time_t timestamp, int local)
 {
-	struct tm *tm = localtime(&timestamp);
+	struct tm *tm = (local) ? localtime(&timestamp) : gmtime(&timestamp);
 	int length = 0;
 	uint8_t digit1, digit2;
 	int quarters, sign;
@@ -227,7 +227,7 @@ static int encode_time(uint8_t *data, time_t timestamp)
 	data[length++] = (digit2 << 4) | digit1;
 
 	/* zone */
-	quarters = timezone / 900;
+	quarters = (local) ? (timezone / 900) : 0;
 	if (quarters < 0) {
 		quarters = -quarters;
 		sign = 1;
@@ -244,7 +244,7 @@ static int encode_time(uint8_t *data, time_t timestamp)
 static int encode_userdata(uint8_t *data, const char *message)
 {
 	int length = 1;
-	char character;
+	uint8_t character;
 	int i, j, pos;
 
 	PDEBUG(DSMS, DEBUG_DEBUG, "Encode user data '%s'\n", message);
@@ -286,7 +286,7 @@ static int encode_userdata(uint8_t *data, const char *message)
 }
 
 /* deliver SMS (SC->MS) */
-int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, time_t timestamp, const char *message)
+int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, time_t timestamp, int local, const char *message)
 {
 	uint8_t data[256], *tpdu_length;
 	int length = 0;
@@ -321,7 +321,7 @@ int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_
 	length += encode_address(data + length, orig_address, orig_type, orig_plan); /* TP-OA */
 	data[length++] = 0; /* TP-PID */
 	data[length++] = 0; /* TP-DCS */
-	length += encode_time(data + length, timestamp);
+	length += encode_time(data + length, timestamp, local);
 	length += encode_userdata(data + length, message);
 
 	/* RP length */

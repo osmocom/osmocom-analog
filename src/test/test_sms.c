@@ -39,7 +39,7 @@ static const uint8_t test_mt_sms_data[] = {
 	0x0a, 0x91, 0x94, 0x84, 0x14, 0xa6, 0x86,
 	0x00,
 	0x00,
-	0x69, 0x21, 0x42, 0x31, 0x53, 0x4a, 0x48,
+	0x69, 0x21, 0x42, 0x21, 0x53, 0x4a, 0x00,
 	0x09, 0xcd, 0x77, 0xda, 0x0d, 0x6a, 0xbe, 0xd3, 0x6e,
 };
 
@@ -63,7 +63,7 @@ static uint8_t dms_buffer[256];
 static int dms_buffer_count;
 void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 {
-//	int i;
+	int i;
 
 	/* skip deliver report */
 	if (length == 13)
@@ -73,10 +73,11 @@ void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 	memcpy(dms_buffer, data, length);
 
 	assert(length == sizeof(test_mt_sms_data), "Expecting SMS binary data length to match");
+	for (i = 0; i < length; i++) {
+		if (data[i] != test_mt_sms_data[i])
+			printf("offset: %d  got: 0x%02x  expecting: 0x%02x\n", i, data[i], test_mt_sms_data[i]);
+	}
 	assert(!memcmp(data, test_mt_sms_data, length), "Expecting SMS binary data to match");
-//	for (i = 0; i < length; i++) {
-//		printf("(0x%02x)\n", data[i]);
-//	}
 }
 
 void sms_release(nmt_t *nmt)
@@ -116,7 +117,7 @@ int main(void)
 
 	/* deliver */
 	printf("(delivering SMS)\n");
-	rc = sms_deliver(nmt, 1, test_mt_sms_tel, SMS_TYPE_INTERNATIONAL, SMS_PLAN_ISDN_TEL, test_mt_sms_time, test_mt_sms_text);
+	rc = sms_deliver(nmt, 1, test_mt_sms_tel, SMS_TYPE_INTERNATIONAL, SMS_PLAN_ISDN_TEL, test_mt_sms_time, 0, test_mt_sms_text);
 	assert(rc == 0, "Expecting sms_deliver() to return 0");
 
 	sms_cleanup_sender(nmt);
