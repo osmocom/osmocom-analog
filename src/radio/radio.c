@@ -146,7 +146,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 
 	if (rx_wave_file) {
 		/* open wave file */
-		radio->rx_audio_samplerate = 4800;
+		radio->rx_audio_samplerate = 48000;
 		radio->rx_audio_channels = (radio->stereo) ? 2 : 1;
 		rc = wave_create_record(&radio->wave_rx_rec, rx_wave_file, radio->rx_audio_samplerate, radio->rx_audio_channels, 1.0);
 		if (rc < 0) {
@@ -177,10 +177,12 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 		PDEBUG(DRADIO, DEBUG_ERROR, "No sound card support compiled in!\n");
 		goto error;
 #endif
+#if 0
 	} else {
 		rc = -ENOTSUP;
 		PDEBUG(DRADIO, DEBUG_ERROR, "No RX audio sink is selected, try \"--audio-device default\"!\n");
 		goto error;
+#endif
 	}
 
 	/* check if sample rate is too low */

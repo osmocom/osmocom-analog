@@ -131,7 +131,7 @@ void print_help(const char *arg0)
 	printf(" -D --deviation\n");
 	printf("        Give deviation of frequency modulated signal. (default %.0f)\n", deviation);
 	printf(" -I --modulation-index 0..1\n");
-	printf("        Give modulation index of amplitude modulated signal. (default %.0f)\n", deviation);
+	printf("        Give modulation index of amplitude modulated signal. (default %.0f)\n", modulation_index);
 	printf(" -E --emphasis <uS> | 0\n");
 	printf("        Use given time constant of pre- and de-emphasis for frequency\n");
 	printf("        modulation. Give 0 to disbale. (default = %.0f uS)\n", time_constant_us);
