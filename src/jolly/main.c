@@ -182,6 +182,8 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
+	/* inits */
+	fm_init(fast_math);
 	init_voice(samplerate);
 	dsp_init();
 
@@ -201,6 +203,9 @@ fail:
 	/* destroy transceiver instance */
 	while (sender_head)
 		jolly_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

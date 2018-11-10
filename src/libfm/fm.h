@@ -1,5 +1,8 @@
 #include "../libfilter/iir_filter.h"
 
+int fm_init(int fast_math);
+void fm_exit(void);
+
 enum fm_mod_state {
 	MOD_STATE_OFF,		/* transmitter off, no IQ vector */
 	MOD_STATE_ON,		/* transmitter on, FM modulated IQ vector */
@@ -12,7 +15,6 @@ typedef struct fm_mod {
 	double offset;		/* offset to calculated center frequency */
 	double amplitude;	/* how much amplitude to add to the buff */
 	double phase;		/* current phase of FM (used to shift and modulate ) */
-	double *sin_tab;	/* sine/cosine table for modulation */
 	enum fm_mod_state state;/* state of transmit power */
 	double *ramp_tab;	/* half cosine ramp up */
 	int ramp;		/* current ramp position */
@@ -29,7 +31,6 @@ typedef struct fm_demod {
 	double rot;		/* rotation step per sample to shift rx frequency (used to shift) */
 	double last_phase;	/* last phase of FM (used to demodulate) */
 	iir_filter_t lp[2];	/* filters received IQ signal */
-	double *sin_tab;	/* sine/cosine table rotation */
 } fm_demod_t;
 
 int fm_demod_init(fm_demod_t *demod, double samplerate, double offset, double bandwidth);

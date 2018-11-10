@@ -29,6 +29,7 @@
 #include "../libtimer/timer.h"
 #include "../libmobile/call.h"
 #include "../liboptions/options.h"
+#include "../libfm/fm.h"
 #include "freiton.h"
 #include "besetztton.h"
 #include "anetz.h"
@@ -176,6 +177,8 @@ int main(int argc, char *argv[])
 	if (!loopback)
 		print_image();
 
+	/* inits */
+	fm_init(fast_math);
 	dsp_init();
 	anetz_init();
 
@@ -195,6 +198,9 @@ fail:
 	/* destroy transceiver instance */
 	while (sender_head)
 		anetz_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

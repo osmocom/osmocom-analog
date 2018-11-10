@@ -29,6 +29,7 @@
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
 #include "../liboptions/options.h"
+#include "../libfm/fm.h"
 #include "cnetz.h"
 #include "database.h"
 #include "sysinfo.h"
@@ -459,7 +460,8 @@ int main(int argc, char *argv[])
 	if (!loopback)
 		print_image();
 
-	/* init functions */
+	/* inits */
+	fm_init(fast_math);
 	scrambler_init();
 	if (futln_sperre_start >= 0) {
 		teilnehmergruppensperre = futln_sperre_start;
@@ -560,6 +562,9 @@ fail:
 	/* destroy transceiver instance */
 	while (sender_head)
 		cnetz_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

@@ -41,6 +41,7 @@
 #include "../libsdr/sdr_config.h"
 #endif
 #include "../liboptions/options.h"
+#include "../libfm/fm.h"
 
 #define DEFAULT_LO_OFFSET -1000000.0
 
@@ -69,6 +70,7 @@ static int send_patterns = 1;
 static int release_on_disconnect = 1;
 int loopback = 0;
 int rt_prio = 1;
+int fast_math = 0;
 const char *write_tx_wave = NULL;
 const char *write_rx_wave = NULL;
 const char *read_tx_wave = NULL;
@@ -133,7 +135,7 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        use one combined control+voice channel and one voice channels.\n");
 	printf(" -m --mncc-sock\n");
 	printf("        Disable built-in call contol and offer socket (to LCR)\n");
-	printf(" --mncc-name <name>\n");
+	printf("    --mncc-name <name>\n");
 	printf("        '/tmp/bsc_mncc' is used by default, give name to change socket to\n");
 	printf("        '/tmp/bsc_mncc_<name>'. (Useful to run multiple networks.)\n");
 	printf(" -t --tones 0 | 1\n");
@@ -143,6 +145,8 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");
 	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
+	printf("    --fast-math\n");
+	printf("        Use fast math approximation for slow CPU / ARM based systems.\n");
 	printf("    --write-rx-wave <file>\n");
 	printf("        Write received audio to given wave file.\n");
 	printf("    --write-tx-wave <file>\n");
@@ -181,6 +185,7 @@ void main_mobile_print_hotkeys(void)
 #define	OPT_READ_TX_WAVE	1004
 #define	OPT_CALL_SAMPLERATE	1005
 #define	OPT_MNCC_NAME		1006
+#define	OPT_FAST_MATH		1007
 #define	OPT_LIMESDR		1100
 #define	OPT_LIMESDR_MINI	1101
 
@@ -206,6 +211,7 @@ void main_mobile_add_options(void)
 	option_add('t', "tones", 1);
 	option_add('l', "loopback", 1);
 	option_add('r', "realtime", 1);
+	option_add(OPT_FAST_MATH, "fast-math", 0);
 	option_add(OPT_WRITE_RX_WAVE, "write-rx-wave", 1);
 	option_add(OPT_WRITE_TX_WAVE, "write-tx-wave", 1);
 	option_add(OPT_READ_RX_WAVE, "read-rx-wave", 1);
@@ -306,6 +312,9 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'r':
 		rt_prio = atoi(argv[argi]);
+		break;
+	case OPT_FAST_MATH:
+		fast_math = 1;
 		break;
 	case OPT_WRITE_RX_WAVE:
 		write_rx_wave = strdup(argv[argi]);

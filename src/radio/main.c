@@ -44,6 +44,7 @@ void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 int rt_prio = 1;
+int fast_math = 0;
 
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
@@ -140,6 +141,8 @@ void print_help(const char *arg0)
 	printf(" -S --stereo\n");
 	printf("        Enables stereo carrier for frequency modulated UHF broadcast.\n");
 	printf("        It uses the 'Pilot-tone' system.\n");
+	printf("    --fast-math\n");
+	printf("        Use fast math approximation for slow CPU / ARM based systems.\n");
 	printf("    --limesdr\n");
 	printf("        Auto-select several required options for LimeSDR\n");
 	printf("    --limesdr-mini\n");
@@ -147,6 +150,7 @@ void print_help(const char *arg0)
 	sdr_config_print_help();
 }
 
+#define	OPT_FAST_MATH		1007
 #define OPT_LIMESDR		1100
 #define OPT_LIMESDR_MINI	1101
 
@@ -166,6 +170,7 @@ static void add_options(void)
 	option_add('I', "modulation-index", 1);
 	option_add('E', "emphasis", 1);
 	option_add('S', "stereo", 0);
+	option_add(OPT_FAST_MATH, "fast-math", 0);
 	option_add(OPT_LIMESDR, "limesdr", 0);
 	option_add(OPT_LIMESDR_MINI, "limesdr-mini", 0);
         sdr_config_add_options();
@@ -236,6 +241,9 @@ static int handle_options(int short_option, int argi, char **argv)
 	case 'S':
 		stereo = 1;
 		break;
+	case OPT_FAST_MATH:
+		fast_math = 1;
+		break;
 	case OPT_LIMESDR:
 		{
 			char *argv_lime[] = { argv[0],
@@ -296,6 +304,10 @@ int main(int argc, char *argv[])
 		print_help(argv[0]);
 		exit(0);
 	}
+
+	/* global inits */
+	fm_init(fast_math);
+	am_init(fast_math);
 
 	rc = sdr_configure(samplerate);
 	if (rc < 0)
@@ -481,6 +493,10 @@ error:
 	if (sdr)
 		sdr_close(sdr);
 	radio_exit(&radio);
+
+	/* global exits */
+	fm_exit();
+	am_exit();
 
 	return 0;
 }

@@ -473,6 +473,9 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
+	/* inits */
+	fm_init(0);
+
 	if (!wave_file) {
 #ifdef HAVE_SDR
 		rc = sdr_configure(samplerate);
@@ -498,6 +501,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Unknown command '%s', use '-h' for help!\n", argv[argi]);
 		return -EINVAL;
 	}
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

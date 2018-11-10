@@ -1,7 +1,10 @@
 #include "../libfilter/iir_filter.h"
 
+int am_init(int fast_math);
+void am_exit(void);
+
 typedef struct am_mod {
-	double	phasestep;	/* angle to rotate vector per sample */
+	double	rot;		/* angle to rotate vector per sample */
 	double	phase;		/* current phase */
 	double	gain;		/* gain to be multiplied to amplitude */
 	double	bias;		/* DC offset to add (carrier amplitude) */
@@ -12,9 +15,8 @@ void am_mod_exit(am_mod_t *mod);
 void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, int num, float *baseband);
 
 typedef struct am_demod {
-	double	phasestep;	/* angle to rotate vector per sample */
+	double	rot;		/* angle to rotate vector per sample */
 	double	phase;		/* current rotation phase (used to shift) */
-	double	last_phase;	/* last phase of FM (used to demodulate) */
 	iir_filter_t lp[3];	/* filters received IQ signal/carrier */
 	double	gain;		/* gain to be expected from amplitude */
 	double	bias;		/* DC offset to be expected (carrier amplitude) */

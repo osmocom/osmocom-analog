@@ -26,12 +26,55 @@
 #include "../libsample/sample.h"
 #include "fm.h"
 
-//#define FAST_SINE
+static int has_init = 0;
+static int fast_math = 0;
+static float *sin_tab = NULL, *cos_tab = NULL;
+
+/* global init */
+int fm_init(int _fast_math)
+{
+	fast_math = _fast_math;
+
+	if (fast_math) {
+		int i;
+
+		sin_tab = calloc(65536+16384, sizeof(*sin_tab));
+		if (!sin_tab) {
+			fprintf(stderr, "No mem!\n");
+			return -ENOMEM;
+		}
+		cos_tab = sin_tab + 16384;
+
+		/* generate sine and cosine */
+		for (i = 0; i < 65536+16384; i++)
+			sin_tab[i] = sin(2.0 * M_PI * (double)i / 65536.0);
+	}
+
+	has_init = 1;
+
+	return 0;
+}
+
+/* global exit */
+void fm_exit(void)
+{
+	if (sin_tab) {
+		free(sin_tab);
+		sin_tab = cos_tab = NULL;
+	}
+
+	has_init = 0;
+}
 
 /* init FM modulator */
 int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitude)
 {
 	int i;
+
+	if (!has_init) {
+		fprintf(stderr, "libfm was not initialized, plese fix!\n");
+		abort();
+	}
 
 	memset(mod, 0, sizeof(*mod));
 	mod->samplerate = samplerate;
@@ -51,19 +94,6 @@ int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitud
 		mod->ramp_tab[i] = 0.5 - cos(M_PI * i / mod->ramp_length) / 2.0;
 	mod->ramp_tab[0] = mod->ramp_tab[1] / 2.0; /* never be 0 */
 
-#ifdef FAST_SINE
-	mod->sin_tab = calloc(65536+16384, sizeof(*mod->sin_tab));
-	if (!mod->sin_tab) {
-		fprintf(stderr, "No mem!\n");
-		fm_mod_exit(mod);
-		return -ENOMEM;
-	}
-
-	/* generate sine and cosine */
-	for (i = 0; i < 65536+16384; i++)
-		mod->sin_tab[i] = sin(2.0 * M_PI * (double)i / 65536.0) * amplitude;
-#endif
-
 	return 0;
 }
 
@@ -73,10 +103,6 @@ void fm_mod_exit(fm_mod_t *mod)
 		free(mod->ramp_tab);
 		mod->ramp_tab = NULL;
 	}
-	if (mod->sin_tab) {
-		free(mod->sin_tab);
-		mod->sin_tab = NULL;
-	}
 }
 
 /* do frequency modulation of samples and add them to existing baseband */
@@ -85,11 +111,7 @@ void fm_modulate_complex(fm_mod_t *mod, sample_t *frequency, uint8_t *power, int
 	double dev, rate, phase, offset;
 	int ramp, ramp_length;
 	double *ramp_tab;
-#ifdef FAST_SINE
-	double *sin_tab, *cos_tab;
-#else
 	double amplitude;
-#endif
 
 	rate = mod->samplerate;
 	phase = mod->phase;
@@ -97,12 +119,7 @@ void fm_modulate_complex(fm_mod_t *mod, sample_t *frequency, uint8_t *power, int
 	ramp = mod->ramp;
 	ramp_length = mod->ramp_length;
 	ramp_tab = mod->ramp_tab;
-#ifdef FAST_SINE
-	sin_tab = mod->sin_tab;
-	cos_tab = mod->sin_tab + 16384;
-#else
 	amplitude = mod->amplitude;
-#endif
 
 again:
 	switch (mod->state) {
@@ -118,23 +135,23 @@ again:
 			dev = offset + *frequency++;
 			power++;
 			length--;
-#ifdef FAST_SINE
-			phase += 65536.0 * dev / rate;
-			if (phase < 0.0)
-				phase += 65536.0;
-			else if (phase >= 65536.0)
-				phase -= 65536.0;
-			*baseband++ += cos_tab[(uint16_t)phase];
-			*baseband++ += sin_tab[(uint16_t)phase];
-#else
-			phase += 2.0 * M_PI * dev / rate;
-			if (phase < 0.0)
-				phase += 2.0 * M_PI;
-			else if (phase >= 2.0 * M_PI)
-				phase -= 2.0 * M_PI;
-			*baseband++ += cos(phase) * amplitude;
-			*baseband++ += sin(phase) * amplitude;
-#endif
+			if (fast_math) {
+				phase += 65536.0 * dev / rate;
+				if (phase < 0.0)
+					phase += 65536.0;
+				else if (phase >= 65536.0)
+					phase -= 65536.0;
+				*baseband++ += cos_tab[(uint16_t)phase] * amplitude;
+				*baseband++ += sin_tab[(uint16_t)phase] * amplitude;
+			} else {
+				phase += 2.0 * M_PI * dev / rate;
+				if (phase < 0.0)
+					phase += 2.0 * M_PI;
+				else if (phase >= 2.0 * M_PI)
+					phase -= 2.0 * M_PI;
+				*baseband++ += cos(phase) * amplitude;
+				*baseband++ += sin(phase) * amplitude;
+			}
 		}
 		break;
 	case MOD_STATE_RAMP_DOWN:
@@ -151,23 +168,23 @@ again:
 			dev = offset + *frequency++;
 			power++;
 			length--;
-#ifdef FAST_SINE
-			phase += 65536.0 * dev / rate;
-			if (phase < 0.0)
-				phase += 65536.0;
-			else if (phase >= 65536.0)
-				phase -= 65536.0;
-			*baseband++ += cos_tab[(uint16_t)phase] * ramp_tab[ramp];
-			*baseband++ += sin_tab[(uint16_t)phase] * ramp_tab[ramp];
-#else
-			phase += 2.0 * M_PI * dev / rate;
-			if (phase < 0.0)
-				phase += 2.0 * M_PI;
-			else if (phase >= 2.0 * M_PI)
-				phase -= 2.0 * M_PI;
-			*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
-			*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
-#endif
+			if (fast_math) {
+				phase += 65536.0 * dev / rate;
+				if (phase < 0.0)
+					phase += 65536.0;
+				else if (phase >= 65536.0)
+					phase -= 65536.0;
+				*baseband++ += cos_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
+				*baseband++ += sin_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
+			} else {
+				phase += 2.0 * M_PI * dev / rate;
+				if (phase < 0.0)
+					phase += 2.0 * M_PI;
+				else if (phase >= 2.0 * M_PI)
+					phase -= 2.0 * M_PI;
+				*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
+				*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
+			}
 			ramp--;
 		}
 		break;
@@ -186,23 +203,23 @@ again:
 			 * we still continue with a carrier, but it has very low amplitude.
 			 * the low amplitude is set in ramp_tab[0]
 			 */
-#ifdef FAST_SINE
-			phase += 65536.0 * dev / rate;
-			if (phase < 0.0)
-				phase += 65536.0;
-			else if (phase >= 65536.0)
-				phase -= 65536.0;
-			*baseband++ += cos_tab[(uint16_t)phase] * ramp_tab[ramp];
-			*baseband++ += sin_tab[(uint16_t)phase] * ramp_tab[ramp];
-#else
-			phase += 2.0 * M_PI * dev / rate;
-			if (phase < 0.0)
-				phase += 2.0 * M_PI;
-			else if (phase >= 2.0 * M_PI)
-				phase -= 2.0 * M_PI;
-			*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
-			*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
-#endif
+			if (fast_math) {
+				phase += 65536.0 * dev / rate;
+				if (phase < 0.0)
+					phase += 65536.0;
+				else if (phase >= 65536.0)
+					phase -= 65536.0;
+				*baseband++ += cos_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
+				*baseband++ += sin_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
+			} else {
+				phase += 2.0 * M_PI * dev / rate;
+				if (phase < 0.0)
+					phase += 2.0 * M_PI;
+				else if (phase >= 2.0 * M_PI)
+					phase -= 2.0 * M_PI;
+				*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
+				*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
+			}
 		}
 		break;
 	case MOD_STATE_RAMP_UP:
@@ -220,23 +237,23 @@ again:
 			dev = offset + *frequency++;
 			power++;
 			length--;
-#ifdef FAST_SINE
-			phase += 65536.0 * dev / rate;
-			if (phase < 0.0)
-				phase += 65536.0;
-			else if (phase >= 65536.0)
-				phase -= 65536.0;
-			*baseband++ += cos_tab[(uint16_t)phase] * ramp_tab[ramp];
-			*baseband++ += sin_tab[(uint16_t)phase] * ramp_tab[ramp];
-#else
-			phase += 2.0 * M_PI * dev / rate;
-			if (phase < 0.0)
-				phase += 2.0 * M_PI;
-			else if (phase >= 2.0 * M_PI)
-				phase -= 2.0 * M_PI;
-			*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
-			*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
-#endif
+			if (fast_math) {
+				phase += 65536.0 * dev / rate;
+				if (phase < 0.0)
+					phase += 65536.0;
+				else if (phase >= 65536.0)
+					phase -= 65536.0;
+				*baseband++ += cos_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
+				*baseband++ += sin_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
+			} else {
+				phase += 2.0 * M_PI * dev / rate;
+				if (phase < 0.0)
+					phase += 2.0 * M_PI;
+				else if (phase >= 2.0 * M_PI)
+					phase -= 2.0 * M_PI;
+				*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
+				*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
+			}
 			ramp++;
 		}
 		break;
@@ -251,41 +268,62 @@ again:
 /* init FM demodulator */
 int fm_demod_init(fm_demod_t *demod, double samplerate, double offset, double bandwidth)
 {
+	if (!has_init) {
+		fprintf(stderr, "libfm was not initialized, plese fix!\n");
+		abort();
+	}
+
 	memset(demod, 0, sizeof(*demod));
 	demod->samplerate = samplerate;
-#ifdef FAST_SINE
-	demod->rot = 65536.0 * -offset / samplerate;
-#else
-	demod->rot = 2 * M_PI * -offset / samplerate;
-#endif
+
+	if (fast_math)
+		demod->rot = 65536.0 * -offset / samplerate;
+	else
+		demod->rot = 2 * M_PI * -offset / samplerate;
 
 	/* use fourth order (2 iter) filter, since it is as fast as second order (1 iter) filter */
 	iir_lowpass_init(&demod->lp[0], bandwidth / 2.0, samplerate, 2);
 	iir_lowpass_init(&demod->lp[1], bandwidth / 2.0, samplerate, 2);
 
-#ifdef FAST_SINE
-	int i;
-
-	demod->sin_tab = calloc(65536+16384, sizeof(*demod->sin_tab));
-	if (!demod->sin_tab) {
-		fprintf(stderr, "No mem!\n");
-		return -ENOMEM;
-	}
-
-	/* generate sine and cosine */
-	for (i = 0; i < 65536+16384; i++)
-		demod->sin_tab[i] = sin(2.0 * M_PI * (double)i / 65536.0);
-#endif
-
 	return 0;
 }
 
-void fm_demod_exit(fm_demod_t *demod)
+void fm_demod_exit(fm_demod_t __attribute__ ((unused)) *demod)
 {
-	if (demod->sin_tab) {
-		free(demod->sin_tab);
-		demod->sin_tab = NULL;
+}
+
+static inline float fast_tan(float z)
+{
+	const float n1 = 0.97239411f;
+	const float n2 = -0.19194795f;
+	return (n1 + n2 * z * z) * z;
+}
+
+static inline float fast_atan2(float y, float x)
+{
+	if (x != 0.0) {
+		if (fabsf(x) > fabsf(y)) {
+			const float z = y / x;
+			if (x > 0.0) /* atan2(y,x) = atan(y/x) if x > 0 */
+				return fast_tan(z);
+			else if (y >= 0.0) /* atan2(y,x) = atan(y/x) + PI if x < 0, y >= 0 */
+				return fast_tan(z) + M_PI;
+			else /* atan2(y,x) = atan(y/x) - PI if x < 0, y < 0 */
+				return fast_tan(z) - M_PI;
+		} else { /* Use property atan(y/x) = PI/2 - atan(x/y) if |y/x| > 1 */
+			const float z = x / y;
+			if (y > 0.0) /* atan2(y,x) = PI/2 - atan(x/y) if |y/x| > 1, y > 0 */
+				return -fast_tan(z) + M_PI_2;
+			else /* atan2(y,x) = -PI/2 - atan(x/y) if |y/x| > 1, y < 0 */
+				return -fast_tan(z) - M_PI_2;
+		}
+	} else {
+		if (y > 0.0) /* x = 0, y > 0 */
+			return M_PI_2;
+		else if (y < 0.0) /* x = 0, y < 0 */
+			return -M_PI_2;
 	}
+	return 0.0; /* x,y = 0. return 0, because NaN would harm further processing  */
 }
 
 /* do frequency demodulation of baseband and write them to samples */
@@ -295,36 +333,29 @@ void fm_demodulate_complex(fm_demod_t *demod, sample_t *frequency, int length, f
 	double _sin, _cos;
 	sample_t i, q;
 	int s, ss;
-#ifdef FAST_SINE
-	double *sin_tab, *cos_tab;
-#endif
 
 	rate = demod->samplerate;
 	phase = demod->phase;
 	rot = demod->rot;
-#ifdef FAST_SINE
-	sin_tab = demod->sin_tab;
-	cos_tab = demod->sin_tab + 16384;
-#endif
 	for (s = 0, ss = 0; s < length; s++) {
 		phase += rot;
 		i = baseband[ss++];
 		q = baseband[ss++];
-#ifdef FAST_SINE
-		if (phase < 0.0)
-			phase += 65536.0;
-		else if (phase >= 65536.0)
-			phase -= 65536.0;
-		_sin = sin_tab[(uint16_t)phase];
-		_cos = cos_tab[(uint16_t)phase];
-#else
-		if (phase < 0.0)
-			phase += 2.0 * M_PI;
-		else if (phase >= 2.0 * M_PI)
-			phase -= 2.0 * M_PI;
-		_sin = sin(phase);
-		_cos = cos(phase);
-#endif
+		if (fast_math) {
+			if (phase < 0.0)
+				phase += 65536.0;
+			else if (phase >= 65536.0)
+				phase -= 65536.0;
+			_sin = sin_tab[(uint16_t)phase];
+			_cos = cos_tab[(uint16_t)phase];
+		} else {
+			if (phase < 0.0)
+				phase += 2.0 * M_PI;
+			else if (phase >= 2.0 * M_PI)
+				phase -= 2.0 * M_PI;
+			_sin = sin(phase);
+			_cos = cos(phase);
+		}
 		I[s] = i * _cos - q * _sin;
 		Q[s] = i * _sin + q * _cos;
 	}
@@ -333,7 +364,10 @@ void fm_demodulate_complex(fm_demod_t *demod, sample_t *frequency, int length, f
 	iir_process(&demod->lp[1], Q, length);
 	last_phase = demod->last_phase;
 	for (s = 0; s < length; s++) {
-		phase = atan2(Q[s], I[s]);
+		if (fast_math)
+			phase = fast_atan2(Q[s], I[s]);
+		else
+			phase = atan2(Q[s], I[s]);
 		dev = (phase - last_phase) / 2 / M_PI;
 		last_phase = phase;
 		if (dev < -0.49)
@@ -352,35 +386,28 @@ void fm_demodulate_real(fm_demod_t *demod, sample_t *frequency, int length, samp
 	double _sin, _cos;
 	sample_t i;
 	int s, ss;
-#ifdef FAST_SINE
-	double *sin_tab, *cos_tab;
-#endif
 
 	rate = demod->samplerate;
 	phase = demod->phase;
 	rot = demod->rot;
-#ifdef FAST_SINE
-	sin_tab = demod->sin_tab;
-	cos_tab = demod->sin_tab + 16384;
-#endif
 	for (s = 0, ss = 0; s < length; s++) {
 		phase += rot;
 		i = baseband[ss++];
-#ifdef FAST_SINE
-		if (phase < 0.0)
-			phase += 65536.0;
-		else if (phase >= 65536.0)
-			phase -= 65536.0;
-		_sin = sin_tab[(uint16_t)phase];
-		_cos = cos_tab[(uint16_t)phase];
-#else
-		if (phase < 0.0)
-			phase += 2.0 * M_PI;
-		else if (phase >= 2.0 * M_PI)
-			phase -= 2.0 * M_PI;
-		_sin = sin(phase);
-		_cos = cos(phase);
-#endif
+		if (fast_math) {
+			if (phase < 0.0)
+				phase += 65536.0;
+			else if (phase >= 65536.0)
+				phase -= 65536.0;
+			_sin = sin_tab[(uint16_t)phase];
+			_cos = cos_tab[(uint16_t)phase];
+		} else {
+			if (phase < 0.0)
+				phase += 2.0 * M_PI;
+			else if (phase >= 2.0 * M_PI)
+				phase -= 2.0 * M_PI;
+			_sin = sin(phase);
+			_cos = cos(phase);
+		}
 		I[s] = i * _cos;
 		Q[s] = i * _sin;
 	}
@@ -389,7 +416,10 @@ void fm_demodulate_real(fm_demod_t *demod, sample_t *frequency, int length, samp
 	iir_process(&demod->lp[1], Q, length);
 	last_phase = demod->last_phase;
 	for (s = 0; s < length; s++) {
-		phase = atan2(Q[s], I[s]);
+		if (fast_math)
+			phase = fast_atan2(Q[s], I[s]);
+		else
+			phase = atan2(Q[s], I[s]);
 		dev = (phase - last_phase) / 2 / M_PI;
 		last_phase = phase;
 		if (dev < -0.49)

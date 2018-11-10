@@ -176,7 +176,8 @@ int main(int argc, char *argv[])
 	if (!loopback)
 		print_image();
 
-	/* init functions */
+	/* inits */
+	fm_init(fast_math);
 	dsp_init();
 	bnetz_init();
 
@@ -203,6 +204,9 @@ fail:
 	/* destroy transceiver instance */
 	while(sender_head)
 		bnetz_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

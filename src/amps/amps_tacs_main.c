@@ -27,6 +27,7 @@
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
 #include "../liboptions/options.h"
+#include "../libfm/fm.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
@@ -329,7 +330,8 @@ int main_amps_tacs(int argc, char *argv[])
 		print_image();
 	sid_stations(sid);
 
-	/* init functions */
+	/* inits */
+	fm_init(fast_math);
 	dsp_init();
 	init_frame();
 
@@ -399,6 +401,9 @@ fail:
 	/* destroy transceiver instance */
 	while (sender_head)
 		amps_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

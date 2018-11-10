@@ -381,7 +381,8 @@ int main(int argc, char *argv[])
 	if (!loopback)
 		print_image();
 
-	/* init functions */
+	/* inits */
+	fm_init(fast_math);
 	rc = init_frame();
 	if (rc < 0) {
 		fprintf(stderr, "Failed to setup frames. Quitting!\n");
@@ -418,6 +419,9 @@ fail:
 	/* destroy transceiver instance */
 	while (sender_head)
 		nmt_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

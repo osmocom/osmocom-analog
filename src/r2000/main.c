@@ -335,7 +335,8 @@ int main(int argc, char *argv[])
 	if (!loopback && crins != 3)
 		print_image();
 
-	/* init functions */
+	/* inits */
+	fm_init(fast_math);
 	dsp_init();
 
 	/* SDR always requires emphasis */
@@ -372,6 +373,9 @@ fail:
 	/* destroy transceiver instance */
 	while (sender_head)
 		r2000_destroy(sender_head);
+
+	/* exits */
+	fm_exit();
 
 	return 0;
 }

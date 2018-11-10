@@ -14,6 +14,7 @@ extern int do_de_emphasis;
 extern double rx_gain;
 extern int loopback;
 extern int rt_prio;
+extern int fast_math;
 extern const char *write_rx_wave;
 extern const char *write_tx_wave;
 extern const char *read_rx_wave;

@@ -63,6 +63,8 @@ int main(void)
 	int f, i;
 	double target;
 
+	fm_init(0);
+
 	dtmf_decode_init(&dtmf_dec, NULL, recv_digit, SAMPLERATE, db2level(0), db2level(-30.0));
 
 	for (f = 0; f < 8; f++) {
@@ -108,6 +110,8 @@ int main(void)
 	}
 
 	dtmf_decode_exit(&dtmf_dec);
+
+	fm_exit();
 
 	return 0;
 }
