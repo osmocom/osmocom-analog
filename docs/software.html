@@ -349,6 +349,43 @@ Refer to NMT section about configuring an NMT network.
 I highly recommend to use an SDR instead of radios connected to a sound card.
 </p>
 
+<p class="toppic">
+Increase performance on ARM CPUs (Raspberry PI)
+</p>
+
+<p>
+To see the CPU consumption of all threads, enter "top -H" into the shell:
+</p>
+
+<pre>
+top - 14:55:31 up 1 day, 22:27,  3 users,  load average: 0,75, 0,19, 0,06
+Threads: 113 total,   2 running,  66 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 30,2 us,  2,1 sy,  0,0 ni, 55,7 id, 11,2 wa,  0,0 hi,  0,7 si,  0,0 st
+KiB Mem :   949448 total,   523164 free,   134692 used,   291592 buff/cache
+KiB Swap:   102396 total,   102396 free,        0 used.   751960 avail Mem 
+
+  PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND     
+11375 root      -2   0  165148  97956   4940 R 91,1 10,3   0:24.29 nmt         
+11391 root      -2   0  165148  97956   4940 S 13,8 10,3   0:04.00 nmt-sdr_tx  
+11392 root      -2   0  165148  97956   4940 S 13,8 10,3   0:03.91 nmt-sdr_rx  
+11380 root      20   0  165148  97956   4940 S  2,3 10,3   0:01.20 nmt         
+11390 root      -2   0  165148  97956   4940 S  2,0 10,3   0:00.58 nmt         
+11389 root      -2   0  165148  97956   4940 S  1,3 10,3   0:00.51 nmt         
+11441 root      20   0   10056   3544   3096 R  1,3  0,4   0:00.19 top         
+19768 root      20   0   10056   3272   2752 S  1,3  0,3  19:16.50 top         
+   67 root      20   0       0      0      0 S  0,3  0,0   0:02.80 mmcqd/0     
+ 9913 root      20   0       0      0      0 I  0,3  0,0   0:00.04 kworker/u8:0
+    1 root      20   0   28004   5916   4788 S  0,0  0,6   0:04.68 systemd     
+...
+</pre>
+
+<p>
+In this case I use a Raspberry PI and run NMT network with multiple channels.
+It is almost at the limit, since I have around 90% CPU usage of the main thread.
+It wouldn't work to have 2 transceivers at 200KHz Bandwidth without fast math approximation.
+Use '--fast-math' to increase processing speed.
+</p>
+
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
 </td></tr></table></center>
 </body>
