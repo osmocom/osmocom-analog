@@ -657,7 +657,7 @@ void amps_go_idle(amps_t *amps)
 			frame_length = 247; /* bits after sync (RECC) */
 		amps_set_dsp_mode(amps, DSP_MODE_FRAME_RX_FRAME_TX, frame_length);
 	} else {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Entering IDLE state, sending test tone on %s.\n", chan_type_long_name(amps->chan_type));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Entering IDLE state (sending silence / no RF) on %s.\n", chan_type_long_name(amps->chan_type));
 		amps_set_dsp_mode(amps, DSP_MODE_OFF, 0);
 	}
 }

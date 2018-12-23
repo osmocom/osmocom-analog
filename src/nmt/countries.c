@@ -174,8 +174,8 @@ void nmt_country_list(int nmt_system)
 	int ch_from = 0, ch_to = 0;
 	char ch_string[256];
 
-	printf("TA from\tTA to\tYY Code\tChannels\t\tShort\tCountry (Provider)\n");
-	printf("------------------------------------------------------------------------------------------------\n");
+	printf("TA from\tTA to\tYY Code\tChannels\t\t\tShort\tCountry (Provider)\n");
+	printf("--------------------------------------------------------------------------------------------------------\n");
 	for (i = 0; nmt_country[i].short_name; i++) {
 		if (nmt_system != nmt_country[i].system)
 			continue;
@@ -197,6 +197,7 @@ void nmt_country_list(int nmt_system)
 		else
 			printf("\n");
 	}
+	printf("\nFor listing channels of the NMT %d system use '-N %d' as first option.\n", 1350 - nmt_system, 1350 - nmt_system);
 }
 
 int nmt_country_by_short_name(int nmt_system, const char *short_name)

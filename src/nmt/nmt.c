@@ -140,11 +140,11 @@ static struct nmt_channels {
 	const char *short_name;
 	const char *long_name;
 } nmt_channels[] = {
-	{ 0,	CHAN_TYPE_CC,		"CC",	"calling channel (incomming calls)" },
-	{ 900,	CHAN_TYPE_CCA,		"CCA",	"calling channel for group A mobiles with odd secret key (incomming calls)" },
-	{ 900,	CHAN_TYPE_CCB,		"CCB",	"calling channel for group B mobiles with even secret key (incomming calls)" },
-	{ 0,	CHAN_TYPE_TC,		"TC",	"traffic channel (outgoing calls)" },
-	{ 900,	CHAN_TYPE_AC_TC,	"AC/TC","combined access & traffic channel (outgoing calls)" },
+	{ 0,	CHAN_TYPE_CC,		"CC",	"calling channel (calls to mobile)" },
+	{ 900,	CHAN_TYPE_CCA,		"CCA",	"calling channel for group A mobiles with odd secret key (calls to mobile)" },
+	{ 900,	CHAN_TYPE_CCB,		"CCB",	"calling channel for group B mobiles with even secret key (calls to mobile)" },
+	{ 0,	CHAN_TYPE_TC,		"TC",	"traffic channel (calls from mobile)" },
+	{ 900,	CHAN_TYPE_AC_TC,	"AC/TC","combined access & traffic channel (calls from mobile)" },
 	{ 0,	CHAN_TYPE_CC_TC,	"CC/TC","combined calling & traffic channel (both way calls)" },
 	{ 0,	CHAN_TYPE_TEST,	"TEST",	"test channel" },
 	{ 0,	0, NULL, NULL }
@@ -1078,6 +1078,7 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 	} else
 		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Staying on CC/TC channel #%d.\n", tc->sender.kanal);
 	nmt_new_state(tc, STATE_MT_IDENT);
+	tc->tx_frame_count = 0;
 
 	/* assign channel on 'nmt' to 'tc' */
 	frame->mt = NMT_MESSAGE_2b;

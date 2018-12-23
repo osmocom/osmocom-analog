@@ -550,7 +550,7 @@ void r2000_go_idle(r2000_t *r2000)
 		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Entering IDLE state, no transmission at relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
 		r2000_set_dsp_mode(r2000, DSP_MODE_OFF, -1);
 	} else {
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Entering IDLE state, sending idle frames of relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Entering IDLE state, sending idle frames at relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
 		r2000_set_dsp_mode(r2000, DSP_MODE_FRAME, (r2000->sender.loopback) ? r2000_encode_super(r2000) : -1);
 	}
 	r2000_new_state(r2000, STATE_IDLE);

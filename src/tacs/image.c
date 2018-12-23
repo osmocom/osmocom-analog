@@ -3,6 +3,7 @@
 #include "image.h"
 
 const char *image[] = {
+	"",
 	"               @B(@g#@B)",
 	"                @g#",
 	"                #",
