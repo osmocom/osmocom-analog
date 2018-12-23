@@ -182,6 +182,31 @@ static struct bnetz_stations {
 	{ "Neidhausen",			9,	"50o02 06o04" },
 	{ "Luxemburg",			9,	"49o37 06o08" },
 
+	/* Netherlands */
+	{ "Groningen",			8,	"53o13 06o34" },
+	{ "Leeuwarden",			2,	"53o12 05o48" },
+	{ "Winschoten",			1,	"53o09 07o02" },
+	{ "Smilde",			5,	"52o57 06o27" },
+	{ "Tjerkgaast",			4,	"52o54 05o41" },
+	{ "Wieringermeer",		8,	"52o51 05o02" },
+	{ "Coevorden",			9,	"52o40 06o44" },
+	{ "Alkmaar",			9,	"52o38 04o45" },
+	{ "Lelystad",			3,	"52o31 05o28" },
+	{ "Zwolle",			6,	"52o31 06o05" },
+	{ "Amsterdam",			5,	"52o22 04o53" },
+	{ "Markelo",			2,	"52o15 06o42" },
+	{ "Ugchelen",			8,	"52o10 05o54" },
+	{ "Utrecht",			1,	"52o05 05o07" },
+	{ "'s-Gravenzande",		6,	"52o00 04o10" },
+	{ "Rotterdam",			4,	"51o56 04o29" },
+	{ "Megen",			7,	"51o49 05o34" },
+	{ "Loon op Zand",		9,	"51o38 05o05" },
+	{ "Roosendaal",			2,	"51o32 04o27" },
+	{ "Goes",			5,	"51o30 03o53" },
+	{ "Mierlo",			5,	"51o26 05o37" },
+	{ "Venlo",			1,	"51o22 06o10" },
+	{ "Eys",			3,	"50o50 05o55" },
+
 	{ NULL,				0,	NULL }
 };
 
