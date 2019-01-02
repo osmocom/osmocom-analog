@@ -249,6 +249,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			if (sdr->chan[sdr->paging_channel].tx_frequency > tx_high_frequency)
 				tx_high_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
 		}
+		tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
+
 		/* range of TX */
 		double range = tx_high_frequency - tx_low_frequency + bandwidth;
 		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth for all TX Frequencies: %.0f Hz\n", range);
@@ -259,7 +261,6 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
 			goto error;
 		}
-		tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
 		PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: TX %.6f MHz\n", tx_center_frequency / 1e6);
 		/* set offsets to center frequency */
 		for (c = 0; c < channels; c++) {
@@ -299,12 +300,12 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	}
 
 	if (rx_frequency) {
+		/* calculate required bandwidth (IQ rate) */
 		for (c = 0; c < channels; c++) {
 			PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: RX = %.6f MHz\n", c, rx_frequency[c] / 1e6);
 			sdr->chan[c].rx_frequency = rx_frequency[c];
 		}
 
-		/* calculate required bandwidth (IQ rate) */
 		double rx_low_frequency = sdr->chan[0].rx_frequency, rx_high_frequency = sdr->chan[0].rx_frequency;
 		for (c = 1; c < channels; c++) {
 			if (sdr->chan[c].rx_frequency < rx_low_frequency)
@@ -312,9 +313,41 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			if (sdr->chan[c].rx_frequency > rx_high_frequency)
 				rx_high_frequency = sdr->chan[c].rx_frequency;
 		}
+		rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
+
+		/* prevent channel from being at the center */
+		for (c = 0; c < channels; c++) {
+			double abs = fabs(rx_center_frequency - sdr->chan[c].rx_frequency);
+			if (abs < 1.0)
+				break;
+		}
+		if (c < channels) {
+			/* find second closest frequency */
+			double second_frequency = 0, offset;
+			for (c = 0; c < channels; c++) {
+				double abs = fabs(rx_center_frequency - sdr->chan[c].rx_frequency);
+				/* must be off center AND closer to the center than last one found */
+				if (abs > 1.0 && (second_frequency == 0 || abs < fabs(rx_center_frequency - second_frequency)))
+					second_frequency = sdr->chan[c].rx_frequency;
+			}
+			if (second_frequency == 0) {
+				/* just some offset, if single frequency */
+				offset = 20000;
+			} else {
+				/* offset between center frequency and second closest frequency */
+				offset = (rx_center_frequency - second_frequency) / 2.0;
+			}
+			rx_center_frequency += offset;
+			rx_low_frequency += offset;
+			rx_high_frequency += offset;
+		}
+
 		/* range of RX */
-		double range = rx_high_frequency - rx_low_frequency + bandwidth;
-		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth for all RX Frequencies: %.0f Hz\n", range);
+		double low_side, high_side, range;
+		low_side = (rx_center_frequency - rx_low_frequency) + bandwidth / 2.0;
+		high_side = (rx_high_frequency - rx_center_frequency) + bandwidth / 2.0;
+		range = ((low_side > high_side) ? low_side : high_side) * 2.0;
+		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth (two side bands) for all RX Frequencies: %.0f Hz\n", range);
 		if (range > samplerate * USABLE_BANDWIDTH) {
 			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
 			PDEBUG(DSDR, DEBUG_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
@@ -322,7 +355,6 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
 			goto error;
 		}
-		rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
 		PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: RX %.6f MHz\n", rx_center_frequency / 1e6);
 		/* set offsets to center frequency */
 		for (c = 0; c < channels; c++) {
