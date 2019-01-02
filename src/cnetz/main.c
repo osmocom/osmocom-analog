@@ -68,6 +68,7 @@ int8_t	futln_sperre_start = -1; /* no blocking */
 int8_t	futln_sperre_end = -1; /* no range */
 enum demod_type demod = FSK_DEMOD_AUTO;
 int metering = 20;
+double dbm0_deviation = 4000.0; /* best results with all my equipment */
 
 void print_help(const char *arg0)
 {
@@ -103,6 +104,10 @@ void print_help(const char *arg0)
 	printf(" -G --gebuehren <seconds> | 0\n");
 	printf("        Increment  metering counter every given number of seconds.\n");
 	printf("        To turn off, use 0. (default = %d)\n", metering);
+	printf(" -V --voice-deviation <2400..4000 Hz>\n");
+	printf("        It is unclear what the actual voice deviation is. Please decrease, if\n");
+	printf("        mobile's microphone is too loud and speaker is too quiet.\n");
+	printf("        (default = %.0f)\n", dbm0_deviation);
 	printf(" -S --sysinfo fuz-nat=<nat>\n");
 	printf("        Set country ID of base station. All IDs were used inside Germany only.\n");
 	printf("        (default = %d)\n", fuz_nat);
@@ -230,6 +235,7 @@ static void add_options(void)
 	option_add('Q', "queue", 1);
 	option_add(OPT_WARTESCHLANGE, "warteschlange", 1);
 	option_add('G', "gebuehren", 1);
+	option_add('V', "voice-deviation", 1);
 	option_add('S', "sysinfo", 1);
 	option_add('D', "demod", 1);
 }
@@ -289,6 +295,9 @@ static int handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'G':
 		metering = atoi(argv[argi]);
+		break;
+	case 'V':
+		dbm0_deviation = atoi_limit(argv[argi], 2400, 4000);
 		break;
 	case 'S':
 		p = strchr(argv[argi], '=');
@@ -542,7 +551,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, auth, warteschlange, metering, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, auth, warteschlange, metering, dbm0_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
