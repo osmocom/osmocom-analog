@@ -48,7 +48,8 @@ int num_chan_type = 0;
 enum nmt_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_CC_TC };
 int ms_power = 1; /* 0..3 */
 char country[16] = "";
-char traffic_area[3] = "";
+uint8_t traffic_area;
+int traffic_area_given = 0;
 char area_no = 0;
 int compandor = 1;
 int num_supervisory = 0;
@@ -172,14 +173,16 @@ error_ta:
 			fprintf(stderr, "Invalid traffic area '%s', use '-Y list' for a list of valid areas\n", argv[argi]);
 			return -EINVAL;
 		}
-		traffic_area[0] = rc + '0';
+		traffic_area = rc << 4;
 		if (p[strlen(p) - 1] != '!') {
 			rc = nmt_ta_by_short_name(nmt_system, country, atoi(p));
 			if (rc < 0)
 				goto error_ta;
 		}
-		nmt_value2digits(atoi(p), traffic_area + 1, 1);
-		traffic_area[2] = '\0';
+		if (atoi(p) < 0 || atoi(p) > 15)
+			goto error_ta;
+		traffic_area |= (nmt_system == 450) ? nmt_flip_ten(atoi(p)) : atoi(p);
+		traffic_area_given = 1;
 		break;
 	case 'A':
 		area_no = argv[argi][0] - '0';
@@ -354,7 +357,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!traffic_area[0]) {
+	if (!traffic_area_given) {
 		printf("No traffic area is specified, I suggest to use Sweden (-Y SE,1) and set the phone's roaming to 'SE' also.\n\n");
 		mandatory = 1;
 	}
@@ -398,7 +401,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, nmt_digits2value(traffic_area, 2), area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
+		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, traffic_area, area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;

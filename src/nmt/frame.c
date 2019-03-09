@@ -147,7 +147,7 @@ void nmt_value2digits(uint64_t value, char *digits, int num)
 		if (digit == 10)
 			digits[i] = '0';
 		else if (digit == 0)
-			digits[i] = 'N';
+			digits[i] = 'a';
 		else if (digit > 10)
 			digits[i] = digit - 10 + 'a';
 		else
@@ -167,15 +167,23 @@ uint64_t nmt_digits2value(const char *digits, int num)
 			value |= digit - '0';
 		else if (digit == '0')
 			value |= 10;
-		else if (digit >= 'a' && digit <= 'f')
+		else if (digit >= 'b' && digit <= 'f')
 			value |= digit - 'a' + 10;
-		else if (digit >= 'A' && digit <= 'F')
+		else if (digit >= 'B' && digit <= 'F')
 			value |= digit - 'A' + 10;
 		else
 			value |= 0;
 	}
 
 	return value;
+}
+
+uint8_t nmt_flip_ten(uint8_t v)
+{
+        if (!(v % 10))
+                v ^= 10;
+
+	return v;
 }
 
 char nmt_value2digit(uint64_t value)
@@ -481,18 +489,13 @@ static const char *param_ta_450(uint64_t value, int ndigits, enum nmt_direction 
 	return result;
 }
 
-static const char *param_ta_900(uint64_t value, int ndigits, enum nmt_direction __attribute__((unused)) direction)
+static const char *param_ta_900(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
 {
 	static char result[64];
 
-	if ((value & 0x80)) {
-		nmt_value2digits(value & 0x7f, result, ndigits);
-		result[ndigits] = '\0';
+	sprintf(result, "%02" PRIx64, value & 0x7f);
+	if ((value & 0x80))
 		strcat(result, " (Channel No. + 1024)");
-	} else {
-		nmt_value2digits(value, result, ndigits);
-		result[ndigits] = '\0';
-	}
 
 	return result;
 }

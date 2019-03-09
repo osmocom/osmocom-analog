@@ -147,7 +147,7 @@ static struct nmt_country {
 	{ 900, 1, 2, 1,9,	"SE",	"Sweden",		"Telia Mobitel",		frq_900_scandinavia },
 	{ 900, 1, 3, 1,9,	"NO",	"Norway",		"Telenor Mobil",		frq_900_scandinavia },
 	{ 900, 1, 4, 1,9,	"FI",	"Finland",		"Telecom Finland",		frq_900_scandinavia },
-	{ 900, 1,10, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
+	{ 900, 1, 0, 1,9,	"F0",	"France (Group 0)",	"France Telecom",		frq_900_f },
 	{ 900, 1, 1, 1,9,	"F1",	"France (Group 1)",	"France Telecom",		frq_900_f },
 	{ 900, 1, 2, 1,9,	"F2",	"France (Group 2)",	"France Telecom",		frq_900_f },
 	{ 900, 1, 3, 1,9,	"F3",	"France (Group 3)",	"France Telecom",		frq_900_f },
@@ -174,7 +174,7 @@ void nmt_country_list(int nmt_system)
 	int ch_from = 0, ch_to = 0;
 	char ch_string[256];
 
-	printf("TA from\tTA to\tYY Code\tChannels\t\t\tShort\tCountry (Provider)\n");
+	printf("TA from\tTA to\tYY Code\tChannels\t\t\tCountry (Provider)\n");
 	printf("--------------------------------------------------------------------------------------------------------\n");
 	for (i = 0; nmt_country[i].short_name; i++) {
 		if (nmt_system != nmt_country[i].system)

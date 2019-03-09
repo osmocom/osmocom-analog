@@ -347,7 +347,7 @@ int nmt_create(int nmt_system, const char *country, int channel, enum nmt_chan_t
 	PDEBUG(DNMT, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(nmt_system, chan_type), chan_type_long_name(nmt_system, chan_type));
 	if (nmt_long_name_by_short_name(nmt_system, country))
 	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using country '%s'\n", nmt_long_name_by_short_name(nmt_system, country));
-	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, traffic_area & 0xf, area_no);
+	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, (nmt_system == 450) ? nmt_flip_ten((traffic_area & 0xf)) : (traffic_area & 0xf), area_no);
 	if (nmt->supervisory)
 		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using supervisory signal %d\n", supervisory);
 	else

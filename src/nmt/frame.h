@@ -90,6 +90,7 @@ uint64_t nmt_encode_traffic_area(int nmt_system, int channel, uint8_t traffic_ar
 void nmt_value2digits(uint64_t value, char *digits, int num);
 uint64_t nmt_digits2value(const char *digits, int num);
 char nmt_value2digit(uint64_t value);
+uint8_t nmt_flip_ten(uint8_t v);
 uint16_t nmt_encode_area_no(uint8_t area_no);
 int nmt_encode_a_number(frame_t *frame, int index, enum number_type type, const char *number, int nmt_system, int channel, int power, uint8_t traffic_area);
 
