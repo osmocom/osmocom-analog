@@ -29,7 +29,8 @@
 #define CENTER_LINE	(287 - 2)
 
 #define GRID_WIDTH	0.0000027
-#define RAMP_WIDTH	0.0000002
+#define RAMP_WIDTH	0.00000015
+#define TEXT_WIDTH	0.0000002
 
 #define GRID_LEVEL	1.0
 #define FIELD_LEVEL	0.25
@@ -38,7 +39,7 @@
 #define CIRCLE_CENTER	(287 - 1)
 #define CIRCLE_HEIGTH	3
 
-struct color_bar {
+static struct color_bar {
 	double amplitude, phase;
 } color_bar[8] = {
 	{0.0, 0.0},
@@ -51,7 +52,7 @@ struct color_bar {
 	{0.0, 0.0},
 };
 
-struct multi_burst {
+static struct multi_burst {
 	double width;		/* how whide is this portion */
 	double level;		/* level of this portion */
 	double frequency;	/* frequency of burst or zero */
@@ -154,7 +155,7 @@ static double mittelfeld(sample_t *sample, double samplerate, int *_i, double *_
 				bit = ((bits << b) & 128);
 				if (!last_bit && !bit) {
 					/* keep black */
-					render_end = render_start + RAMP_WIDTH;
+					render_end = render_start + TEXT_WIDTH;
 					while (x < render_end) {
 						sample[i++] = 0.0;
 						x += step;
@@ -163,7 +164,7 @@ static double mittelfeld(sample_t *sample, double samplerate, int *_i, double *_
 				}
 				if (last_bit && bit) {
 					/* keep white */
-					render_end = render_start + RAMP_WIDTH;
+					render_end = render_start + TEXT_WIDTH;
 					while (x < render_end) {
 						sample[i++] = 1.0;
 						x += step;
@@ -172,18 +173,18 @@ static double mittelfeld(sample_t *sample, double samplerate, int *_i, double *_
 				}
 				if (!last_bit && bit) {
 					/* ramp to white */
-					render_end = render_start + RAMP_WIDTH;
+					render_end = render_start + TEXT_WIDTH;
 					while (x < render_end) {
-						sample[i++] = 1.0 - ramp((render_end - x) / RAMP_WIDTH);
+						sample[i++] = 1.0 - ramp((render_end - x) / TEXT_WIDTH);
 						x += step;
 					}
 					render_start = render_end;
 				}
 				if (last_bit && !bit) {
 					/* ramp to black */
-					render_end = render_start + RAMP_WIDTH;
+					render_end = render_start + TEXT_WIDTH;
 					while (x < render_end) {
-						sample[i++] = ramp((render_end - x) / RAMP_WIDTH);
+						sample[i++] = ramp((render_end - x) / TEXT_WIDTH);
 						x += step;
 					}
 					render_start = render_end;

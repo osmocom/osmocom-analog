@@ -177,6 +177,7 @@ int vcr_gen_line(sample_t *sample, double x, double samplerate, sample_t *color_
 				x += step;
 			}
 		}
+		break;
 	}
 
 	return i;

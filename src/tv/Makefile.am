@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) -fstack-check
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) -fstack-check $(IMAGEMAGICK_CFLAGS)
 
 bin_PROGRAMS = \
 	osmotv
@@ -6,9 +6,13 @@ bin_PROGRAMS = \
 osmotv_SOURCES = \
 	bas.c \
 	fubk.c \
+	ebu.c \
+	convergence.c \
+	color.c \
 	font.c \
 	vcr.c \
 	image.c \
+	sample_image.c \
 	tv_modulate.c \
 	channels.c \
 	main.c
@@ -22,7 +26,7 @@ osmotv_LDADD = \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(ALSA_LIBS) \
-	$(GRAPHICSMAGICK_LIBS) $(IMAGEMAGICK_LIBS) \
+	$(IMAGEMAGICK_LIBS) \
 	-lm
 
 if HAVE_SDR

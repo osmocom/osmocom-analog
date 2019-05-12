@@ -60,6 +60,7 @@ static double circle_radius = 6.7;
 static int color_bar = 0;
 static int grid_only = 0;
 static const char *station_id = "Jolly  Roger";
+static int grid_width = 0;
 static int __attribute__((__unused__)) latency = 200;
 static double samplerate = 10e6;
 static const char *wave_file = NULL;
@@ -86,10 +87,13 @@ void print_help(const char *arg0)
 	printf("Usage: %s -f <frequency> | -c <channel>  <command>\n", arg0);
 	/*      -                                                                             - */
 	printf("\ncommand:\n");
-	printf("        tx-fubk        Transmit FUBK test image (German PAL image)\n");
-	printf("        tx-vcr         Transmit VCR calibration pattern\n");
-	printf("        tx-img <image> Transmit given image file\n");
-	printf("                       Use 4:3 image with 574 lines for best result.\n");
+	printf("        tx-fubk          Transmit FUBK test image (German PAL image)\n");
+	printf("        tx-ebu           Transmit EBU test image (color bars)\n");
+	printf("        tx-convergence   Transmit convergence grid for color adjustemnt\n");
+	printf("        tx-red           Transmit single color image for DY adjustment\n");
+	printf("        tx-vcr           Transmit VCR calibration pattern\n");
+	printf("        tx-img [<image>] Transmit natural image or given image file\n");
+	printf("                         Use 4:3 image with 574 lines for best result.\n");
 	printf("\ngeneral options:\n");
 	printf(" -f --frequency <frequency>\n");
 	printf("        Give frequency in Hertz.\n");
@@ -118,6 +122,9 @@ void print_help(const char *arg0)
 	printf(" -I --sation-id \"<text>\"\n");
 	printf("        Give exactly 12 characters to display as Station ID.\n");
 	printf("        (default = \"%s\")\n", station_id);
+	printf("\nconvergence options:\n");
+	printf(" -W --grid-width 2 | 1\n");
+	printf("        Thickness of grid. (default = %d)\n", grid_width);
 #ifdef HAVE_SDR
 	printf("    --limesdr\n");
 	printf("        Auto-select several required options for LimeSDR\n");
@@ -144,6 +151,7 @@ static void add_options(void)
 	option_add('C', "color-bar", 1);
 	option_add('G', "grid-only", 1);
 	option_add('I', "station-id", 1);
+	option_add('W', "grid-width", 1);
 #ifdef HAVE_SDR
 	option_add(OPT_LIMESDR, "limesdr", 0);
 	option_add(OPT_LIMESDR_MINI, "limesdr-mini", 0);
@@ -194,6 +202,9 @@ static int handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'G':
 		grid_only = atoi(argv[argi]);
+		break;
+	case 'W':
+		grid_width = atoi(argv[argi]);
 		break;
 	case 'I':
 		station_id = strdup(argv[argi]);
@@ -379,7 +390,7 @@ static int tx_test_picture(enum bas_type type)
 		fprintf(stderr, "No mem!\n");
 		goto error;
 	}
-	bas_init(&bas, samplerate, type, fbas, circle_radius, color_bar, grid_only, station_id, NULL, 0, 0);
+	bas_init(&bas, samplerate, type, fbas, circle_radius, color_bar, grid_only, station_id, grid_width, NULL, 0, 0);
 	count = bas_generate(&bas, test_bas);
 	count += bas_generate(&bas, test_bas + count);
 	count += bas_generate(&bas, test_bas + count);
@@ -413,6 +424,8 @@ error:
 	return ret;
 }
 
+extern uint32_t sample_image[];
+
 static int tx_img(const char *filename)
 {
 	unsigned short *img = NULL;
@@ -422,10 +435,21 @@ static int tx_img(const char *filename)
 	int ret = -1;
 	int count;
 
-	img = load_img(&width, &height, filename, 0);
-	if (!img) {
-		fprintf(stderr, "Failed to load image '%s'\n", filename);
-		return -1;
+	if (filename) {
+		img = load_img(&width, &height, filename, 0);
+		if (!img) {
+			fprintf(stderr, "Failed to load image '%s'\n", filename);
+			return -1;
+		}
+	} else {
+		int i;
+		width = 764;
+		height = 574;
+		img = (unsigned short *)sample_image;
+		for (i = 0; i < width * height * 6 / 4; i++)
+			sample_image[i] = htobe32(sample_image[i]);
+		for (i = 0; i < width * height * 3; i++)
+			img[i] = le16toh(img[i]);
 	}
 
 	/* test image, add some samples in case of overflow due to rounding errors */
@@ -434,7 +458,7 @@ static int tx_img(const char *filename)
 		fprintf(stderr, "No mem!\n");
 		goto error;
 	}
-	bas_init(&bas, samplerate, BAS_IMAGE, fbas, circle_radius, color_bar, grid_only, NULL, img, width, height);
+	bas_init(&bas, samplerate, BAS_IMAGE, fbas, circle_radius, color_bar, grid_only, NULL, grid_width, img, width, height);
 	count = bas_generate(&bas, img_bas);
 	count += bas_generate(&bas, img_bas + count);
 	count += bas_generate(&bas, img_bas + count);
@@ -445,7 +469,8 @@ static int tx_img(const char *filename)
 	ret = 0;
 error:
 	free(img_bas);
-	free(img);
+	if (filename)
+		free(img);
 	return ret;
 }
 
@@ -489,14 +514,16 @@ int main(int argc, char *argv[])
 		exit(0);
 	} else if (!strcmp(argv[argi], "tx-fubk")) {
 		tx_test_picture(BAS_FUBK);
+	} else if (!strcmp(argv[argi], "tx-ebu")) {
+		tx_test_picture(BAS_EBU);
+	} else if (!strcmp(argv[argi], "tx-convergence")) {
+		tx_test_picture(BAS_CONVERGENCE);
+	} else if (!strcmp(argv[argi], "tx-red")) {
+		tx_test_picture(BAS_RED);
 	} else if (!strcmp(argv[argi], "tx-vcr")) {
 		tx_test_picture(BAS_VCR);
 	} else if (!strcmp(argv[argi], "tx-img")) {
-		if (argi + 1 >= argc) {
-			fprintf(stderr, "Expecting image file, use '-h' for help!\n");
-			return -EINVAL;
-		}
-		tx_img(argv[argi + 1]);
+		tx_img((argi + 1 < argc) ? argv[argi + 1] : NULL);
 	} else {
 		fprintf(stderr, "Unknown command '%s', use '-h' for help!\n", argv[argi]);
 		return -EINVAL;

@@ -25,6 +25,9 @@
 #include "bas.h"
 #include "vcr.h"
 #include "fubk.h"
+#include "convergence.h"
+#include "color.h"
+#include "ebu.h"
 #include "image.h"
 
 #define WHITE_LEVEL	1.0
@@ -49,7 +52,7 @@
 #define BURST_AMPLITUDE	0.15
 #define COLOR_FILTER_ITER 1
 
-void bas_init(bas_t *bas, double samplerate, enum bas_type type, int fbas, double circle_radius, int color_bar, int grid_only, const char *station_id, unsigned short *img, int width, int height)
+void bas_init(bas_t *bas, double samplerate, enum bas_type type, int fbas, double circle_radius, int color_bar, int grid_only, const char *station_id, int grid_width, unsigned short *img, int width, int height)
 {
 	memset(bas, 0, sizeof(*bas));
 	bas->samplerate = samplerate;
@@ -60,6 +63,7 @@ void bas_init(bas_t *bas, double samplerate, enum bas_type type, int fbas, doubl
 	bas->color_bar = color_bar;
 	bas->grid_only = grid_only;
 	bas->station_id = station_id;
+	bas->grid_width = grid_width;
 	bas->img = img;
 	bas->img_width = width;
 	bas->img_height = height;
@@ -110,6 +114,18 @@ int bas_generate(bas_t *bas, sample_t *sample)
 			case BAS_FUBK:
 				/* render FUBK test image */
 				fubk_gen_line(sample, x, bas->samplerate, color_u, color_v, bas->v_polarity, H_LINE_START, H_LINE_END, middlefield_line, bas->circle_radius, bas->color_bar, bas->grid_only, bas->station_id);
+				break;
+			case BAS_CONVERGENCE:
+				/* render color convergence test image */
+				convergence_gen_line(sample, x, bas->samplerate, H_LINE_START, H_LINE_END, middlefield_line, (bas->grid_width) > 1 ? 1.0: 0.5);
+				break;
+			case BAS_RED:
+				/* render (thin) color convergence test image */
+				color_gen_line(sample, x, bas->samplerate, color_u, color_v, bas->v_polarity, H_LINE_START, H_LINE_END);
+				break;
+			case BAS_EBU:
+				/* render (thin) color convergence test image */
+				ebu_gen_line(sample, x, bas->samplerate, color_u, color_v, bas->v_polarity, H_LINE_START, H_LINE_END);
 				break;
 			case BAS_IMAGE: {
 				/* 574 lines of image are to be rendered */
