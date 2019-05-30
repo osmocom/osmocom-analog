@@ -61,6 +61,12 @@ int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empf
 	if (use_sdr)
 		sender->rx_gain = 1.0;
 
+	if (samplerate < 8000) {
+		PDEBUG(DSENDER, DEBUG_NOTICE, "Given sample rate is below 8 KHz. Please use higher sample rate!\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
 
 	/* if we find a channel that uses the same device as we do,
