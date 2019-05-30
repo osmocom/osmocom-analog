@@ -368,6 +368,22 @@ void display_spectrum(float *samples, int length)
 					}
 				}
 			}
+			/* add center (DC line) to spectrum */
+			j = width / 2 + 0.5;
+			if (j < 1 || j >= width-1) /* check out-of-range, should not happen */
+				continue;
+			for (k = 0; k < HEIGHT; k++) {
+				/* skip green/yellow/white graph */
+				if (screen_color[k][j] == 13 || screen_color[k][j] == 17 || screen_color[k][j] == 12)
+					continue;
+				screen[k][j] = '.';
+				screen_color[k][j] = 7;
+			}
+			screen[0][j-1] = 'D';
+			screen[0][j+1] = 'C';
+			screen_color[0][j-1] = 7;
+			screen_color[0][j+1] = 7;
+			/* display buffer */
 			printf("\0337\033[H");
 			for (j = 0; j < HEIGHT; j++) {
 				for (k = 0; k < width; k++) {
