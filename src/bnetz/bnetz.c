@@ -383,7 +383,7 @@ void bnetz_loss_indication(bnetz_t *bnetz, double loss_time)
 void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 {
 	if (bit >= 0)
-		PDEBUG_CHAN(DBNETZ, DEBUG_DEBUG, "Received contiuous %d Hz tone.\n", (bit)?1950:2070);
+		PDEBUG_CHAN(DBNETZ, DEBUG_DEBUG, "Received continuous %d Hz tone.\n", (bit)?1950:2070);
 	else
 		PDEBUG_CHAN(DBNETZ, DEBUG_DEBUG, "Continuous tone is gone.\n");
 
@@ -520,27 +520,27 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 			switch (digit) {
 			case 's':
 				if (bnetz->dial_type != DIAL_TYPE_NOMETER) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (no metering support), releaseing.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Repeated start message ('Funkwahl') does not match first one (no metering support), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			case 'S':
 				if (bnetz->dial_type != DIAL_TYPE_METER) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support), releaseing.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Repeated start message ('Funkwahl') does not match first one (metering support), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			case 'M':
 				if (bnetz->dial_type != DIAL_TYPE_METER_MUENZ) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received start message('Funkwahl') does not match first one (metering support, payphone), releaseing.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Repeated start message ('Funkwahl') does not match first one (metering support, payphone), releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
 				break;
 			default:
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Received digit that is not a start digit ('Funkwahl'), releaseing.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Repeated digit is not a start digit ('Funkwahl'), releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -554,7 +554,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 				return;
 			}
 			if (bnetz->station_id[bnetz->dial_pos++] != digit) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received station id does not match first one, releaseing.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Repeated station id does not match the first one, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
@@ -572,7 +572,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 				strcpy(dialing + 1, bnetz->dial_number);
 
 				if (bnetz->dial_pos != (int)strlen(bnetz->dial_number)) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too few number digits the second time, releaseing.\n");
+					PDEBUG(DBNETZ, DEBUG_NOTICE, "Received too few repeated number digits, releaseing.\n");
 					bnetz_release(bnetz, TRENN_COUNT);
 					return;
 				}
@@ -614,7 +614,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 				return;
 			}
 			if (bnetz->dial_number[bnetz->dial_pos++] != digit) {
-				PDEBUG(DBNETZ, DEBUG_NOTICE, "Second received number does not match first one, releaseing.\n");
+				PDEBUG(DBNETZ, DEBUG_NOTICE, "Repeated number does not match the first one, releaseing.\n");
 				bnetz_release(bnetz, TRENN_COUNT);
 				return;
 			}
