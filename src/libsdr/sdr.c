@@ -101,6 +101,36 @@ typedef struct sdr {
 	sample_t	*wavespl1;
 } sdr_t;
 
+static void show_spectrum(const char *direction, double halfbandwidth, double center, double *frequency, double paging_frequency, int num)
+{
+	char text[80];
+	int i, x;
+
+	memset(text, ' ', 79);
+	text[79] = '\0';
+
+	// FIXME: better solution
+	if (num > 9)
+		num = 9;
+
+	for (i = 0; i < num; i++) {
+		x = (frequency[i] - center) / halfbandwidth * 39.0 + 39.5;
+		if (x >= 0 && x < 79)
+			text[x] = '1' + i;
+	}
+	if (paging_frequency) {
+		x = (paging_frequency - center) / halfbandwidth * 39.0 + 39.5;
+		if (x >= 0 && x < 79)
+			text[x] = 'P';
+	}
+
+	PDEBUG(DSDR, DEBUG_INFO, "%s Spectrum:\n%s\n---------------------------------------+---------------------------------------\n", direction, text);
+	for (i = 0; i < num; i++)
+		PDEBUG(DSDR, DEBUG_INFO, "Frequency %c = %.4f MHz\n", '1' + i, frequency[i] / 1e6);
+	if (paging_frequency)
+		PDEBUG(DSDR, DEBUG_INFO, "Frequency P = %.4f MHz (Paging Frequency)\n", paging_frequency / 1e6);
+}
+
 void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int channels, double paging_frequency, int samplerate, int latspl, double max_deviation, double max_modulation)
 {
 	sdr_t *sdr;
@@ -227,23 +257,17 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 	if (tx_frequency) {
 		/* calculate required bandwidth (IQ rate) */
-		for (c = 0; c < channels; c++) {
-			PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: TX = %.6f MHz\n", c, tx_frequency[c] / 1e6);
-			sdr->chan[c].tx_frequency = tx_frequency[c];
-		}
-		if (sdr->paging_channel) {
-			PDEBUG(DSDR, DEBUG_INFO, "Paging Frequency: TX = %.6f MHz\n", paging_frequency / 1e6);
-			sdr->chan[sdr->paging_channel].tx_frequency = paging_frequency;
-		}
 
-		double tx_low_frequency = sdr->chan[0].tx_frequency, tx_high_frequency = sdr->chan[0].tx_frequency;
-		for (c = 1; c < channels; c++) {
-			if (sdr->chan[c].tx_frequency < tx_low_frequency)
+		double tx_low_frequency = 0.0, tx_high_frequency = 0.0;
+		for (c = 0; c < channels; c++) {
+			sdr->chan[c].tx_frequency = tx_frequency[c];
+			if (c == 0 || sdr->chan[c].tx_frequency < tx_low_frequency)
 				tx_low_frequency = sdr->chan[c].tx_frequency;
-			if (sdr->chan[c].tx_frequency > tx_high_frequency)
+			if (c == 0 || sdr->chan[c].tx_frequency > tx_high_frequency)
 				tx_high_frequency = sdr->chan[c].tx_frequency;
 		}
 		if (sdr->paging_channel) {
+			sdr->chan[sdr->paging_channel].tx_frequency = paging_frequency;
 			if (sdr->chan[sdr->paging_channel].tx_frequency < tx_low_frequency)
 				tx_low_frequency = sdr->chan[sdr->paging_channel].tx_frequency;
 			if (sdr->chan[sdr->paging_channel].tx_frequency > tx_high_frequency)
@@ -251,9 +275,15 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		}
 		tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
 
+		/* show spectrum */
+		show_spectrum("TX", (double)samplerate / 2.0, tx_center_frequency, tx_frequency, paging_frequency, channels);
+
 		/* range of TX */
-		double range = tx_high_frequency - tx_low_frequency + bandwidth;
-		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth for all TX Frequencies: %.0f Hz\n", range);
+		double low_side, high_side, range;
+		low_side = (tx_center_frequency - tx_low_frequency) + bandwidth / 2.0;
+		high_side = (tx_high_frequency - tx_center_frequency) + bandwidth / 2.0;
+		range = ((low_side > high_side) ? low_side : high_side) * 2.0;
+		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth (two side bands) for all TX Frequencies: %.0f Hz\n", range);
 		if (range > samplerate * USABLE_BANDWIDTH) {
 			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
 			PDEBUG(DSDR, DEBUG_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
@@ -301,46 +331,55 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 	if (rx_frequency) {
 		/* calculate required bandwidth (IQ rate) */
+		double rx_low_frequency = 0.0, rx_high_frequency = 0.0;
 		for (c = 0; c < channels; c++) {
-			PDEBUG(DSDR, DEBUG_INFO, "Frequency #%d: RX = %.6f MHz\n", c, rx_frequency[c] / 1e6);
 			sdr->chan[c].rx_frequency = rx_frequency[c];
-		}
-
-		double rx_low_frequency = sdr->chan[0].rx_frequency, rx_high_frequency = sdr->chan[0].rx_frequency;
-		for (c = 1; c < channels; c++) {
-			if (sdr->chan[c].rx_frequency < rx_low_frequency)
+			if (c == 0 || sdr->chan[c].rx_frequency < rx_low_frequency)
 				rx_low_frequency = sdr->chan[c].rx_frequency;
-			if (sdr->chan[c].rx_frequency > rx_high_frequency)
+			if (c == 0 || sdr->chan[c].rx_frequency > rx_high_frequency)
 				rx_high_frequency = sdr->chan[c].rx_frequency;
 		}
 		rx_center_frequency = (rx_high_frequency + rx_low_frequency) / 2.0;
 
-		/* prevent channel from being at the center */
-		for (c = 0; c < channels; c++) {
-			double abs = fabs(rx_center_frequency - sdr->chan[c].rx_frequency);
-			if (abs < 1.0)
-				break;
-		}
-		if (c < channels) {
-			/* find second closest frequency */
-			double second_frequency = 0, offset;
+		/* prevent channel bandwidth from overlapping with the center frequency */
+		if (channels == 1) {
+			/* simple: just move off the center by half of the bandwidth */
+			rx_center_frequency -= bandwidth / 2.0;
+			/* Note: rx_low_frequency is kept at old center.
+			   Calculation of 'low_side' will become 0.
+			   This is correct, since there is no bandwidth
+			   below new center frequency.
+			 */
+			PDEBUG(DSDR, DEBUG_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
+		} else {
+			/* find two channels that are aside the center */
+			double low_dist, high_dist, dist;
+			int low_c = -1, high_c = -1;
 			for (c = 0; c < channels; c++) {
-				double abs = fabs(rx_center_frequency - sdr->chan[c].rx_frequency);
-				/* must be off center AND closer to the center than last one found */
-				if (abs > 1.0 && (second_frequency == 0 || abs < fabs(rx_center_frequency - second_frequency)))
-					second_frequency = sdr->chan[c].rx_frequency;
+				dist = fabs(rx_center_frequency - sdr->chan[c].rx_frequency);
+				if (round(sdr->chan[c].rx_frequency) >= round(rx_center_frequency)) {
+					if (high_c < 0 || dist < high_dist) {
+						high_dist = dist;
+						high_c = c;
+					}
+				} else {
+					if (low_c < 0 || dist < low_dist) {
+						low_dist = dist;
+						low_c = c;
+					}
+				}
 			}
-			if (second_frequency == 0) {
-				/* just some offset, if single frequency */
-				offset = 20000;
-			} else {
-				/* offset between center frequency and second closest frequency */
-				offset = (rx_center_frequency - second_frequency) / 2.0;
+			/* new center = center of the two frequencies aside old center */
+			if (low_c >= 0 && high_c >= 0) {
+				rx_center_frequency =
+					((sdr->chan[low_c].rx_frequency) +
+					 (sdr->chan[high_c].rx_frequency)) / 2.0;
+				PDEBUG(DSDR, DEBUG_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
 			}
-			rx_center_frequency += offset;
-			rx_low_frequency += offset;
-			rx_high_frequency += offset;
 		}
+
+		/* show spectrum */
+		show_spectrum("RX", (double)samplerate / 2.0, rx_center_frequency, rx_frequency, 0.0, channels);
 
 		/* range of RX */
 		double low_side, high_side, range;
