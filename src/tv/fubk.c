@@ -101,8 +101,8 @@ static double mittelfeld(sample_t *sample, double samplerate, int *_i, double *_
 				colorphase = (360.0 - color_bar[b].phase) / 180.0 * M_PI;
 			else
 				colorphase = color_bar[b].phase / 180.0 * M_PI;
-			U = cos(colorphase) * amplitude / 2.0;
-			V = sin(colorphase) * amplitude / 2.0;
+			U = cos(colorphase) * amplitude;
+			V = sin(colorphase) * amplitude;
 			render_end = render_start + GRID_WIDTH * 1.5;
 			while (x < render_end) {
 				color_u[i] = U;
@@ -223,8 +223,8 @@ static double mittelfeld(sample_t *sample, double samplerate, int *_i, double *_
 					colorphase = (360.0 - 145.9) / 180.0 * M_PI;
 				else
 					colorphase = 145.9 / 180.0 * M_PI;
-				color_u[i] = cos(colorphase) * V / 2.0;
-				color_v[i] = sin(colorphase) * V / 2.0;
+				color_u[i] = cos(colorphase) * V;
+				color_v[i] = sin(colorphase) * V;
 				sample[i++] = Y + sin(phase) / 2.0;
 				phase += phase_step;
 				x += step;

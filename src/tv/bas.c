@@ -49,7 +49,7 @@
 #define H_CBURST_STOP	0.0000094
 #define COLOR_CARRIER	4433618.75
 #define COLOR_OFFSET	0.0000004
-#define BURST_AMPLITUDE	0.15
+#define BURST_AMPLITUDE	0.3
 #define COLOR_FILTER_ITER 1
 
 void bas_init(bas_t *bas, double samplerate, enum bas_type type, int fbas, double circle_radius, int color_bar, int grid_only, const char *station_id, int grid_width, unsigned short *img, int width, int height)
@@ -88,7 +88,7 @@ int bas_generate(bas_t *bas, sample_t *sample)
 	int have_image;
 	sample_t color_u[(int)(bas->samplerate / 15625.0) + 10];
 	sample_t color_v[(int)(bas->samplerate / 15625.0) + 10];
-	double _sin, _cos;
+	double _sin, _cos, chroma;
 	double color_step = COLOR_CARRIER / bas->samplerate * 2 * M_PI;
 	/* the offset is specified by delaying Y signal by 0.4 uS. */
 // additianlly we compensate the delay caused by the color filter, that is 2 samples per iteration */
@@ -275,9 +275,9 @@ int bas_generate(bas_t *bas, sample_t *sample)
 					bas->color_phase -= 2.0 * M_PI;
 				_sin = sin(bas->color_phase);
 				_cos = cos(bas->color_phase);
-				sample[c-color_offset] += color_u[c] * _cos - color_v[c] * _sin;
-				sample[c-color_offset] += color_u[c] * _sin + color_v[c] * _cos;
-	//			puts(debug_amplitude(sample[c-color_offset]));
+				chroma = color_u[c] * _cos - color_v[c] * _sin;
+				/* scale level of chroma to range of BAS signal */
+				sample[c-color_offset] += chroma * (WHITE_LEVEL - BLACK_LEVEL);
 			}
 
 			/* filter bas signal */

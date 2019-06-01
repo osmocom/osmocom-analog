@@ -61,8 +61,8 @@ int ebu_gen_line(sample_t *sample, double x, double samplerate, sample_t *color_
 			colorphase = (360.0 - color_bar[b].phase) / 180.0 * M_PI;
 		else
 			colorphase = color_bar[b].phase / 180.0 * M_PI;
-		U = cos(colorphase) * amplitude / 2.0;
-		V = sin(colorphase) * amplitude / 2.0;
+		U = cos(colorphase) * amplitude;
+		V = sin(colorphase) * amplitude;
 		render_end = (line_end - line_start) / 8 * (b + 1) + line_start;
 		while (x < render_end) {
 			color_u[i] = U;

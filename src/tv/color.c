@@ -60,8 +60,8 @@ int color_gen_line(sample_t *sample, double x, double samplerate, sample_t *colo
 		colorphase = (360.0 - color_bar[b].phase) / 180.0 * M_PI;
 	else
 		colorphase = color_bar[b].phase / 180.0 * M_PI;
-	U = cos(colorphase) * amplitude / 2.0;
-	V = sin(colorphase) * amplitude / 2.0;
+	U = cos(colorphase) * amplitude;
+	V = sin(colorphase) * amplitude;
 	while (x < line_end) {
 		color_u[i] = U;
 		color_v[i] = V;
