@@ -38,7 +38,7 @@ const char *transaction2rufnummer(transaction_t *trans)
 }
 
 /* create transaction */
-transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended)
+transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int futelg_bit, int extended)
 {
 	sender_t *sender;
 	transaction_t *trans = NULL;
@@ -88,7 +88,9 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 	link_transaction(trans, cnetz);
 
 	/* update database: now busy */
-	trans->extended = update_db(cnetz, futln_nat, futln_fuvst, futln_rest, extended, 1, 0);
+	update_db(cnetz, futln_nat, futln_fuvst, futln_rest, &futelg_bit, &extended, 1, 0);
+	trans->futelg_bit = futelg_bit;
+	trans->extended = extended;
 
 	return trans;
 }
@@ -97,7 +99,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 void destroy_transaction(transaction_t *trans)
 {
 	/* update database: now idle */
-	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, -1, 0, trans->page_failed);
+	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, NULL, NULL, 0, trans->page_failed);
 
 	unlink_transaction(trans);
 	
@@ -228,8 +230,14 @@ static const char *trans_state_name(uint64_t state)
 		return "VAK";
 	case TRANS_BQ:
 		return "BQ";
-	case TRANS_VHQ:
-		return "VHQ";
+	case TRANS_ZFZ:
+		return "ZFZ";
+	case TRANS_VHQ_K:
+		return "VHQ_K";
+	case TRANS_VHQ_V:
+		return "VHQ_V";
+	case TRANS_AP:
+		return "AP";
 	case TRANS_RTA:
 		return "RTA";
 	case TRANS_DS:
@@ -273,11 +281,15 @@ const char *trans_short_state_name(uint64_t state)
 	case TRANS_WBP:
 	case TRANS_WBN:
 		return "DIALING";
+	case TRANS_ZFZ:
+	case TRANS_AP:
+		return "AUTHENTICATE";
 	case TRANS_VAG:
 	case TRANS_WSK:
 	case TRANS_VAK:
 	case TRANS_BQ:
-	case TRANS_VHQ:
+	case TRANS_VHQ_K:
+	case TRANS_VHQ_V:
 		return "ASSIGN";
 	case TRANS_RTA:
 		return "ALERT";

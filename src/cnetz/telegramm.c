@@ -1486,7 +1486,7 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 		return;
 	}
 
-	disassemble_telegramm(&telegramm, bits, cnetz->auth);
+	disassemble_telegramm(&telegramm, bits, si[cnetz->cell_nr].authentifikationsbit);
 	opcode = telegramm.opcode;
 	telegramm.level = level;
 	telegramm.sync_time = sync_time;

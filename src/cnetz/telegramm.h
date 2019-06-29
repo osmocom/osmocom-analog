@@ -101,7 +101,7 @@ typedef struct telegramm {
 	uint8_t authentifikationsbit;
 	uint8_t mittelungsfaktor_fuer_ausloesen;
 	uint8_t mittelungsfaktor_fuer_umschalten;
-	uint16_t zufallszahl;
+	uint64_t zufallszahl;
 	uint8_t bewertung_nach_pegel_und_entfernung;
 	uint64_t authorisierungsparameter;
 	uint8_t entfernungsangabe_der_fufst;

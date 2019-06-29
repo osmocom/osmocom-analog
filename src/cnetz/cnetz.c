@@ -246,7 +246,7 @@ int cnetz_init(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int auth, int warteschlange, int metering, double dbm0_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
+int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double dbm0_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -327,7 +327,10 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 	}
 
 	cnetz->chan_type = chan_type;
-	cnetz->auth = auth;
+	cnetz->challenge_valid = challenge_valid;
+	cnetz->challenge = challenge;
+	cnetz->response_valid = response_valid;
+	cnetz->response = response;
 	cnetz->warteschlange = warteschlange;
 	cnetz->metering = metering;
 	cnetz->ms_power = ms_power;
@@ -353,6 +356,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 		break;
 	default:
 		/* send two cells and select by the first message from mobile */
+		cnetz->cell_nr = 0; /* use cell 0 until selected */
 		cnetz->cell_auto = 1;
 	}
 
@@ -368,13 +372,13 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 	cnetz_go_idle(cnetz);
 
 #ifdef DEBUG_SPK
-	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002, -1);
+	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002, -1, -1);
 	trans->mo_call = 1;
 	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
 #else
 	/* create transaction for speech channel loopback */
 	if (loopback && chan_type == CHAN_TYPE_SPK) {
-		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ, 2, 2, 22002, -1);
+		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ_K, 2, 2, 22002, -1, -1);
 		trans->mo_call = 1;
 		cnetz_set_dsp_mode(cnetz, DSP_MODE_SPK_K);
 		cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 0);
@@ -384,16 +388,16 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 #if 0
 	/* debug flushing transactions */
 	transaction_t *trans1, *trans2;
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1);
 	destroy_transaction(trans1);
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1);
 	destroy_transaction(trans1);
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1);
-	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1, -1);
 	unlink_transaction(trans1);
 	link_transaction(trans1, cnetz);
 	cnetz_flush_other_transactions(cnetz, trans1);
-	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1, -1);
 	cnetz_flush_other_transactions(cnetz, trans2);
 #endif
 
@@ -546,6 +550,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 {
 	sender_t *sender;
 	cnetz_t *cnetz, *spk;
+	int rc;
 	int extended;
 	transaction_t *trans;
 	uint8_t futln_nat;
@@ -575,8 +580,8 @@ inval:
 	futln_rest = atoi(dialing + 2);
 
 	/* 2. check if the subscriber is attached */
-	extended = find_db(futln_nat, futln_fuvst, futln_rest);
-	if (extended < 0) {
+	rc = find_db(futln_nat, futln_fuvst, futln_rest, NULL, &extended);
+	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call to not attached subscriber, rejecting!\n");
 		return -CAUSE_OUTOFORDER;
 	}
@@ -614,7 +619,7 @@ inval:
 	PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
-	trans = create_transaction(cnetz, (spk) ? TRANS_VAK : TRANS_WSK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2), -1);
+	trans = create_transaction(cnetz, (spk) ? TRANS_VAK : TRANS_WSK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2), -1, -1);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
@@ -730,7 +735,7 @@ int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_res
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "'Meldeaufruf', but OgK is currently busy!\n");
 		return -CAUSE_NOCHANNEL;
 	}
-	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest, -1);
+	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest, -1, -1);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
@@ -833,7 +838,24 @@ void transaction_timeout(struct timer *timer)
 		trans_new_state(trans, TRANS_AF);
 		trans->repeat = 0;
 		break;
-	case TRANS_VHQ:
+	case TRANS_ZFZ:
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after sending random number 'Zufallszahl'\n");
+		if (trans->callref) {
+			call_up_release(trans->callref, CAUSE_TEMPFAIL);
+			trans->callref = 0;
+		}
+		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+		break;
+	case TRANS_AP:
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after waiting for challenge response 'Autorisierungsparameter'\n");
+		if (trans->callref) {
+			call_up_release(trans->callref, CAUSE_TEMPFAIL);
+			trans->callref = 0;
+		}
+		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
+		break;
+	case TRANS_VHQ_K:
+	case TRANS_VHQ_V:
 		if (cnetz->dsp_mode != DSP_MODE_SPK_V)
 			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response while holding call 'Quittung Verbindung halten'\n");
 		else
@@ -929,7 +951,7 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
 	telegramm.zeitschlitz_nr = cnetz->sched_ts;
 	telegramm.grenzwert_fuer_einbuchen_und_umbuchen = si[cnetz->cell_nr].grenz_einbuchen;
-	telegramm.authentifikationsbit = cnetz->auth;
+	telegramm.authentifikationsbit = si[cnetz->cell_nr].authentifikationsbit;
 	telegramm.vermittlungstechnische_sperren = si[cnetz->cell_nr].vermittlungstechnische_sperren;
 	telegramm.ws_kennung = si[cnetz->cell_nr].ws_kennung;
 	telegramm.reduzierungsfaktor = si[cnetz->cell_nr].reduzierung;
@@ -1114,7 +1136,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
-		if (cnetz->auth && telegramm->chipkarten_futelg_bit)
+		if (si[cnetz->cell_nr].authentifikationsbit && telegramm->chipkarten_futelg_bit)
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
 		else
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
@@ -1124,7 +1146,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Attachment from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->erweitertes_frequenzbandbit);
+		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
@@ -1135,7 +1157,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
-		if (cnetz->auth && telegramm->chipkarten_futelg_bit)
+		if (si[cnetz->cell_nr].authentifikationsbit && telegramm->chipkarten_futelg_bit)
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with chip card's ID %d (vendor id %d, hardware version %d, software version %d)\n", rufnummer, telegramm->kartenkennung, telegramm->herstellerkennung, telegramm->hardware_des_futelg, telegramm->software_des_futelg);
 		else
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
@@ -1145,7 +1167,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Roaming from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->erweitertes_frequenzbandbit);
+		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
@@ -1169,7 +1191,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Call from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_VWG, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1);
+		trans = create_transaction(cnetz, TRANS_VWG, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, telegramm->erweitertes_frequenzbandbit);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
@@ -1199,7 +1221,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		trans = search_transaction_number(cnetz, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 		if (!trans) {
 			/* create transaction, in case the phone repeats the release after we have acked it */
-			trans = create_transaction(cnetz, TRANS_ATQ, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->erweitertes_frequenzbandbit);
+			trans = create_transaction(cnetz, TRANS_ATQ, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, -1);
 			if (!trans) {
 				PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 				break;
@@ -1262,21 +1284,46 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	telegramm.futln_rest_nr = trans->futln_rest;
 	telegramm.frequenz_nr = cnetz->sender.kanal;
 	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
+	telegramm.zufallszahl = cnetz->challenge;
 
 	switch (trans->state) {
 	case TRANS_BQ:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Belegungsquittung' on traffic channel\n");
 		telegramm.opcode = OPCODE_BQ_K;
 		if (++trans->repeat >= 8 && !timer_running(&trans->timer)) {
-			trans_new_state(trans, TRANS_VHQ);
+			if (cnetz->challenge_valid) {
+				if (si[cnetz->cell_nr].authentifikationsbit == 0) {
+					PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Cannot authenticate, because base station does not support it. (Authentication disabled in sysinfo.)\n");
+					goto no_auth;
+				}
+				if (trans->futelg_bit == 0) {
+					PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Cannot authenticate, because mobile station does not support it. (Mobile station has magnetic card.)\n");
+					goto no_auth;
+				}
+				PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Perform authentication with subscriber's card.\n");
+				trans_new_state(trans, TRANS_ZFZ);
+				timer_start(&trans->timer, 0.0375 * F_ZFZ); /* F_ZFZ frames */
+			} else {
+no_auth:
+				trans_new_state(trans, TRANS_VHQ_K);
+				timer_start(&trans->timer, 0.0375 * F_VHQK); /* F_VHQK frames */
+			}
 			trans->repeat = 0;
-			timer_start(&trans->timer, 0.0375 * F_VHQK); /* F_VHQK frames */
 		}
 		break;
-	case TRANS_VHQ:
+	case TRANS_ZFZ:
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Zufallszahl' on traffic channel (0x%016" PRIx64 ").\n", telegramm.zufallszahl);
+		telegramm.opcode = OPCODE_ZFZ_K;
+		break;
+	case TRANS_AP:
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
+		telegramm.opcode = OPCODE_VHQ_K;
+		break;
+	case TRANS_VHQ_K:
 		if (!cnetz->sender.loopback)
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten' on traffic channel\n");
 		telegramm.opcode = OPCODE_VHQ_K;
+		/* continue until next sub frame, so we send DS from first block of next sub frame. */
 		if (!cnetz->sender.loopback && (cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m && !timer_running(&trans->timer)) {
 			/* next sub frame */
 			if (trans->mo_call) {
@@ -1304,9 +1351,10 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	case TRANS_DS:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Durchschalten' on traffic channel\n");
 		telegramm.opcode = OPCODE_DSB_K;
+		/* send exactly a sub frame (8 time slots) */
 		if ((cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m && !timer_running(&trans->timer)) {
 			/* next sub frame */
-			trans_new_state(trans, TRANS_VHQ);
+			trans_new_state(trans, TRANS_VHQ_V);
 			trans->repeat = 0;
 			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
 #ifndef DEBUG_SPK
@@ -1323,7 +1371,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 		telegramm.opcode = OPCODE_AHQ_K;
 		if ((cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m) {
 			/* next sub frame */
-			trans_new_state(trans, TRANS_VHQ);
+			trans_new_state(trans, TRANS_VHQ_V);
 			trans->repeat = 0;
 			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
@@ -1431,6 +1479,38 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		cnetz->scrambler_switch = 0;
 		timer_stop(&trans->timer);
 		break;
+	case OPCODE_ZFZQ_K:
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received random number acknowledge 'Zufallszahlquittung' message.\n");
+		valid_frame = 1;
+		if (trans->state != TRANS_ZFZ)
+			break;
+		if (cnetz->challenge != telegramm->zufallszahl) {
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received random number acknowledge (0x%016" PRIx64 ") does not match the transmitted one (0x%016" PRIx64 "), ignoring!\n", telegramm->zufallszahl, cnetz->challenge);
+			break;
+		}
+		timer_stop(&trans->timer);
+		trans_new_state(trans, TRANS_AP);
+		timer_start(&trans->timer, T_AP); /* 750 milliseconds */
+		break;
+	case OPCODE_AP_K:
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received challenge response 'Autorisierungsparameter' message (0x%016" PRIx64 ").\n", telegramm->authorisierungsparameter);
+		valid_frame = 1;
+		if (trans->state != TRANS_AP)
+			break;
+		/* if authentication response from card does not match */
+		if (cnetz->response_valid && telegramm->authorisierungsparameter != cnetz->response) {
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received challenge response (0x%016" PRIx64 ") does not match the expected one (0x%016" PRIx64 "), releasing!\n", telegramm->authorisierungsparameter, cnetz->response);
+			if (trans->callref) {
+				call_up_release(trans->callref, CAUSE_TEMPFAIL); /* jolly guesses that */
+				trans->callref = 0;
+			}
+			cnetz_release(trans, CNETZ_CAUSE_GASSENBESETZT); /* when authentication is not valid */
+			break;
+		}
+		timer_stop(&trans->timer);
+		trans_new_state(trans, TRANS_VHQ_K);
+		timer_start(&trans->timer, 0.0375 * F_VHQK); /* F_VHQK frames */
+		break;
 	case OPCODE_VH_K:
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr)) {
 			break;
@@ -1440,7 +1520,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		}
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received connection hold 'Verbindung halten' message.\n");
 		valid_frame = 1;
-		if (trans->state != TRANS_VHQ)
+		if (trans->state != TRANS_VHQ_K)
 			break;
 		timer_stop(&trans->timer);
 		break;
@@ -1467,7 +1547,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received answer frame 'Abheben' message.\n");
 		valid_frame = 1;
 		/* if already received this frame, or if we are already on VHQ or if we are releasing */
-		if (trans->state == TRANS_AHQ || trans->state == TRANS_VHQ || trans->state == TRANS_AF)
+		if (trans->state == TRANS_AHQ || trans->state == TRANS_VHQ_K || trans->state == TRANS_AF)
 			break;
 		cnetz->scrambler = telegramm->betriebs_art;
 		cnetz->scrambler_switch = 0;
@@ -1539,7 +1619,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	telegramm.ausloesegrund = trans->release_cause;
 
 	switch (trans->state) {
-	case TRANS_VHQ:
+	case TRANS_VHQ_V:
 		if ((cnetz->sched_ts & 8) == 0) { /* sub frame 1 and 3 */
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Quittung Verbindung halten 1' on traffic channel\n");
 			telegramm.opcode = OPCODE_VHQ1_V;
@@ -1557,7 +1637,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 		}
 		break;
 	case TRANS_AT:
-		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Auslosen durch FuFst' on traffic channel\n");
+		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending acknowledge to 'Ausloesen durch FuTln' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_V;
 		if (++trans->repeat == 1) {
 			destroy_transaction(trans);
@@ -1589,7 +1669,7 @@ void cnetz_receive_telegramm_spk_v(cnetz_t *cnetz, telegramm_t *telegramm)
 		if (!match_futln(telegramm, trans->futln_nat, trans->futln_fuvst, trans->futln_rest)) {
 			break;
 		}
-		if (trans->state != TRANS_VHQ)
+		if (trans->state != TRANS_VHQ_V)
 			break;
 		timer_start(&trans->timer, 0.6 * F_VHQ); /* F_VHQ frames */
 		switch (opcode) {

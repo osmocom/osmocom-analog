@@ -40,6 +40,7 @@ typedef struct cnetz_database {
 	uint8_t			futln_nat;	/* who ... */
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
+	int			futelg_bit;	/* chip card inside */
 	int			extended;	/* mobile supports extended frequencies */
 	struct timer		timer;		/* timer for next availability check */
 	int			retry;		/* counts number of retries */
@@ -89,7 +90,7 @@ static void db_timeout(struct timer *timer)
 }
 
 /* create/update db entry */
-int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended, int busy, int failed)
+int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *futelg_bit, int *extended, int busy, int failed)
 {
 	cnetz_db_t *db, **dbp;
 
@@ -123,8 +124,11 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 		PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	}
 
-	if (extended >= 0)
-		db->extended = extended;
+	if (futelg_bit && *futelg_bit >= 0)
+		db->futelg_bit = *futelg_bit;
+
+	if (extended && *extended >= 0)
+		db->extended = *extended;
 
 	if (busy) {
 		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%d' busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
@@ -143,18 +147,27 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 		timer_start(&db->timer, MELDE_WIEDERHOLUNG); /* when to do retry */
 	}
 
-	return db->extended;
+	if (futelg_bit)
+		*futelg_bit = db->futelg_bit;
+	if (extended)
+		*extended = db->extended;
+	return 0;
 }
 
-int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *futelg_bit, int *extended)
 {
 	cnetz_db_t *db = cnetz_db_head;
 
 	while (db) {
 		if (db->futln_nat == futln_nat
 		 && db->futln_fuvst == futln_fuvst
-		 && db->futln_rest == futln_rest)
-			return db->extended;
+		 && db->futln_rest == futln_rest) {
+			if (futelg_bit)
+				*futelg_bit = db->futelg_bit;
+			if (extended)
+				*extended = db->extended;
+			return 0;
+		}
 		db = db->next;
 	}
 	return -1;

@@ -46,12 +46,16 @@ double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
 const char *flip_polarity = "auto";
 int ms_power = 0; /* 0..3 */
-int auth = 0;
 int warteschlange = 1;
+int challenge_valid;
+uint64_t challenge;
+int response_valid;
+uint64_t response;
 uint8_t fuz_nat = 1;
 uint8_t fuz_fuvst = 1;
 uint8_t fuz_rest = 38;
 uint8_t kennung_fufst = 1; /* normal prio */
+uint8_t authentifikationsbit = 0;
 uint8_t ws_kennung = 0; /* no queue */
 uint8_t fuvst_sperren = 0; /* no blocking registration/calls */
 uint8_t grenz_einbuchen = 1; /* > 15 SNR */
@@ -94,10 +98,16 @@ void print_help(const char *arg0)
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station 0..3. (default = '%d')\n", ms_power);
 	printf("	0 = 50-125 mW;  1 = 0.5-1 W;  2 = 4-8 W;  3 = 10-20 W\n");
-	printf(" -A --authentication\n");
-	printf("        Enable authentication on the base station. Since we cannot\n");
-	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
-	printf("	we just accept any card. With this we get the vendor IDs of the phone.\n");
+	printf(" -A --authentication <challenge>\n");
+	printf("        Enable authorization flag on the base station and use given challenge\n");
+	printf("        as autorization random. Depending on the key inside the card you will\n");
+	printf("        get a response. Any response is accepted. Phone must have smart card!\n");
+	printf("        The challenge can be any 64 bit (hex) number like: 0x0123456789abcdef\n");
+	printf("        Note: Authentication is automatically enabled for the base station\n");
+	printf(" -A --authentication <challenge>,<response>\n");
+	printf("        Same as above, but the given response must match the response from\n");
+	printf("        smart card. The response can be any 64 bit (hex) number.\n");
+	printf("        Note: Authentication is automatically enabled for the base station\n");
 	printf(" -Q --queue | --warteschlange 1 | 0\n");
 	printf("        Enable queue support. If no channel is available, calls will be kept\n");
 	printf("        in a queue for maximum of 60 seconds. (default = %d)\n", warteschlange);
@@ -122,6 +132,13 @@ void print_help(const char *arg0)
 	printf("        2 = Higher priority base station.\n");
 	printf("        3 = Highest priority base station.\n");
 	printf("	Note: Priority has no effect, because there is only one base station.\n");
+	printf(" -A --sysinfo authentifikationsbit=auth>\n");
+	printf("        Enable authentication flag on the base station. Since we cannot\n");
+	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
+	printf("	we just accept any card. Useful get the vendor IDs of the phone.\n");
+	printf("        0 = Disable. Even chip card phones behave like magnetic card phones.\n");
+	printf("        1 = Enable. Chip card phones send their card ID.\n");
+	printf("        (default = %d)\n", authentifikationsbit);
 	printf(" -S --sysinfo ws-kennung=<value>\n");
 	printf("        Queue setting of base station. (default = %d)\n", ws_kennung);
 	printf("        0 = No queue, calls will be handled directly.\n");
@@ -231,7 +248,7 @@ static void add_options(void)
 	option_add('C', "clock-speed", 1);
 	option_add('F', "flip-polarity", 1);
 	option_add('P', "ms-power", 1);
-	option_add('A', "authentication", 0);
+	option_add('A', "authentifikationsbit", 1);
 	option_add('Q', "queue", 1);
 	option_add(OPT_WARTESCHLANGE, "warteschlange", 1);
 	option_add('G', "gebuehren", 1);
@@ -287,11 +304,18 @@ static int handle_options(int short_option, int argi, char **argv)
 		ms_power = atoi_limit(argv[argi], 0, 3);
 		break;
 	case 'A':
-		auth = 1;
+		authentifikationsbit = 1;
+		challenge_valid = 1;
+		challenge = strtoul(argv[argi], NULL, 0);
+		p = strchr(argv[argi], ',');
+		if (p) {
+			response_valid = 1;
+			response = strtoul(p + 1, NULL, 0);
+		}
 		break;
 	case 'Q':
 	case OPT_WARTESCHLANGE:
-		warteschlange = atoi_limit(argv[argi], 0, 1);;
+		warteschlange = atoi_limit(argv[argi], 0, 1);
 		break;
 	case 'G':
 		metering = atoi(argv[argi]);
@@ -317,6 +341,9 @@ static int handle_options(int short_option, int argi, char **argv)
 		} else
 		if (!strncasecmp(argv[argi], "kennung-fufst=", p - argv[argi])) {
 			kennung_fufst = atoi_limit(p, 0, 3);
+		} else
+		if (!strncasecmp(argv[argi], "auth=", p - argv[argi])) {
+			authentifikationsbit = atoi_limit(p, 0, 1);
 		} else
 		if (!strncasecmp(argv[argi], "ws-kennung=", p - argv[argi])) {
 			ws_kennung = atoi_limit(p, 0, 3);
@@ -481,7 +508,7 @@ int main(int argc, char *argv[])
 	}
     	if (anzahl_gesperrter_teilnehmergruppen)
 		printf("Blocked subscriber with number's last 4 bits from 0x%x to 0x%x\n", teilnehmergruppensperre, (teilnehmergruppensperre + anzahl_gesperrter_teilnehmergruppen - 1) & 0xf);
-	init_sysinfo(fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
+	init_sysinfo(fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
 	dsp_init();
 	rc = init_telegramm();
 	if (rc < 0) {
@@ -551,7 +578,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, auth, warteschlange, metering, dbm0_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, challenge_valid, challenge, response_valid, response, warteschlange, metering, dbm0_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

@@ -4,7 +4,7 @@
 
 cnetz_si si[2];
 
-void init_sysinfo(uint8_t fuz_nat, uint8_t fuz_fuvst, uint8_t fuz_rest, uint8_t kennung_fufst, uint8_t ws_kennung, uint8_t vermittlungstechnische_sperren, uint8_t grenz_einbuchen, uint8_t grenz_umschalten, uint8_t grenz_ausloesen, uint8_t mittel_umschalten, uint8_t mittel_ausloesen, uint8_t genauigkeit, uint8_t bewertung, uint8_t entfernung, uint8_t reduzierung, uint8_t nachbar_prio, int8_t teilnehmergruppensperre, uint8_t anzahl_gesperrter_teilnehmergruppen)
+void init_sysinfo(uint8_t fuz_nat, uint8_t fuz_fuvst, uint8_t fuz_rest, uint8_t kennung_fufst, uint8_t authentifikationsbit, uint8_t ws_kennung, uint8_t vermittlungstechnische_sperren, uint8_t grenz_einbuchen, uint8_t grenz_umschalten, uint8_t grenz_ausloesen, uint8_t mittel_umschalten, uint8_t mittel_ausloesen, uint8_t genauigkeit, uint8_t bewertung, uint8_t entfernung, uint8_t reduzierung, uint8_t nachbar_prio, int8_t teilnehmergruppensperre, uint8_t anzahl_gesperrter_teilnehmergruppen)
 {
 	memset(&si[0], 0, sizeof(cnetz_si));
 
@@ -38,6 +38,8 @@ void init_sysinfo(uint8_t fuz_nat, uint8_t fuz_fuvst, uint8_t fuz_rest, uint8_t 
 	si[0].grenz_einbuchen = grenz_einbuchen; /* 1..7 */
 
 	si[0].kennung_fufst = kennung_fufst;
+
+	si[0].authentifikationsbit = authentifikationsbit;
 
 	si[0].ws_kennung = ws_kennung;
 

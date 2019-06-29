@@ -17,20 +17,23 @@
 #define	TRANS_VAK	(1 << 10)	/* establishment of call sent, switching channel */
 	/* traffic channel */
 #define	TRANS_BQ	(1 << 11)	/* accnowledge channel */
-#define	TRANS_VHQ	(1 << 12)	/* hold call */
-#define	TRANS_RTA	(1 << 13)	/* hold call and make the phone ring */
-#define	TRANS_DS	(1 << 14)	/* establish speech connection */
-#define	TRANS_AHQ	(1 << 15)	/* establish speech connection after answer */
+#define	TRANS_ZFZ	(1 << 12)	/* hold call and send and receive challenge request */
+#define	TRANS_AP	(1 << 13)	/* hold call and send and receive challenge request */
+#define	TRANS_VHQ_K	(1 << 14)	/* hold call until speech channel or challenge response is available */
+#define	TRANS_VHQ_V	(1 << 15)	/* hold call while in conversation on distributed signalling */
+#define	TRANS_RTA	(1 << 16)	/* hold call and make the phone ring */
+#define	TRANS_DS	(1 << 17)	/* establish speech connection */
+#define	TRANS_AHQ	(1 << 18)	/* establish speech connection after answer */
 	/* release */
-#define	TRANS_VA	(1 << 16)	/* release call in queue by base station (OgK) */
-#define	TRANS_AF	(1 << 17)	/* release connection by base station (SpK) */
-#define	TRANS_AT	(1 << 18)	/* release connection by mobile station */
-#define	TRANS_ATQ	(1 << 19)	/* acknowledge release of MO call in queue */
+#define	TRANS_VA	(1 << 19)	/* release call in queue by base station (OgK) */
+#define	TRANS_AF	(1 << 20)	/* release connection by base station (SpK) */
+#define	TRANS_AT	(1 << 21)	/* release connection by mobile station */
+#define	TRANS_ATQ	(1 << 22)	/* acknowledge release of MO call in queue */
 	/* queue */
-#define	TRANS_MO_QUEUE	(1 << 20)	/* MO queue */
-#define	TRANS_MT_QUEUE	(1 << 21)	/* MT queue */
-#define	TRANS_MO_DELAY	(1 << 22)	/* delay to be sure the channel is free again */
-#define	TRANS_MT_DELAY	(1 << 23)
+#define	TRANS_MO_QUEUE	(1 << 23)	/* MO queue */
+#define	TRANS_MT_QUEUE	(1 << 24)	/* MT queue */
+#define	TRANS_MO_DELAY	(1 << 25)	/* delay to be sure the channel is free again */
+#define	TRANS_MT_DELAY	(1 << 26)
 
 typedef struct transaction {
 	struct transaction	*next;			/* pointer to next node in list */
@@ -39,6 +42,7 @@ typedef struct transaction {
 	uint8_t			futln_nat;		/* current station ID (3 values) */
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
+	int			futelg_bit;		/* chip card inside phone */
 	int			extended;		/* extended frequency capability */
 	char			dialing[18];		/* number dialed by the phone */
 	int64_t			state;			/* state of transaction */
@@ -53,7 +57,7 @@ typedef struct transaction {
 } transaction_t;
 
 const char *transaction2rufnummer(transaction_t *trans);
-transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int extended);
+transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int futelg_bit, int extended);
 void destroy_transaction(transaction_t *trans);
 void link_transaction(transaction_t *trans, cnetz_t *cnetz);
 void unlink_transaction(transaction_t *trans);
