@@ -42,6 +42,7 @@
 #endif
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
+#include "image.h"
 
 #define DEFAULT_LO_OFFSET -1000000.0
 
@@ -493,6 +494,9 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 		return;
 	if (console_open_audio(latspl))
 		return;
+
+	if (!loopback)
+		print_image();
 
 	/* real time priority */
 	if (rt_prio > 0) {

@@ -31,7 +31,6 @@
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
-#include "image.h"
 #include "stations.h"
 #include "main.h"
 
@@ -326,8 +325,6 @@ int main_amps_tacs(int argc, char *argv[])
 		exit(0);
 	}
 
-	if (!loopback)
-		print_image();
 	sid_stations(sid);
 
 	/* inits */

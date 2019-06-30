@@ -5,8 +5,8 @@
  * another burst of corrupted bits.
  *
  * There is no parity check, so it is required to check all information
- * elements of each message. Messages that contain signals or digits are
- * protected by repeating the digits in the information element.
+ * elements of each message. With NMT System: Messages that contain signals
+ * or digits are protected by repeating the digits in the information element.
  *
  * (C) 2017 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved

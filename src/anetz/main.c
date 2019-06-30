@@ -35,7 +35,6 @@
 #include "anetz.h"
 #include "dsp.h"
 #include "stations.h"
-#include "image.h"
 
 /* settings */
 static char operator[32] = "010";
@@ -173,9 +172,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
-
-	if (!loopback)
-		print_image();
 
 	/* inits */
 	fm_init(fast_math);

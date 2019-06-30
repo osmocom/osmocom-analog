@@ -33,7 +33,6 @@
 #include "nmt.h"
 #include "frame.h"
 #include "dsp.h"
-#include "image.h"
 #include "tones.h"
 #include "announcement.h"
 #include "countries.h"
@@ -380,9 +379,6 @@ int main(int argc, char *argv[])
 			goto fail;
 		}
 	}
-
-	if (!loopback)
-		print_image();
 
 	/* inits */
 	fm_init(fast_math);

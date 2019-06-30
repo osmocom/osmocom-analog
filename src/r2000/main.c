@@ -34,7 +34,6 @@
 #include "dsp.h"
 #include "frame.h"
 #include "tones.h"
-#include "image.h"
 
 /* settings */
 static int band = 1;
@@ -331,9 +330,6 @@ int main(int argc, char *argv[])
 		else
 			getchar();
 	}
-
-	if (!loopback && crins != 3)
-		print_image();
 
 	/* inits */
 	fm_init(fast_math);

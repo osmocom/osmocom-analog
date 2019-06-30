@@ -35,7 +35,6 @@
 #include "sysinfo.h"
 #include "dsp.h"
 #include "telegramm.h"
-#include "image.h"
 #include "ansage.h"
 
 /* settings */
@@ -492,9 +491,6 @@ int main(int argc, char *argv[])
 		print_help(argv[0]);
 		return 0;
 	}
-
-	if (!loopback)
-		print_image();
 
 	/* inits */
 	fm_init(fast_math);

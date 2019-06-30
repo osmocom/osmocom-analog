@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "image.h"
+#include "../libmobile/image.h"
 
 const char *image[] = {
 	"@g                                                       _\n"

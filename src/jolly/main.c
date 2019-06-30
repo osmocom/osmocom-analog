@@ -48,6 +48,8 @@ static double squelch_db = -INFINITY;
 int nbfm = 0;
 int repeater = 0;
 
+void print_image(void) {}
+
 void print_help(const char *arg0)
 {
 	main_mobile_print_help(arg0, "[-F <downlink MHz>,<uplink MHz>] ");

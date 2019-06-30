@@ -33,7 +33,6 @@
 #include "bnetz.h"
 #include "dsp.h"
 #include "stations.h"
-#include "image.h"
 #include "ansage.h"
 
 int gfs = 2;
@@ -172,9 +171,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
-
-	if (!loopback)
-		print_image();
 
 	/* inits */
 	fm_init(fast_math);
