@@ -63,6 +63,7 @@ static double bandwidth = 0.0;
 static double deviation = 75000.0;
 static double modulation_index = 1.0;
 static double time_constant_us = 50.0;
+static double volume = 1.0;
 static int stereo = 0;
 static int rds = 0;
 static int rds2 = 0;
@@ -138,6 +139,8 @@ void print_help(const char *arg0)
 	printf("        modulation. Give 0 to disbale. (default = %.0f uS)\n", time_constant_us);
 	printf("        VHF broadcast 50 uS in Europe and 75 uS in the United States.\n");
 	printf("        Other radio FM should use 530 uS, to cover complete speech spectrum.\n");
+	printf(" -V --volume %.3f\n", volume);
+	printf("        Change volume of radio side. (Gains transmission, dampens reception)\n");
 	printf(" -S --stereo\n");
 	printf("        Enables stereo carrier for frequency modulated UHF broadcast.\n");
 	printf("        It uses the 'Pilot-tone' system.\n");
@@ -169,6 +172,7 @@ static void add_options(void)
 	option_add('D', "deviation", 1);
 	option_add('I', "modulation-index", 1);
 	option_add('E', "emphasis", 1);
+	option_add('V', "volume", 1);
 	option_add('S', "stereo", 0);
 	option_add(OPT_FAST_MATH, "fast-math", 0);
 	option_add(OPT_LIMESDR, "limesdr", 0);
@@ -237,6 +241,9 @@ static int handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'E':
 		time_constant_us = atof(argv[argi]);
+		break;
+	case 'V':
+		volume = atof(argv[argi]);
 		break;
 	case 'S':
 		stereo = 1;
@@ -348,7 +355,7 @@ int main(int argc, char *argv[])
 	/* now we have latency and sample rate */
 	latspl = samplerate * latency / 1000;
 
-	rc = radio_init(&radio, latspl, samplerate, tx_wave_file, rx_wave_file, (tx) ? tx_audiodev : NULL, (rx) ? rx_audiodev : NULL, modulation, bandwidth, deviation, modulation_index, time_constant_us, stereo, rds, rds2);
+	rc = radio_init(&radio, latspl, samplerate, tx_wave_file, rx_wave_file, (tx) ? tx_audiodev : NULL, (rx) ? rx_audiodev : NULL, modulation, bandwidth, deviation, modulation_index, time_constant_us, volume, stereo, rds, rds2);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialize radio with given options, exitting!\n");
 		exit(0);

@@ -36,7 +36,7 @@
 #define PILOT_FREQ	19000.0
 #define PILOT_BW	5.0
 
-int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant_us, int stereo, int rds, int rds2)
+int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant_us, double volume, int stereo, int rds, int rds2)
 {
 	int rc = -EINVAL;
 
@@ -44,6 +44,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 
 	memset(radio, 0, sizeof(*radio));
 	radio->latspl = latspl;
+	radio->volume = volume;
 	radio->stereo = stereo;
 	radio->rds = rds;
 	radio->rds2 = rds2;
@@ -457,6 +458,7 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	switch (radio->tx_audio_mode) {
 	case AUDIO_MODE_WAVEFILE:
 		wave_read(&radio->wave_tx_play, audio_samples, audio_num);
+		
 		if (!radio->wave_tx_play.left) {
 			int rc;
 			int _samplerate = 0;
@@ -526,6 +528,16 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	iir_process(&radio->tx_dc_removal[0], audio_samples[0], audio_num);
 	if (radio->stereo)
 		iir_process(&radio->tx_dc_removal[1], audio_samples[1], audio_num);
+
+	/* gain volume */
+	if (radio->volume != 1.0) {
+		for (i = 0; i < audio_num; i++)
+			audio_samples[0][i] *= radio->volume;
+		if (radio->stereo) {
+			for (i = 0; i < audio_num; i++)
+				audio_samples[1][i] *= radio->volume;
+		}
+	}
 
 	/* upsample */
 	signal_num = samplerate_upsample(&radio->tx_resampler[0], audio_samples[0], audio_num, signal_samples[0]);
@@ -653,6 +665,16 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 	audio_num = samplerate_downsample(&radio->rx_resampler[0], samples[0], signal_num);
 	if (radio->stereo)
 		samplerate_downsample(&radio->rx_resampler[1], samples[1], signal_num);
+
+	/* dampen volume */
+	if (radio->volume != 1.0) {
+		for (i = 0; i < audio_num; i++)
+			samples[0][i] /= radio->volume;
+		if (radio->stereo) {
+			for (i = 0; i < audio_num; i++)
+				samples[1][i] /= radio->volume;
+		}
+	}
 
 	/* convert mono/stereo, (from differential signal) */
 	if (radio->stereo && radio->rx_audio_channels == 1) {
