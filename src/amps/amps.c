@@ -899,10 +899,17 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	int i;
 
 	/* 1. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) == 11 && !strncmp(dialing, "+", 1))
-		dialing += 1;
-	if (strlen(dialing) == 11 && !strncmp(dialing, "1", 1))
-		dialing += 1;
+	if (!tacs) {
+		if (strlen(dialing) == 12 && !strncmp(dialing, "+1", 2))
+		dialing += 2;
+		if (strlen(dialing) == 11 && !strncmp(dialing, "1", 1))
+			dialing += 1;
+	} else if (!jtacs) {
+		if (strlen(dialing) == 14 && !strncmp(dialing, "+44", 3))
+			dialing += 3;
+		if (strlen(dialing) == 11 && !strncmp(dialing, "0", 1))
+			dialing += 1;
+	}
 	if (strlen(dialing) != 10) {
 inval:
 		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
