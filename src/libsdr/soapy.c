@@ -501,7 +501,7 @@ int soapy_get_tosend(int latspl)
 	tosend = latspl - (tx_count - rx_count);
 	/* in case of underrun: */
 	if (tosend > latspl) {
-// It is normal that we have underruns, prior inital filling of buffer.
+// It is normal that we have underruns, prior initial filling of buffer.
 // FIXME: better solution to detect underrun
 //		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun!\n");
 		tosend = 0;

@@ -558,7 +558,7 @@ bnetz.c:351 info   : Entering IDLE state, sending 'Gruppenfreisignal' 2.
 Base station for channel 1 ready, please tune transmitter to 153.010 MHz and receiver to 148.410 MHz.
 To call phone, switch transmitter (using paging signal) to 153.370 MHz.
 mncc_sock.c:137 notice : MNCC socket connected.
-dsp.c:159 info   : Detecting continous tone: 2070:Level= 80% Quality=100%
+dsp.c:159 info   : Detecting continuous tone: 2070:Level= 80% Quality=100%
 bnetz.c:470 info   : Received signal 'Kanalbelegung' from mobile station, sending signal 'Wahlabruf'.
 bnetz.c:509 info   : Digit RX Level: 80% Quality=85
 bnetz.c:524 info   : Received telegramm digit 'Funkwahl ohne Gebuehrenuebermittlung'.
@@ -692,15 +692,15 @@ call.c:859 info   : Outgoing call from to '50993'
 bnetz.c:757 info   : Call to mobile station, paging station id '50993'
 bnetz.c:374 info   : Entering paging state (try 1), sending 'Selektivruf' to '50993'.
 bnetz.c:410 info   : Paging mobile station 50993 complete, waiting for answer.
-dsp.c:159 info   : Detecting continous tone: 1950:Level= 105% Quality=100%
+dsp.c:159 info   : Detecting continuous tone: 1950:Level= 105% Quality=100%
 bnetz.c:480 info   : Received signal 'Rufbestaetigung' from mobile station, sending signal 'Rufhaltung'.
 (call is ringing)
 call.c:641 info   : Call is alerting
 ...
-dsp.c:159 info   : Detecting continous tone: 2070:Level= 102% Quality=99%
+dsp.c:159 info   : Detecting continuous tone: 2070:Level= 102% Quality=99%
 bnetz.c:491 info   : Received signal 'Beginnsignal' from mobile station, call establised.
 call.c:684 info   : Call has been answered by '50993'
-dsp.c:159 info   : Detecting continous tone: 2070:Level= 104% Quality=100%
+dsp.c:159 info   : Detecting continuous tone: 2070:Level= 104% Quality=100%
 
 </pre>
 
@@ -727,7 +727,7 @@ squelch.c:94 info   : RF signal measurement: -69.2 dB noise floor, using thresho
 </pre>
 
 <p>
-In the following example I cut off the power of the phone beeing in a call and waited 12 seconds for the base station to time out:
+In the following example I cut off the power of the phone being in a call and waited 12 seconds for the base station to time out:
 </p>
 
 <pre>
@@ -749,7 +749,7 @@ Kennungsspeicher (The Security Module)
 <p>
 Older phones used soldered jumpers to set the phone number (ID) of the phone.
 Just by soldering a different number, the network could be used without paying.
-So simple was hacking back then - if you could affort an expensive B-Netz phone.
+So simple was hacking back then - if you could afford an expensive B-Netz phone.
 The security module "Kennungsspeicher" was introduced to prevent using the phone, if it is not inserted into the internal socket.
 The idea was to disable unsubscribed phones, just by removing the module.
 This module was owned by the German post office and I got a phone without it.

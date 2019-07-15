@@ -49,7 +49,7 @@
    This offset of 0x400000000 is required for MNCC interface. */
 static int new_callref = 0x40000000;
 
-/* definiton of bands and channels */
+/* definition of bands and channels */
 #define CHANNEL_SPACING	0.0125
 
 static struct r2000_bands {

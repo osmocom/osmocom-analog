@@ -30,14 +30,14 @@ static double int_16_speech_level = SPEECH_LEVEL * 0.7079; /* 16 dBm below dBm0,
  * support high numbers. 'double' or 'float' types are sufficient.
  *
  * When using sample_t inside signal processing of each base station, the
- * level of +- 1 is relative to the normal speach evenlope.
+ * level of +- 1 is relative to the normal speech evenlope.
  *
  * When converting sample_t to int16_t, the level of +- 1 is reduced by factor.
  * This way the speech may be louder before clipping happens.
  *
  * When using sample_t to modulate (SDR or sound card), the level is changed,
  * so it represents the frequency deviation in Hz. The deviation of speech
- * envelope is network dependant.
+ * envelope is network dependent.
  */
 
 void samples_to_int16(int16_t *spl, sample_t *samples, int length)

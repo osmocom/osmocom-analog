@@ -1,4 +1,4 @@
-You need to have the folowing packages install:
+You need to have the following packages install:
 
 * automake, gcc for compilation
 * libasound2 for sound card support, which is what you need!

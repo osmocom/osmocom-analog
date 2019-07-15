@@ -157,7 +157,7 @@ void fsk_receive(fsk_t *fsk, sample_t *sample, int length)
 	int bit;
 	double level, quality;
 
-	/* demod samples to offset arround center frequency */
+	/* demod samples to offset around center frequency */
 	fm_demodulate_real(&fsk->demod, frequency, length, sample, I, Q);
 
 	for (i = 0; i < length; i++) {
@@ -187,7 +187,7 @@ void fsk_receive(fsk_t *fsk, sample_t *sample, int length)
 					fsk->rx_bitpos = 0.5;
 			}
 		}
-		/* if bit counter reaches 1, we substract 1 and sample the bit */
+		/* if bit counter reaches 1, we subtract 1 and sample the bit */
 		if (fsk->rx_bitpos >= 1.0) {
 			/* peak level is the length of I/Q vector
 			 * since we filter out the unwanted modulation product, the vector is only half of length */

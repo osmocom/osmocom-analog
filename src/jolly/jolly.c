@@ -88,7 +88,7 @@
  * 		| '#' received		| stop timer
  * 		|			| call setup
  * 		|			| if call setup fails:
- * 		|			| 	play release anouncement
+ * 		|			| 	play release announcement
  * 		|			| 	go to state RELEASED
  * 		|			| go to state CALL
  * 		|			|
@@ -98,18 +98,18 @@
  * CALL		| '*' received		| start timer T-DIAL2
  * 		|			| go to state CALL-DIALING
  * 		|			|
- * 		| call release		| play release anouncement
+ * 		| call release		| play release announcement
  * 		|			| go to state RELEASED
  * 		|			|
  * -------------+-----------------------+--------------------------------------
  * CALL-DIALING	| '#' received		| stop timer
  * 		|			| call release
- * 		|			| play release anouncement
+ * 		|			| play release announcement
  * 		|			| go to state RELEASED
  * 		|			|
  * 		| timeout		| go state CALL
  * 		|			|
- * 		| call release		| play release anouncement
+ * 		| call release		| play release announcement
  * 		|			| go to state RELEASED
  * 		|			|
  * -------------+-----------------------+--------------------------------------
@@ -121,7 +121,7 @@
  * 		| call release		| go to state IDLE
  * 		|			|
  * -------------+-----------------------+--------------------------------------
- * RELEASED	| end of anouncement	| go to state IDLE
+ * RELEASED	| end of announcement	| go to state IDLE
  * 		|			|
  */
 

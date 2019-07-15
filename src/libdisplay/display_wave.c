@@ -120,7 +120,7 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 		if (pos == width + 2) {
 			memset(&screen, ' ', sizeof(screen));
 			for (j = 0; j < width; j++) {
-				/* Input value is scaled to range -1 .. 1 and then substracted from 1,
+				/* Input value is scaled to range -1 .. 1 and then subtracted from 1,
 				 * so the result ranges from 0 .. 2.
 				 * HEIGHT-1 is multiplied with the range, so a HEIGHT of 3 would allow
 				 * 0..4 (5 steps) and a HEIGHT of 11 would allow 0..20 (21 steps).

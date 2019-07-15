@@ -143,9 +143,9 @@ void dsp_cleanup_sender(jolly_t *jolly)
 	}
 }
 
-void set_speech_string(jolly_t *jolly, char anouncement, const char *number)
+void set_speech_string(jolly_t *jolly, char announcement, const char *number)
 {
-	jolly->speech_string[0] = anouncement;
+	jolly->speech_string[0] = announcement;
 	jolly->speech_string[1] = '\0';
 	strncat(jolly->speech_string, number, sizeof(jolly->speech_string) - 1);
 	jolly->speech_digit = 0;

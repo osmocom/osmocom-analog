@@ -104,7 +104,7 @@ enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double durat
 		}
 	}
 
-	/* enough RF level, so we unmute when mute_count reched 0 */
+	/* enough RF level, so we unmute when mute_count reached 0 */
 	if (rf_level_db >= squelch->threshold_db) {
 		squelch->mute_count -= duration;
 		if (squelch->mute_count <= 0.0) {

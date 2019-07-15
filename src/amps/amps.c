@@ -184,7 +184,7 @@ void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2)
 	int i;
 
 	if (nlen != 10) {
-		fprintf(stderr, "illegal lenght %d. Must be 10, aborting!", nlen);
+		fprintf(stderr, "illegal length %d. Must be 10, aborting!", nlen);
 		abort();
 	}
 
@@ -580,7 +580,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 
 	amps->pre_emphasis = pre_emphasis;
 	amps->de_emphasis = de_emphasis;
-	/* the AMPS uses a frequency rage of 300..3000 Hz, but we still use the default low pass filter, wich is not too far above */
+	/* the AMPS uses a frequency rage of 300..3000 Hz, but we still use the default low pass filter, which is not too far above */
 	rc = init_emphasis(&amps->estate, samplerate, CUT_OFF_EMPHASIS_DEFAULT, CUT_OFF_HIGHPASS_DEFAULT, CUT_OFF_LOWPASS_DEFAULT);
 	if (rc < 0)
 		goto error;

@@ -326,7 +326,7 @@ int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_
 
 	/* RP length */
 	*tpdu_length = length - (uint8_t)(tpdu_length - data) - 1;
-	PDEBUG(DSMS, DEBUG_DEBUG, " -> TPDU lenght = %d\n", *tpdu_length);
+	PDEBUG(DSMS, DEBUG_DEBUG, " -> TPDU length = %d\n", *tpdu_length);
 
 	nmt->sms.mt = 1;
 	dms_send(nmt, data, length, 1);

@@ -93,7 +93,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		string_ul = strsep(&string, ",");
 		string_step = strsep(&string, ",");
 		if (!string_dl || !string_ul || !string_step) {
-			fprintf(stderr, "Please give 3 values for --frequency, seperated by comma and no space!\n");
+			fprintf(stderr, "Please give 3 values for --frequency, separated by comma and no space!\n");
 			exit(0);
 		}
 		dl_freq = atof(string_dl);

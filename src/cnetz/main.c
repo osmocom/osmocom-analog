@@ -280,7 +280,7 @@ static int handle_options(int short_option, int argi, char **argv)
 	case 'C':
 		p = strchr(argv[argi], ',');
 		if (!p) {
-			fprintf(stderr, "Illegal clock speed, use two values, seperated by comma and no spaces!\n");
+			fprintf(stderr, "Illegal clock speed, use two values, separated by comma and no spaces!\n");
 			return -EINVAL;
 		}
 		clock_speed[0] = strtold(argv[argi], NULL);

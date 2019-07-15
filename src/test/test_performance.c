@@ -82,7 +82,7 @@ int main(void)
 	iir_lowpass_init(&lp, 10000.0 / 2.0, 50000, 4);
 	T_START()
 	iir_process(&lp, samples, SAMPLES);
-	T_STOP("low-pass filter (eigth order)", SAMPLES)
+	T_STOP("low-pass filter (eighth order)", SAMPLES)
 
 	fm_exit();
 

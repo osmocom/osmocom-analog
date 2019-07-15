@@ -42,7 +42,7 @@
 #define H_SYNC2_START	(H_SYNC_START + H_LINE_END/2.0)
 #define H_SYNC2_STOP	(H_SYNC_STOP + H_LINE_END/2.0)
 #define V_SYNC_STOP	(H_SYNC2_START - (H_SYNC_STOP - H_SYNC_START))
-#define V_SYNC2_STOP	(H_SYNC_START - (H_SYNC_STOP - H_SYNC_START) + H_LINE_END) // wraps, so we substract H_LINE_END
+#define V_SYNC2_STOP	(H_SYNC_START - (H_SYNC_STOP - H_SYNC_START) + H_LINE_END) // wraps, so we subtract H_LINE_END
 #define SYNC_RAMP	0.0000003
 #define IMAGE_RAMP	0.0000002
 #define H_CBURST_START	0.0000068
@@ -71,7 +71,7 @@ void bas_init(bas_t *bas, double samplerate, enum bas_type type, int fbas, doubl
 	/* filter color signal */
 	iir_lowpass_init(&bas->lp_u, 1300000.0, samplerate, COLOR_FILTER_ITER);
 	iir_lowpass_init(&bas->lp_v, 1300000.0, samplerate, COLOR_FILTER_ITER);
-	/* filter final FBAS, so we prevent from beeing in the audio carrier spectrum */
+	/* filter final FBAS, so we prevent from being in the audio carrier spectrum */
 	iir_lowpass_init(&bas->lp_y, 4500000.0, samplerate, COLOR_FILTER_ITER);
 }
 

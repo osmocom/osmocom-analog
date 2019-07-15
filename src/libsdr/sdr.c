@@ -967,7 +967,7 @@ int sdr_get_tosend(void *inst, int latspl)
 	count /= sdr->oversample;
 
 	if (sdr->threads) {
-		/* substract what we have in write buffer, because this is not jent sent to the SDR */
+		/* subtract what we have in write buffer, because this is not jent sent to the SDR */
 		int fill;
 
 		fill = (sdr->thread_write.in - sdr->thread_write.out + sdr->thread_write.buffer_size) % sdr->thread_write.buffer_size;

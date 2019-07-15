@@ -76,7 +76,7 @@ void print_help(const char *arg0)
 	printf(" -Y --traffic-area <traffic area> | list\n");
 	printf("        NOTE: MUST MATCH WITH YOUR ROAMING SETTINGS IN THE PHONE!\n");
 	printf("              Your phone will not connect, if country code is different!\n");
-	printf("        Give short country code and traffic area seperated by comma.\n");
+	printf("        Give short country code and traffic area separated by comma.\n");
 	printf("        (Example: Give 'SE,1' for Sweden, traffic area 1)\n");
 	printf("        Add '!' to force traffic area that is not supported by country.\n");
 	printf("        (Example: Give 'B,12!' for Belgium, traffic area 12)\n");

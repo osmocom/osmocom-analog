@@ -633,7 +633,7 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 			/* mix pilot tone (double phase) with differential signal */
 			for (i = 0; i < signal_num; i++) {
 				p = atan2(samples[2][i], samples[1][i]);
-				/* substract measured phase difference (use double amplitude, because we filter later) */
+				/* subtract measured phase difference (use double amplitude, because we filter later) */
 			        samples[1][i] = samples[0][i] * sin((radio->rx_pilot_phase - p) * 2.0) * 2.0;
 				radio->rx_pilot_phase += radio->pilot_phasestep;
 				if (radio->rx_pilot_phase >= 2.0 * M_PI)

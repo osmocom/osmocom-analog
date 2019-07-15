@@ -152,7 +152,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int tone, int goodtone, double leve
 	if (!goodtone && bnetz->tone_detected > -1) {
 		bnetz->tone_count++;
 		if (bnetz->tone_count == TONE_LOST_CNT) {
-			/* substract TONE_LOST_CNT from duration, because it took that long to detect loss of tone */
+			/* subtract TONE_LOST_CNT from duration, because it took that long to detect loss of tone */
 			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Lost F%d tone after %.2f seconds.\n", bnetz->tone_detected, (double)(bnetz->tone_duration - TONE_LOST_CNT) / 100.0);
 			bnetz->tone_detected = -1;
 			bnetz_receive_tone(bnetz, -1);
@@ -194,7 +194,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	display_measurements_update(bnetz->dmp_tone_stddev, level_stddev / level_avg * 100.0, 0.0);
 	display_measurements_update(bnetz->dmp_tone_quality, quality_avg * 100.0, 0.0);
 
-	/* collect bits, and check for level and continous tone */
+	/* collect bits, and check for level and continuous tone */
 	bnetz->rx_tone = (bnetz->rx_tone << 1) | bit;
 	for (i = 0; i < TONE_DETECT_CNT; i++) {
 		if (((bnetz->rx_tone >> i) & 1) != bit)

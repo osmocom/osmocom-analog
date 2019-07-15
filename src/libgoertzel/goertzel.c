@@ -68,7 +68,7 @@ void audio_goertzel_init(goertzel_t *goertzel, double freq, int samplerate)
  *
  * samples: pointer to sample buffer
  * length: length of buffer
- * offset: for ring buffer, start here and wrap arround to 0 when length has been hit
+ * offset: for ring buffer, start here and wrap around to 0 when length has been hit
  * coeff: array of coefficients (coeff << 15)
  * result: array of result levels (average value of the sine, that is 1 / (PI/2) of the sine's peak)
  * k: number of frequencies to check

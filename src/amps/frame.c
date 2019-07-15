@@ -2221,7 +2221,7 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_DMAC,			"DMAC",			"Digital mobile attenuation code field", ie_cmac },
 	{ AMPS_IE_DTX,			"DTX",			"Discontinuous-Transmission field", ie_yes },
 	{ AMPS_IE_DTX_Support,		"DTX Support",		"Indicates the nature of DTX supported on an analog voice", ie_dtx_support },
-	{ AMPS_IE_DVCC,			"DVCC",			"Digital Verfication Color Code", NULL},
+	{ AMPS_IE_DVCC,			"DVCC",			"Digital Verification Color Code", NULL},
 	{ AMPS_IE_Data_Part,		"Data Part",		"Identifies the Data Port associated with a data/fax call", ie_data_part },
 	{ AMPS_IE_Data_Privacy,		"Data Privacy",		"This field indicates whether or not Data Privacy is supported", ie_yes },
 	{ AMPS_IE_E,			"E",			"Extended address field", ie_yes },
@@ -3699,7 +3699,7 @@ int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, d
 	} else if (count == 240) {
 		more = amps_decode_bits_recc(amps, bits, 0);
 	} else {
-		PDEBUG_CHAN(DFRAME, DEBUG_ERROR, "Frame with unknown lenght = %d, please fix!\n", count);
+		PDEBUG_CHAN(DFRAME, DEBUG_ERROR, "Frame with unknown length = %d, please fix!\n", count);
 	}
 
 	return more;

@@ -96,7 +96,7 @@
  *
  * In case of a combined OgK+SpK, the channel stays the same, but will change.
  *
- * See below for detailled processing.
+ * See below for detailed processing.
  */
 
 /*

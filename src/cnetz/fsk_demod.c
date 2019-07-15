@@ -81,7 +81,7 @@
  * When we are synced:
  *
  * After we recorded the time of all level changes during the sync sequence, we
- * calulate an average and use it as a time base for sampling the subsequent 150
+ * calculate an average and use it as a time base for sampling the subsequent 150
  * bit of a message.  From now on, a bit change does not cause any resync. We
  * just remember what change we received. Later we use it for sampling the 150
  * bits.
@@ -100,7 +100,7 @@
  * since the mobile phone is perfectly synced to us.
  *
  * After receiving and decoding of a frame, we use the time of received sync
- * sequence to synchronize the reciever to the mobile phone. If we receive a
+ * sequence to synchronize the receiver to the mobile phone. If we receive a
  * message on the OgK (control channel), we know that this is a response to a
  * message of a specific time slot we recently sent. Then we can fully sync the
  * receiver's clock.  For any other frame, we cannot determine the absolute

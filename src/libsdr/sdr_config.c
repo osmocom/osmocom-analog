@@ -62,7 +62,7 @@ void sdr_config_print_help(void)
 	printf("    --sdr-device-args <args>\n");
 	printf("    --sdr-stream-args <args>\n");
 	printf("    --sdr-tune-args <args>\n");
-	printf("        Optional SDR device arguments, seperated by comma\n");
+	printf("        Optional SDR device arguments, separated by comma\n");
 	printf("        e.g. --sdr-device-args <key>=<value>[,<key>=<value>[,...]]\n");
 	printf("    --sdr-samplerate <samplerate>\n");
 	printf("        Sample rate to use with SDR. By default it equals the regular sample\n");

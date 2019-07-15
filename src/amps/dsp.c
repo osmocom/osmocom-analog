@@ -39,7 +39,7 @@
  * The average level change offsets of the dotting sequence is used to set the
  * window for the first bit.  When all samples for the window are received, a
  * raise in level is detected as 1, fall in level is detected as 0. This is done
- * by substracting the average sample value of the left side of the window by
+ * by subtracting the average sample value of the left side of the window by
  * the average sample value of the right side.  After the bit has been detected,
  * the samples for the next window will be received and detected.
  *
@@ -108,7 +108,7 @@
 #define AMPS_BITRATE		10000
 /* for some reason, 4000 Hz deviation works better */
 #define TACS_DBM0_DEVIATION	4000.0  /* 2300 Hz deviation at 1 kHz (according to panasonic manual) */
-#define TACS_MAX_DEVIATION	6400.0	/* (according to texas intruments and other sources) */
+#define TACS_MAX_DEVIATION	6400.0	/* (according to texas instruments and other sources) */
 #define TACS_MAX_MODULATION	9500.0	/* (according to panasonic manual) */
 #define TACS_FSK_DEVIATION	(6400.0 / TACS_DBM0_DEVIATION)	/* no emphasis */
 #define TACS_SAT_DEVIATION	(1700.0 / TACS_DBM0_DEVIATION)	/* no emphasis (panasonic / TI) */
