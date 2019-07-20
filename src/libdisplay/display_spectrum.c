@@ -55,7 +55,7 @@ void display_spectrum_init(int samplerate, double _center_frequency)
 	has_init = 1;
 }
 
-void display_spectrum_add_mark(int kanal, double frequency)
+void display_spectrum_add_mark(const char *kanal, double frequency)
 {
 	dispspectrum_mark_t *mark, **mark_p;
 
@@ -348,7 +348,7 @@ void display_spectrum(float *samples, int length)
 					screen[k][j] = ':';
 					screen_color[k][j] = 12;
 				}
-				sprintf(print_channel, "Ch%d", mark->kanal);
+				sprintf(print_channel, "Ch%s", mark->kanal);
 				for (o = 0; o < (int)strlen(print_channel); o++) {
 					s = j - strlen(print_channel) + o;
 					if (s >= 0 && s < width) {

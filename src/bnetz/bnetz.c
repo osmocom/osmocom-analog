@@ -157,27 +157,27 @@ static void bnetz_timeout(struct timer *timer);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
-int bnetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering)
+int bnetz_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering)
 {
 	bnetz_t *bnetz;
 	enum paging_signal paging_signal = PAGING_SIGNAL_NONE;
 	char paging_file[255] = "", paging_on[255] = "", paging_off[255] = "";
 	int rc;
 
-	if (!(kanal >= 1 && kanal <= 39) && !(kanal >= 50 && kanal <= 86)) {
-		PDEBUG(DBNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid.\n", kanal);
+	if (!(atoi(kanal) >= 1 && atoi(kanal) <= 39) && !(atoi(kanal) >= 50 && atoi(kanal) <= 86)) {
+		PDEBUG(DBNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
 
-	if (kanal == 19) {
-		PDEBUG(DBNETZ, DEBUG_ERROR, "Selected calling channel ('Rufkanal') number %d can't be used as traffic channel.\n", kanal);
+	if (atoi(kanal) == 19) {
+		PDEBUG(DBNETZ, DEBUG_ERROR, "Selected calling channel ('Rufkanal') number %s can't be used as traffic channel.\n", kanal);
 		return -EINVAL;
 	}
 
-	if (kanal >= 38 && kanal <= 39)
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Selected channel ('Kanal') number %d may not be supported by older B1-Network phones.\n", kanal);
-	if (kanal >= 50)
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Selected channel ('Kanal') number %d belongs to B2-Network and is not supported by B1 phones.\n", kanal);
+	if (atoi(kanal) >= 38 && atoi(kanal) <= 39)
+		PDEBUG(DBNETZ, DEBUG_NOTICE, "Selected channel ('Kanal') number %s may not be supported by older B1-Network phones.\n", kanal);
+	if (atoi(kanal) >= 50)
+		PDEBUG(DBNETZ, DEBUG_NOTICE, "Selected channel ('Kanal') number %s belongs to B2-Network and is not supported by B1 phones.\n", kanal);
 
 	if ((gfs < 1 || gfs > 19)) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Given 'Gruppenfreisignal' %d invalid.\n", gfs);
@@ -220,10 +220,10 @@ error_paging:
 		return -ENOMEM;
 	}
 
-	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %d 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
+	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %s 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(kanal, 0), bnetz_kanal2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, paging_signal);
+	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(atoi(kanal), 0), bnetz_kanal2freq(atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, paging_signal);
 	if (rc < 0) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -247,7 +247,7 @@ error_paging:
 	/* go into idle state */
 	bnetz_go_idle(bnetz);
 
-	PDEBUG(DBNETZ, DEBUG_NOTICE, "Created 'Kanal' #%d\n", kanal);
+	PDEBUG(DBNETZ, DEBUG_NOTICE, "Created 'Kanal' #%s\n", kanal);
 	PDEBUG(DBNETZ, DEBUG_NOTICE, " -> Using station ID (Gruppenfreisignal) %d\n", gfs);
 
 	return 0;
@@ -263,7 +263,7 @@ void bnetz_destroy(sender_t *sender)
 {
 	bnetz_t *bnetz = (bnetz_t *) sender;
 
-	PDEBUG(DBNETZ, DEBUG_DEBUG, "Destroying 'B-Netz' instance for 'Kanal' = %d.\n", sender->kanal);
+	PDEBUG(DBNETZ, DEBUG_DEBUG, "Destroying 'B-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
 	switch_channel_19(bnetz, 0);
 	dsp_cleanup_sender(bnetz);
 	timer_exit(&bnetz->timer);
@@ -276,7 +276,7 @@ static void bnetz_go_idle(bnetz_t *bnetz)
 {
 	timer_stop(&bnetz->timer);
 
-	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %d, sending 'Gruppenfreisignal' %d.\n", bnetz->sender.kanal, bnetz->gfs);
+	PDEBUG(DBNETZ, DEBUG_INFO, "Entering IDLE state on channel %s, sending 'Gruppenfreisignal' %d.\n", bnetz->sender.kanal, bnetz->gfs);
 	bnetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	bnetz_new_state(bnetz, BNETZ_FREI);
 	bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
@@ -342,7 +342,7 @@ const char *bnetz_get_telegramm(bnetz_t *bnetz)
 			return NULL;
 		}
 		if (bnetz->station_id_pos == 5) {
-			it = bnetz_digit2telegramm(bnetz->sender.kanal + 1000);
+			it = bnetz_digit2telegramm(atoi(bnetz->sender.kanal) + 1000);
 			bnetz->page_mode = PAGE_MODE_KANALBEFEHL;
 			break;
 		}
@@ -656,7 +656,7 @@ static void bnetz_timeout(struct timer *timer)
 		bnetz_set_dsp_mode(bnetz, DSP_MODE_TELEGRAMM);
 		break;
 	case BNETZ_SELEKTIVRUF_AUS:
-		PDEBUG_CHAN(DBNETZ, DEBUG_DEBUG, "Transmitter switched back to channel %d, waiting for paging response.\n", bnetz->sender.kanal);
+		PDEBUG_CHAN(DBNETZ, DEBUG_DEBUG, "Transmitter switched back to channel %s, waiting for paging response.\n", bnetz->sender.kanal);
 		bnetz_new_state(bnetz, BNETZ_RUFBESTAETIGUNG);
 		switch_channel_19(bnetz, 0);
 		timer_start(&bnetz->timer, PAGING_TO);

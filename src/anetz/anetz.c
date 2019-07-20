@@ -186,13 +186,13 @@ static void anetz_timeout(struct timer *timer);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
-int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *operator)
+int anetz_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double page_gain, int page_sequence, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *operator)
 {
 	anetz_t *anetz;
 	int rc;
 
-	if (kanal < 30 || kanal > 63) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid.\n", kanal);
+	if (atoi(kanal) < 30 || atoi(kanal) > 63) {
+		PDEBUG(DANETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
 
@@ -204,10 +204,10 @@ int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 
 	anetz->operator = operator;
 
-	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
+	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(kanal, 0), anetz_kanal2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(atoi(kanal), 0), anetz_kanal2freq(atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;
@@ -225,7 +225,7 @@ int anetz_create(int kanal, const char *audiodev, int use_sdr, int samplerate, d
 	/* go into idle state */
 	anetz_go_idle(anetz);
 
-	PDEBUG(DANETZ, DEBUG_NOTICE, "Created 'Kanal' #%d\n", kanal);
+	PDEBUG(DANETZ, DEBUG_NOTICE, "Created 'Kanal' #%s\n", kanal);
 
 	return 0;
 
@@ -240,7 +240,7 @@ void anetz_destroy(sender_t *sender)
 {
 	anetz_t *anetz = (anetz_t *) sender;
 
-	PDEBUG(DANETZ, DEBUG_DEBUG, "Destroying 'A-Netz' instance for 'Kanal' = %d.\n", sender->kanal);
+	PDEBUG(DANETZ, DEBUG_DEBUG, "Destroying 'A-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	timer_exit(&anetz->timer);
 	dsp_cleanup_sender(anetz);
@@ -253,7 +253,7 @@ static void anetz_go_idle(anetz_t *anetz)
 {
 	timer_stop(&anetz->timer);
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state on channel %d, sending 2280 Hz tone.\n", anetz->sender.kanal);
+	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state on channel %s, sending 2280 Hz tone.\n", anetz->sender.kanal);
 	anetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_FREI);
 	/* also reset detector, so if there is a new call it is answered */

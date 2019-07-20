@@ -121,7 +121,7 @@ void r2000_channel_list(void);
 int r2000_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum r2000_chan_type chan_type);
 const char *chan_type_long_name(enum r2000_chan_type chan_type);
-int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback);
+int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback);
 void r2000_check_channels(void);
 void r2000_destroy(sender_t *sender);
 void r2000_go_idle(r2000_t *r2000);

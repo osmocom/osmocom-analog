@@ -354,7 +354,7 @@ static int match_voie(r2000_t *r2000, frame_t *frame, uint8_t voie)
 
 static int match_channel(r2000_t *r2000, frame_t *frame)
 {
-	if (frame->channel != r2000->sender.kanal) {
+	if (frame->channel != atoi(r2000->sender.kanal)) {
 		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for different channel %d received, ignoring.\n", frame->channel);
 		return 0;
 	}
@@ -412,14 +412,14 @@ uint8_t r2000_encode_super(r2000_t *r2000)
 static void r2000_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback)
+int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback)
 {
 	sender_t *sender;
 	r2000_t *r2000 = NULL;
 	int rc;
 
 	/* check channel matching and set deviation factor */
-	if (r2000_channel2freq(band, channel, 0) == 0.0)
+	if (r2000_channel2freq(band, atoi(kanal), 0) == 0.0)
 		return -EINVAL;
 
 	for (sender = sender_head; sender; sender = sender->next) {
@@ -437,10 +437,10 @@ int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const ch
 		return -ENOMEM;
 	}
 
-	PDEBUG(DR2000, DEBUG_DEBUG, "Creating 'Radiocom 2000' instance for channel = %d (sample rate %d).\n", channel, samplerate);
+	PDEBUG(DR2000, DEBUG_DEBUG, "Creating 'Radiocom 2000' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&r2000->sender, channel, r2000_channel2freq(band, channel, 0), r2000_channel2freq(band, channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&r2000->sender, kanal, r2000_channel2freq(band, atoi(kanal), 0), r2000_channel2freq(band, atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DR2000, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -479,7 +479,7 @@ int r2000_create(int band, int channel, enum r2000_chan_type chan_type, const ch
 	/* go into idle state */
 	r2000_go_idle(r2000);
 
-	PDEBUG(DR2000, DEBUG_NOTICE, "Created channel #%d of type '%s' = %s\n", channel, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	PDEBUG(DR2000, DEBUG_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -528,7 +528,7 @@ void r2000_destroy(sender_t *sender)
 {
 	r2000_t *r2000 = (r2000_t *) sender;
 
-	PDEBUG(DR2000, DEBUG_DEBUG, "Destroying 'Radiocom 2000' instance for channel = %d.\n", sender->kanal);
+	PDEBUG(DR2000, DEBUG_DEBUG, "Destroying 'Radiocom 2000' instance for channel = %s.\n", sender->kanal);
 	dsp_cleanup_sender(r2000);
 	timer_exit(&r2000->timer);
 	sender_destroy(&r2000->sender);
@@ -746,9 +746,9 @@ static void tx_out_assign(r2000_t *r2000, frame_t *frame)
 	frame->sm_type = r2000->subscriber.type;
 	frame->sm_relais = r2000->subscriber.relais;
 	frame->sm_mor = r2000->subscriber.mor;
-	frame->chan_assign = tc->sender.kanal;
+	frame->chan_assign = atoi(tc->sender.kanal);
 
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending outgoing assignment from channel %d to %d\n", r2000->sender.kanal, tc->sender.kanal);
+	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending outgoing assignment from channel %s to %s\n", r2000->sender.kanal, tc->sender.kanal);
 
 	r2000_new_state(tc, (tc->state == STATE_OUT_ASSIGN) ? STATE_OUT_IDENT : STATE_RECALL_IDENT);
 	timer_start(&tc->timer, IDENT_TIME);
@@ -773,9 +773,9 @@ static void tx_in_assign(r2000_t *r2000, frame_t *frame)
 	frame->sm_type = r2000->subscriber.type;
 	frame->sm_relais = r2000->subscriber.relais;
 	frame->sm_mor = r2000->subscriber.mor;
-	frame->chan_assign = tc->sender.kanal;
+	frame->chan_assign = atoi(tc->sender.kanal);
 
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending incoming assignment from channel %d to %d\n", r2000->sender.kanal, tc->sender.kanal);
+	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending incoming assignment from channel %s to %s\n", r2000->sender.kanal, tc->sender.kanal);
 
 	r2000_new_state(tc, STATE_IN_IDENT);
 	timer_start(&tc->timer, IDENT_TIME);
@@ -1196,7 +1196,7 @@ const char *r2000_get_frame(r2000_t *r2000)
 	r2000->tx_frame_count++;
 
 	memset(&frame, 0, sizeof(frame));
-	frame.channel = r2000->sender.kanal;
+	frame.channel = atoi(r2000->sender.kanal);
 	frame.relais = r2000->sysinfo.relais;
 	frame.deport = r2000->sysinfo.deport;
 	frame.agi = r2000->sysinfo.agi;

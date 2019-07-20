@@ -28,7 +28,7 @@ typedef struct sender {
 	struct sender		*master;		/* if set, the audio device is owned by 'master' */
 
 	/* system info */
-	int			kanal;			/* channel number */
+	const char		*kanal;			/* channel number */
 	double			sendefrequenz;		/* transmitter frequency */
 	double			empfangsfrequenz;	/* receiver frequency */
 	double			ruffrequenz;		/* special paging frequency used for B-Netz */
@@ -90,7 +90,7 @@ typedef struct sender {
 extern sender_t *sender_head;
 extern int cant_recover;
 
-int sender_create(sender_t *sender, int kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal);
+int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal);
 void sender_destroy(sender_t *sender);
 void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double dBm0_deviation, double max_display);
 int sender_open_audio(int latspl);

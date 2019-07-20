@@ -579,10 +579,10 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
-		if ((kanal[i] & 1)) {
-			printf("Base station on channel %d ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], cnetz_kanal2freq(kanal[i], 0) / 1e6, cnetz_kanal2freq(kanal[i], 1) / 1e6, cnetz_kanal2freq(kanal[i], 2) / 1e6);
+		if ((atoi(kanal[i]) & 1)) {
+			printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], cnetz_kanal2freq(atoi(kanal[i]), 0) / 1e6, cnetz_kanal2freq(atoi(kanal[i]), 1) / 1e6, cnetz_kanal2freq(atoi(kanal[i]), 2) / 1e6);
 		} else {
-			printf("Base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], cnetz_kanal2freq(kanal[i], 0) / 1e6, cnetz_kanal2freq(kanal[i], 1) / 1e6, cnetz_kanal2freq(kanal[i], 2) / 1e6);
+			printf("Base station on channel %s ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], cnetz_kanal2freq(atoi(kanal[i]), 0) / 1e6, cnetz_kanal2freq(atoi(kanal[i]), 1) / 1e6, cnetz_kanal2freq(atoi(kanal[i]), 2) / 1e6);
 		}
 	}
 

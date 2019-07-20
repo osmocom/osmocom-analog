@@ -246,38 +246,38 @@ int cnetz_init(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double dbm0_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
+int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double dbm0_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
 	int rc;
 
-	if ((kanal & 1) && kanal < 1 && kanal > 1147) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid.\n", kanal);
+	if ((atoi(kanal) & 1) && atoi(kanal) < 1 && atoi(kanal) > 1147) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
-	if ((kanal & 1) && kanal > 947) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %d, only newer phones support this!\n", kanal);
+	if ((atoi(kanal) & 1) && atoi(kanal) > 947) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency channel %s, only newer phones support this!\n", kanal);
 	}
-	if (!(kanal & 1) && kanal < 2 && kanal > 918) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid.\n", kanal);
+	if (!(atoi(kanal) & 1) && atoi(kanal) < 2 && atoi(kanal) > 918) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
-	if (!(kanal & 1) && kanal > 758) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %d, only newer phones support this!\n", kanal);
+	if (!(atoi(kanal) & 1) && atoi(kanal) > 758) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %s, only newer phones support this!\n", kanal);
 	}
-	if (kanal == 1 || kanal == 2) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Channel ('Kanal') number %d is specified as 'unused', it might not work!\n", kanal);
+	if (atoi(kanal) == 1 || atoi(kanal) == 2) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "Channel ('Kanal') number %s is specified as 'unused', it might not work!\n", kanal);
 	}
 
 	/* OgK must be on channel 131 */
-	if ((chan_type == CHAN_TYPE_OGK || chan_type == CHAN_TYPE_OGK_SPK) && kanal != CNETZ_OGK_KANAL) {
+	if ((chan_type == CHAN_TYPE_OGK || chan_type == CHAN_TYPE_OGK_SPK) && atoi(kanal) != CNETZ_OGK_KANAL) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "You must use channel %d for calling channel ('Orga-Kanal') or for combined calling + traffic channel!\n", CNETZ_OGK_KANAL);
 		return -EINVAL;
 	}
 
 	/* SpK must be on channel other than 131 */
-	if (chan_type == CHAN_TYPE_SPK && kanal == CNETZ_OGK_KANAL) {
+	if (chan_type == CHAN_TYPE_SPK && atoi(kanal) == CNETZ_OGK_KANAL) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "You must not use channel %d for traffic channel!\n", CNETZ_OGK_KANAL);
 		return -EINVAL;
 	}
@@ -301,11 +301,11 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 		return -ENOMEM;
 	}
 
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'C-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
+	PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'C-Netz' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by cnetz code, not by common sender code */
-	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(kanal, 0), cnetz_kanal2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(atoi(kanal), 0), cnetz_kanal2freq(atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -401,7 +401,7 @@ int cnetz_create(int kanal, enum cnetz_chan_type chan_type, const char *audiodev
 	cnetz_flush_other_transactions(cnetz, trans2);
 #endif
 
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' #%d of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -417,7 +417,7 @@ void cnetz_destroy(sender_t *sender)
 	cnetz_t *cnetz = (cnetz_t *) sender;
 	transaction_t *trans;
 
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Destroying 'C-Netz' instance for 'Kanal' = %d.\n", sender->kanal);
+	PDEBUG(DCNETZ, DEBUG_DEBUG, "Destroying 'C-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	while ((trans = search_transaction(cnetz, ~0))) {
 		const char *rufnummer = transaction2rufnummer(trans);
@@ -439,9 +439,9 @@ static cnetz_t *search_free_spk(int extended)
 		cnetz = (cnetz_t *) sender;
 		/* ignore extended frequency, if not supported */
 		if (!extended) {
-			if ((sender->kanal & 1) && sender->kanal > 947)
+			if ((atoi(sender->kanal) & 1) && atoi(sender->kanal) > 947)
 				continue;
-			if (!(sender->kanal & 1) && sender->kanal > 758)
+			if (!(atoi(sender->kanal) & 1) && atoi(sender->kanal) > 758)
 				continue;
 		}
 		/* ignore busy channel */
@@ -493,16 +493,16 @@ void cnetz_go_idle(cnetz_t *cnetz)
 		destroy_transaction(cnetz->trans_list);
 	}
 
-	PDEBUG(DCNETZ, DEBUG_INFO, "Entering IDLE state on channel %d.\n", cnetz->sender.kanal);
+	PDEBUG(DCNETZ, DEBUG_INFO, "Entering IDLE state on channel %s.\n", cnetz->sender.kanal);
 	cnetz_new_state(cnetz, CNETZ_IDLE);
 
 	/* set scheduler to OgK or turn off SpK */
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* go idle after next frame/slot */
-		cnetz_set_sched_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 1);
+		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 1);
 	} else {
-		cnetz_set_sched_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 0);
-		cnetz_set_dsp_mode(cnetz, (cnetz->sender.kanal == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF);
+		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 0);
+		cnetz_set_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF);
 	}
 
 	/* check for first phone in queue and trigger completion of call (becoming idle means that SpK is now available)  */
@@ -1032,14 +1032,14 @@ vak:
 				break;
 			}
 			if (spk == cnetz) {
-				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined calling + traffic channel %d\n", spk->sender.kanal);
+				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined calling + traffic channel %s\n", spk->sender.kanal);
 			} else {
-				PDEBUG(DCNETZ, DEBUG_INFO, "Assigning phone to traffic channel %d\n", spk->sender.kanal);
+				PDEBUG(DCNETZ, DEBUG_INFO, "Assigning phone to traffic channel %s\n", spk->sender.kanal);
 				/* sync RX time to current OgK time */
 				fsk_copy_sync(&spk->fsk_demod, &cnetz->fsk_demod);
 			}
 			/* set channel */
-			telegramm.frequenz_nr = spk->sender.kanal;
+			telegramm.frequenz_nr = atoi(spk->sender.kanal);
 			/* change state to busy */
 			cnetz_new_state(spk, CNETZ_BUSY);
 			/* schedule switching two slots ahead */
@@ -1282,7 +1282,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	telegramm.futln_nationalitaet = trans->futln_nat;
 	telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 	telegramm.futln_rest_nr = trans->futln_rest;
-	telegramm.frequenz_nr = cnetz->sender.kanal;
+	telegramm.frequenz_nr = atoi(cnetz->sender.kanal);
 	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
 	telegramm.zufallszahl = cnetz->challenge;
 
@@ -1612,7 +1612,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	telegramm.futln_nationalitaet = trans->futln_nat;
 	telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 	telegramm.futln_rest_nr = trans->futln_rest;
-	telegramm.frequenz_nr = cnetz->sender.kanal;
+	telegramm.frequenz_nr = atoi(cnetz->sender.kanal);
 	telegramm.entfernung = si[cnetz->cell_nr].entfernung;
 	telegramm.bedingte_genauigkeit_der_fufst = si[cnetz->cell_nr].genauigkeit;
 	telegramm.gueltigkeit_des_gebuehrenstandes = 0;

@@ -94,7 +94,7 @@ void get_win_size(int *w, int *h)
 		*w = MAX_DISPLAY_WIDTH - 1;
 }
 
-void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, int chan, const char *fmt, ...)
+void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, const char *kanal, const char *fmt, ...)
 {
 	char buffer[4096], *b = buffer;
 	int s = sizeof(buffer) - 1;
@@ -107,9 +107,9 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 
 	buffer[sizeof(buffer) - 1] = '\0';
 
-	/* if chan is used, prefix the channel number */
-	if (num_kanal > 1 && chan >= 0) {
-		sprintf(buffer, "(chan %d) ", chan);
+	/* if kanal is used, prefix the channel number */
+	if (num_kanal > 1 && kanal) {
+		sprintf(buffer, "(chan %s) ", kanal);
 		b = strchr(buffer, '\0');
 		s -= strlen(buffer);
 	}

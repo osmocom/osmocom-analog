@@ -87,7 +87,7 @@ void display_status_start(void)
 	line_count = 1;
 }
 
-void display_status_channel(int channel, const char *type, const char *state)
+void display_status_channel(const char *kanal, const char *type, const char *state)
 {
 	char line[MAX_DISPLAY_WIDTH];
 
@@ -99,9 +99,9 @@ void display_status_channel(int channel, const char *type, const char *state)
 		return;
 
 	if (type)
-		snprintf(line, sizeof(line), "Channel: %d Type: %s State: %s", channel, type, state);
+		snprintf(line, sizeof(line), "Channel: %s Type: %s State: %s", kanal, type, state);
 	else
-		snprintf(line, sizeof(line), "Channel: %d State: %s", channel, state);
+		snprintf(line, sizeof(line), "Channel: %s State: %s", kanal, state);
 	line[sizeof(line) - 1] = '\0';
 	memcpy(screen[line_count++], line, strlen(line));
 }

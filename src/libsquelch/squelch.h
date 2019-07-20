@@ -1,6 +1,6 @@
 
 typedef struct squelch {
-	int	chan;		/* channel number */
+	const char *kanal;	/* channel number */
 	double	threshold_db;	/* threshold level to mute or loss of signal */
 	double	init_count;	/* duration counter for starting squelch process */
 	int	auto_state;	/* set if auto threshold calibration is performed */
@@ -21,6 +21,6 @@ enum squelch_result {
 	SQUELCH_LOSS,
 };
 
-void squelch_init(squelch_t *squelch, int chan, double threshold_db, double mute_time, double loss_time);
+void squelch_init(squelch_t *squelch, const char *kanal, double threshold_db, double mute_time, double loss_time);
 enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double duration);
 

@@ -40,7 +40,7 @@ static char line_color[MAX_DISPLAY_WIDTH];
 
 dispmeas_t *meas_head = NULL;
 
-void display_measurements_init(dispmeas_t *disp, int __attribute__((unused)) samplerate, int kanal)
+void display_measurements_init(dispmeas_t *disp, int __attribute__((unused)) samplerate, const char *kanal)
 {
 	dispmeas_t **disp_p;
 
@@ -114,7 +114,7 @@ static void print_measurements(int on)
 	for (disp = meas_head; disp; disp = disp->next) {
 		memset(line, ' ', width);
 		memset(line_color, 7, width);
-		sprintf(line, "(chan %d", disp->kanal);
+		sprintf(line, "(chan %s", disp->kanal);
 		*strchr(line, '\0') = ')';
 		display_line(on, width);
 		for (param = disp->param; param; param = param->next) {

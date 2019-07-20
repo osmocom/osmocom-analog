@@ -50,7 +50,7 @@ static int got_init = 0;
 
 /* common mobile settings */
 int num_kanal = 0;
-int kanal[MAX_SENDER];
+const char *kanal[MAX_SENDER];
 int num_audiodev = 0;
 const char *audiodev[MAX_SENDER] = { "hw:0,0" };
 int use_sdr = 0;
@@ -248,7 +248,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'k':
 	case OPT_CHANNEL:
-		OPT_ARRAY(num_kanal, kanal, atoi(argv[argi]))
+		OPT_ARRAY(num_kanal, kanal, argv[argi])
 		break;
 	case 'a':
 		OPT_ARRAY(num_audiodev, audiodev, strdup(argv[argi]))

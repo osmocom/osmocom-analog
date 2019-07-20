@@ -345,14 +345,14 @@ int main(int argc, char *argv[])
 
 		for (i = 0; i < num_kanal; i++) {
 			if (supervisory[i] == 0) {
-				fprintf(stderr, "No supervisory signal given for channel %d. This is ok, but signal loss dannot be detected. \n", kanal[i]);
+				fprintf(stderr, "No supervisory signal given for channel %s. This is ok, but signal loss dannot be detected. \n", kanal[i]);
 				continue;
 			}
 			if (super[supervisory[i]]) {
-				fprintf(stderr, "Supervisory signal %d is selected for both cannels #%d and #%d. I advice to use different signal, to avoid co-channel interferences.\n", supervisory[i], kanal[i], super[supervisory[i]]);
+				fprintf(stderr, "Supervisory signal %d is selected for both cannels #%s and #%d. I advice to use different signal, to avoid co-channel interferences.\n", supervisory[i], kanal[i], super[supervisory[i]]);
 				continue;
 			}
-			super[supervisory[i]] = kanal[i];
+			super[supervisory[i]] = atoi(kanal[i]);
 		}
 	}
 
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
 		}
-		printf("base station on channel %d ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], nmt_channel2freq(nmt_system, country, kanal[i], 0, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, kanal[i], 1, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, kanal[i], 2, NULL, NULL, NULL) / 1e6);
+		printf("base station on channel %s ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], nmt_channel2freq(nmt_system, country, atoi(kanal[i]), 0, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, atoi(kanal[i]), 1, NULL, NULL, NULL) / 1e6, nmt_channel2freq(nmt_system, country, atoi(kanal[i]), 2, NULL, NULL, NULL) / 1e6);
 	}
 
 	nmt_check_channels(nmt_system);

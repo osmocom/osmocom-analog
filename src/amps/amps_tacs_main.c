@@ -306,7 +306,7 @@ int main_amps_tacs(int argc, char *argv[])
 	// NOTE: Variable 'i' from above is used here:
 	/* default SID/AID, depending on system */
 	if (!sid) {
-		if (amps_channel2band(kanal[i])[0] == 'A') {
+		if (amps_channel2band(atoi(kanal[i]))[0] == 'A') {
 			if (!tacs)
 				sid = 1; /* Chicago */
 			else
@@ -387,9 +387,9 @@ int main_amps_tacs(int argc, char *argv[])
 			goto fail;
 		}
 		if (!tacs)
-			printf("Base station on channel %d ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0) / 1e6, amps_channel2freq(kanal[i], 1) / 1e6, amps_channel2freq(kanal[i], 2) / 1e6);
+			printf("Base station on channel %s ready (%s), please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(atoi(kanal[i]), 0) / 1e6, amps_channel2freq(atoi(kanal[i]), 1) / 1e6, amps_channel2freq(atoi(kanal[i]), 2) / 1e6);
 		else
-			printf("Base station on channel %d ready (%s), please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(kanal[i], 0) / 1e6, amps_channel2freq(kanal[i], 1) / 1e6, amps_channel2freq(kanal[i], 2) / 1e6);
+			printf("Base station on channel %s ready (%s), please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(atoi(kanal[i]), 0) / 1e6, amps_channel2freq(atoi(kanal[i]), 1) / 1e6, amps_channel2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
 	main_mobile(&quit, latency, interval, NULL, station_id, 10);

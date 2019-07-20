@@ -22,7 +22,7 @@
 #include "../libdebug/debug.h"
 #include "squelch.h"
 
-#define CHAN squelch->chan
+#define CHAN squelch->kanal
 
 /* How does it work:
  *
@@ -48,10 +48,10 @@
 #define SQUELCH_AUTO_TIME	0.5	/* duration of squelch quelch calibration */
 #define SQUELCH_AUTO_OFFSET	10.0	/* auto calibration: offset above noise floor */
 
-void squelch_init(squelch_t *squelch, int chan, double threshold_db, double mute_time, double loss_time)
+void squelch_init(squelch_t *squelch, const char *kanal, double threshold_db, double mute_time, double loss_time)
 {
 	memset(squelch, 0, sizeof(*squelch));
-	squelch->chan = chan;
+	squelch->kanal = kanal;
 	squelch->threshold_db = threshold_db;
 	/* wait for init condition */
 	squelch->init_count = 0.0;

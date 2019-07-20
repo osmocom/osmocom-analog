@@ -5,7 +5,7 @@
 #define MAX_DISPLAY_WIDTH 1024
 
 typedef struct display_wave {
-	int	kanal;
+	const char *kanal;
 	int	interval_pos;
 	int	interval_max;
 	int	offset;
@@ -44,7 +44,7 @@ typedef struct display_measurements_param {
 
 typedef struct display_measurements {
 	struct display_measurements *next;
-	int	kanal;
+	const char *kanal;
 	dispmeasparam_t *param;
 } dispmeas_t;
 
@@ -60,7 +60,7 @@ typedef struct display_iq {
 
 typedef struct display_spectrum_mark {
 	struct display_spectrum_mark *next;
-	int	kanal;
+	const char *kanal;
 	double	frequency;
 } dispspectrum_mark_t;
 
@@ -74,17 +74,17 @@ typedef struct display_spectrum {
 
 #define MAX_HEIGHT_STATUS 32
 
-void display_wave_init(dispwav_t *disp, int samplerate, int kanal);
+void display_wave_init(dispwav_t *disp, int samplerate, const char *kanal);
 void display_wave_on(int on);
 void display_wave(dispwav_t *disp, sample_t *samples, int length, double range);
 
 void display_status_on(int on);
 void display_status_start(void);
-void display_status_channel(int channel, const char *type, const char *state);
+void display_status_channel(const char *kanal, const char *type, const char *state);
 void display_status_subscriber(const char *number, const char *state);
 void display_status_end(void);
 
-void display_measurements_init(dispmeas_t *disp, int samplerate, int kanal);
+void display_measurements_init(dispmeas_t *disp, int samplerate, const char *kanal);
 void display_measurements_exit(dispmeas_t *disp);
 void display_measurements_on(int on);
 dispmeasparam_t *display_measurements_add(dispmeas_t *disp, char *name, char *format, enum display_measurements_type type, enum display_measurements_bar bar, double min, double max, double mark);
@@ -96,7 +96,7 @@ void display_iq_on(int on);
 void display_iq(float *samples, int length);
 
 void display_spectrum_init(int samplerate, double center_frequency);
-void display_spectrum_add_mark(int kanal, double frequency);
+void display_spectrum_add_mark(const char *kanal, double frequency);
 void display_spectrum_exit(void);
 void display_spectrum_on(int on);
 void display_spectrum(float *samples, int length);

@@ -443,7 +443,7 @@ static amps_t *search_channel(int channel)
 	amps_t *amps;
 
 	for (sender = sender_head; sender; sender = sender->next) {
-		if (sender->kanal != channel)
+		if (atoi(sender->kanal) != channel)
 			continue;
 		amps = (amps_t *) sender;
 		if (amps->state == STATE_IDLE)
@@ -494,7 +494,7 @@ static amps_t *search_pc(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
+int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int tolerant, int loopback)
 {
 	sender_t *sender;
 	amps_t *amps;
@@ -503,8 +503,8 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	const char *band;
 
 	/* check for channel number */
-	if (amps_channel2freq(channel, 0) == 0) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d invalid.\n", channel);
+	if (amps_channel2freq(atoi(kanal), 0) == 0) {
+		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
 
@@ -526,23 +526,23 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	}
 
 	/* check if channel type matches channel number */
-	ct = amps_channel2type(channel);
+	ct = amps_channel2type(atoi(kanal));
 	if (ct == CHAN_TYPE_CC && chan_type != CHAN_TYPE_PC && chan_type != CHAN_TYPE_CC_PC && chan_type != CHAN_TYPE_CC_PC_VC) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Channel number %d belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this, but all my phones don't.\n", channel, chan_type_long_name(chan_type));
+		PDEBUG(DAMPS, DEBUG_NOTICE, "Channel number %s belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this, but all my phones don't.\n", kanal, chan_type_long_name(chan_type));
 	}
 	if (ct == CHAN_TYPE_VC && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", channel, chan_type_long_name(chan_type));
+		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", kanal, chan_type_long_name(chan_type));
 		return -EINVAL;
 	}
 
 	/* check if sid machtes channel band */
-	band = amps_channel2band(channel);
+	band = amps_channel2band(atoi(kanal));
 	if (band[0] == 'A' && (sid & 1) == 0 && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system A, but your %s %d is even and belongs to system B. Please give odd %s.\n", channel, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
+		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to system A, but your %s %d is even and belongs to system B. Please give odd %s.\n", kanal, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
 		return -EINVAL;
 	}
 	if (band[0] == 'B' && (sid & 1) == 1 && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %d belongs to system B, but your %s %d is odd and belongs to system A. Please give even %s.\n", channel, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
+		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to system B, but your %s %d is odd and belongs to system A. Please give even %s.\n", kanal, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
 		return -EINVAL;
 	}
 
@@ -552,8 +552,8 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 	}
 
 	/* check if we selected a voice channel that i outside 20 MHz band */
-	if (chan_type == CHAN_TYPE_VC && channel > 666) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s' on channel #%d. Older phones do not support channels above #666.\n", chan_type_long_name(chan_type), channel);
+	if (chan_type == CHAN_TYPE_VC && atoi(kanal) > 666) {
+		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s' on channel #%s. Older phones do not support channels above #666.\n", chan_type_long_name(chan_type), kanal);
 	}
 
 	amps = calloc(1, sizeof(amps_t));
@@ -562,10 +562,10 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 		return -ENOMEM;
 	}
 
-	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %d of band %s (sample rate %d).\n", channel, band, samplerate);
+	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %s of band %s (sample rate %d).\n", kanal, band, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&amps->sender, channel, amps_channel2freq(channel, 0), amps_channel2freq(channel, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&amps->sender, kanal, amps_channel2freq(atoi(kanal), 0), amps_channel2freq(atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -603,7 +603,7 @@ int amps_create(int channel, enum amps_chan_type chan_type, const char *audiodev
 //	amps_new_state(amps, STATE_BUSY);
 #endif
 
-	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%d (System %s) of type '%s' = %s\n", channel, band, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%s (System %s) of type '%s' = %s\n", kanal, band, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -619,7 +619,7 @@ void amps_destroy(sender_t *sender)
 	amps_t *amps = (amps_t *) sender;
 	transaction_t *trans;
 
-	PDEBUG(DAMPS, DEBUG_DEBUG, "Destroying 'AMPS' instance for channel = %d.\n", sender->kanal);
+	PDEBUG(DAMPS, DEBUG_DEBUG, "Destroying 'AMPS' instance for channel = %s.\n", sender->kanal);
 
 	while ((trans = amps->trans_list)) {
 		const char *number = amps_min2number(trans->min1, trans->min2);
@@ -862,7 +862,7 @@ reject:
 			return;
 		}
 		if (!trans) {
-			trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, 0, 0, 0, vc->sender.kanal);
+			trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, 0, 0, 0, atoi(vc->sender.kanal));
 			strncpy(trans->dialing, dialing, sizeof(trans->dialing) - 1);
 			if (!trans) {
 				PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -870,7 +870,7 @@ reject:
 			}
 		} else {
 			trans_new_state(trans, TRANS_CALL_MT_ASSIGN);
-			trans->chan = vc->sender.kanal;
+			trans->chan = atoi(vc->sender.kanal);
 		}
 		/* if we support DTX and also the phone does, we set DTX state of transaction */
 		if (amps->si.word2.dtx) {
@@ -1129,9 +1129,9 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 	}
 
 	if (vc == amps)
-		PDEBUG(DAMPS, DEBUG_INFO, "Staying on combined control + voice channel %d\n", vc->sender.kanal);
+		PDEBUG(DAMPS, DEBUG_INFO, "Staying on combined control + voice channel %s\n", vc->sender.kanal);
 	else
-		PDEBUG(DAMPS, DEBUG_INFO, "Moving to voice channel %d\n", vc->sender.kanal);
+		PDEBUG(DAMPS, DEBUG_INFO, "Moving to voice channel %s\n", vc->sender.kanal);
 
 	/* switch channel... */
 	timer_start(&trans->timer, SAT_TO1);

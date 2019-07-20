@@ -212,7 +212,7 @@ static void jolly_speech_timeout(struct timer *timer);
 static void jolly_go_idle(jolly_t *jolly);
 
 /* Create transceiver instance and link to a list. */
-int jolly_create(int kanal, double dl_freq, double ul_freq, double step, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int nbfm, int repeater)
+int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int nbfm, int repeater)
 {
 	jolly_t *jolly;
 	int rc;
@@ -223,10 +223,10 @@ int jolly_create(int kanal, double dl_freq, double ul_freq, double step, const c
 		return -EIO;
 	}
 
-	PDEBUG(DJOLLY, DEBUG_DEBUG, "Creating 'JollyCom' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
+	PDEBUG(DJOLLY, DEBUG_DEBUG, "Creating 'JollyCom' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
-	dl_freq = dl_freq * 1e6 + step * 1e3 * (double)kanal;
-	ul_freq = ul_freq * 1e6 + step * 1e3 * (double)kanal;
+	dl_freq = dl_freq * 1e6 + step * 1e3 * (double)atoi(kanal);
+	ul_freq = ul_freq * 1e6 + step * 1e3 * (double)atoi(kanal);
 
 	/* init general part of transceiver */
 	rc = sender_create(&jolly->sender, kanal, dl_freq, ul_freq, audiodev, use_sdr, samplerate, rx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
@@ -249,7 +249,7 @@ int jolly_create(int kanal, double dl_freq, double ul_freq, double step, const c
 	/* go into idle state */
 	jolly_go_idle(jolly);
 
-	PDEBUG(DJOLLY, DEBUG_NOTICE, "Created 'Kanal' #%d\n", kanal);
+	PDEBUG(DJOLLY, DEBUG_NOTICE, "Created 'Kanal' #%s\n", kanal);
 
 	return 0;
 
@@ -264,7 +264,7 @@ void jolly_destroy(sender_t *sender)
 {
 	jolly_t *jolly = (jolly_t *) sender;
 
-	PDEBUG(DJOLLY, DEBUG_DEBUG, "Destroying 'JollyCom' instance for 'Kanal' = %d.\n", sender->kanal);
+	PDEBUG(DJOLLY, DEBUG_DEBUG, "Destroying 'JollyCom' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	dsp_cleanup_sender(jolly);
 	timer_exit(&jolly->timer);
@@ -280,7 +280,7 @@ static void jolly_go_idle(jolly_t *jolly)
 	timer_stop(&jolly->speech_timer);
 	reset_speech_string(jolly);
 
-	PDEBUG(DJOLLY, DEBUG_INFO, "Entering IDLE state on channel %d.\n", jolly->sender.kanal);
+	PDEBUG(DJOLLY, DEBUG_INFO, "Entering IDLE state on channel %s.\n", jolly->sender.kanal);
 	jolly->dialing[0] = '\0';
 	jolly->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	jolly_new_state(jolly, STATE_IDLE);
@@ -293,7 +293,7 @@ static void jolly_release(jolly_t *jolly)
 	timer_stop(&jolly->speech_timer);
 	reset_speech_string(jolly);
 
-	PDEBUG(DJOLLY, DEBUG_INFO, "Sending Release sequence on channel %d.\n", jolly->sender.kanal);
+	PDEBUG(DJOLLY, DEBUG_INFO, "Sending Release sequence on channel %s.\n", jolly->sender.kanal);
 	timer_start(&jolly->speech_timer, SPEECH_DELAY_RELEASE);
 	jolly_new_state(jolly, STATE_RELEASED);
 }

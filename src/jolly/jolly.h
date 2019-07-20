@@ -50,7 +50,7 @@ typedef struct jolly {
 	int			delay_max;		/* number of samples in delay buffer */
 } jolly_t;
 
-int jolly_create(int kanal, double dl_freq, double ul_freq, double step, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int nbfm, int repeater);
+int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int nbfm, int repeater);
 void jolly_destroy(sender_t *sender);
 void speech_finished(jolly_t *jolly);
 void jolly_receive_dtmf(void *priv, char digit, dtmf_meas_t *meas);
