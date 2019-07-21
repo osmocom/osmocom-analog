@@ -13,6 +13,7 @@ generated simultaniously using SDR. Currently supported networks:
  * TACS (Total Access Communication System)
  * JTACS (Japanese version of TACS)
  * Radiocom 2000 (French network)
+ * IMTS / MTS ((Improved) Mobile Telephone Service)
  * JollyCom (Unofficial network, invented by the author)
 
 

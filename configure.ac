@@ -84,6 +84,7 @@ AC_OUTPUT(
     src/tacs/Makefile
     src/jtacs/Makefile
     src/r2000/Makefile
+    src/imts/Makefile
     src/jolly/Makefile
     src/tv/Makefile
     src/radio/Makefile

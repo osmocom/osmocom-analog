@@ -46,6 +46,7 @@ SUBDIRS += \
 	tacs \
 	jtacs \
 	r2000 \
+	imts \
 	jolly \
 	tv \
 	radio \

@@ -14,19 +14,20 @@
 #define DNMT		7
 #define DAMPS		8
 #define DR2000		9
-#define DJOLLY		10
-#define DFRAME		11
-#define DCALL		12
-#define DMNCC		13
-#define DDB		14
-#define DTRANS		15
-#define DDMS		16
-#define DSMS		17
-#define DSDR		18
-#define DUHD		19
-#define DSOAPY		20
-#define DWAVE		21
-#define DRADIO		22
+#define DIMTS		10
+#define DJOLLY		11
+#define DFRAME		12
+#define DCALL		13
+#define DMNCC		14
+#define DDB		15
+#define DTRANS		16
+#define DDMS		17
+#define DSMS		18
+#define DSDR		19
+#define DUHD		20
+#define DSOAPY		21
+#define DWAVE		22
+#define DRADIO		23
 
 void get_win_size(int *w, int *h);
 

@@ -60,6 +60,8 @@ src/amps/amps
 src/tacs/tacs
 src/jtacs/jtacs
 src/r2000/radiocom2000
+src/imts/imts
+src/imts/imts-dialer
 src/jolly/jollycom
 src/tv/osmotv
 src/radio/osmoradio
