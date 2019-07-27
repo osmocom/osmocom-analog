@@ -1,9 +1,9 @@
 AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 
-noinst_LIBRARIES = libamps.a
-
 bin_PROGRAMS = \
 	amps
+
+noinst_LIBRARIES = libamps.a libusatone.a
 
 libamps_a_SOURCES = \
 	amps_tacs_main.c \
@@ -13,12 +13,14 @@ libamps_a_SOURCES = \
 	dsp.c \
 	sysinfo.c
 
-amps_SOURCES = \
+libusatone_a_SOURCES = \
 	tones.c \
 	noanswer.c \
 	outoforder.c \
 	invalidnumber.c \
-	congestion.c \
+	congestion.c
+
+amps_SOURCES = \
 	stations.c \
 	image.c \
 	main.c
@@ -26,6 +28,7 @@ amps_SOURCES = \
 amps_LDADD = \
 	$(COMMON_LA) \
 	libamps.a \
+	libusatone.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
