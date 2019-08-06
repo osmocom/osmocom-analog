@@ -343,8 +343,8 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 
 		/* prevent channel bandwidth from overlapping with the center frequency */
 		if (channels == 1) {
-			/* simple: just move off the center by half of the bandwidth */
-			rx_center_frequency -= bandwidth / 2.0;
+			/* simple: just move off the center by two times half of the bandwidth */
+			rx_center_frequency -= 2.0 * bandwidth / 2.0;
 			/* Note: rx_low_frequency is kept at old center.
 			   Calculation of 'low_side' will become 0.
 			   This is correct, since there is no bandwidth
