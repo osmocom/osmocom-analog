@@ -100,9 +100,6 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	jolly->dt_phaseshift65536[0] = 65536.0 / ((double)jolly->sender.samplerate / INFO_TONE_F1);
 	jolly->dt_phaseshift65536[1] = 65536.0 / ((double)jolly->sender.samplerate / INFO_TONE_F2);
 	jolly->ack_phaseshift65536 = 65536.0 / ((double)jolly->sender.samplerate / ACK_TONE);
-	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", INFO_TONE_F1, jolly->dt_phaseshift65536[0]);
-	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", INFO_TONE_F2, jolly->dt_phaseshift65536[1]);
-	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", ACK_TONE, jolly->ack_phaseshift65536);
 	jolly->ack_max = (int)((double)jolly->sender.samplerate * ACK_TIME);
 
 	/* delay buffer */

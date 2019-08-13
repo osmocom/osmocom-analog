@@ -137,16 +137,13 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	/* count supervidory tones */
 	for (i = 0; i < 5; i++) {
 		audio_goertzel_init(&nmt->super_goertzel[i], super_freq[i], nmt->sender.samplerate);
-		if (i < 4) {
+		if (i < 4)
 			nmt->super_phaseshift65536[i] = 65536.0 / ((double)nmt->sender.samplerate / super_freq[i]);
-			PDEBUG(DDSP, DEBUG_DEBUG, "super_phaseshift[%d] = %.4f\n", i, nmt->super_phaseshift65536[i]);
-		}
 	}
 	super_reset(nmt);
 
 	/* dial tone */
 	nmt->dial_phaseshift65536 = 65536.0 / ((double)nmt->sender.samplerate / DIALTONE_HZ);
-	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", nmt->dial_phaseshift65536);
 
 	/* dtmf, generate tone relative to speech level */
 	dtmf_encode_init(&nmt->dtmf, 8000, 1.0 / SPEECH_LEVEL);

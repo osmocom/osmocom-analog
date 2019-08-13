@@ -255,10 +255,8 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	/* count SAT tones */
 	for (i = 0; i < 4; i++) {
 		audio_goertzel_init(&amps->sat_goertzel[i], sat_freq[i], amps->sender.samplerate);
-		if (i < 3) {
+		if (i < 3)
 			amps->sat_phaseshift65536[i] = 65536.0 / ((double)amps->sender.samplerate / sat_freq[i]);
-			PDEBUG(DDSP, DEBUG_DEBUG, "sat_phaseshift65536[%d] = %.4f\n", i, amps->sat_phaseshift65536[i]);
-		}
 	}
 	/* signaling tone */
 	audio_goertzel_init(&amps->sat_goertzel[4], (!tacs) ? 10000.0 : 8000.0, amps->sender.samplerate);

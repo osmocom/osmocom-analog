@@ -95,7 +95,7 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 	anetz->page_sequence = page_sequence;
 
 	anetz->samples_per_chunk = anetz->sender.samplerate * CHUNK_DURATION;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per chunk duration.\n", anetz->samples_per_chunk);
+	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per filter chunk duration.\n", anetz->samples_per_chunk);
 	spl = calloc(anetz->samples_per_chunk, sizeof(sample_t));
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
@@ -109,7 +109,6 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 		audio_goertzel_init(&anetz->fsk_tone_goertzel[i], fsk_tones[i], anetz->sender.samplerate);
 	tone = fsk_tones[(anetz->sender.loopback == 0) ? 0 : 1];
 	anetz->tone_phaseshift65536 = 65536.0 / ((double)anetz->sender.samplerate / tone);
-	PDEBUG(DDSP, DEBUG_DEBUG, "TX %.0f Hz phaseshift = %.4f\n", tone, anetz->tone_phaseshift65536);
 
 	anetz->dmp_tone_level = display_measurements_add(&anetz->sender.dispmeas, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
 	anetz->dmp_tone_quality = display_measurements_add(&anetz->sender.dispmeas, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);

@@ -105,7 +105,6 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 
 	/* metering tone */
 	bnetz->meter_phaseshift65536 = 65536.0 / ((double)bnetz->sender.samplerate / METERING_HZ);
-	PDEBUG(DDSP, DEBUG_DEBUG, "dial_phaseshift = %.4f\n", bnetz->meter_phaseshift65536);
 
 	bnetz->dmp_tone_level = display_measurements_add(&bnetz->sender.dispmeas, "Tone Level", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 150.0, 100.0);
 	bnetz->dmp_tone_stddev = display_measurements_add(&bnetz->sender.dispmeas, "Tone Stddev", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
