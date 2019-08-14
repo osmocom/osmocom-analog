@@ -363,6 +363,9 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 	int in, rc;
 	int i, ii;
 
+	/* make valgrind happy, because snd_pcm_readi() does not seem to initally fill buffer with values */
+	memset(buff, 0, sizeof(buff));
+
 	/* get samples in rx buffer */
 	in = snd_pcm_avail(sound->chandle);
 	/* if not more than KEEP_FRAMES frames available, try next time */
