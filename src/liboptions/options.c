@@ -137,7 +137,7 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
 			return -EINVAL;
 		}
-		argv[0] = param;
+		argv[0] = strdup(param);
 		rc = handle_options(option->short_option, 0, argv);
 		if (rc <= 0)
 			goto done;
