@@ -1,0 +1,756 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>MTS &amp; IMTS</center></h2>
+
+<center><img src="imts.jpg"/></center>
+
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks_imts">How IMTS works</a>
+	<li><a href="#howitworks_mts">How MTS works</a>
+	<li><a href="#basestation_imts">Setup of an IMTS base station</a>
+	<li><a href="#basestation_mts">Setup of an MTS base station</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
+</p>
+
+<p>
+From Wikipedia, the free encyclopedia:
+<br><br>
+"The Improved Mobile Telephone Service (IMTS) was a pre-cellular VHF/UHF radio system which linked to the PSTN.
+IMTS was the radiotelephone equivalent of land dial phone service.
+Introduced in 1964, it replaced Mobile Telephone Service (MTS) and improved on most MTS systems by offering direct-dial rather than connections through a live operator."
+</p>
+
+<p>
+MTS and IMTS phone were assembled in large cases located in the trunk of cars.
+Early models used mechanical switches to encode and decode phone's identity.
+Later models were solid state and had duplexers to talk and listen simultaneously.
+Attach&eacute; case phones came available in the late 60's, so they could be used outside the car.
+Some models in the 80's were handheld.
+</p>
+
+<center><img src="imts-attache.jpg"/></center>
+
+<p>
+<ul>
+	<li>Frequency range VHF Low: 35.26 - 35.66 MHz (down-link); 43.26 - 43.66 MHz (up-link)
+	<li>Frequency range VHF High: 152.48 - 152.84 MHz (down-link); 157.74 - 158.10 MHz (up-link)
+	<li>Frequency range UHF: 454.375 - 454.65 MHz (down-link); 459.375 - 359.65 MHz (up-link)
+	<li>10 channels used for VHF Low Band in the US
+	<li>11 channels used for VHF High Band in the US
+	<li>13 channels used for VHF High Band in Canada
+	<li>12 channels used for UHF Band in the US
+	<li>Duplex distance: around 5 MHz (VHF High and UHF)
+	<li>Channel spacing: 30 KHz (VHF High) 25 KHz (UHF)
+	<li>Modulation: FM
+	<li>Frequency deviation: 5 KHz (signaling tones)
+	<li>Mobile station transmit power: Typically 25 Watts
+	<li>Base station transmit power: 100..250 Watts
+</ul>
+</p>
+
+<p class="toppic">
+<a name="howitworks_imts"></a>
+How IMTS works
+</p>
+
+<p>
+This description is not an original standard.
+It is based on my research.
+There are many unknown parameters.
+If you know more, please help to complete this documentation.
+</p>
+
+<p>
+Frequencies:
+</p>
+
+<p>
+<table class="imts">
+<tr><th colspan="3"> VHF Low Band </th></tr>
+<tr><th>Channel</th><th>Base (MHz)</th><th>Mobile (MHz)</th></tr>
+<tr><td>ZO</td><td>35.26</td><td>43.26</td></tr>
+<tr><td>ZF</td><td>35.30</td><td>43.30</td></tr>
+<tr><td>ZM</td><td>35.38</td><td>43.38</td></tr>
+<tr><td>ZH</td><td>35.34</td><td>43.34</td></tr>
+<tr><td>ZA</td><td>35.42</td><td>43.32</td></tr>
+<tr><td>ZY</td><td>35.46</td><td>43.46</td></tr>
+<tr><td>ZR</td><td>35.50</td><td>43.50</td></tr>
+<tr><td>ZB</td><td>35.54</td><td>43.54</td></tr>
+<tr><td>ZW</td><td>35.62</td><td>43.62</td></tr>
+<tr><td>ZL</td><td>35.66</td><td>43.66</td></tr>
+</table>
+<table class="imts">
+<tr><th colspan="3"> VHF High Band </th></tr>
+<tr><th>Channel</th><th>Base (MHz)</th><th>Mobile (MHz)</th></tr>
+<tr><td>JJ</td><td>152.48</td><td>157.74 (Canada only)</td></tr>
+<tr><td>JL</td><td>152.51</td><td>157.77</td></tr>
+<tr><td>YL</td><td>152.54</td><td>157.80</td></tr>
+<tr><td>JP</td><td>152.57</td><td>157.83</td></tr>
+<tr><td>YP</td><td>152.60</td><td>157.86</td></tr>
+<tr><td>YJ</td><td>152.63</td><td>157.89</td></tr>
+<tr><td>YK</td><td>152.66</td><td>157.92</td></tr>
+<tr><td>JS</td><td>152.69</td><td>157.95</td></tr>
+<tr><td>YS</td><td>152.72</td><td>157.98</td></tr>
+<tr><td>YR</td><td>152.75</td><td>158.01</td></tr>
+<tr><td>JK</td><td>152.78</td><td>158.04</td></tr>
+<tr><td>JR</td><td>152.81</td><td>158.07</td></tr>
+<tr><td>JW</td><td>152.84</td><td>158.10 (Canada only)</td></tr>
+</table>
+<table class="imts">
+<tr><th colspan="3"> UHF Band </th></tr>
+<tr><th>Channel</th><th>Base (MHz)</th><th>Mobile (MHz)</th></tr>
+<tr><td>QC</td><td>454.375</td><td>459.375</td></tr>
+<tr><td>QJ</td><td>454.40</td><td>459.40</td></tr>
+<tr><td>QD</td><td>454.425</td><td>459.425</td></tr>
+<tr><td>QA</td><td>454.45</td><td>459.45</td></tr>
+<tr><td>QE</td><td>454.475</td><td>459.475</td></tr>
+<tr><td>QP</td><td>454.50</td><td>459.50</td></tr>
+<tr><td>QK</td><td>454.525</td><td>459.525</td></tr>
+<tr><td>QB</td><td>454.55</td><td>459.55</td></tr>
+<tr><td>QO</td><td>454.575</td><td>459.575</td></tr>
+<tr><td>QR</td><td>454.60</td><td>459.60</td></tr>
+<tr><td>QY</td><td>454.625</td><td>459.625</td></tr>
+<tr><td>QF</td><td>454.65</td><td>459.65</td></tr>
+</table>
+</p>
+
+<p>
+The modulation is FM. The frequency deviation of speech is 2500 Hz ??? at 1000 Hz.
+Signaling tones have a frequency deviation of 5000 Hz.
+Pre-Emphasis is used for speech only.
+</p>
+
+<p>
+Tones used for signaling:
+</p>
+
+<p>
+<table class="imts">
+<tr><th colspan="2"> Base -&gt; Mobile </th></tr>
+<tr><td>Idle</td><td>2000 Hz</td></tr>
+<tr><td>Seize</td><td>1800 Hz</td></tr>
+</table>
+</p>
+
+<p>
+<table class="imts">
+<tr><th colspan="2"> Mobile -&gt; Base </th></tr>
+<tr><td>Guard</td><td>2150 Hz</td></tr>
+<tr><td>Connect</td><td>1633 Hz</td></tr>
+<tr><td>Disconnect</td><td>1336 Hz</td></tr>
+</table>
+</p>
+
+<p>
+Idle State:
+</p>
+
+<p>
+All transceivers of a base station that are not in use, are turned off, except for one channel, the idle channel.
+Only one channel being idle will transmit the 2000 Hz Idle tone and listens for the 2150 Hz Guard tone.
+If the (only) channel with the Idle tone is seized by a mobile phone or the public telephone exchange, another channel, that is turned off, is activated and sends the Idle tone and becomes the new idle channel.
+</p>
+
+<p>
+When a mobile phone is idle, it will search for a radio channel with Idle tone and suitable quality.
+The transmitter will be off while the phone listens to the Idle tone or an incoming call from the base station.
+When the Idle tone disappears for about 250 ms ???, it will search for another idle channel.
+</p>
+
+<p>
+Call from mobile phone:
+</p>
+
+<p>
+When the user picks up the handset of the mobile phone, the phone will seize the channel, transmits ANI and receives dial tone.
+</p>
+
+<p>
+First, the mobile phone will turn on the transmitter and sends 350 ms of 2150 Hz Guard tone, followed by 50 ms of 1633 Hz Connect tone.
+As soon as the Guard tone, followed by Connect tone is detected by the base station, it will turn off 2000 Hz Idle tone and transmit silence.
+(Another channel that is turned off, will then transmit the 2000 Hz Idle tone.)
+Note that the base station has to respond even before the 50 ms of the Connect tone is over.
+The mobile phone must detect the silence from the base station before it is done sending the Connect tone.
+(There are special requirements on SDR/soundcard setup to respond fast enough.)
+The mobile phone then continues to send Guard tone and waits for the base station to respond with the 1800 Hz Seize tone.
+Note that there seems to be no timeout in the mobile phone, waiting for Seize tone.
+The base station sends 250 ms of the Seize tone.
+</p>
+
+<p>
+If the mobile phone receives the Seize tone, it will send the ANI sequence.
+The ANI sequence consists of 190 ms of Guard tone, followed by 7 pulsed digits.
+Each digit is formed by pulses consisting of 25 ms Mark tone and 25 ms of Space tone.
+After the last pulse of each digit the mobile phone sends 190 ms of Space tone.
+The Mark tone is transmitted as 1633 Hz Connect tone.
+The Space tone is transmitted as silence, if the pulse number was odd.
+The Space tone is transmitted as 2150 Hz Guard tone, if the pulse number was even.
+The pulse number is counted from the first pulse of the first digit through the last pulse of the last digit.
+The mobile phone will then through-connect speech path, the user awaits the dial tone.
+</p>
+
+<p>
+The base station verifies the received ANI and presents a dial tone or forwards the call to an operator.
+</p>
+
+<p>
+When a number is dialed from a mobile phone, Guard tone is sent continuously as soon a the dial goes off normal (when the dial is moved from its resting position), which should be about 400 ms ???.
+Each digit is formed by pulses consisting of 60 ms Mark tone and 40 ms of Space tone.
+The Mark tone is transmitted as 1633 Hz Connect tone.
+The Space tone is transmitted as 2150 Hz Guard tone.
+The Space tone continues until the dial returned to normal, which should be about 200 ms ???.
+</p>
+
+<p>
+Call towards mobile phone:
+</p>
+
+<p>
+The land user dials the phone number of the mobile phone.
+It consists of the 3 digit area code and the 4 digit suffix.
+The 3 digit prefix (mobile exchange) is omitted when paging the mobile phone.
+</p>
+
+<p>
+First, the base station selects the idle channel that is transmitting the 2000 Hz Idle tone.
+(Another channel that is turned off, will then transmit the 2000 Hz Idle tone.)
+If there is no channel available, the land user receives a busy signal.
+The 7 digit number is transmitted towards the mobile phone via alternating tones.
+The base station transmits a 1800 Hz Seize tone for about 400 ms (???) before, between and after each digit.
+Each digit is formed by pulses consisting of 50 ms Mark tone and 50 ms of Space tone.
+The Mark tone is transmitted as 2000 Hz Idle tone.
+The Space tone is transmitted as 1800 Hz Seize tone.
+The base station will start timer for 3 to 4 seconds waiting for the mobile phone to respond with a 2150 Hz Guard tone.
+</p>
+
+<p>
+If the mobile phone receives digits from base station, it compares the digits with its own number.
+If the number does not match, it will abort and scan for the idle channel.
+If the number matches the mobile phone will transmit the Guard tone up to 750 ms, waiting for the ringing sequence.
+After sending Guard tone, the mobile phone will ring and wait for answer.
+</p>
+
+<p>
+If the base station does not receive the Guard tone from the mobile phone, it will return to idle state.
+The land user will receive an announcement that the called phone is not available at this moment.
+If the base station receives the Guard tone from the mobile phone, it will send a ringing sequence for about 45 seconds.
+Ringing by the base station is composed of 1800 Hz Seize tone and 2000 Hz Idle tone, each alternating after 25 ms for 2 seconds, then 4 seconds of Seize tone.
+</p>
+
+<p>
+The mobile phone rings the bell using the tones received from the base station.
+If the 1800 Hz Seize tone disappears, the phone stops ringing and returns to idle channel.
+</p>
+
+<p>
+If the user of the mobile phone answers, the mobile phone transmits 1633 Hz Connect tone for 400 ms and through-connects speech path.
+</p>
+
+<p>
+If the base station receives the Connect tone, it will stop the ringing sequence, answers the call from the land user and through-connect the speech path.
+</p>
+
+
+<p>
+Release by the mobile phone:
+</p>
+
+<p>
+If the mobile user hangs up, the mobile phone starts the release sequence by sending alternating 1336 Hz Release tone and 2150 Hz Guard tone, 25 ms each.
+After 750 ms sending that sequence, the mobile phone turns off transmitter and searches for idle channel.
+</p>
+
+<p>
+When the base station receives the release sequence, it will return to idle state.
+</p>
+
+
+<p>
+Release by the base station:
+</p>
+
+<p>
+When the mobile phone is ringing, it will stop if the base station removes the ringing sequence.
+There is no release sequence to release an a active call towards mobile phone.
+</p>
+
+<p class="toppic">
+<a name="howitworks_mts"></a>
+How MTS works
+</p>
+
+<p>
+Base station in Idle state:
+</p>
+
+<p>
+The base station uses a 600 Hz tone to indicate an idle channel.
+Similarly to the IMTS, only one idle channel send the 600 Hz tone, the other channels are turned off.
+</p>
+
+<p>
+Call from mobile phone
+</p>
+
+<p>
+The mobile station does not send any signaling tone at all.
+The radio signal is used to start a call.
+Whenever the user picks up the phone and presses the push-to-talk button, a connection is made to an operator.
+The operation is half duplex, so there is no release by stopping transmission of the mobile phone.
+The operator has to terminate the call.
+</p>
+
+<p>
+Call from base station
+</p>
+
+<p>
+To page a mobile phone, the operator has to dial the 5 digits of the mobile phone.
+The operator has to add the digit '1' in front of the 5 digit subscriber ID.
+This digit is used to reset the paging detector inside mobile phone.
+Note that the subscriber ID must not have a digit '1'.
+Each pulse from the base station is a transition from 600 Hz to 1500 Hz or from 1500 Hz to 600 Hz.
+Two or more pulses are separated 100 ms.
+Each digit is separated 400 ms ???.
+After the last pulse of the last digit, the tone sustains until the caller hangs up.
+The mobile phone rings.
+To answer the call, the user presses the push-to-talk button.
+The ringing can be released by sending another transition pulse or by removing the tone for a short time. (This is for further study.)
+</p>
+
+<p class="toppic">
+<a name="basestation_imts"></a>
+Setup of an IMTS base station
+</p>
+
+<p>
+Find out what band and channels your phone supports. Then get a list of all available bands and channels:
+</p>
+
+<pre>
+
+# src/imts/imts -k list
+
+</pre>
+
+<p>
+Assume the phone supports VHF Low band, so we select channel 'YK' with the command line option '-k YK', or select any other channel your phone supports.
+In order to have a low latency, you must add '-b 5' to the command line option.
+Then tune the transmitter to the indicated channel and receiver to the other indicated channel.
+Transmit with a normal loud speech volume, but not too loud.
+The actual level is not yet relevant.
+</p>
+
+<pre>
+
+# src/imts/imts -k YK -b 5
+...
+imts.c:381 info   : Entering IDLE state on channel YK, sending 2000 Hz tone.
+imts.c:336 notice : Created channel #YK
+Base station on channel YK ready, please tune transmitter to 152.660 MHz and receiver to 157.920 MHz. (-5.260 MHz offset)
+on-hook: ....... (enter digits 0..9)
+
+</pre>
+
+
+<p>
+If you receive permanent buffer underruns, see 'Fast Seize' below.
+Power on your phone.
+Be sure to use attenuator on the antenna, so it will not transmit full 25 Watts close to your receiver equipment.
+The phone should search and stop at the selected channel.
+If the phone does not support automatic channel selection, select channel YK manually.
+</p>
+
+<p>
+Now pick up the handset of your phone and it should transmit the Guard tone, followed by a short Connect tone.
+If the phone does not lock or does not transmit, check if your transmitter transmits the Idle tone.
+If the phone transmits, your base station should respond to the seize sequence by the phone and the phone transmits ANI towards your base station.
+</p>
+
+<pre>
+
+# src/imts/imts -k YK -b 5
+...
+imts.c:381 info   : Entering IDLE state on channel YK, sending 2000 Hz tone.
+imts.c:336 notice : Created channel #YK
+Base station on channel YK ready, please tune transmitter to 152.660 MHz and receiver to 157.920 MHz. (-5.260 MHz offset)
+imts.c:886 notice : Received Guard tone, turning off IDLE tone
+imts.c:544 info   : Received seize (Guard + Connect tone) from mobile phone.
+imts.c:545 info   :  -&gt; Guard tone duration: 350 ms (level 69%)
+imts.c:408 info   : All channels are busy now, cannot activate any other channel.
+imts.c:907 notice : Sending Seize to mobile phone.
+imts.c:784 info   : Received ANI digit '2' from mobile phone (level 71%).
+imts.c:784 info   : Received ANI digit '1' from mobile phone (level 77%).
+imts.c:784 info   : Received ANI digit '6' from mobile phone (level 77%).
+imts.c:784 info   : Received ANI digit '2' from mobile phone (level 77%).
+imts.c:784 info   : Received ANI digit '6' from mobile phone (level 77%).
+imts.c:784 info   : Received ANI digit '3' from mobile phone (level 71%).
+imts.c:784 info   : Received ANI digit '0' from mobile phone (level 71%).
+imts.c:790 info   : ANI '2162630' complete, sending dial tone.
+
+</pre>
+
+<p>
+If the base station does not receive Guard tone or receives bad ANI digits, check the receiver and the receive level.
+To test the receiver side, tune the receiver to the frequency of the transmitter and check the loopback signal. Adjust your receiver (sound card input) to match about 100% level:
+</p>
+
+<pre>
+
+...
+imts.c:876 notice : Received idle tone (level of 97%), loopback?
+imts.c:876 notice : Received idle tone (level of 97%), loopback?
+imts.c:876 notice : Received idle tone (level of 97%), loopback?
+imts.c:876 notice : Received idle tone (level of 97%), loopback?
+...
+
+</pre>
+
+<p>
+Return your receiver to the uplink frequency and try to make a call again.
+If it works, use you dial pad (or rotary dial) to dial the number.
+</p>
+
+<p>
+To call towards mobile station, enter the 7 digit mobile station ID on your keyboard or add it to the command line.
+Use the same phone number you received with the ANI above, this is your mobile station ID.
+Then press 'd' to page and ring the phone:
+</p>
+
+<pre>
+
+...
+mncc_console.c:358 info   : Outgoing call to '2162630'
+call.c:699 info   : Received MNCC call from fixed network '' to mobile '2162630'
+call.c:706 info   : Indicate MNCC call confirm towards fixed network
+call.c:717 info   : Outgoing call from '' to '2162630'
+imts.c:1176 info   : Call to mobile station, paging number: 2162630
+imts.c:445 info   : Entering paging state, sending phone's ID '2162630'.
+imts.c:408 info   : All channels are busy now, cannot activate any other channel.
+imts.c:942 info   : Sending paging digit '2' as pulses.
+imts.c:942 info   : Sending paging digit '1' as pulses.
+imts.c:942 info   : Sending paging digit '6' as pulses.
+imts.c:942 info   : Sending paging digit '2' as pulses.
+imts.c:942 info   : Sending paging digit '6' as pulses.
+imts.c:942 info   : Sending paging digit '3' as pulses.
+imts.c:942 info   : Sending paging digit '0' as pulses.
+imts.c:755 info   : Received acknowledge (Guard tone) from mobile phone (level 71%).
+call.c:440 info   : Call is alerting
+call.c:428 info   : Indicate MNCC alerting towards fixed network
+mncc_console.c:202 info   : Call alerting
+imts.c:466 info   : Received response from mobile phone, ringing.
+imts.c:1013 info   : Sending ringing signal as pulses.
+imts.c:1022 info   : Sending pause after ringing.
+imts.c:1013 info   : Sending ringing signal as pulses.
+imts.c:1022 info   : Sending pause after ringing.
+imts.c:763 info   : Received answer (Connect tone) from mobile phone (level 75%).
+call.c:478 info   : Call has been answered by '2162630'
+call.c:466 info   : Indicate MNCC answer towards fixed network
+mncc_console.c:206 info   : Call connected to '2162630'
+imts.c:476 info   : Received answer from mobile phone, conversation started.
+
+</pre>
+
+<p>
+To disconnect a call, the phone must be hung up:
+</p>
+
+<pre>
+
+...
+imts.c:654 info   : Received disconnect sequence from mobile phone (level 90%).
+imts.c:418 info   : Turing transmitter off.
+imts.c:381 info   : Entering IDLE state on channel YK, sending 2000 Hz tone.
+
+</pre>
+
+<p>
+Level adjustment:
+</p>
+
+<p>
+Don't care about it, if you use SDR, since levels are always correctly modulated.
+Now it is time to actually care about the correct transmit and received level.
+In the example above you see a level around 70..77%.
+Now tune your receiver to your transmitter frequency again.
+Adjust the level to something around 73% using a variable resistor on my soundcard's input. (+- 10% is good)
+</p>
+
+<pre>
+
+...
+imts.c:876 notice : Received idle tone (level of 88%), loopback?
+imts.c:876 notice : Received idle tone (level of 76%), loopback?
+imts.c:876 notice : Received idle tone (level of 73%), loopback?
+imts.c:876 notice : Received idle tone (level of 73%), loopback?
+imts.c:876 notice : Received idle tone (level of 73%), loopback?
+imts.c:876 notice : Received idle tone (level of 73%), loopback?
+...
+
+</pre>
+
+<p>
+Now, whatever frequency deviation the phone transmits for signaling, so does your base station. (Around 73% in this case.)
+Use the other variable resistor (connecting your receiver) to adjust the volume until the level matches about 100%. (+- 10% is good)
+Switch back the receiver to up-link frequency and see the result from your phone. (You should now receive the phone at around 100%.)
+</p>
+
+<p>
+Pre- and De-Emphasis:
+</p>
+
+<p>
+In order to have correct level of signaling tones, your transmitter and your receiver should not use pre- and de-emphasis.
+Let this software do that instead, then the signaling tones do not use pre-emphasis, just the voice.
+If possible, add command line option '-p' for pre-emphasis of the transmit signal and '-d' for de-ephasis of the received signal.
+Don't care about it, if you use SDR, since pre-emphasis and de-emphasis is automatically selected and used.
+</p>
+
+<p>
+Fast seize detection:
+</p>
+
+<p>
+Sometimes your sound device might not be fast enough to handle a small sound buffer.
+The maximum buffer of 5 ms (command line option '-b 5') might cause repeating trouble:
+</p>
+
+<pre>
+
+sound_alsa.c:458 error  : Buffer underrun: Please use higher latency and enable real time scheduling
+sound_alsa.c:127 error  : cannot prepare audio interface for use (Device or resource busy)
+sender.c:330 error  : Failed to get number of samples in buffer (rc = -32)!
+sender.c:338 error  : Trying to recover!
+
+</pre>
+
+<p>
+<font color="red">
+We must not increase buffer, because we would detect the Connect tone too late, so we would respond too late.
+We must respond before we detect the Connect tone, so that our response matches the time the Connect tone is actually transmitted by the phone.
+</font>
+</p>
+
+<p>
+To do this we must measure the length of the Guard tone.
+First pick up the phone and remember the Guard tone duration.
+It should be close to 350 ms.
+</p>
+
+<pre>
+
+imts.c:544 info   : Received seize (Guard + Connect tone) from mobile phone.
+imts.c:545 info   :  -&gt; Guard tone duration: 349 ms (level 99%)
+
+</pre>
+
+<p>
+Now put the base station into loopback mode and tune receiver to transmitter or loop soundcard's output to input.
+</p>
+
+<pre>
+
+# src/imts/imts -k YK -l 2
+...
+imts.c:942 info   : Sending paging digit '1' as pulses.
+imts.c:861 info   : Received paging test digit '1' (level 103%  delay 68 ms).
+imts.c:942 info   : Sending paging digit '2' as pulses.
+imts.c:861 info   : Received paging test digit '2' (level 103%  delay 67 ms).
+imts.c:942 info   : Sending paging digit '3' as pulses.
+imts.c:861 info   : Received paging test digit '3' (level 103%  delay 67 ms).
+
+</pre>
+
+<p>
+In this case the soundcard's round trip delay is 67 ms.
+Substract 67 from 349 and you get 282.
+Add '-F 282' to command line option, instead of '-b 5'.
+Now we react about 282 ms after we detected the start of the Guard tone.
+The reaction now matches the time when the phone transmits the Connect tone.
+(Tested with a Limermore LAP-2000 phone.)
+</p>
+
+<p>
+Detecting loss of carrier signal:
+</p>
+
+<p>
+This works with SDR only, because we do not have any RSSI (Received Signal Strength Indicator) signal from a radio connected to the sound card.
+With SDR we know the RX level, so we can define a threshold value for a lost signal.
+Use '-S &lt;db&gt;' or '--squelch &lt;db&gt;' to define the squelch threshold level.
+To measure the noise floor, use the 'm' key to get a bar graph of the current RSSI. (RF level)
+Add some dB to the noise floor for the squelch threshold value.
+An easier way is to use '-S auto' or '--squelch auto' to automatically measure the noise floor level and then automatically use a threshold level that is some dB above this measured level.
+This level is then used to detect loss of carrier.
+Also this level is used to mute the audio path, whenever the signal gets lost for a short time.
+After about 12 seconds of signal loss, a call is released.
+</p>
+
+<pre>
+...
+squelch.c:94 info   : RF signal measurement: -69.2 dB noise floor, using threshold of -63.2 dB
+...
+</pre>
+
+<p>
+In the following example I cut off the power of the phone being in a call and waited 12 seconds for the base station to time out:
+</p>
+
+<pre>
+...
+squelch.c:114 info   : RF signal weak: Muting audio (RF -77.6 dB &lt; -70.7 db)
+imts.c:491 notice : Detected loss of signal after 12 seconds, releasing.
+...
+</pre>
+
+<p class="toppic">
+<a name="basestation_mts"></a>
+Setup of an MTS base station
+</p>
+
+<p>
+To detect an outgoing call or answer from a mobile phone, it is required to use squelch.
+Squelch is only available with SDR support.
+The command line option '-M' is used to switch to MTS mode.
+Also we use loopback mode '-l 2' to test RF loopback.
+Alternatively use '-l 1' to perform an internal loopback.
+The following example shows setup with LimeSDR (not LimeSDR mini!):
+</p>
+
+<pre>
+
+# src/imts/imts --limesdr -k JS -M -l 2
+...
+imts.c:443 info   : Entering paging test state, sending digits 1234567890.
+imts.c:408 info   : All channels are busy now, cannot activate any other channel.
+imts.c:336 notice : Created channel #JS
+Base station on channel JS ready, please tune transmitter to 152.690 MHz and receiver to 157.950 MHz. (-5.260 MHz offset)
+...
+imts.c:861 info   : Received paging test digit '1' (level 98%  delay 9139 ms).
+imts.c:992 info   : Sending paging digit '1' as pulses.
+imts.c:861 info   : Received paging test digit '1' (level 100%  delay 80 ms).
+imts.c:992 info   : Sending paging digit '2' as pulses.
+imts.c:861 info   : Received paging test digit '2' (level 100%  delay 78 ms).
+imts.c:992 info   : Sending paging digit '3' as pulses.
+imts.c:861 info   : Received paging test digit '3' (level 100%  delay 77 ms).
+imts.c:992 info   : Sending paging digit '4' as pulses.
+imts.c:861 info   : Received paging test digit '4' (level 100%  delay 78 ms).
+imts.c:992 info   : Sending paging digit '5' as pulses.
+imts.c:861 info   : Received paging test digit '5' (level 100%  delay 77 ms).
+imts.c:992 info   : Sending paging digit '6' as pulses.
+...
+
+</pre>
+
+<p>
+Now run the base station without loopback.
+Add "-S auto" to use squelch level with automatic level calibration.
+Be sure to have an attenuator, so you do not saturate your input of your SDR.
+Refer to the SDR help page for more information and input level display.
+The following example shows a call from mobile phone, just by transmitting toward base station:
+</p>
+
+<pre>
+
+# src/imts/imts --limesdr -k JS -M -S auto
+...
+squelch.c:61 info   : RF signal squelch: Use automatic threshold
+imts.c:386 info   : Entering IDLE state on channel JS, sending 600 Hz tone.
+imts.c:336 notice : Created channel #JS
+Base station on channel JS ready, please tune transmitter to 152.690 MHz and receiver to 157.950 MHz. (-5.260 MHz offset)
+...
+dsp.c:466 info   : Low RF level, muting.
+squelch.c:99 info   : RF signal measurement: -69.9 dB noise floor, using squelch threshold of -59.9 dB
+squelch.c:99 info   : RF signal measurement: -70.2 dB noise floor, using squelch threshold of -60.2 dB
+squelch.c:112 info   : RF signal strong: Unmuting audio (RF -54.2 &gt;= -60.2 dB)
+dsp.c:476 info   : High RF level, unmuting; turning transmitter on.
+imts.c:506 info   : Detectes RF signal in IDLE mode, calling the opterator at '010'.
+call.c:405 info   : Incoming call from 'unknown' to '010'
+call.c:407 info   :  -&gt; Call to Operator '010'
+call.c:385 info   : Indicate MNCC setup towards fixed network
+mncc_console.c:165 info   : Incoming call from ''
+mncc_console.c:196 info   : Call automatically answered
+call.c:744 info   : Received MNCC answer from fixed network
+call.c:746 info   : Call answered
+call.c:748 info   : Indicate MNCC setup complete towards fixed network
+
+</pre>
+
+<p>
+To terminate the call, press 'h':
+</p>
+
+<pre>
+
+mncc_console.c:388 info   : Call hangup
+call.c:774 info   : Received MNCC release from fixed network with cause 16
+call.c:778 info   : Call released toward mobile network
+imts.c:1237 info   : Call has been released by network, releasing call.
+imts.c:1254 notice : Outgoing release, during call, releasing!
+imts.c:418 info   : Turing transmitter off.
+imts.c:386 info   : Entering IDLE state on channel JS, sending 600 Hz tone.
+
+</pre>
+
+<p>
+To call the mobile phone, enter the number as command line parameter or after running the base station.
+Then press 'd' to dial the number.
+If the phone rings, answer by start transmitting:
+</p>
+
+<pre>
+
+on-hook: 23042 (press d=dial)
+mncc_console.c:358 info   : Outgoing call to '23042'
+call.c:699 info   : Received MNCC call from fixed network '' to mobile '23042'
+call.c:706 info   : Indicate MNCC call confirm towards fixed network
+call.c:717 info   : Outgoing call from '' to '23042'
+imts.c:1177 info   : Call to mobile station, paging number: 23042
+imts.c:445 info   : Entering paging state, sending phone's ID '23042'.
+imts.c:408 info   : All channels are busy now, cannot activate any other channel.
+imts.c:992 info   : Sending paging digit '2' as pulses.
+imts.c:992 info   : Sending paging digit '3' as pulses.
+imts.c:992 info   : Sending paging digit '0' as pulses.
+imts.c:992 info   : Sending paging digit '4' as pulses.
+imts.c:992 info   : Sending paging digit '2' as pulses.
+imts.c:975 info   : Digits complete, assuming the phone is ringing.
+call.c:440 info   : Call is alerting
+call.c:428 info   : Indicate MNCC alerting towards fixed network
+mncc_console.c:202 info   : Call alerting
+...
+squelch.c:112 info   : RF signal strong: Unmuting audio (RF -66.5 &g6;= -67.7 dB)
+dsp.c:476 info   : High RF level, unmuting.
+imts.c:520 info   : Detected RF signal, mobile is now transmitting.
+call.c:478 info   : Call has been answered by '23042'
+call.c:466 info   : Indicate MNCC answer towards fixed network
+mncc_console.c:206 info   : Call connected to '23042'
+imts.c:476 info   : Received answer from mobile phone, conversation started.
+
+</pre>
+
+<p>
+Use MTS with 7 digit ID or IMTS with 5 digit ID:
+</p>
+
+<p>
+Some later phone allow to operate in IMTS and MTS networks.
+In order to roam, the caller ID length can be different.
+Use command line option '-5' to use IMTS mode with 5 digit IDs.
+Use command line option '-7' to use MTS mode with 7 digit IDs.
+</p>
+
+<hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
+</td></tr></table></center>
+</body>
+</html>

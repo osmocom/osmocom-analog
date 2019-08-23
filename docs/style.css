@@ -74,12 +74,21 @@ td {
 table.nmt {
 	width: 400px;
 	border-spacing: 0px;
-	border:4px solid black;
-	border-collapse:collapse;
+	border: 4px solid black;
+	border-collapse: collapse;
 }
 td.nmt {
 	padding: 3px;
-	border:4px solid black
+	border: 4px solid black;
+}
+
+table.imts {
+	width: 600px;
+	text-align: center;
+	table-layout: fixed;
+	border-spacing: 0px;
+	border: none;
+	border-collapse: collapse;
 }
 
 li {
