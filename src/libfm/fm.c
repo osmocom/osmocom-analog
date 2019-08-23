@@ -92,7 +92,6 @@ int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitud
 	/* generate ramp up with ramp_length */
 	for (i = 0; i < mod->ramp_length; i++)
 		mod->ramp_tab[i] = 0.5 - cos(M_PI * i / mod->ramp_length) / 2.0;
-	mod->ramp_tab[0] = mod->ramp_tab[1] / 2.0; /* never be 0 */
 
 	return 0;
 }
@@ -199,10 +198,6 @@ again:
 			dev = offset + *frequency++;
 			power++;
 			length--;
-			/* somehow we need to have some value, otherwise IIR filter will be very slow!
-			 * we still continue with a carrier, but it has very low amplitude.
-			 * the low amplitude is set in ramp_tab[0]
-			 */
 			if (fast_math) {
 				phase += 65536.0 * dev / rate;
 				if (phase < 0.0)

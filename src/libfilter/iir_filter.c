@@ -104,7 +104,7 @@ void iir_notch_init(iir_filter_t *filter, double frequency, int samplerate, int 
 	filter->b1 = filter->a1;
 	filter->b2 = (1 - K / Q + K * K) * norm;
 }
-            
+
 void iir_process(iir_filter_t *filter, sample_t *samples, int length)
 {
 	double a0, a1, a2, b1, b2;
@@ -126,7 +126,8 @@ void iir_process(iir_filter_t *filter, sample_t *samples, int length)
 
 	/* process filter */
 	for (i = 0; i < length; i++) {
-		in = *samples;
+		/* add a small value, otherwise this loop will perform really bad on my 'nuedel' machine!!! */
+		in = *samples + 0.000000001;
 		for (j = 0; j < iterations; j++) {
 			out = in * a0 + z1[j];
 			z1[j] = in * a1 + z2[j] - b1 * out;
@@ -163,7 +164,8 @@ void iir_process_baseband(iir_filter_t *filter, float *baseband, int length)
 
 	/* process filter */
 	for (i = 0; i < length; i++) {
-		in = *baseband;
+		/* add a small value, otherwise this loop will perform really bad on my 'nuedel' machine!!! */
+		in = *baseband + 0.000000001;
 		for (j = 0; j < iterations; j++) {
 			out = in * a0 + z1[j];
 #ifdef DEBUG_NAN
