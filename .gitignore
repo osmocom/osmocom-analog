@@ -65,6 +65,7 @@ src/imts/imts-dialer
 src/jolly/jollycom
 src/tv/osmotv
 src/radio/osmoradio
+src/datenklo/datenklo
 sim/cnetz_sim
 src/test/test_filter
 src/test/test_sendevolumenregler

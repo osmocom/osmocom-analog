@@ -65,6 +65,10 @@ struct debug_cat {
 	{ "soapy", "\033[1;35m" },
 	{ "wave", "\033[1;33m" },
 	{ "radio", "\033[1;34m" },
+	{ "am791x", "\033[0;31m" },
+	{ "uart", "\033[0;32m" },
+	{ "device", "\033[0;33m" },
+	{ "datenklo", "\033[1;34m" },
 	{ NULL, NULL }
 };
 
@@ -124,7 +128,6 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 
 	while ((p = strchr(file, '/')))
 		file = p + 1;
-
 	if (clear_console_text)
 		clear_console_text();
 	if (debug_limit_scroll) {

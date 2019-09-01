@@ -49,6 +49,15 @@ SUBDIRS += \
 	imts \
 	jolly \
 	tv \
-	radio \
+	radio
+
+if HAVE_SDR
+if HAVE_FUSE
+SUBDIRS += \
+	datenklo
+endif
+endif
+
+SUBDIRS += \
 	test
 

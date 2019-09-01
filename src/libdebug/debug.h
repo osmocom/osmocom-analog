@@ -28,6 +28,10 @@
 #define DSOAPY		21
 #define DWAVE		22
 #define DRADIO		23
+#define DAM791X		24
+#define DUART		25
+#define DDEVICE		26
+#define DDATENKLO	27
 
 void get_win_size(int *w, int *h);
 
