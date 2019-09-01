@@ -61,7 +61,7 @@ int tx_telegramm_pos = 0;
 int latspl;
 
 /* instances */
-fsk_t fsk;
+fsk_mod_t fsk_mod;
 #ifdef HAVE_ALSA
 void *audio = NULL;
 #endif
@@ -226,7 +226,7 @@ again:
 		break;
 	case TX_MODE_FSK:
 		/* send FSK until it stops, then fill with silence */
-		count = fsk_send(&fsk, samples, length, 0);
+		count = fsk_mod_send(&fsk_mod, samples, length, 0);
 		samples += count;
 		length -= count;
 		if (length)
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
 
 	/* init */
 	bnetz_init_telegramm();
-	memset(&fsk, 0, sizeof(fsk));
+	memset(&fsk_mod, 0, sizeof(fsk_mod));
 
 	/* latency of send buffer in samples */
 	latspl = samplerate * latency / 1000;
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
 	sprintf(funkwahl, "wwww%c%s%se%c%s%se", start_digit, station_id, dialing + 1, start_digit, station_id, dialing + 1);
 
 	/* init fsk */
-	if (fsk_init(&fsk, NULL, fsk_send_bit, NULL, samplerate, BIT_RATE, F0, F1, 1.0, 0, 0) < 0) {
+	if (fsk_mod_init(&fsk_mod, NULL, fsk_send_bit, samplerate, BIT_RATE, F0, F1, 1.0, 0) < 0) {
 		PDEBUG(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		goto exit;
 	}
@@ -389,7 +389,7 @@ exit:
 #endif
 
 	/* exit fsk */
-	fsk_cleanup(&fsk);
+	fsk_mod_cleanup(&fsk_mod);
 
 	return 0;
 }

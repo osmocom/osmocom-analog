@@ -104,7 +104,8 @@ typedef struct nmt {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
-	fsk_t			fsk;			/* fsk processing */
+	fsk_mod_t		fsk_mod;		/* fsk processing */
+	fsk_demod_t		fsk_demod;
 	int			super_samples;		/* number of samples in buffer for supervisory detection */
 	goertzel_t		super_goertzel[5];	/* filter for supervisory decoding */
 	sample_t		*super_filter_spl;	/* array with sample buffer for supervisory detection */

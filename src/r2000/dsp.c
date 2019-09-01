@@ -85,7 +85,11 @@ int dsp_init_sender(r2000_t *r2000)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f\n", TX_PEAK_FSK);
 
 	/* init fsk */
-	if (fsk_init(&r2000->fsk, r2000, fsk_send_bit, fsk_receive_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1, FSK_BIT_ADJUST) < 0) {
+	if (fsk_mod_init(&r2000->fsk_mod, r2000, fsk_send_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		return -EINVAL;
+	}
+	if (fsk_demod_init(&r2000->fsk_demod, r2000, fsk_receive_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, FSK_BIT_ADJUST) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
@@ -95,7 +99,11 @@ int dsp_init_sender(r2000_t *r2000)
 		r2000->rx_max = 144;
 
 	/* init supervisorty fsk */
-	if (fsk_init(&r2000->super_fsk, r2000, super_send_bit, super_receive_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0, SUPER_BIT_ADJUST) < 0) {
+	if (fsk_mod_init(&r2000->super_fsk_mod, r2000, super_send_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		return -EINVAL;
+	}
+	if (fsk_demod_init(&r2000->super_fsk_demod, r2000, super_receive_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, SUPER_BIT_ADJUST) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
@@ -122,8 +130,10 @@ void dsp_cleanup_sender(r2000_t *r2000)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
 
-	fsk_cleanup(&r2000->fsk);
-	fsk_cleanup(&r2000->super_fsk);
+	fsk_mod_cleanup(&r2000->fsk_mod);
+	fsk_demod_cleanup(&r2000->fsk_demod);
+	fsk_mod_cleanup(&r2000->super_fsk_mod);
+	fsk_demod_cleanup(&r2000->super_fsk_demod);
 }
 
 /* Check for SYNC bits, then collect data bits */
@@ -254,14 +264,14 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 	if (r2000->dsp_mode == DSP_MODE_AUDIO_TX
 	 || r2000->dsp_mode == DSP_MODE_AUDIO_TX_RX
 	 || r2000->sender.loopback)
-		fsk_receive(&r2000->super_fsk, samples, length);
+		fsk_demod_receive(&r2000->super_fsk_demod, samples, length);
 
 	/* do de-emphasis */
 	if (r2000->de_emphasis)
 		de_emphasis(&r2000->estate, samples, length);
 
 	/* fsk signal */
-	fsk_receive(&r2000->fsk, samples, length);
+	fsk_demod_receive(&r2000->fsk_demod, samples, length);
 
 	/* we must have audio mode for both ways and a call */
 	if (r2000->dsp_mode == DSP_MODE_AUDIO_TX_RX
@@ -342,19 +352,19 @@ again:
 		if (r2000->pre_emphasis)
 			pre_emphasis(&r2000->estate, samples, length);
 		/* add supervisory to sample buffer */
-		fsk_send(&r2000->super_fsk, samples, length, 1);
+		fsk_mod_send(&r2000->super_fsk_mod, samples, length, 1);
 		break;
 	case DSP_MODE_FRAME:
 		/* Encode frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
-		count = fsk_send(&r2000->fsk, samples, length, 0);
+		count = fsk_mod_send(&r2000->fsk_mod, samples, length, 0);
 		/* do pre-emphasis */
 		if (r2000->pre_emphasis)
 			pre_emphasis(&r2000->estate, samples, count);
 		/* special case: add supervisory signal to frame at loop test */
 		if (r2000->sender.loopback) {
 			/* add supervisory to sample buffer */
-			fsk_send(&r2000->super_fsk, samples, count, 1);
+			fsk_mod_send(&r2000->super_fsk_mod, samples, count, 1);
 		}
 		memset(power, 1, count);
 		samples += count;
@@ -390,12 +400,12 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 	/* reset telegramm */
 	if (mode == DSP_MODE_FRAME && r2000->dsp_mode != mode) {
 		r2000->tx_frame_length = 0;
-		fsk_tx_reset(&r2000->fsk);
+		fsk_mod_tx_reset(&r2000->fsk_mod);
 	}
 	if ((mode == DSP_MODE_AUDIO_TX || mode == DSP_MODE_AUDIO_TX_RX)
 	 && (r2000->dsp_mode != DSP_MODE_AUDIO_TX && r2000->dsp_mode != DSP_MODE_AUDIO_TX_RX)) {
 		r2000->super_tx_word_length = 0;
-		fsk_tx_reset(&r2000->super_fsk);
+		fsk_mod_tx_reset(&r2000->super_fsk_mod);
 	}
 
 	if (super >= 0) {

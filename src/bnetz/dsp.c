@@ -96,7 +96,11 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 2000 Hz)\n", TX_PEAK_FSK, 4.0);
 
 	/* init fsk */
-	if (fsk_init(&bnetz->fsk, bnetz, fsk_send_bit, fsk_receive_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 0, BIT_ADJUST) < 0) {
+	if (fsk_mod_init(&bnetz->fsk_mod, bnetz, fsk_send_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 0) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		return -EINVAL;
+	}
+	if (fsk_demod_init(&bnetz->fsk_demod, bnetz, fsk_receive_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, BIT_ADJUST) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
@@ -121,7 +125,8 @@ void dsp_cleanup_sender(bnetz_t *bnetz)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
-	fsk_cleanup(&bnetz->fsk);
+	fsk_mod_cleanup(&bnetz->fsk_mod);
+	fsk_demod_cleanup(&bnetz->fsk_demod);
 }
 
 /* If good tone is received, we just set this tone, if not already and reset counters.
@@ -270,7 +275,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 	int i;
 
 	/* fsk/tone signal */
-	fsk_receive(&bnetz->fsk, samples, length);
+	fsk_demod_receive(&bnetz->fsk_demod, samples, length);
 
 	/* process signal mute/loss, without signalling tone / FSK frames */
 	switch (squelch(&bnetz->squelch, rf_level_db, (double)length / (double)bnetz->sender.samplerate)) {
@@ -375,7 +380,7 @@ again:
 	case DSP_MODE_TELEGRAMM:
 		/* Encode tone/frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
-		count = fsk_send(&bnetz->fsk, samples, length, 0);
+		count = fsk_mod_send(&bnetz->fsk_mod, samples, length, 0);
 		samples += count;
 		length -= count;
 		if (length)
@@ -412,7 +417,7 @@ void bnetz_set_dsp_mode(bnetz_t *bnetz, enum dsp_mode mode)
 	/* reset telegramm */
 	if (mode == DSP_MODE_TELEGRAMM && bnetz->dsp_mode != mode) {
 		bnetz->tx_telegramm = 0;
-		fsk_tx_reset(&bnetz->fsk);
+		fsk_mod_tx_reset(&bnetz->fsk_mod);
 	}
 	
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", bnetz_dsp_mode_name(bnetz->dsp_mode), bnetz_dsp_mode_name(mode));

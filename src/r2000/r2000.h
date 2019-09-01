@@ -85,7 +85,8 @@ typedef struct r2000 {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
-	fsk_t			fsk;			/* fsk processing */
+	fsk_mod_t		fsk_mod;		/* fsk processing */
+	fsk_demod_t		fsk_demod;
 	char			tx_frame[208];		/* carries bits of one frame to transmit */
 	int			tx_frame_length;
 	int			tx_frame_pos;
@@ -102,7 +103,8 @@ typedef struct r2000 {
 	uint64_t		rx_bits_count_last;	/* sample counter of last frame */
 
 	/* supervisory dsp states */
-	fsk_t			super_fsk;		/* fsk processing */
+	fsk_mod_t		super_fsk_mod;		/* fsk processing */
+	fsk_demod_t		super_fsk_demod;
 	uint32_t		super_tx_word;		/* supervisory info to transmit */
 	int			super_tx_word_length;
 	int			super_tx_word_pos;

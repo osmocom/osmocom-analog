@@ -120,7 +120,11 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
 
 	/* init fsk */
-	if (fsk_init(&nmt->fsk, nmt, fsk_send_bit, fsk_receive_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1, BIT_ADJUST) < 0) {
+	if (fsk_mod_init(&nmt->fsk_mod, nmt, fsk_send_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1) < 0) {
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		return -EINVAL;
+	}
+	if (fsk_demod_init(&nmt->fsk_demod, nmt, fsk_receive_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, BIT_ADJUST) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
@@ -163,7 +167,8 @@ void dsp_cleanup_sender(nmt_t *nmt)
 {
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
 
-	fsk_cleanup(&nmt->fsk);
+	fsk_mod_cleanup(&nmt->fsk_mod);
+	fsk_demod_cleanup(&nmt->fsk_demod);
 
 	if (nmt->super_filter_spl) {
 		free(nmt->super_filter_spl);
@@ -336,7 +341,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 	nmt->super_filter_pos = pos;
 
 	/* fsk signal */
-	fsk_receive(&nmt->fsk, samples, length);
+	fsk_demod_receive(&nmt->fsk_demod, samples, length);
 
 	/* muting audio while receiving frame */
 	for (i = 0; i < length; i++) {
@@ -449,7 +454,7 @@ again:
 		jitter_load(&nmt->sender.dejitter, samples, length);
 		/* send after dejitter, so audio is flushed */
 		if (nmt->dms.tx_frame_valid) {
-			fsk_send(&nmt->fsk, samples, length, 0);
+			fsk_mod_send(&nmt->fsk_mod, samples, length, 0);
 			break;
 		}
 		if (nmt->supervisory)
@@ -464,7 +469,7 @@ again:
 	case DSP_MODE_FRAME:
 		/* Encode frame into audio stream. If frames have
 		 * stopped, process again for rest of stream. */
-		count = fsk_send(&nmt->fsk, samples, length, 0);
+		count = fsk_mod_send(&nmt->fsk_mod, samples, length, 0);
 		/* special case: add supervisory signal to frame at loop test */
 		if (nmt->sender.loopback && nmt->supervisory)
 			super_encode(nmt, samples, count);
@@ -501,7 +506,7 @@ void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 {
 	/* reset frame */
 	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode) {
-		fsk_tx_reset(&nmt->fsk);
+		fsk_mod_tx_reset(&nmt->fsk_mod);
 		nmt->tx_frame_length = 0;
 	}
 
