@@ -39,7 +39,7 @@
  * level = level to modulate the frequencies
  * coherent = use coherent modulation (FFSK)
  */
-int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int coherent)
+int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int coherent, int filter)
 {
 	int i;
 	int rc;
@@ -76,9 +76,9 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	PDEBUG(DDSP, DEBUG_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits_per_sample, samplerate);
 
 	fsk->phaseshift65536[0] = f0 / (double)samplerate * 65536.0;
-	PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift65536[0] = %.4f\n", fsk->phaseshift65536[0]);
+	PDEBUG(DDSP, DEBUG_DEBUG, "F0 = %.0f Hz (phaseshift65536[0] = %.4f)\n", f0, fsk->phaseshift65536[0]);
 	fsk->phaseshift65536[1] = f1 / (double)samplerate * 65536.0;
-	PDEBUG(DDSP, DEBUG_DEBUG, "phaseshift65536[1] = %.4f\n", fsk->phaseshift65536[1]);
+	PDEBUG(DDSP, DEBUG_DEBUG, "F1 = %.0f Hz (phaseshift65536[1] = %.4f)\n", f1, fsk->phaseshift65536[1]);
 
 	/* use coherent modulation, i.e. each bit has an integer number of
 	 * half waves and starts/ends at zero crossing
@@ -86,6 +86,7 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	if (coherent) {
 		double waves;
 
+		PDEBUG(DDSP, DEBUG_DEBUG, "enable coherent FSK modulation mode\n");
 		fsk->coherent = 1;
 		waves = (f0 / bitrate);
 		if (fabs(round(waves * 2) - (waves * 2)) > 0.001) {
@@ -99,6 +100,20 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 			abort();
 		}
 		fsk->cycles_per_bit65536[1] = waves * 65536.0;
+	}
+
+	/* if filter is enabled, add a band pass filter to smoot the spectrum of the tones
+	 * the bandwidth is twice the difference between f0 and f1
+	 */
+	if (filter) {
+		double low = (f0 + f1) / 2.0 - fabs(f0 - f1);
+		double high = (f0 + f1) / 2.0 + fabs(f0 - f1);
+
+		PDEBUG(DDSP, DEBUG_DEBUG, "enable filter to smooth FSK transmission. (frequency rage %.0f .. %.0f)\n", low, high);
+		fsk->filter = 1;
+		/* use fourth order (2 iter) filter, since it is as fast as second order (1 iter) filter */
+		iir_highpass_init(&fsk->lp[0], low, samplerate, 2);
+		iir_lowpass_init(&fsk->lp[1], high, samplerate, 2);
 	}
 
 	return 0;
@@ -178,6 +193,12 @@ next_bit:
 	if (fsk->tx_bitpos >= 1.0) {
 		fsk->tx_bitpos -= 1.0;
 		goto next_bit;
+	}
+
+	/* post filter */
+	if (fsk->filter) {
+		iir_process(&fsk->lp[0], sample, length);
+		iir_process(&fsk->lp[1], sample, length);
 	}
 
 done:

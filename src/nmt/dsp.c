@@ -120,7 +120,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
 
 	/* init fsk */
-	if (fsk_mod_init(&nmt->fsk_mod, nmt, fsk_send_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1) < 0) {
+	if (fsk_mod_init(&nmt->fsk_mod, nmt, fsk_send_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1, 0) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}

@@ -85,7 +85,7 @@ int dsp_init_sender(r2000_t *r2000)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f\n", TX_PEAK_FSK);
 
 	/* init fsk */
-	if (fsk_mod_init(&r2000->fsk_mod, r2000, fsk_send_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1) < 0) {
+	if (fsk_mod_init(&r2000->fsk_mod, r2000, fsk_send_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1, 0) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
@@ -99,7 +99,7 @@ int dsp_init_sender(r2000_t *r2000)
 		r2000->rx_max = 144;
 
 	/* init supervisorty fsk */
-	if (fsk_mod_init(&r2000->super_fsk_mod, r2000, super_send_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0) < 0) {
+	if (fsk_mod_init(&r2000->super_fsk_mod, r2000, super_send_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0, 0) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}

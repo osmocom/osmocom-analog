@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
 	sprintf(funkwahl, "wwww%c%s%se%c%s%se", start_digit, station_id, dialing + 1, start_digit, station_id, dialing + 1);
 
 	/* init fsk */
-	if (fsk_mod_init(&fsk_mod, NULL, fsk_send_bit, samplerate, BIT_RATE, F0, F1, 1.0, 0) < 0) {
+	if (fsk_mod_init(&fsk_mod, NULL, fsk_send_bit, samplerate, BIT_RATE, F0, F1, 1.0, 0, 0) < 0) {
 		PDEBUG(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		goto exit;
 	}

@@ -15,6 +15,8 @@ typedef struct fsk_mod {
 	int		low_bit, high_bit;	/* a low or high deviation means which bit? */
 	int		tx_bit;			/* current transmitting bit (-1 if not set) */
 	double		tx_bitpos;		/* current transmit position in bit */
+	int		filter;			/* set, if filters are used */
+	iir_filter_t	lp[2];			/* filter to smoot transmission spectrum */
 } fsk_mod_t;
 
 typedef struct fsk_demod {
@@ -30,7 +32,7 @@ typedef struct fsk_demod {
 	double		rx_bitadjust;		/* how much does a bit change cause the sample clock to be adjusted in phase */
 } fsk_demod_t;
 
-int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int coherent);
+int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int coherent, int filter);
 void fsk_mod_cleanup(fsk_mod_t *fsk);
 int fsk_mod_send(fsk_mod_t *fsk, sample_t *sample, int length, int add);
 void fsk_mod_tx_reset(fsk_mod_t *fsk);

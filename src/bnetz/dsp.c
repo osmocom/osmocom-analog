@@ -96,7 +96,7 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 2000 Hz)\n", TX_PEAK_FSK, 4.0);
 
 	/* init fsk */
-	if (fsk_mod_init(&bnetz->fsk_mod, bnetz, fsk_send_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 0) < 0) {
+	if (fsk_mod_init(&bnetz->fsk_mod, bnetz, fsk_send_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 0, 0) < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
