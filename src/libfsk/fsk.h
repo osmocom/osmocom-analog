@@ -30,6 +30,7 @@ typedef struct fsk_demod {
 	int		rx_bit;			/* current receiving bit (-1 if not yet measured) */
 	double		rx_bitpos;		/* current receive position in bit (sampleclock) */
 	double		rx_bitadjust;		/* how much does a bit change cause the sample clock to be adjusted in phase */
+	int		rx_change;		/* set, if we have a level change before sampling the bit */
 } fsk_demod_t;
 
 int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int coherent, int filter);

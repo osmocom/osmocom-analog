@@ -324,6 +324,18 @@ void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length)
 				if (fsk->rx_bitpos < 0.5)
 					fsk->rx_bitpos = 0.5;
 			}
+			/* if we have a pulse before we sampled a bit after last pulse */
+			if (fsk->rx_change) {
+				/* peak level is the length of I/Q vector
+				 * since we filter out the unwanted modulation product, the vector is only half of length */
+				level = sqrt(I[i] * I[i] + Q[i] * Q[i]) * 2.0;
+#ifdef DEBUG_FILTER
+				printf("prematurely bit change (level=%.3f)\n", level / fsk->level);
+#endif
+				/* quality is 0.0, because a prematurely level change is caused by noise and has nothing to measure. */
+				fsk->receive_bit(fsk->inst, fsk->rx_bit, 0.0, level);
+			}
+			fsk->rx_change = 1;
 		}
 		/* if bit counter reaches 1, we subtract 1 and sample the bit */
 		if (fsk->rx_bitpos >= 1.0) {
@@ -344,6 +356,7 @@ void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length)
 			/* adjust the values, because this is best we can get from fm demodulator */
 			fsk->receive_bit(fsk->inst, bit, quality / 0.95, level);
 			fsk->rx_bitpos -= 1.0;
+			fsk->rx_change = 0;
 		}
 		fsk->rx_bitpos += fsk->bits_per_sample;
 	}
