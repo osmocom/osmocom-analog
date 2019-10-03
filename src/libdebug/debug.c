@@ -41,7 +41,7 @@ struct debug_cat {
 	const char *name;
 	const char *color;
 } debug_cat[] = {
-	{ "options", "\033[1;37m" },
+	{ "options", "\033[0;33m" },
 	{ "sender", "\033[1;33m" },
 	{ "sound", "\033[0;35m" },
 	{ "dsp", "\033[0;31m" },
