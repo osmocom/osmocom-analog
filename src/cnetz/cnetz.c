@@ -1300,7 +1300,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 					PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Cannot authenticate, because mobile station does not support it. (Mobile station has magnetic card.)\n");
 					goto no_auth;
 				}
-				PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Perform authentication with subscriber's card.\n");
+				PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Perform authentication with subscriber's card, use challenge: 0x%016" PRIx64 "\n", telegramm.zufallszahl);
 				trans_new_state(trans, TRANS_ZFZ);
 				timer_start(&trans->timer, 0.0375 * F_ZFZ); /* F_ZFZ frames */
 			} else {
@@ -1507,6 +1507,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 			cnetz_release(trans, CNETZ_CAUSE_GASSENBESETZT); /* when authentication is not valid */
 			break;
 		}
+		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Completed authentication with subscriber's card, challenge response: 0x%016" PRIx64 "\n", telegramm->authorisierungsparameter);
 		timer_stop(&trans->timer);
 		trans_new_state(trans, TRANS_VHQ_K);
 		timer_start(&trans->timer, 0.0375 * F_VHQK); /* F_VHQK frames */
@@ -1547,7 +1548,7 @@ void cnetz_receive_telegramm_spk_k(cnetz_t *cnetz, telegramm_t *telegramm)
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received answer frame 'Abheben' message.\n");
 		valid_frame = 1;
 		/* if already received this frame, or if we are already on VHQ or if we are releasing */
-		if (trans->state == TRANS_AHQ || trans->state == TRANS_VHQ_K || trans->state == TRANS_AF)
+		if (trans->state == TRANS_AHQ || trans->state == TRANS_VHQ_K || trans->state == TRANS_VHQ_V || trans->state == TRANS_AF)
 			break;
 		cnetz->scrambler = telegramm->betriebs_art;
 		cnetz->scrambler_switch = 0;
