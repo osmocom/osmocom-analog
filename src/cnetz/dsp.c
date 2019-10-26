@@ -564,8 +564,9 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 
 	if (cnetz->dsp_mode != DSP_MODE_OFF) {
 		iir_process(&cnetz->lp, samples, length);
-		fsk_fm_demod(&cnetz->fsk_demod, samples, length);
-	}
+		fsk_fm_demod(&cnetz->fsk_demod, samples, length); /* process */
+	} else
+		fsk_fm_demod(&cnetz->fsk_demod, NULL, length); /* just count bit time */
 	return;
 }
 
@@ -610,7 +611,7 @@ again:
 
 	/* start new telegramm, so we generate one */
 	if (pos == 0) {
-		/* a new hyper frame starts */
+		/* a new super frame starts */
 		if (cnetz->sched_ts == 0 && cnetz->sched_r_m == 0) {
 			/* measure actual signal speed */
 			calc_clock_speed(cnetz, (double)cnetz->sender.samplerate * 2.4, 1, 1);
@@ -624,7 +625,7 @@ again:
 				cnetz_t *master = (cnetz_t *)cnetz->sender.master;
 				/* it may happen that the sample count does not match with the master,
 				 * because one has a phase wrap before and the other after a sample.
-				 * then we do it next hyper frame cycle */
+				 * then we do it next super frame cycle */
 				if (master->frame_last_scount == cnetz->fsk_tx_scount) {
 					PDEBUG(DDSP, DEBUG_DEBUG, "Sync phase of slave to master: master=%.15f, slave=%.15f, diff=%.15f\n", master->frame_last_phase, cnetz->fsk_tx_phase, master->frame_last_phase - cnetz->fsk_tx_phase);
 					cnetz->fsk_tx_phase = master->frame_last_phase;

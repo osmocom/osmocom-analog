@@ -584,55 +584,58 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 
 	/* process signaling block, sample by sample */
 	for (i = 0; i < length; i++) {
-		fsk->bit_buffer_spl[fsk->bit_buffer_pos++] = samples[i];
-		if (fsk->bit_buffer_pos == fsk->bit_buffer_len)
-			fsk->bit_buffer_pos = 0;
+		/* samples == NULL, if no processing is wanted, then just count bit time */
+		if (samples) {
+			fsk->bit_buffer_spl[fsk->bit_buffer_pos++] = samples[i];
+			if (fsk->bit_buffer_pos == fsk->bit_buffer_len)
+				fsk->bit_buffer_pos = 0;
 
-		/* for each sample process buffer */
-		if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
-			if (fsk->demod_type == FSK_DEMOD_SLOPE)
-				find_change_slope(fsk);
-			else
-				find_change_level(fsk);
-		} else {
-#ifdef DEBUG_DECODER
-			/* start debugging */
-			debug = 1;
-#endif
-			/* in distributed signaling, measure over 5 bits, but ignore 5th bit.
-			 * also reset next_bit, as soon as we reach the window */
-			/* note that we start from 0.5, because we detect change 0.5 bits later,
-			 * because the detector of the change is in the middle of the 1 bit
-			 * search window */
-			t = fmod(fsk->bit_time, BITS_PER_SPK_BLOCK);
-			if (t < 0.5) {
-				fsk->next_bit = 1.0 - fsk->bits_per_sample;
-#ifdef DEBUG_DECODER
-				if (debug && fsk->bit_count)
-					fprintf(fsk->debug_fp, "---- SPK(V) BLOCK START ----\n");
-#endif
-				fsk->bit_count = 0;
-			} else
-			if (t >= 0.5 && t < 5.5) {
+			/* for each sample process buffer */
+			if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
 				if (fsk->demod_type == FSK_DEMOD_SLOPE)
 					find_change_slope(fsk);
 				else
 					find_change_level(fsk);
-			} else
-			if (t >= 5.5 && t < 65.5) {
-				/* get audio for the duration of 60 bits */
-				/* prevent overflow, if speech_size != 0 and SPK_V
-				 * has been restarted. */
-				if (fsk->speech_count < fsk->speech_size)
-					fsk->speech_buffer[fsk->speech_count++] = samples[i];
-			} else
-			if (t >= 65.5) {
-				if (fsk->speech_count) {
-					unshrink_speech(fsk->cnetz, fsk->speech_buffer, fsk->speech_count);
-					fsk->speech_count = 0;
+			} else {
+#ifdef DEBUG_DECODER
+				/* start debugging */
+				debug = 1;
+#endif
+				/* in distributed signaling, measure over 5 bits, but ignore 5th bit.
+				 * also reset next_bit, as soon as we reach the window */
+				/* note that we start from 0.5, because we detect change 0.5 bits later,
+				 * because the detector of the change is in the middle of the 1 bit
+				 * search window */
+				t = fmod(fsk->bit_time, BITS_PER_SPK_BLOCK);
+				if (t < 0.5) {
+					fsk->next_bit = 1.0 - fsk->bits_per_sample;
+#ifdef DEBUG_DECODER
+					if (debug && fsk->bit_count)
+						fprintf(fsk->debug_fp, "---- SPK(V) BLOCK START ----\n");
+#endif
+					fsk->bit_count = 0;
+				} else
+				if (t >= 0.5 && t < 5.5) {
+					if (fsk->demod_type == FSK_DEMOD_SLOPE)
+						find_change_slope(fsk);
+					else
+						find_change_level(fsk);
+				} else
+				if (t >= 5.5 && t < 65.5) {
+					/* get audio for the duration of 60 bits */
+					/* prevent overflow, if speech_size != 0 and SPK_V
+					 * has been restarted. */
+					if (fsk->speech_count < fsk->speech_size)
+						fsk->speech_buffer[fsk->speech_count++] = samples[i];
+				} else
+				if (t >= 65.5) {
+					if (fsk->speech_count) {
+						unshrink_speech(fsk->cnetz, fsk->speech_buffer, fsk->speech_count);
+						fsk->speech_count = 0;
+					}
 				}
-			}
 
+			}
 		}
 		fsk->bit_time += fsk->bits_per_sample;
 		if (fsk->bit_time >= BITS_PER_SUPERFRAME) {
@@ -652,10 +655,11 @@ void fsk_correct_sync(fsk_fm_demod_t *fsk, double offset)
 	fsk->bit_time = fmod(fsk->bit_time - offset + BITS_PER_SUPERFRAME, BITS_PER_SUPERFRAME);
 }
 
-/* copy sync from one instance to another (used to sync RX of SpK to OgK */
+/* copy sync from one instance to another (used to sync RX of SpK to OgK) */
 void fsk_copy_sync(fsk_fm_demod_t *fsk_to, fsk_fm_demod_t *fsk_from)
 {
 	fsk_to->bit_time = fsk_from->bit_time;
+	fsk_demod_reset(fsk_to);
 }
 
 void fsk_demod_reset(fsk_fm_demod_t *fsk)
