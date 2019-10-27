@@ -134,7 +134,7 @@ static int sound_prepare(sound_t *sound)
 void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) latspl, double max_deviation, double __attribute__((unused)) max_modulation)
 {
 	sound_t *sound;
-	int rc;
+	int rc, rc_rec, rc_play;
 
 	if (channels < 1 || channels > 2) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "Cannot use more than two channels with the same sound card!\n");
@@ -150,15 +150,20 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 	sound->spl_deviation = max_deviation / 32767.0;
 	sound->paging_phaseshift = 1.0 / ((double)samplerate / 1000.0);
 
-	rc = snd_pcm_open(&sound->phandle, audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s)\n", audiodev, snd_strerror(rc));
+	rc_play = snd_pcm_open(&sound->phandle, audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	rc_rec = snd_pcm_open(&sound->chandle, audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	if (rc_play < 0 && rc_rec < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s'! (%s)\n", audiodev, snd_strerror(rc_play));
+		PDEBUG(DSOUND, DEBUG_ERROR, "Run 'aplay -l' to get a list of available cards and devices.\n");
+		PDEBUG(DSOUND, DEBUG_ERROR, "Then use 'hw:<card>:<device>' for audio device.\n");
 		goto error;
 	}
-
-	rc = snd_pcm_open(&sound->chandle, audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s)\n", audiodev, snd_strerror(rc));
+	if (rc_play < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports both direction audio.\n", audiodev, snd_strerror(rc_play));
+		goto error;
+	}
+	if (rc_rec < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports both direction audio.\n", audiodev, snd_strerror(rc_rec));
 		goto error;
 	}
 

@@ -222,7 +222,7 @@ int sender_open_audio(int latspl)
 		/* open device */
 		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, latspl, master->max_deviation, master->max_modulation);
 		if (!master->audio) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "No audio device!\n");
+			PDEBUG(DSENDER, DEBUG_ERROR, "No device for transceiver!\n");
 			return -EIO;
 		}
 	}
