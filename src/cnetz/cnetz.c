@@ -1186,7 +1186,10 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		if (!match_fuz(cnetz, telegramm, cnetz->cell_nr))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
-		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '%s'\n", rufnummer);
+		if (opcode == OPCODE_VWG_R)
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '%s'\n", rufnummer);
+		else
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing emergency Call 'Sonderruf gehend' message from Subscriber '%s'\n", rufnummer);
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Call from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
