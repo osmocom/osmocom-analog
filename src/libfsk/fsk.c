@@ -305,7 +305,7 @@ void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length)
 		else
 			bit = fsk->high_bit;
 #ifdef DEBUG_FILTER
-			printf("|%s| %.3f\n", debug_amplitude(f / fabs(fsk->f0_deviation)), f / fabs(fsk->f0_deviation));
+			printf("|%s| %.3f\n", debug_amplitude(f / fabs(fsk->f0_deviation) / 2), f / fabs(fsk->f0_deviation));
 #endif
 	
 
@@ -330,7 +330,7 @@ void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length)
 				 * since we filter out the unwanted modulation product, the vector is only half of length */
 				level = sqrt(I[i] * I[i] + Q[i] * Q[i]) * 2.0;
 #ifdef DEBUG_FILTER
-				printf("prematurely bit change (level=%.3f)\n", level / fsk->level);
+				printf("prematurely bit change (level=%.3f)\n", level);
 #endif
 				/* quality is 0.0, because a prematurely level change is caused by noise and has nothing to measure. */
 				fsk->receive_bit(fsk->inst, fsk->rx_bit, 0.0, level);
@@ -351,10 +351,9 @@ void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length)
 			if (quality < 0)
 				quality = 0;
 #ifdef DEBUG_FILTER
-			printf("sample (level=%.3f, quality=%.3f)\n", level / fsk->level, quality);
+			printf("sample (level=%.3f, quality=%.3f)\n", level, quality);
 #endif
-			/* adjust the values, because this is best we can get from fm demodulator */
-			fsk->receive_bit(fsk->inst, bit, quality / 0.95, level);
+			fsk->receive_bit(fsk->inst, bit, quality, level);
 			fsk->rx_bitpos -= 1.0;
 			fsk->rx_change = 0;
 		}
