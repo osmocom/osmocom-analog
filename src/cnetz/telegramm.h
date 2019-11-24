@@ -119,7 +119,7 @@ int init_coding(void);
 const char *telegramm_name(uint8_t opcode);
 
 const char *telegramm2rufnummer(telegramm_t *telegramm);
-int match_fuz(cnetz_t *cnetz, telegramm_t *telegramm, int cell);
+int match_fuz(telegramm_t *telegramm);
 int match_futln(telegramm_t *telegramm, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
 
 int detect_sync(uint64_t bitstream);

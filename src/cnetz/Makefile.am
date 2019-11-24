@@ -13,6 +13,7 @@ cnetz_SOURCES = \
 	fsk_demod.c \
 	image.c \
 	ansage.c \
+	stations.c \
 	main.c
 cnetz_LDADD = \
 	$(COMMON_LA) \

@@ -1,6 +1,5 @@
 
 typedef struct system_information {
-	int		flip_polarity;		/* use negative polarity for FSK transmission */
 	uint8_t		fuz_nat;		/* national network ID */
 	uint8_t		fuz_fuvst;		/* id of switching center */
 	uint8_t		fuz_rest;		/* rest of base station id */
@@ -22,7 +21,7 @@ typedef struct system_information {
 	int8_t		anzahl_gesperrter_teilnehmergruppen;
 } cnetz_si;
 
-extern cnetz_si si[];
+extern cnetz_si si;
 
 void init_sysinfo(uint8_t fuz_nat, uint8_t fuz_fuvst, uint8_t fuz_rest, uint8_t kennung_fufst, uint8_t authentifikationsbit, uint8_t ws_kennung, uint8_t vermittlungstechnische_sperren, uint8_t grenz_einbuchen, uint8_t grenz_umschalten, uint8_t grenz_ausloesen, uint8_t mittel_umschalten, uint8_t mittel_ausloesen, uint8_t genauigkeit, uint8_t bewertung, uint8_t entfernung, uint8_t reduzierung, uint8_t nachbar_prio, int8_t teilnehmergruppensperre, uint8_t anzahl_gesperrter_teilnehmergruppen);
 

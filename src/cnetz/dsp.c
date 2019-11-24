@@ -646,20 +646,21 @@ again:
 
 		switch (cnetz->dsp_mode) {
 		case DSP_MODE_OGK:
-			/* if automatic cell selection is used, toggle between
-			 * two cells until a response for one cell is received
+			/* if automatic polarity selection is used, toggle between
+			 * two polarities (every 4 slots) until a response is received
+			 * then continue to use the time slots of that polarity
 			 */
-			if (cnetz->cell_auto)
-				cnetz->cell_nr = (cnetz->sched_ts & 7) >> 2;
-			/* send on timeslots depending on the cell_nr:
-			 * cell 0: 0, 8, 16, 24
-			 * cell 1: 4, 12, 20, 28
+			if (cnetz->auto_polarity)
+				cnetz->negative_polarity = (cnetz->sched_ts & 7) >> 2;
+			/* send on timeslots depending on the polarity:
+			 * positive polarity: 0, 8, 16, 24
+			 * negative polarity: 4, 12, 20, 28
 			 */
-			if (((cnetz->sched_ts & 7) == 0 && cnetz->cell_nr == 0)
-			 || ((cnetz->sched_ts & 7) == 4 && cnetz->cell_nr == 1)) {
+			if (((cnetz->sched_ts & 7) == 0 && cnetz->negative_polarity == 0)
+			 || ((cnetz->sched_ts & 7) == 4 && cnetz->negative_polarity == 1)) {
 				if (cnetz->sched_r_m == 0) {
-					/* set last time slot, so we can match received message from mobile station */
-					cnetz->sched_last_ts[cnetz->cell_nr] = cnetz->sched_ts;
+					/* set last time slot, so we know to which time slot the message from mobile station belongs to */
+					cnetz->sched_last_ts = cnetz->sched_ts;
 					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
 					bits = cnetz_encode_telegramm(cnetz);
 				} else {

@@ -85,13 +85,13 @@ typedef struct cnetz {
 	/* all cnetz states */
 	enum cnetz_state	state;			/* main state of sender */
 
-	/* cell nr selection */
-	int			cell_auto;		/* if set, cell_nr is selected automatically */
-	int			cell_nr;		/* current cell number to use (sysinfo) */
+	/* polarity detection */
+	int			auto_polarity;		/* if set, polarity of transmitter is selected */
+	int			negative_polarity;	/* current polarity 0: positive 1: negative */
 
 	/* scheduler */
 	int			sched_ts;		/* current time slot */
-	int			sched_last_ts[2];	/* last timeslot we transmitted, so we can match MS timeslot */
+	int			sched_last_ts;		/* last timeslot we transmitted, to sync time of the receiver */
 	int			sched_r_m;		/* Rufblock (0) / Meldeblock (1) */
 	int			sched_switch_mode;	/* counts slots until mode is switched */
 	enum dsp_mode		sched_dsp_mode;		/* what mode shall be switched to  */

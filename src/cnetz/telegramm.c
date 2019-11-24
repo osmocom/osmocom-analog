@@ -568,13 +568,12 @@ static int encode_dialstring(uint64_t *value, const char *number)
 	return 0;
 }
 
-int match_fuz(cnetz_t *cnetz, telegramm_t *telegramm, int cell)
+int match_fuz(telegramm_t *telegramm)
 {
-	if (telegramm->fuz_nationalitaet != si[cell].fuz_nat
-	 || telegramm->fuz_fuvst_nr != si[cell].fuz_fuvst
-	 || telegramm->fuz_rest_nr != si[cell].fuz_rest) {
-	 	if (!cnetz->cell_auto)
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Cell 'Funkzelle' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+	if (telegramm->fuz_nationalitaet != si.fuz_nat
+	 || telegramm->fuz_fuvst_nr != si.fuz_fuvst
+	 || telegramm->fuz_rest_nr != si.fuz_rest) {
+		PDEBUG(DFRAME, DEBUG_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Cell 'Funkzelle' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 	 	return 0;
 	}
 
@@ -1486,7 +1485,7 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 		return;
 	}
 
-	disassemble_telegramm(&telegramm, bits, si[cnetz->cell_nr].authentifikationsbit);
+	disassemble_telegramm(&telegramm, bits, si.authentifikationsbit);
 	opcode = telegramm.opcode;
 	telegramm.level = level;
 	telegramm.sync_time = sync_time;
@@ -1513,28 +1512,18 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 	}
 
 	/* auto select cell */
-	if (cnetz->cell_auto) {
+	if (cnetz->auto_polarity && match_fuz(&telegramm)) {
 		sender_t *sender;
 		cnetz_t *c;
-		int nr;
-		if (match_fuz(cnetz, &telegramm, 0)) {
-			nr = 0;
-selected:
-			printf("***********************************************\n");
-			printf("*** Autoselecting %stive FSK TX polarity! ***\n", (si[nr].flip_polarity) ? "nega" : "posi");
-			printf("***********************************************\n");
-			/* select on all transceivers */
-			for (sender = sender_head; sender; sender = sender->next) {
-				c = (cnetz_t *) sender;
-				c->cell_auto = 0;
-				c->cell_nr = nr;
-			}
-		} else if (match_fuz(cnetz, &telegramm, 1)) {
-			nr = 1;
-			goto selected;
-		} else {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm with unknown cell number, ignoring!\n");
-			return;
+
+		printf("***********************************************\n");
+		printf("*** Autoselecting %stive FSK TX polarity! ***\n", (cnetz->negative_polarity) ? "nega" : "posi");
+		printf("***********************************************\n");
+		/* select on all transceivers */
+		for (sender = sender_head; sender; sender = sender->next) {
+			c = (cnetz_t *) sender;
+			c->auto_polarity = 0;
+			c->negative_polarity = cnetz->negative_polarity;
 		}
 	}
 
@@ -1544,8 +1533,10 @@ selected:
 			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used OgK channel signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
-		/* determine block by last timeslot sent and by message type */
-		block = cnetz->sched_last_ts[cnetz->cell_nr] * 2;
+		/* determine block by last timeslot sent and by message type
+		 * this is needed to sync the time of the receiver
+		 */
+		block = cnetz->sched_last_ts * 2;
 		if (definition_opcode[opcode].block == BLOCK_M)
 			block++;
 		cnetz_receive_telegramm_ogk(cnetz, &telegramm, block);
@@ -1598,7 +1589,7 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 	bits = interleave(bits);
 
 	/* invert, if polarity of the cell is negative */
-	if (si[cnetz->cell_nr].flip_polarity) {
+	if (cnetz->negative_polarity) {
 		int i;
 
 		for (i = 0; i < 184; i++)

@@ -36,6 +36,7 @@
 #include "dsp.h"
 #include "telegramm.h"
 #include "ansage.h"
+#include "stations.h"
 
 /* settings */
 int num_chan_type = 0;
@@ -51,8 +52,9 @@ uint64_t challenge;
 int response_valid;
 uint64_t response;
 uint8_t fuz_nat = 1;
-uint8_t fuz_fuvst = 1;
-uint8_t fuz_rest = 38;
+uint8_t fuz_fuvst = 4;
+uint8_t fuz_rest = 66;
+const char *fuz_name = NULL;
 uint8_t kennung_fufst = 1; /* normal prio */
 uint8_t authentifikationsbit = 0;
 uint8_t ws_kennung = 0; /* no queue */
@@ -90,7 +92,7 @@ void print_help(const char *arg0)
 	printf(" -F --flip-polarity no | yes | auto\n");
 	printf("        Flip polarity of transmitted FSK signal. If yes, the sound card\n");
 	printf("        generates a negative signal rather than a positive one. If auto, the\n");
-	printf("        base station generates two virtual base stations with both polarities.\n");
+	printf("        base station uses double time slots with alternating polarity.\n");
 	printf("        Once a mobile registers, the correct polarity is selected and used.\n");
 	printf("        (default = %s)\n", flip_polarity);
 	printf("	Note: This has no effect with SDR.\n");
@@ -124,6 +126,11 @@ void print_help(const char *arg0)
 	printf("        Set switching center ID of base station. (default = %d)\n", fuz_fuvst);
 	printf(" -S --sysinfo fuz-rest=<id>\n");
 	printf("        Set cell ID of base station. (default = %d)\n", fuz_rest);
+	printf(" -S --sysinfo fuz=<nat>,<fuvst>,<rest>\n");
+	printf("        Set country, switching center and cell ID of base station at once.\n");
+	printf(" -S --sysinfo fuz-name=<name>\n");
+	printf("        Set country, switching center and cell ID by providing name or prefix\n");
+	printf("        Use 'list' to get a list of all base sstation names.\n");
 	printf(" -S --sysinfo kennung-fufst=<id>\n");
 	printf("        Set priority for selecting base station. (default = %d)\n", kennung_fufst);
 	printf("        0 = Test (Only special mobile stations may register.)\n");
@@ -259,7 +266,7 @@ static void add_options(void)
 static int handle_options(int short_option, int argi, char **argv)
 {
 	int rc;
-	const char *p;
+	const char *p, *q;
 
 	switch (short_option) {
 	case 'T':
@@ -333,10 +340,29 @@ static int handle_options(int short_option, int argi, char **argv)
 			fuz_nat = atoi_limit(p, 0, 7);
 		} else
 		if (!strncasecmp(argv[argi], "fuz-fuvst=", p - argv[argi])) {
-			fuz_fuvst = atoi_limit(p, 0, 32);
+			fuz_fuvst = atoi_limit(p, 0, 31);
 		} else
 		if (!strncasecmp(argv[argi], "fuz-rest=", p - argv[argi])) {
 			fuz_rest = atoi_limit(p, 0, 255);
+		} else
+		if (!strncasecmp(argv[argi], "fuz=", p - argv[argi])) {
+			q = strchr(p, ',');
+			if (!q) {
+error_fuz:
+				fprintf(stderr, "You must give 3 values for 'fuz'.\n");
+				return -EINVAL;
+			}
+			fuz_nat = atoi_limit(p, 0, 7);
+			p = q + 1;
+			q = strchr(p, ',');
+			if (!q)
+				goto error_fuz;
+			fuz_fuvst = atoi_limit(p, 0, 31);
+			p = q + 1;
+			fuz_rest = atoi_limit(p, 0, 255);
+		} else
+		if (!strncasecmp(argv[argi], "fuz-name=", p - argv[argi])) {
+			fuz_name = strdup(p);
 		} else
 		if (!strncasecmp(argv[argi], "kennung-fufst=", p - argv[argi])) {
 			kennung_fufst = atoi_limit(p, 0, 3);
@@ -433,6 +459,8 @@ int main(int argc, char *argv[])
 	init_besetzton();
 	init_ansage();
 
+	init_station();
+
 	main_mobile_init();
 
 	/* handle options / config file */
@@ -451,6 +479,25 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 	}
+
+	/* resolve name of base station */
+	if (fuz_name) {
+		const char *error;
+
+		/* get data from name */
+		if (!strcmp(fuz_name, "list")) {
+			station_list();
+			return 0;
+		}
+		/* resolve */
+		error = get_station_id(fuz_name, &fuz_nat, &fuz_fuvst, &fuz_rest);
+		if (error) {
+			fprintf(stderr, "%s\n", error);
+			return -EINVAL;
+		}
+	}
+	/* set or complete name (in case of prefix was given) */
+	fuz_name = get_station_name(fuz_nat, fuz_fuvst, fuz_rest);
 
 	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", CNETZ_OGK_KANAL);
