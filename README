@@ -14,7 +14,14 @@ generated simultaniously using SDR. Currently supported networks:
  * JTACS (Japanese version of TACS)
  * Radiocom 2000 (French network)
  * IMTS / MTS ((Improved) Mobile Telephone Service)
+ * Eurosignal (ERuRD paging service)
  * JollyCom (Unofficial network, invented by the author)
+
+Additionally the following communication services are implemented:
+
+ * TV Transmitter with test Images
+ * Radio transmitter / receiver
+ * Analog Modem Emulation (AM7911)
 
 
 USE AT YOUR OWN RISK!
@@ -33,7 +40,7 @@ Hans Wigger for providing valuable informations about A-Netz and B-Netz and
 helping me to get an A-Netz phone.
 
 Stephan Hessberger for his work on oebl.de, that provides valuable informations
-about A-Netz, B-Netz and C-Netz.
+about A-Netz, B-Netz, C-Netz, Eurosignal and much more.
 
 Friedhelm Hillebrand for providing complete specification of the mobile phone
 of C-Netz.

@@ -48,6 +48,7 @@ SUBDIRS += \
 	r2000 \
 	imts \
 	jolly \
+	eurosignal \
 	tv \
 	radio
 

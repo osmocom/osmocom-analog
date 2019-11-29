@@ -94,6 +94,7 @@ AC_OUTPUT(
     src/r2000/Makefile
     src/imts/Makefile
     src/jolly/Makefile
+    src/eurosignal/Makefile
     src/tv/Makefile
     src/radio/Makefile
     src/datenklo/Makefile

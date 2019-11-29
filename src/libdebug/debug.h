@@ -16,22 +16,23 @@
 #define DR2000		9
 #define DIMTS		10
 #define DJOLLY		11
-#define DFRAME		12
-#define DCALL		13
-#define DMNCC		14
-#define DDB		15
-#define DTRANS		16
-#define DDMS		17
-#define DSMS		18
-#define DSDR		19
-#define DUHD		20
-#define DSOAPY		21
-#define DWAVE		22
-#define DRADIO		23
-#define DAM791X		24
-#define DUART		25
-#define DDEVICE		26
-#define DDATENKLO	27
+#define DEURO		12
+#define DFRAME		13
+#define DCALL		14
+#define DMNCC		15
+#define DDB		16
+#define DTRANS		17
+#define DDMS		18
+#define DSMS		19
+#define DSDR		20
+#define DUHD		21
+#define DSOAPY		22
+#define DWAVE		23
+#define DRADIO		24
+#define DAM791X		25
+#define DUART		26
+#define DDEVICE		27
+#define DDATENKLO	28
 
 void get_win_size(int *w, int *h);
 
