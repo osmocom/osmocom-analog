@@ -30,6 +30,7 @@
 #include <pthread.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <math.h>
 #include "../libsample/sample.h"
 #include "../libtimer/timer.h"
 #include "../libfsk/fsk.h"
@@ -41,6 +42,8 @@
 #include "am791x.h"
 #include "uart.h"
 #include "datenklo.h"
+
+#define level2db(level) (20 * log10(level))
 
 /* Put the state of FD into *TERMIOS_P.  */
 extern int tcgetattr (int __fd, struct termios *__termios_p) __THROW;
@@ -341,8 +344,8 @@ static void rd(void *inst, int bit, double quality, double level)
 
 	/* only show level+quality when bit has not changed */
 	if (datenklo->last_bit == bit) {
-		display_measurements_update(datenklo->dmp_level, level, 0.0);
-		display_measurements_update(datenklo->dmp_quality, quality, 0.0);
+		display_measurements_update(datenklo->dmp_tone_level, level, 0.0);
+		display_measurements_update(datenklo->dmp_tone_quality, quality, 0.0);
 	}
 	datenklo->last_bit = bit;
 
@@ -359,8 +362,8 @@ static void brd(void *inst, int bit, double quality, double level)
 
 	/* only show level+quality when bit has not changed */
 	if (datenklo->last_bit == bit) {
-		display_measurements_update(datenklo->dmp_level, level, 0.0);
-		display_measurements_update(datenklo->dmp_quality, quality, 0.0);
+		display_measurements_update(datenklo->dmp_tone_level, level, 0.0);
+		display_measurements_update(datenklo->dmp_tone_quality, quality, 0.0);
 	}
 	datenklo->last_bit = bit;
 
@@ -1365,8 +1368,10 @@ int datenklo_init(datenklo_t *datenklo, const char *dev_name, enum am791x_type a
 	display_wave_init(&datenklo->dispwav, samplerate, dev_name);
 	display_measurements_init(&datenklo->dispmeas, samplerate, dev_name);
 
-	datenklo->dmp_level = display_measurements_add(&datenklo->dispmeas, "Level", "%.1f dBm", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -50.0, 5.0, 0.0);
-	datenklo->dmp_quality = display_measurements_add(&datenklo->dispmeas, "Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
+	datenklo->rx_level_max = samplerate / 20;
+	datenklo->dmp_rx_level = display_measurements_add(&datenklo->dispmeas, "Input Level", "%.1f dBm", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -50.0, 5.0, 0.0);
+	datenklo->dmp_tone_level = display_measurements_add(&datenklo->dispmeas, "Tone Level", "%.1f dBm", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, -50.0, 5.0, 0.0);
+	datenklo->dmp_tone_quality = display_measurements_add(&datenklo->dispmeas, "Tone Quality", "%.1f %%", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	return 0;
 
@@ -1446,6 +1451,25 @@ static int get_char()
 		return -1;
 }
 
+static void display_level(datenklo_t *datenklo, sample_t *samples, int count)
+{
+	int i;
+	sample_t s;
+
+	for (i = 0; i < count; i++) {
+		s = *samples++;
+		if (s < 0)
+			s = -s;
+		if (s > datenklo->rx_level_abs)
+			datenklo->rx_level_abs = s;
+		if (++datenklo->rx_level_count == datenklo->rx_level_max) {
+			display_measurements_update(datenklo->dmp_rx_level, level2db(datenklo->rx_level_abs), 0.0);
+			datenklo->rx_level_abs = 0.0;
+			datenklo->rx_level_count = 0;
+		}
+	}
+}
+
 /* main loop */
 void datenklo_main(datenklo_t *datenklo, int loopback)
 {
@@ -1521,11 +1545,13 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 
 		/* put audio into modem */
 		if (!loopback) {
-			am791x_receive(&datenklo->am791x, samples[0], count);
 			display_wave(&datenklo->dispwav, samples[0], count, 1);
+			display_level(datenklo, samples[0], count);
+			am791x_receive(&datenklo->am791x, samples[0], count);
 			if (num_chan > 1) {
-				am791x_receive(&datenklo->slave->am791x, samples[1], count);
 				display_wave(&datenklo->slave->dispwav, samples[1], count, 1);
+				display_level(datenklo->slave, samples[1], count);
+				am791x_receive(&datenklo->slave->am791x, samples[1], count);
 			}
 		}
 
@@ -1560,11 +1586,13 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 				samples[0] = lbuff[0];
 				samples[1] = lbuff[1];
 			}
-			am791x_receive(&datenklo->am791x, samples[0], count);
 			display_wave(&datenklo->dispwav, samples[0], count, 1);
+			display_level(datenklo, samples[0], count);
+			am791x_receive(&datenklo->am791x, samples[0], count);
 			if (num_chan > 1) {
-				am791x_receive(&datenklo->slave->am791x, samples[1], count);
 				display_wave(&datenklo->slave->dispwav, samples[1], count, 1);
+				display_level(datenklo->slave, samples[1], count);
+				am791x_receive(&datenklo->slave->am791x, samples[1], count);
 			}
 			samples[0] = buff[0];
 			samples[1] = buff[1];

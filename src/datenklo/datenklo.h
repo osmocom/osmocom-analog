@@ -75,8 +75,12 @@ typedef struct datenklo {
         wave_play_t	wave_tx_play;		/* wave playback (as TX) */
 	dispwav_t	dispwav;		/* wave display */
 	dispmeas_t	dispmeas;		/* measurements display */
-	dispmeasparam_t	*dmp_level;
-	dispmeasparam_t	*dmp_quality;
+	double		rx_level_abs;		/* measure peak level of received audio */
+	int		rx_level_count;		/* samples measured so far */
+	int		rx_level_max;		/* number of samples per measurement */
+	dispmeasparam_t	*dmp_rx_level;		/* current rx level */
+	dispmeasparam_t	*dmp_tone_level;	/* level of tone */
+	dispmeasparam_t	*dmp_tone_quality;	/* quality of tone */
 	int		last_bit;		/* to check if we have valid quality */
 } datenklo_t;
 
