@@ -317,7 +317,7 @@ static void get_process_patterns(process_t *process, int16_t *samples, int lengt
 		if (pos >= size)
 			*samples++ = 0;
 		else
-			*samples++ = spl[pos] >> 1;
+			*samples++ = spl[pos] >> 2;
 		if (++pos == max)
 			pos = 0;
 	}
