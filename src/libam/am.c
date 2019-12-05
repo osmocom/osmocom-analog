@@ -91,7 +91,7 @@ void am_mod_exit(am_mod_t __attribute__((unused)) *mod)
 {
 }
 
-void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, int num, float *baseband)
+void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, uint8_t *power, int num, float *baseband)
 {
 	int s;
 	double vector;
@@ -101,7 +101,10 @@ void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, int num, float *bas
 	double bias = mod->bias;
 
 	for (s = 0; s < num; s++) {
-		vector = *amplitude++ * gain + bias;
+		if (*power++)
+			vector = *amplitude++ * gain + bias;
+		else
+			vector = 0.0;
 		if (fast_math) {
 			*baseband++ += cos_tab[(uint16_t)phase] * vector;
 			*baseband++ += sin_tab[(uint16_t)phase] * vector;

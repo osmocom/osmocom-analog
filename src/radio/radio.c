@@ -546,12 +546,12 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 
 	/* prepare baseband */
 	memset(baseband, 0, sizeof(float) * 2 * signal_num);
+	memset(signal_power, 1, signal_num);
 
 	/* filter audio (remove DC, remove high frequencies, pre-emphasis)
 	 * and modulate */
 	switch (radio->modulation) {
 	case MODULATION_FM:
-		memset(signal_power, 1, signal_num);
 		pre_emphasis(&radio->fm_emphasis[0], signal_samples[0], signal_num);
 		clipper_process(signal_samples[0], signal_num);
 		if (radio->stereo) {
@@ -577,14 +577,14 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 		/* also clip to prevent overshooting after audio filtering */
 		clipper_process(signal_samples[0], signal_num);
 		iir_process(&radio->tx_am_bw_limit, signal_samples[0], signal_num);
-		am_modulate_complex(&radio->am_mod, signal_samples[0], signal_num, baseband);
+		am_modulate_complex(&radio->am_mod, signal_samples[0], signal_power, signal_num, baseband);
 		break;
 	case MODULATION_AM_USB:
 	case MODULATION_AM_LSB:
 		/* also clip to prevent overshooting after audio filtering */
 		clipper_process(signal_samples[0], signal_num);
 		iir_process(&radio->tx_am_bw_limit, signal_samples[0], signal_num);
-		am_modulate_complex(&radio->am_mod, signal_samples[0], signal_num, baseband);
+		am_modulate_complex(&radio->am_mod, signal_samples[0], signal_power, signal_num, baseband);
 		break;
 	default:
 		break;

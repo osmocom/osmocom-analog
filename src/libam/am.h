@@ -12,7 +12,7 @@ typedef struct am_mod {
 
 int am_mod_init(am_mod_t *mod, double samplerate, double offset, double gain, double bias);
 void am_mod_exit(am_mod_t *mod);
-void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, int num, float *baseband);
+void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, uint8_t *power, int num, float *baseband);
 
 typedef struct am_demod {
 	double	rot;		/* angle to rotate vector per sample */

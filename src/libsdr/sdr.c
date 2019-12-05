@@ -775,8 +775,7 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 			if (on[c] && sdr->paging_channel)
 				fm_modulate_complex(&sdr->chan[sdr->paging_channel].fm_mod, samples[c], power[c], num, buff);
 			else if (sdr->chan[c].am) {
-				if (power[c][0])
-					am_modulate_complex(&sdr->chan[c].am_mod, samples[c], num, buff);
+				am_modulate_complex(&sdr->chan[c].am_mod, samples[c], power[c], num, buff);
 			} else
 				fm_modulate_complex(&sdr->chan[c].fm_mod, samples[c], power[c], num, buff);
 		}
