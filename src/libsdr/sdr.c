@@ -30,6 +30,7 @@ enum paging_signal;
 #include <unistd.h>
 #include "../libsample/sample.h"
 #include "../libfm/fm.h"
+#include "../libam/am.h"
 #include "../libtimer/timer.h"
 #include "../libmobile/sender.h"
 #include "sdr_config.h"
@@ -71,8 +72,11 @@ typedef struct sdr_thread {
 typedef struct sdr_chan {
 	double		tx_frequency;	/* frequency used */
 	double		rx_frequency;	/* frequency used */
-	fm_mod_t	mod;		/* modulator instance */
-	fm_demod_t	demod;		/* demodulator instance */
+	int		am;		/* use AM instead of FM */
+	fm_mod_t	fm_mod;		/* modulator instance */
+	fm_demod_t	fm_demod;	/* demodulator instance */
+	am_mod_t	am_mod;		/* modulator instance */
+	am_demod_t	am_demod;	/* demodulator instance */
 	dispmeasparam_t	*dmp_rf_level;
 	dispmeasparam_t	*dmp_freq_offset;
 	dispmeasparam_t	*dmp_deviation;
@@ -94,9 +98,10 @@ typedef struct sdr {
 	wave_rec_t	wave_tx_rec;
 	wave_play_t	wave_rx_play;
 	wave_play_t	wave_tx_play;
-	float		*modbuff;	/* buffer for FM transmodulation */
+	float		*modbuff;	/* buffer for transmodulation */
 	sample_t	*modbuff_I;
 	sample_t	*modbuff_Q;
+	sample_t	*modbuff_carrier;
 	sample_t	*wavespl0;	/* sample buffer for wave generation */
 	sample_t	*wavespl1;
 } sdr_t;
@@ -131,7 +136,7 @@ static void show_spectrum(const char *direction, double halfbandwidth, double ce
 		PDEBUG(DSDR, DEBUG_INFO, "Frequency P = %.4f MHz (Paging Frequency)\n", paging_frequency / 1e6);
 }
 
-void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int channels, double paging_frequency, int samplerate, int latspl, double max_deviation, double max_modulation)
+void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_frequency, double *rx_frequency, int *am, int channels, double paging_frequency, int samplerate, int latspl, double max_deviation, double max_modulation, double modulation_index)
 {
 	sdr_t *sdr;
 	int threads = 1, oversample = 1; /* always use threads */
@@ -231,6 +236,11 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
 		goto error;
 	}
+	sdr->modbuff_carrier = calloc(sdr->latspl, sizeof(*sdr->modbuff_carrier));
+	if (!sdr->modbuff_carrier) {
+		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		goto error;
+	}
 	sdr->wavespl0 = calloc(sdr->latspl, sizeof(*sdr->wavespl0));
 	if (!sdr->wavespl0) {
 		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
@@ -297,7 +307,14 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double tx_offset;
 			tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz\n", c, tx_offset / 1e6);
-			rc = fm_mod_init(&sdr->chan[c].mod, samplerate, tx_offset, sdr->amplitude);
+			sdr->chan[c].am = am[c];
+			if (am[c]) {
+				double gain, bias;
+				gain = modulation_index / 2.0;
+				bias = 1.0 - gain;
+				rc = am_mod_init(&sdr->chan[c].am_mod, samplerate, tx_offset, sdr->amplitude * gain, sdr->amplitude * bias);
+			} else
+				rc = fm_mod_init(&sdr->chan[c].fm_mod, samplerate, tx_offset, sdr->amplitude);
 			if (rc < 0)
 				goto error;
 		}
@@ -305,7 +322,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double tx_offset;
 			tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
-			rc = fm_mod_init(&sdr->chan[sdr->paging_channel].mod, samplerate, tx_offset, sdr->amplitude);
+			rc = fm_mod_init(&sdr->chan[sdr->paging_channel].fm_mod, samplerate, tx_offset, sdr->amplitude);
 			if (rc < 0)
 				goto error;
 		}
@@ -400,7 +417,11 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			double rx_offset;
 			rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
 			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
-			rc = fm_demod_init(&sdr->chan[c].demod, samplerate, rx_offset, bandwidth);
+			sdr->chan[c].am = am[c];
+			if (am[c])
+				rc = am_demod_init(&sdr->chan[c].am_demod, samplerate, rx_offset, bandwidth, 1.0 / modulation_index);
+			else
+				rc = fm_demod_init(&sdr->chan[c].fm_demod, samplerate, rx_offset, bandwidth / 2.0);
 			if (rc < 0)
 				goto error;
 		}
@@ -428,8 +449,10 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 			if (!sender)
 				continue;
 			sdr->chan[c].dmp_rf_level = display_measurements_add(&sender->dispmeas, "RF Level", "%.1f dB", DISPLAY_MEAS_AVG, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
-			sdr->chan[c].dmp_freq_offset = display_measurements_add(&sender->dispmeas, "Freq. Offset", "%+.2f KHz", DISPLAY_MEAS_AVG, DISPLAY_MEAS_CENTER, -max_deviation / 1000.0 * 2.0, max_deviation / 1000.0 * 2.0, 0.0);
-			sdr->chan[c].dmp_deviation = display_measurements_add(&sender->dispmeas, "Deviation", "%.2f KHz", DISPLAY_MEAS_PEAK2PEAK, DISPLAY_MEAS_LEFT, 0.0, max_deviation / 1000.0 * 1.5, max_deviation / 1000.0);
+			if (!am[c]) {
+				sdr->chan[c].dmp_freq_offset = display_measurements_add(&sender->dispmeas, "Freq. Offset", "%+.2f KHz", DISPLAY_MEAS_AVG, DISPLAY_MEAS_CENTER, -max_modulation / 1000.0 * 2.0, max_modulation / 1000.0 * 2.0, 0.0);
+				sdr->chan[c].dmp_deviation = display_measurements_add(&sender->dispmeas, "Deviation", "%.2f KHz", DISPLAY_MEAS_PEAK2PEAK, DISPLAY_MEAS_LEFT, 0.0, max_deviation / 1000.0 * 1.5, max_deviation / 1000.0);
+			}
 		}
 	}
 
@@ -700,6 +723,7 @@ void sdr_close(void *inst)
 		free(sdr->modbuff);
 		free(sdr->modbuff_I);
 		free(sdr->modbuff_Q);
+		free(sdr->modbuff_carrier);
 		free(sdr->wavespl0);
 		free(sdr->wavespl1);
 		wave_destroy_record(&sdr->wave_rx_rec);
@@ -710,11 +734,13 @@ void sdr_close(void *inst)
 			int c;
 
 			for (c = 0; c < sdr->channels; c++) {
-				fm_mod_exit(&sdr->chan[c].mod);
-				fm_demod_exit(&sdr->chan[c].demod);
+				fm_mod_exit(&sdr->chan[c].fm_mod);
+				fm_demod_exit(&sdr->chan[c].fm_demod);
+				am_mod_exit(&sdr->chan[c].am_mod);
+				am_demod_exit(&sdr->chan[c].am_demod);
 			}
 			if (sdr->paging_channel)
-				fm_mod_exit(&sdr->chan[sdr->paging_channel].mod);
+				fm_mod_exit(&sdr->chan[sdr->paging_channel].fm_mod);
 			free(sdr->chan);
 		}
 		free(sdr);
@@ -747,9 +773,12 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 		for (c = 0; c < channels; c++) {
 			/* switch to paging channel, if requested */
 			if (on[c] && sdr->paging_channel)
-				fm_modulate_complex(&sdr->chan[sdr->paging_channel].mod, samples[c], power[c], num, buff);
-			else
-				fm_modulate_complex(&sdr->chan[c].mod, samples[c], power[c], num, buff);
+				fm_modulate_complex(&sdr->chan[sdr->paging_channel].fm_mod, samples[c], power[c], num, buff);
+			else if (sdr->chan[c].am) {
+				if (power[c][0])
+					am_modulate_complex(&sdr->chan[c].am_mod, samples[c], num, buff);
+			} else
+				fm_modulate_complex(&sdr->chan[c].fm_mod, samples[c], power[c], num, buff);
 		}
 	} else {
 		buff = (float *)samples;
@@ -914,7 +943,10 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 
 	if (channels) {
 		for (c = 0; c < channels; c++) {
-			fm_demodulate_complex(&sdr->chan[c].demod, samples[c], count, buff, sdr->modbuff_I, sdr->modbuff_Q);
+			if (sdr->chan[c].am)
+				am_demodulate_complex(&sdr->chan[c].am_demod, samples[c], count, buff, sdr->modbuff_I, sdr->modbuff_Q, sdr->modbuff_carrier);
+			else
+				fm_demodulate_complex(&sdr->chan[c].fm_demod, samples[c], count, buff, sdr->modbuff_I, sdr->modbuff_Q);
 			sender_t *sender = get_sender_by_empfangsfrequenz(sdr->chan[c].rx_frequency);
 			if (!sender || !count)
 				continue;
@@ -928,20 +960,22 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 			avg = log10(avg) * 20;
 			display_measurements_update(sdr->chan[c].dmp_rf_level, avg, 0.0);
 			rf_level_db[c] = avg;
-			min = 0.0;
-			max = 0.0;
-			avg = 0.0;
-			for (s = 0; s < count; s++) {
-				avg += samples[c][s];
-				if (s == 0 || samples[c][s] > max)
-					max = samples[c][s];
-				if (s == 0 || samples[c][s] < min)
-					min = samples[c][s];
+			if (!sdr->chan[c].am) {
+				min = 0.0;
+				max = 0.0;
+				avg = 0.0;
+				for (s = 0; s < count; s++) {
+					avg += samples[c][s];
+					if (s == 0 || samples[c][s] > max)
+						max = samples[c][s];
+					if (s == 0 || samples[c][s] < min)
+						min = samples[c][s];
+				}
+				avg /= (double)count;
+				display_measurements_update(sdr->chan[c].dmp_freq_offset, avg / 1000.0, 0.0);
+				/* use half min and max, because we want the deviation above/below (+-) center frequency. */
+				display_measurements_update(sdr->chan[c].dmp_deviation, min / 2.0 / 1000.0, max / 2.0 / 1000.0);
 			}
-			avg /= (double)count;
-			display_measurements_update(sdr->chan[c].dmp_freq_offset, avg / 1000.0, 0.0);
-			/* use half min and max, because we want the deviation above/below (+-) center frequency. */
-			display_measurements_update(sdr->chan[c].dmp_deviation, min / 2.0 / 1000.0, max / 2.0 / 1000.0);
 		}
 	}
 

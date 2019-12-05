@@ -1395,7 +1395,7 @@ int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int latency,
 
 #ifdef HAVE_ALSA
 	/* init sound */
-	datenklo->audio = sound_open(audiodev, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->latspl, 1.0, 4000.0);
+	datenklo->audio = sound_open(audiodev, NULL, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->latspl, 1.0, 4000.0, 2.0);
 	if (!datenklo->audio) {
 		PDEBUG(DDATENKLO, DEBUG_ERROR, "No sound device!\n");
 		return -EIO;

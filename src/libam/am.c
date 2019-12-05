@@ -111,8 +111,8 @@ void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, int num, float *bas
 			else if (phase >= 65536.0)
 				phase -= 65536.0;
 		} else {
-			*baseband++ = cos(phase) * vector;
-			*baseband++ = sin(phase) * vector;
+			*baseband++ += cos(phase) * vector;
+			*baseband++ += sin(phase) * vector;
 			phase += rot;
 			if (phase < 0.0)
 				phase += 2.0 * M_PI;

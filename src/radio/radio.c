@@ -98,7 +98,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 		/* open audio device */
 		radio->tx_audio_samplerate = 48000;
 		radio->tx_audio_channels = (stereo) ? 2 : 1;
-		radio->tx_sound = sound_open(tx_audiodev, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->latspl, 1.0, 0.0);
+		radio->tx_sound = sound_open(tx_audiodev, NULL, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->latspl, 1.0, 0.0, 2.0);
 		if (!radio->tx_sound) {
 			rc = -EIO;
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
@@ -164,7 +164,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 		if (radio->tx_sound && !strcmp(tx_audiodev, rx_audiodev))
 			radio->rx_sound = radio->tx_sound;
 		else
-			radio->rx_sound = sound_open(rx_audiodev, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->latspl, 1.0, 0.0);
+			radio->rx_sound = sound_open(rx_audiodev, NULL, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->latspl, 1.0, 0.0, 2.0);
 		if (!radio->rx_sound) {
 			rc = -EIO;
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");

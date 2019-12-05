@@ -183,36 +183,38 @@ int sender_open_audio(int latspl)
 			channels++;
 		}
 		double tx_f[channels], rx_f[channels], paging_frequency = 0.0;
+		int am[channels];
 		for (i = 0, inst = master; inst; i++, inst = inst->slave) {
 			tx_f[i] = inst->sendefrequenz;
 			rx_f[i] = inst->empfangsfrequenz;
+			am[i] = inst->am;
 			if (inst->ruffrequenz)
 				paging_frequency = inst->ruffrequenz;
 		}
 
 		if (master->write_rx_wave) {
-			rc = wave_create_record(&master->wave_rx_rec, master->write_rx_wave, master->samplerate, channels, master->max_deviation);
+			rc = wave_create_record(&master->wave_rx_rec, master->write_rx_wave, master->samplerate, channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 				return rc;
 			}
 		}
 		if (master->write_tx_wave) {
-			rc = wave_create_record(&master->wave_tx_rec, master->write_tx_wave, master->samplerate, channels, master->max_deviation);
+			rc = wave_create_record(&master->wave_tx_rec, master->write_tx_wave, master->samplerate, channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 				return rc;
 			}
 		}
 		if (master->read_rx_wave) {
-			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, &master->samplerate, &channels, master->max_deviation);
+			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, &master->samplerate, &channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
 			}
 		}
 		if (master->read_tx_wave) {
-			rc = wave_create_playback(&master->wave_tx_play, master->read_tx_wave, &master->samplerate, &channels, master->max_deviation);
+			rc = wave_create_playback(&master->wave_tx_play, master->read_tx_wave, &master->samplerate, &channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
 				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
@@ -220,7 +222,7 @@ int sender_open_audio(int latspl)
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, channels, paging_frequency, master->samplerate, latspl, master->max_deviation, master->max_modulation);
+		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, am, channels, paging_frequency, master->samplerate, latspl, (master->max_deviation) ?: 1.0, master->max_modulation, master->modulation_index);
 		if (!master->audio) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "No device for transceiver!\n");
 			return -EIO;
@@ -291,6 +293,19 @@ void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation
 
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Maxium deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Deviation at speech level: %.1f kHz\n", speech_deviation / 1000.0);
+}
+
+/* set amplitude modulation and parameters */
+void sender_set_am(sender_t *sender, double max_modulation, double speech_level, double max_display, double modulation_index)
+{
+	sender->am = 1;
+	sender->max_deviation = 0;
+	sender->max_modulation = max_modulation;
+	sender->speech_deviation = speech_level;
+	sender->max_display = max_display;
+	sender->modulation_index = modulation_index;
+
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Modulation degree: %.0f %%, Maximum modulation: %.1f kHz\n", modulation_index / 100.0, max_modulation / 1000.0);
 }
 
 static void gain_samples(sample_t *samples, int length, double gain)

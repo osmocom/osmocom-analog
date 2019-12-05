@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_ALSA
 	/* init sound */
-	audio = sound_open(audiodev, NULL, NULL, 1, 0.0, samplerate, latspl, 1.0, 4000.0);
+	audio = sound_open(audiodev, NULL, NULL, NULL, 1, 0.0, samplerate, latspl, 1.0, 4000.0, 2.0);
 	if (!audio) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "No sound device!\n");
 		goto exit;

@@ -321,9 +321,11 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		}
 
 		double tx_frequencies[1], rx_frequencies[1];
+		int am[1];
 		tx_frequencies[0] = frequency;
 		rx_frequencies[0] = frequency;
-		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, 1, 0.0, samplerate, latspl, 0.0, 0.0);
+		am[0] = 0;
+		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, samplerate, latspl, 0.0, 0.0, 0.0);
 		if (!sdr)
 			goto error;
 		sdr_start(sdr);

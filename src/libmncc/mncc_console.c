@@ -299,7 +299,7 @@ int console_open_audio(int __attribute__((unused)) latspl)
 #ifdef HAVE_ALSA
 	/* open sound device for call control */
 	/* use factor 1.4 of speech level for complete range of sound card */
-	console.sound = sound_open(console.audiodev, NULL, NULL, 1, 0.0, console.samplerate, latspl, 1.4, 4000.0);
+	console.sound = sound_open(console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, latspl, 1.4, 4000.0, 2.0);
 	if (!console.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 		return -EIO;

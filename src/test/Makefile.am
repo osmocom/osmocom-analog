@@ -81,6 +81,7 @@ test_dms_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libfm/libfm.a \
+	$(top_builddir)/src/libam/libam.a \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS)
 endif
@@ -115,6 +116,7 @@ test_sms_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libfft/libfft.a \
 	$(top_builddir)/src/libfm/libfm.a \
+	$(top_builddir)/src/libam/libam.a \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS)
 endif

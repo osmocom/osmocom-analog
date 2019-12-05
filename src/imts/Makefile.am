@@ -52,6 +52,7 @@ endif
 if HAVE_SDR
 imts_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
+	$(top_builddir)/src/libam/libam.a \
 	$(top_builddir)/src/libfft/libfft.a \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS)
