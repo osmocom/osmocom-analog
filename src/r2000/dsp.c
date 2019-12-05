@@ -47,9 +47,9 @@
 /* signaling */
 #define MAX_DEVIATION		2500.0
 #define MAX_MODULATION		2550.0
-#define DBM0_DEVIATION		1500.0	/* deviation of dBm0 at 1 kHz */
-#define TX_PEAK_FSK		(1425.0 / 1500.0 * 1000.0 / DBM0_DEVIATION) /* with emphasis */
-#define TX_PEAK_SUPER		(300.0 / DBM0_DEVIATION) /* no emphasis */
+#define SPEECH_DEVIATION	1500.0	/* deviation of speech at 1 kHz */
+#define TX_PEAK_FSK		(1425.0 / 1500.0 * 1000.0 / SPEECH_DEVIATION) /* with emphasis */
+#define TX_PEAK_SUPER		(300.0 / SPEECH_DEVIATION) /* no emphasis */
 #define FSK_BIT_RATE		1200.0
 #define FSK_BIT_ADJUST		0.1	/* how much do we adjust bit clock on frequency change */
 #define FSK_F0			1800.0
@@ -59,7 +59,7 @@
 #define SUPER_F0		136.0
 #define SUPER_F1		164.0
 #define SUPER_CUTOFF_H		400.0	/* filter to remove spectrum of supervisory signal */
-#define MAX_DISPLAY		1.4	/* something above dBm0 */
+#define MAX_DISPLAY		1.4	/* something above speech level */
 
 /* global init for FSK */
 void dsp_init(void)
@@ -80,7 +80,7 @@ int dsp_init_sender(r2000_t *r2000)
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* set modulation parameters */
-	sender_set_fm(&r2000->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
+	sender_set_fm(&r2000->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f\n", TX_PEAK_FSK);
 

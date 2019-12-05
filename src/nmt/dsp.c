@@ -35,11 +35,11 @@
 
 /* Notes on TX_PEAK_FSK level:
  *
- * This deviation is -2.2db below the dBm0 deviation.
+ * This deviation is -2.2db below the speech deviation.
  *
  * At 1800 Hz the deviation shall be 4.2 kHz, so with emphasis the deviation
  * at 1000 Hz would be theoretically 2.333 kHz. This is factor 0.777 below
- * 3 kHz deviation we want at dBm0.
+ * 3 kHz deviation we want at speech.
  */
 
 /* Notes on TX_PEAK_SUPER (supervisory signal) level:
@@ -54,14 +54,14 @@
 /* signaling */
 #define MAX_DEVIATION		4700.0
 #define MAX_MODULATION		4055.0
-#define DBM0_DEVIATION		3000.0	/* deviation of dBm0 at 1 kHz */
-#define TX_PEAK_FSK		(4200.0 / 1800.0 * 1000.0 / DBM0_DEVIATION)
-#define TX_PEAK_SUPER		(300.0 / 4015.0 * 1000.0 / DBM0_DEVIATION)
+#define SPEECH_DEVIATION	3000.0	/* deviation of speech at 1 kHz */
+#define TX_PEAK_FSK		(4200.0 / 1800.0 * 1000.0 / SPEECH_DEVIATION)
+#define TX_PEAK_SUPER		(300.0 / 4015.0 * 1000.0 / SPEECH_DEVIATION)
 #define BIT_RATE		1200.0
 #define BIT_ADJUST		0.1	/* how much do we adjust bit clock on frequency change */
 #define F0			1800.0
 #define F1			1200.0
-#define MAX_DISPLAY		1.4	/* something above dBm0 */
+#define MAX_DISPLAY		1.4	/* something above speech level */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
 #define TX_PEAK_DIALTONE	1.0	/* dial tone peak FIXME: Not found in the specs! */
 #define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
@@ -114,7 +114,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* set modulation parameters */
-	sender_set_fm(&nmt->sender, MAX_DEVIATION * deviation_factor, MAX_MODULATION * deviation_factor, DBM0_DEVIATION * deviation_factor, MAX_DISPLAY);
+	sender_set_fm(&nmt->sender, MAX_DEVIATION * deviation_factor, MAX_MODULATION * deviation_factor, SPEECH_DEVIATION * deviation_factor, MAX_DISPLAY);
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);

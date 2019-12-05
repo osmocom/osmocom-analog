@@ -101,18 +101,18 @@
 
 #define AMPS_MAX_DEVIATION	8000.0
 #define AMPS_MAX_MODULATION	10000.0
-#define AMPS_DBM0_DEVIATION	2900.0  /* deviation of dBm0 at 1 kHz */
-#define AMPS_FSK_DEVIATION	(8000.0 / AMPS_DBM0_DEVIATION)	/* no emphasis */
-#define AMPS_SAT_DEVIATION	(2000.0 / AMPS_DBM0_DEVIATION)	/* no emphasis */
-#define AMPS_MAX_DISPLAY	(10000.0 / AMPS_DBM0_DEVIATION)	/* no emphasis */
+#define AMPS_SPEECH_DEVIATION	2900.0  /* deviation of speech at 1 kHz */
+#define AMPS_FSK_DEVIATION	(8000.0 / AMPS_SPEECH_DEVIATION)	/* no emphasis */
+#define AMPS_SAT_DEVIATION	(2000.0 / AMPS_SPEECH_DEVIATION)	/* no emphasis */
+#define AMPS_MAX_DISPLAY	(10000.0 / AMPS_SPEECH_DEVIATION)	/* no emphasis */
 #define AMPS_BITRATE		10000
 /* for some reason, 4000 Hz deviation works better */
-#define TACS_DBM0_DEVIATION	4000.0  /* 2300 Hz deviation at 1 kHz (according to panasonic manual) */
+#define TACS_SPEECH_DEVIATION	4000.0  /* 2300 Hz deviation at 1 kHz (according to panasonic manual) */
 #define TACS_MAX_DEVIATION	6400.0	/* (according to texas instruments and other sources) */
 #define TACS_MAX_MODULATION	9500.0	/* (according to panasonic manual) */
-#define TACS_FSK_DEVIATION	(6400.0 / TACS_DBM0_DEVIATION)	/* no emphasis */
-#define TACS_SAT_DEVIATION	(1700.0 / TACS_DBM0_DEVIATION)	/* no emphasis (panasonic / TI) */
-#define TACS_MAX_DISPLAY	(8000.0 / TACS_DBM0_DEVIATION)	/* no emphasis */
+#define TACS_FSK_DEVIATION	(6400.0 / TACS_SPEECH_DEVIATION)	/* no emphasis */
+#define TACS_SAT_DEVIATION	(1700.0 / TACS_SPEECH_DEVIATION)	/* no emphasis (panasonic / TI) */
+#define TACS_MAX_DISPLAY	(8000.0 / TACS_SPEECH_DEVIATION)	/* no emphasis */
 #define TACS_BITRATE		8000
 #define SAT_DURATION		0.05	/* duration of SAT signal measurement */
 #define SAT_QUALITY		0.85	/* quality needed to detect SAT signal */
@@ -202,7 +202,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	sender_set_fm(&amps->sender,
 		(!tacs) ? AMPS_MAX_DEVIATION : TACS_MAX_DEVIATION,
 		(!tacs) ? AMPS_MAX_MODULATION : TACS_MAX_MODULATION,
-		(!tacs) ? AMPS_DBM0_DEVIATION : TACS_DBM0_DEVIATION,
+		(!tacs) ? AMPS_SPEECH_DEVIATION : TACS_SPEECH_DEVIATION,
 		(!tacs) ? AMPS_MAX_DISPLAY : TACS_MAX_DISPLAY);
 
 	if (amps->sender.samplerate < 96000) {

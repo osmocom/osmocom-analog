@@ -73,7 +73,7 @@ int8_t	futln_sperre_start = -1; /* no blocking */
 int8_t	futln_sperre_end = -1; /* no range */
 enum demod_type demod = FSK_DEMOD_AUTO;
 int metering = 20;
-double dbm0_deviation = 4000.0; /* best results with all my equipment */
+double speech_deviation = 4000.0; /* best results with all my equipment */
 
 void print_help(const char *arg0)
 {
@@ -118,7 +118,7 @@ void print_help(const char *arg0)
 	printf(" -V --voice-deviation <2400..4000 Hz>\n");
 	printf("        It is unclear what the actual voice deviation is. Please decrease, if\n");
 	printf("        mobile's microphone is too loud and speaker is too quiet.\n");
-	printf("        (default = %.0f)\n", dbm0_deviation);
+	printf("        (default = %.0f)\n", speech_deviation);
 	printf(" -S --sysinfo fuz-nat=<nat>\n");
 	printf("        Set country ID of base station. All IDs were used inside Germany only.\n");
 	printf("        (default = %d)\n", fuz_nat);
@@ -327,7 +327,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		metering = atoi(argv[argi]);
 		break;
 	case 'V':
-		dbm0_deviation = atoi_limit(argv[argi], 2400, 4000);
+		speech_deviation = atoi_limit(argv[argi], 2400, 4000);
 		break;
 	case 'S':
 		p = strchr(argv[argi], '=');
@@ -621,7 +621,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, challenge_valid, challenge, response_valid, response, warteschlange, metering, dbm0_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, challenge_valid, challenge, response_valid, response, warteschlange, metering, speech_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;

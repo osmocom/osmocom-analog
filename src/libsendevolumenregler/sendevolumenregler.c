@@ -38,22 +38,22 @@
 /*
  * Init function
  *
- * abwaerts_dbs = how many dB per second to lower the amplification, if input signal is above dBm0
- * aufwaerts_dbs = how many dB per second to raise the amplification, if input signal is below dBm0
- * maximum_db = limit of the output level above dBm0
+ * abwaerts_dbs = how many dB per second to lower the amplification, if input signal is above db0
+ * aufwaerts_dbs = how many dB per second to raise the amplification, if input signal is below db0
+ * maximum_db = limit of the output level above db0
  * minimum_db = below this input level, the amplification is not raised, so it stays constant.
- * dbm0_level = target level to be treated as 0 dB
+ * db0_level = target level to be treated as 0 dB
  *
  * Hopefully this is correct
  *
  */
-void init_sendevolumenregler(sendevolumenregler_t *state, double samplerate, double abwaerts_dbs, double aufwaerts_dbs, double maximum_db, double minimum_db, double dbm0_level)
+void init_sendevolumenregler(sendevolumenregler_t *state, double samplerate, double abwaerts_dbs, double aufwaerts_dbs, double maximum_db, double minimum_db, double db0_level)
 {
 	memset(state, 0, sizeof(*state));
 
 	state->peak = 1.0;
 	state->envelope = 1.0;
-	state->dbm0_level = dbm0_level;
+	state->db0_level = db0_level;
 	state->step_down = pow(db2level(abwaerts_dbs), 1.0 / samplerate);
 	state->step_up = pow(db2level(aufwaerts_dbs), 1.0 / samplerate);
 	state->maximum_level = db2level(maximum_db);
@@ -72,10 +72,10 @@ void init_sendevolumenregler(sendevolumenregler_t *state, double samplerate, dou
  */
 void sendevolumenregler(sendevolumenregler_t *state, sample_t *samples, int num)
 {
-	double value, peak, envelope, step_up, step_down, maximum_level, minimum_level, dbm0_level;
+	double value, peak, envelope, step_up, step_down, maximum_level, minimum_level, db0_level;
 	int i;
 
-	dbm0_level = state->dbm0_level;
+	db0_level = state->db0_level;
 	step_up = state->step_up;
 	step_down = state->step_down;
 	maximum_level = state->maximum_level;
@@ -84,8 +84,8 @@ void sendevolumenregler(sendevolumenregler_t *state, sample_t *samples, int num)
 	envelope = state->envelope;
 
 	for (i = 0; i < num; i++) {
-		/* normalize sample value to dbm0_level level */
-		value = *samples / dbm0_level;
+		/* normalize sample value to db0_level level */
+		value = *samples / db0_level;
 
 		/* 'peak' is the level that raises directly with the value
 		 * level, but falls as specified by step_up. */
@@ -106,7 +106,7 @@ void sendevolumenregler(sendevolumenregler_t *state, sample_t *samples, int num)
 		if (peak / envelope > maximum_level)
 			envelope = peak / maximum_level;
 
-		*samples++ = value / envelope * dbm0_level;
+		*samples++ = value / envelope * db0_level;
 	}
 
 	state->envelope = envelope;

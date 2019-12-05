@@ -37,15 +37,15 @@
 #define db2level(db)	pow(10, (double)db / 20.0)
 
 /* transceiver parameters */
-#define MAX_DEVIATION	5000.0	/* deviation of signal */
-#define MAX_MODULATION  4000.0	/* frequency spectrum of signal */
-#define DBM0_DEVIATION	3000.0	/* deviation of dBm0 at 1 kHz (generally used with 25 kHz channel spacing) */
-#define	MAX_DISPLAY	1.0	/* maximum level to display */
-#define TX_INFO_TONE	1.0	/* Level of tone relative to dBm0 (each component) */
-#define TX_ACK_TONE	0.1	/* Level of tone relative to dBm0 */
-#define INFO_TONE_F1	640.0
-#define INFO_TONE_F2	670.0
-#define ACK_TONE	1000.0
+#define MAX_DEVIATION		5000.0	/* deviation of signal */
+#define MAX_MODULATION		4000.0	/* frequency spectrum of signal */
+#define SPEECH_DEVIATION	3000.0	/* deviation of speech at 1 kHz (generally used with 25 kHz channel spacing) */
+#define	MAX_DISPLAY		1.0	/* maximum level to display */
+#define TX_INFO_TONE		1.0	/* Level of tone relative to speech level (each component) */
+#define TX_ACK_TONE		0.1	/* Level of tone relative to speech level */
+#define INFO_TONE_F1		640.0
+#define INFO_TONE_F2		670.0
+#define ACK_TONE		1000.0
 
 /* Squelch */
 #define MUTE_TIME	0.1	/* Time until muting */
@@ -83,9 +83,9 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 
 	/* set modulation parameters (NBFM uses half channel spacing, so we use half deviation) */
 	if (nbfm)
-		sender_set_fm(&jolly->sender, MAX_DEVIATION / 2.0, MAX_MODULATION, DBM0_DEVIATION / 2.0, MAX_DISPLAY);
+		sender_set_fm(&jolly->sender, MAX_DEVIATION / 2.0, MAX_MODULATION, SPEECH_DEVIATION / 2.0, MAX_DISPLAY);
 	else
-		sender_set_fm(&jolly->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
+		sender_set_fm(&jolly->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
 	/* init dtmf audio processing.
 	 * each frequency may be +6 dB deviation, which means a total deviation of +12 dB is allowed for detection.

@@ -37,25 +37,25 @@
  *
  * At 2000 Hz the deviation shall be 4 kHz, so with emphasis the deviation
  * at 1000 Hz would be theoretically 2 kHz. This is factor 0.714 below
- * 2.8 kHz deviation we want at dBm0.
+ * 2.8 kHz deviation we want at speech level.
  */
 
 /* signaling */
-#define MAX_DEVIATION	4000.0
-#define MAX_MODULATION	3000.0
-#define DBM0_DEVIATION	2800.0	/* deviation of dBm0 at 1 kHz */
-#define TX_PEAK_FSK	(4000.0 / 2000.0 * 1000.0 / DBM0_DEVIATION)
-#define TX_PEAK_METER	(2000.0 / 2900.0 * 1000.0 / DBM0_DEVIATION) /* FIXME: what is the metering pulse deviation??? we use half of the 4kHz deviation, so we can still use -6dB of the speech level */
-#define DAMPEN_METER	0.5	/* use -6dB to dampen speech while sending metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.5) */
-#define MAX_DISPLAY	1.4	/* something above dBm0 */
-#define BIT_RATE	100.0
-#define BIT_ADJUST	0.5	/* full adjustment on bit change */
-#define F0		2070.0
-#define F1		1950.0
-#define METERING_HZ	2900	/* metering pulse frequency */
-#define TONE_DETECT_CNT	7	/* 70 milliseconds to detect continuous tone */
-#define TONE_LOST_CNT	14	/* we use twice of the detect time, so we bridge a loss of "TONE_DETECT_CNT duration" */
-#define	TONE_STDDEV_TH	0.2	/* threshold of bad quality (standard deviation) to reject tone */
+#define MAX_DEVIATION		4000.0
+#define MAX_MODULATION		3000.0
+#define SPEECH_DEVIATION	2800.0	/* deviation of speech at 1 kHz */
+#define TX_PEAK_FSK		(4000.0 / 2000.0 * 1000.0 / SPEECH_DEVIATION)
+#define TX_PEAK_METER		(2000.0 / 2900.0 * 1000.0 / SPEECH_DEVIATION) /* FIXME: what is the metering pulse deviation??? we use half of the 4kHz deviation, so we can still use -6dB of the speech level */
+#define DAMPEN_METER		0.5	/* use -6dB to dampen speech while sending metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.5) */
+#define MAX_DISPLAY		1.4	/* something above speech level */
+#define BIT_RATE		100.0
+#define BIT_ADJUST		0.5	/* full adjustment on bit change */
+#define F0			2070.0
+#define F1			1950.0
+#define METERING_HZ		2900	/* metering pulse frequency */
+#define TONE_DETECT_CNT		7	/* 70 milliseconds to detect continuous tone */
+#define TONE_LOST_CNT		14	/* we use twice of the detect time, so we bridge a loss of "TONE_DETECT_CNT duration" */
+#define	TONE_STDDEV_TH		0.2	/* threshold of bad quality (standard deviation) to reject tone */
 
 /* carrier loss detection */
 #define MUTE_TIME	0.1	/* time to mute after loosing signal */
@@ -91,7 +91,7 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 	squelch_init(&bnetz->squelch, bnetz->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
 
 	/* set modulation parameters */
-	sender_set_fm(&bnetz->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
+	sender_set_fm(&bnetz->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 2000 Hz)\n", TX_PEAK_FSK, 4.0);
 

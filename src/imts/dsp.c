@@ -38,22 +38,22 @@
 #define PI		3.1415927
 
 /* signaling */
-#define MAX_DEVIATION	7000.0				/* signaling tone plus some extra to calibrate */
-#define MAX_MODULATION	3000.0				/* FIXME */
-#define DBM0_DEVIATION	2500.0				/* deviation of dBm0 (with emphasis) */
-#define TX_PEAK_TONE	(5000.0 / DBM0_DEVIATION)	/* signaling tone level (5khz, no emphasis) */
-#define RX_MIN_AMPL	0.25				/* FIXME: Minimum level to detect tone */
+#define MAX_DEVIATION		7000.0				/* signaling tone plus some extra to calibrate */
+#define MAX_MODULATION		3000.0				/* FIXME */
+#define SPEECH_DEVIATION	2500.0				/* deviation of speech (with emphasis) */
+#define TX_PEAK_TONE		(5000.0 / SPEECH_DEVIATION)	/* signaling tone level (5khz, no emphasis) */
+#define RX_MIN_AMPL		0.25				/* FIXME: Minimum level to detect tone */
 /* Note that 75 is half of the distance between two tones (2000 and 2150 Hz)
  * An error of more than 50 causes too much toggeling between two tones,
  * less would take too long to detect the tone and maybe not detect it, if
  * it is too far off the expected frequency.
  */
-#define RX_MIN_FREQ	50.0				/* minimum frequency error to detect tone */
-#define MAX_DISPLAY	(MAX_DEVIATION / DBM0_DEVIATION)/* as much as MAX_DEVIATION */
+#define RX_MIN_FREQ		50.0				/* minimum frequency error to detect tone */
+#define MAX_DISPLAY		(MAX_DEVIATION / SPEECH_DEVIATION)/* as much as MAX_DEVIATION */
 /* Note that FILTER_BW / SUSTAIN and QUAL_TIME sum up and should not exeed minimum tone length */
-#define RX_FILTER_BW	100.0				/* amplitude filter (causes delay) */
-#define RX_SUSTAIN	0.010				/* how long a tone must sustain until detected (causes delay) */
-#define RX_QUAL_TIME	0.005				/* how long a quality measurement lasts after detecting a tone */
+#define RX_FILTER_BW		100.0				/* amplitude filter (causes delay) */
+#define RX_SUSTAIN		0.010				/* how long a tone must sustain until detected (causes delay) */
+#define RX_QUAL_TIME		0.005				/* how long a quality measurement lasts after detecting a tone */
 
 /* carrier loss detection */
 #define MUTE_TIME	0.1	/* time to mute after loosing signal */
@@ -131,7 +131,7 @@ int dsp_init_transceiver(imts_t *imts, double squelch_db, int ptt)
 	squelch_init(&imts->squelch, imts->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
 
 	/* set modulation parameters */
-	sender_set_fm(&imts->sender, MAX_DEVIATION, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
+	sender_set_fm(&imts->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
 	/* init FM demodulator for tone detection */
 	if (imts->mode == MODE_IMTS) {

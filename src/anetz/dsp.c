@@ -35,15 +35,15 @@
 #define PI		3.1415927
 
 /* signaling */
-#define MAX_DEVIATION	15000.0
-#define MAX_MODULATION	4000.0
-#define DBM0_DEVIATION	10500.0	/* deviation of dBm0 at 1 kHz */
-#define TX_PEAK_TONE	(10500.0 / DBM0_DEVIATION)	/* 10.5 kHz, no emphasis */
-#define TX_PEAK_PAGE	(15000.0 / DBM0_DEVIATION)	/* 15 kHz, no emphasis */
-#define MAX_DISPLAY	(15000.0 / DBM0_DEVIATION)	/* 15 kHz, no emphasis */
-#define CHUNK_DURATION	0.010	/* 10 ms */
-#define TONE_THRESHOLD	0.05
-#define QUAL_THRESHOLD	0.5
+#define MAX_DEVIATION		15000.0
+#define MAX_MODULATION		4000.0
+#define SPEECH_DEVIATION	10500.0	/* deviation of speech at 1 kHz */
+#define TX_PEAK_TONE		(10500.0 / SPEECH_DEVIATION)	/* 10.5 kHz, no emphasis */
+#define TX_PEAK_PAGE		(15000.0 / SPEECH_DEVIATION)	/* 15 kHz, no emphasis */
+#define MAX_DISPLAY		(15000.0 / SPEECH_DEVIATION)	/* 15 kHz, no emphasis */
+#define CHUNK_DURATION		0.010	/* 10 ms */
+#define TONE_THRESHOLD		0.05
+#define QUAL_THRESHOLD		0.5
 
 // FIXME: how long until we detect a tone?
 #define TONE_DETECT_TH	8	/* chunk intervals to detect continuous tone */
@@ -89,7 +89,7 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 	squelch_init(&anetz->squelch, anetz->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
 
 	/* set modulation parameters */
-	sender_set_fm(&anetz->sender, MAX_DEVIATION * page_gain, MAX_MODULATION, DBM0_DEVIATION, MAX_DISPLAY);
+	sender_set_fm(&anetz->sender, MAX_DEVIATION * page_gain, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
 	anetz->page_gain = page_gain;
 	anetz->page_sequence = page_sequence;

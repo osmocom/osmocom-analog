@@ -42,8 +42,8 @@
 
 #define MAX_DEVIATION	4000.0
 #define MAX_MODULATION	3000.0
-#define FSK_DEVIATION	(2500.0 / dbm0_deviation) /* no emphasis */
-#define MAX_DISPLAY	1.4	/* something above dBm0, no emphasis */
+#define FSK_DEVIATION	(2500.0 / speech_deviation) /* no emphasis */
+#define MAX_DISPLAY	1.4	/* something above speech level, no emphasis */
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
 #define CUT_OFF_OFFSET	300.0	/* cut off frequency for offset filter (level correction between subsequent audio chunks) */
@@ -80,7 +80,7 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 }
 
 /* Init transceiver instance. */
-int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], enum demod_type demod, double dbm0_deviation)
+int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], enum demod_type demod, double speech_deviation)
 {
 	int rc = 0;
 	double size;
@@ -89,7 +89,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
 
 	/* set modulation parameters */
-	sender_set_fm(&cnetz->sender, MAX_DEVIATION, MAX_MODULATION, dbm0_deviation, MAX_DISPLAY);
+	sender_set_fm(&cnetz->sender, MAX_DEVIATION, MAX_MODULATION, speech_deviation, MAX_DISPLAY);
 
 	if (measure_speed) {
 		cnetz->measure_speed = measure_speed;

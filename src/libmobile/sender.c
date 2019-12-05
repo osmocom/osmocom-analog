@@ -281,15 +281,16 @@ void sender_destroy(sender_t *sender)
 	jitter_destroy(&sender->dejitter);
 }
 
-void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double dBm0_deviation, double max_display)
+/* set frequency modulation and parameters */
+void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double speech_deviation, double max_display)
 {
 	sender->max_deviation = max_deviation;
 	sender->max_modulation = max_modulation;
-	sender->dBm0_deviation = dBm0_deviation;
+	sender->speech_deviation = speech_deviation;
 	sender->max_display = max_display;
 
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Maxium deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Deviation at dBm0 (audio level): %.1f kHz\n", dBm0_deviation / 1000.0);
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Deviation at speech level: %.1f kHz\n", speech_deviation / 1000.0);
 }
 
 static void gain_samples(sample_t *samples, int length, double gain)
@@ -361,8 +362,8 @@ cant_recover:
 			/* do pre emphasis towards radio */
 			if (inst->pre_emphasis)
 				pre_emphasis(&inst->estate, samples[i], count);
-			/* normal level to frequency deviation of dBm0 */
-			gain_samples(samples[i], count, inst->dBm0_deviation);
+			/* normal level to frequency deviation of speech level */
+			gain_samples(samples[i], count, inst->speech_deviation);
 			/* set paging signal */
 			paging_signal[i] = inst->paging_signal;
 			on[i] = inst->paging_on;
@@ -417,8 +418,8 @@ cant_recover:
 
 		/* loop through all channels */
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
-			/* frequency deviation of dBm0 to normal level */
-			gain_samples(samples[i], count, 1.0 / inst->dBm0_deviation);
+			/* frequency deviation of speech level to normal level */
+			gain_samples(samples[i], count, 1.0 / inst->speech_deviation);
 			/* rx gain */
 			if (inst->rx_gain != 1.0)
 				gain_samples(samples[i], count, inst->rx_gain);
