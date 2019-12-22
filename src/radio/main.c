@@ -34,7 +34,6 @@ enum paging_signal;
 #include "../libdebug/debug.h"
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
-#include "../libdisplay/display.h"
 #include "../liboptions/options.h"
 #include "radio.h"
 
@@ -355,7 +354,7 @@ int main(int argc, char *argv[])
 	/* now we have latency and sample rate */
 	latspl = samplerate * latency / 1000;
 
-	rc = radio_init(&radio, latspl, samplerate, tx_wave_file, rx_wave_file, (tx) ? tx_audiodev : NULL, (rx) ? rx_audiodev : NULL, modulation, bandwidth, deviation, modulation_index, time_constant_us, volume, stereo, rds, rds2);
+	rc = radio_init(&radio, latspl, samplerate, frequency, tx_wave_file, rx_wave_file, (tx) ? tx_audiodev : NULL, (rx) ? rx_audiodev : NULL, modulation, bandwidth, deviation, modulation_index, time_constant_us, volume, stereo, rds, rds2);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialize radio with given options, exitting!\n");
 		exit(0);
@@ -458,6 +457,7 @@ next_char:
 			/* toggle measurements display */
 			display_iq_on(0);
 			display_spectrum_on(0);
+			display_wave_on(0);
 			display_measurements_on(-1);
 			goto next_char;
 #endif
@@ -465,13 +465,22 @@ next_char:
 			/* toggle IQ display */
 			display_measurements_on(0);
 			display_spectrum_on(0);
+			display_wave_on(0);
 			display_iq_on(-1);
 			goto next_char;
 		case 's':
 			/* toggle spectrum display */
 			display_measurements_on(0);
 			display_iq_on(0);
+			display_wave_on(0);
 			display_spectrum_on(-1);
+			goto next_char;
+		case 'w':
+			/* toggle wave display */
+			display_measurements_on(0);
+			display_iq_on(0);
+			display_spectrum_on(0);
+			display_wave_on(-1);
 			goto next_char;
 		case 'B':
 			calibrate_bias();

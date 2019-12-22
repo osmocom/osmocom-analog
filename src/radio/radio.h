@@ -5,6 +5,7 @@
 #include "../libjitter/jitter.h"
 #include "../libfm/fm.h"
 #include "../libam/am.h"
+#include "../libdisplay/display.h"
 
 enum modulation {
 	MODULATION_NONE = 0,
@@ -48,6 +49,7 @@ typedef struct radio {
 	sample_t	*testtone[2];		/* test tone sample */
 	int		testtone_length;
 	int		testtone_pos;
+	dispwav_t	dispwav[2];		/* display wave form */
 	/* signal stage */
 	double		signal_samplerate;
 	double		signal_bandwidth;
@@ -79,7 +81,7 @@ typedef struct radio {
 	sample_t	*carrier_buffer;
 } radio_t;
 
-int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant, double volume, int stereo, int rds, int rds2);
+int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant, double volume, int stereo, int rds, int rds2);
 void radio_exit(radio_t *radio);
 int radio_start(radio_t *radio);
 int radio_tx(radio_t *radio, float *baseband, int num);

@@ -36,7 +36,9 @@
 #define PILOT_FREQ	19000.0
 #define PILOT_BW	5.0
 
-int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant_us, double volume, int stereo, int rds, int rds2)
+static char freq_name[2][64];
+
+int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant_us, double volume, int stereo, int rds, int rds2)
 {
 	int rc = -EINVAL;
 
@@ -232,6 +234,10 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 	if (rc < 0)
 		goto error;
 
+	/* init display of wave form */
+	sprintf(freq_name[0], "%.4f MHz", frequency / 1e6);
+	display_wave_init(&radio->dispwav[0], radio->rx_audio_samplerate, freq_name[0]);
+
 	/* init filters (using signal sample rate) */
 	switch (radio->modulation) {
 	case MODULATION_FM:
@@ -252,6 +258,11 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 		rc = fm_demod_init(&radio->fm_demod, radio->signal_samplerate, 0.0, 2 * radio->signal_bandwidth);
 		if (rc < 0)
 			goto error;
+		if (stereo) {
+			sprintf(freq_name[0], "%.4f MHz left", frequency / 1e6);
+			sprintf(freq_name[1], "%.4f MHz right", frequency / 1e6);
+			display_wave_init(&radio->dispwav[1], samplerate, freq_name[1]);
+		}
 		break;
 	case MODULATION_AM_DSB:
 		iir_lowpass_init(&radio->tx_am_bw_limit, radio->audio_bandwidth, radio->signal_samplerate, 1);
@@ -705,6 +716,11 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 		for (i = 0; i < audio_num; i++)
 			samples[1][i] = samples[0][i];
 	}
+
+	/* display wave */
+	display_wave(&radio->dispwav[0], samples[0], audio_num, 1.0);
+	if (radio->stereo && radio->rx_audio_channels == 2)
+		display_wave(&radio->dispwav[1], samples[1], audio_num, 1.0);
 
 	/* store received audio */
 	switch (radio->rx_audio_mode) {
