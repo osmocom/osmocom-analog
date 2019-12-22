@@ -156,8 +156,9 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to create WAVE record instance!\n");
 			goto error;
 		}
-		radio->rx_audio_mode = AUDIO_MODE_WAVEFILE;
-	} else if (rx_audiodev) {
+		radio->rx_audio_mode |= AUDIO_MODE_WAVEFILE;
+	}
+	if (rx_audiodev) {
 #ifdef HAVE_ALSA
 		/* open audio device */
 		radio->rx_audio_samplerate = 48000;
@@ -174,16 +175,10 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 		}
 		jitter_create(&radio->rx_dejitter[0], radio->rx_audio_samplerate / 5);
 		jitter_create(&radio->rx_dejitter[1], radio->rx_audio_samplerate / 5);
-		radio->rx_audio_mode = AUDIO_MODE_AUDIODEV;
+		radio->rx_audio_mode |= AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
 		PDEBUG(DRADIO, DEBUG_ERROR, "No sound card support compiled in!\n");
-		goto error;
-#endif
-#if 0
-	} else {
-		rc = -ENOTSUP;
-		PDEBUG(DRADIO, DEBUG_ERROR, "No RX audio sink is selected, try \"--audio-device default\"!\n");
 		goto error;
 #endif
 	}
@@ -385,7 +380,7 @@ void radio_exit(radio_t *radio)
 		wave_destroy_playback(&radio->wave_tx_play);
 		radio->tx_audio_mode = AUDIO_MODE_NONE;
 	}
-	if (radio->rx_audio_mode == AUDIO_MODE_WAVEFILE) {
+	if ((radio->rx_audio_mode & AUDIO_MODE_WAVEFILE)) {
 		wave_destroy_record(&radio->wave_rx_rec);
 		radio->rx_audio_mode = AUDIO_MODE_NONE;
 	}
@@ -723,12 +718,10 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 		display_wave(&radio->dispwav[1], samples[1], audio_num, 1.0);
 
 	/* store received audio */
-	switch (radio->rx_audio_mode) {
-	case AUDIO_MODE_WAVEFILE:
+	if ((radio->rx_audio_mode & AUDIO_MODE_WAVEFILE))
 		wave_write(&radio->wave_rx_rec, samples, audio_num);
-		break;
 #ifdef HAVE_ALSA
-	case AUDIO_MODE_AUDIODEV:
+	if ((radio->rx_audio_mode & AUDIO_MODE_AUDIODEV)) {
 		jitter_save(&radio->rx_dejitter[0], samples[0], audio_num);
 		if (radio->rx_audio_channels == 2)
 			jitter_save(&radio->rx_dejitter[1], samples[1], audio_num);
@@ -744,9 +737,9 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 			else
 				return 0;
 		}
-		break;
+	}
 #endif
-	default:
+	if (!radio->rx_audio_mode) {
 		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, plese fix!\n");
 		return -EINVAL;
 	}

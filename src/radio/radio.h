@@ -17,9 +17,9 @@ enum modulation {
 
 enum audio_mode {
 	AUDIO_MODE_NONE = 0,
-	AUDIO_MODE_WAVEFILE,
-	AUDIO_MODE_AUDIODEV,
-	AUDIO_MODE_TESTTONE,
+	AUDIO_MODE_WAVEFILE = 1,
+	AUDIO_MODE_AUDIODEV = 2,
+	AUDIO_MODE_TESTTONE = 4,
 };
 
 typedef struct radio {
