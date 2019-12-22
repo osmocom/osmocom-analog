@@ -30,6 +30,7 @@ typedef struct radio {
 	double		volume;			/* volume change (gain/dampen) */
 	int		stereo;			/* use stere FM */
 	int		rds, rds2;		/* use RDS */
+	int		emphasis;		/* use pre-/de-emphasis with FM */
 	/* audio stage */
 	double		tx_audio_samplerate;	/* sample rate of audio source */
 	double		rx_audio_samplerate;	/* sample rate of audio sink */

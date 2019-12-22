@@ -235,14 +235,17 @@ int radio_init(radio_t *radio, int latspl, int samplerate, const char *tx_wave_f
 	/* init filters (using signal sample rate) */
 	switch (radio->modulation) {
 	case MODULATION_FM:
-		/* time constant */
-		PDEBUG(DRADIO, DEBUG_INFO, "Using emphasis cut-off at %.0f Hz.\n", timeconstant2cutoff(time_constant_us));
-		rc = init_emphasis(&radio->fm_emphasis[0], radio->signal_samplerate, timeconstant2cutoff(time_constant_us), DC_CUTOFF, radio->audio_bandwidth);
-		if (rc < 0)
-			goto error;
-		rc = init_emphasis(&radio->fm_emphasis[1], radio->signal_samplerate, timeconstant2cutoff(time_constant_us), DC_CUTOFF, radio->audio_bandwidth);
-		if (rc < 0)
-			goto error;
+		if (time_constant_us > 0.0) {
+			radio->emphasis = 1;
+			/* time constant */
+			PDEBUG(DRADIO, DEBUG_INFO, "Using emphasis cut-off at %.0f Hz.\n", timeconstant2cutoff(time_constant_us));
+			rc = init_emphasis(&radio->fm_emphasis[0], radio->signal_samplerate, timeconstant2cutoff(time_constant_us), DC_CUTOFF, radio->audio_bandwidth);
+			if (rc < 0)
+				goto error;
+			rc = init_emphasis(&radio->fm_emphasis[1], radio->signal_samplerate, timeconstant2cutoff(time_constant_us), DC_CUTOFF, radio->audio_bandwidth);
+			if (rc < 0)
+				goto error;
+		}
 		rc = fm_mod_init(&radio->fm_mod, radio->signal_samplerate, 0.0, 1.0);
 		if (rc < 0)
 			goto error;
@@ -552,10 +555,12 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	 * and modulate */
 	switch (radio->modulation) {
 	case MODULATION_FM:
-		pre_emphasis(&radio->fm_emphasis[0], signal_samples[0], signal_num);
+		if (radio->emphasis)
+			pre_emphasis(&radio->fm_emphasis[0], signal_samples[0], signal_num);
 		clipper_process(signal_samples[0], signal_num);
 		if (radio->stereo) {
-			pre_emphasis(&radio->fm_emphasis[1], signal_samples[1], signal_num);
+			if (radio->emphasis)
+				pre_emphasis(&radio->fm_emphasis[1], signal_samples[1], signal_num);
 			clipper_process(signal_samples[1], signal_num);
 			/* add pilot tone */
 			double phasestep = radio->pilot_phasestep;
@@ -643,11 +648,13 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 			iir_process(&radio->rx_lp_sum, samples[0], signal_num);
 			iir_process(&radio->rx_lp_diff, samples[1], signal_num);
 		}
-		dc_filter(&radio->fm_emphasis[0], samples[0], signal_num);
-		de_emphasis(&radio->fm_emphasis[0], samples[0], signal_num);
-		if (radio->stereo) {
-			dc_filter(&radio->fm_emphasis[1], samples[1], signal_num);
-			de_emphasis(&radio->fm_emphasis[1], samples[1], signal_num);
+		if (radio->emphasis) {
+			dc_filter(&radio->fm_emphasis[0], samples[0], signal_num);
+			de_emphasis(&radio->fm_emphasis[0], samples[0], signal_num);
+			if (radio->stereo) {
+				dc_filter(&radio->fm_emphasis[1], samples[1], signal_num);
+				de_emphasis(&radio->fm_emphasis[1], samples[1], signal_num);
+			}
 		}
 		break;
 	case MODULATION_AM_DSB:
