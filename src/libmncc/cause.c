@@ -39,8 +39,10 @@ const char *cause_name(int cause)
 		return "no-channel";
 	case CAUSE_TEMPFAIL:
 		return "link-failure";
+	case CAUSE_INVALCALLREF:
+		return "invalid-callref";
 	default:
-		sprintf(cause_str, "cause=%d\n", cause);
+		sprintf(cause_str, "cause=%d", cause);
 		return cause_str;
 	}
 
