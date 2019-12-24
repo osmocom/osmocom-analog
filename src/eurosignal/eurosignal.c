@@ -46,6 +46,7 @@
    This offset of 0x400000000 is required for MNCC interface. */
 static int new_callref = 0x40000000;
 
+/* these calls are not associated with a transmitter */
 euro_call_t *ooo_call_list = NULL;
 
 struct id_list {
@@ -464,31 +465,24 @@ void euro_receive_id(euro_t *euro, char *id)
 
 	/* we want to send beep via MNCC */
 	if (id_list) {
-		sender_t *sender;
-		euro_t *e;
 		euro_call_t *call;
 		char dialing[32];
 		int callref;
 		int rc;
 
 		/* check if we already have a call that beeps */
-		for (sender = sender_head; sender; sender = sender->next) {
-			e = (euro_t *) sender;
-			for (call = e->call_list; call; call = call->next) {
-				if (!strcmp(call->station_id, id) && call->state == EURO_CALL_BEEPING)
-					break;
-			}
-			if (call)
+		for (call = ooo_call_list; call; call = call->next) {
+			if (!strcmp(call->station_id, id) && call->state == EURO_CALL_BEEPING)
 				break;
 		}
 		/* if already beeping */
-		if (sender)
+		if (call)
 			return;
 
 		/* create call and send setup */
 		PDEBUG_CHAN(DEURO, DEBUG_INFO, "Sending setup towards network.'\n");
 		callref = ++new_callref;
-		call = euro_call_create(euro, callref, id);
+		call = euro_call_create(NULL, callref, id);
 		call_new_state(call, EURO_CALL_BEEPING);
 		sprintf(dialing, "%d", count);
 		rc = call_up_setup(callref, call->station_id, dialing);
@@ -554,11 +548,8 @@ void euro_clock_chunk(sender_t *sender)
 		/* no callref */
 		if (!call->callref)
 			continue;
-		/* beep or announcement */
-		if (call->state == EURO_CALL_BEEPING)
-			call_play_beep(call);
-		else
-			call_play_announcement(call);
+		/* announcement */
+		call_play_announcement(call);
 	}
 }
 
@@ -727,23 +718,16 @@ inval:
 
 void call_down_answer(int __attribute__((unused)) callref)
 {
-	sender_t *sender;
-	euro_t *euro;
 	euro_call_t *call;
 
 	PDEBUG(DEURO, DEBUG_INFO, "Call has been answered by network.\n");
 
-	for (sender = sender_head; sender; sender = sender->next) {
-		euro = (euro_t *) sender;
-		for (call = euro->call_list; call; call = call->next) {
-			if (call->callref == callref)
-				break;
-		}
-		if (call)
+	for (call = ooo_call_list; call; call = call->next) {
+		if (call->callref == callref)
 			break;
 	}
 	if (!call) {
-		PDEBUG(DEURO, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		PDEBUG(DEURO, DEBUG_NOTICE, "Answer from network, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}

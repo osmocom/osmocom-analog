@@ -63,8 +63,10 @@ void print_help(const char *arg0)
 	printf("        Give one or more IDs to allow only the given IDs to be transmitted and\n");
 	printf("        received. This option can be repeated many times. If this option is not\n");
 	printf("        specified, any ID is allowed to transmit.\n");
-	printf("        Also, any ID given will cause a beep when the ID was received. This\n");
-	printf("        requires call device (sound card) to be defined or MNCC interface.\n");
+	printf("        Also, any given ID will cause a beep when received. This requires call\n");
+	printf("        device (sound card) to be defined or MNCC interface. (The caller ID will\n");
+	printf("        be the received pager ID. The called number will be '1' for the first\n");
+	printf("        ID given, '2' for scond, ...)\n");
 	printf(" -D --degraded\n");
 	printf("        Play the anouncement that the system is degraded due to failure of one\n");
 	printf("        or more transmitters. If the caller hangs up during or rigt after the\n");
