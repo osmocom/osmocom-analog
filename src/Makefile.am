@@ -59,7 +59,8 @@ SUBDIRS += \
 	sim \
 	magnetic \
 	fuvst \
-	dcf77
+	dcf77 \
+	mate
 
 if HAVE_ALSA
 if HAVE_FUSE
