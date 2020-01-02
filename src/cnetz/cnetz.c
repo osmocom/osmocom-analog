@@ -181,6 +181,26 @@ double cnetz_kanal2freq(int kanal, int unterband)
 	return freq * 1e6;
 }
 
+/* convert power level to P-bits by selecting next higher level */
+static uint8_t cnetz_power2bits(int power)
+{
+	switch (power) {
+	case 1:
+		return 3;
+	case 2:
+	case 3:
+		return 2;
+	case 4:
+	case 5:
+		return 1;
+	case 6:
+	case 7:
+	case 8:
+	default:
+		return 0;
+	}
+}
+
 const char *cnetz_state_name(enum cnetz_state state)
 {
 	static char invalid[16];
@@ -941,7 +961,7 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 	memset(&telegramm, 0, sizeof(telegramm));
 
 	telegramm.opcode = OPCODE_LR_R;
-	telegramm.max_sendeleistung = cnetz->ms_power;
+	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);
 	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
 	telegramm.zeitschlitz_nr = cnetz->sched_ts;
 	telegramm.grenzwert_fuer_einbuchen_und_umbuchen = si.grenz_einbuchen;
@@ -1082,7 +1102,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 
 	memset(&telegramm, 0, sizeof(telegramm));
 	telegramm.opcode = OPCODE_MLR_M;
-	telegramm.max_sendeleistung = cnetz->ms_power;
+	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);
 	telegramm.ogk_verkehrsanteil = 0; /* must be 0 or phone might not respond to messages in different slot */
 	telegramm.teilnehmergruppensperre = si.teilnehmergruppensperre;
 	telegramm.anzahl_gesperrter_teilnehmergruppen = si.anzahl_gesperrter_teilnehmergruppen;
@@ -1270,8 +1290,8 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	if (!trans)
 		return &telegramm;
 
-	telegramm.max_sendeleistung = cnetz->ms_power;
-	telegramm.sendeleistungsanpassung = 1;
+	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);
+	telegramm.sendeleistungsanpassung = (cnetz->ms_power < 8) ? 1 : 0;
 	telegramm.entfernung = si.entfernung;
 	telegramm.fuz_nationalitaet = si.fuz_nat;
 	telegramm.fuz_fuvst_nr = si.fuz_fuvst;
@@ -1600,8 +1620,8 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 		meter = (now - trans->call_start) / (double)cnetz->metering + 1;
 	}
 
-	telegramm.max_sendeleistung = cnetz->ms_power;
-	telegramm.sendeleistungsanpassung = 1;
+	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);
+	telegramm.sendeleistungsanpassung = (cnetz->ms_power < 8) ? 1 : 0;
 	telegramm.ankuendigung_gespraechsende = 0;
 	telegramm.gebuehren_stand = meter;
 	telegramm.fuz_nationalitaet = si.fuz_nat;

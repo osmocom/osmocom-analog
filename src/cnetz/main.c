@@ -45,7 +45,7 @@ int measure_speed = 0;
 double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
 const char *flip_polarity = "auto";
-int ms_power = 0; /* 0..3 */
+int ms_power = 6; /* 1..8 */
 int warteschlange = 1;
 int challenge_valid;
 uint64_t challenge;
@@ -97,8 +97,9 @@ void print_help(const char *arg0)
 	printf("        (default = %s)\n", flip_polarity);
 	printf("	Note: This has no effect with SDR.\n");
 	printf(" -P --ms-power <power level>\n");
-	printf("        Give power level of the mobile station 0..3. (default = '%d')\n", ms_power);
-	printf("	0 = 50-125 mW;  1 = 0.5-1 W;  2 = 4-8 W;  3 = 10-20 W\n");
+	printf("        Give power level of the mobile station: 1, 2, 4, 6, 8 (default = '%d')\n", ms_power);
+	printf("	1 = 7.5-20 W; 2 = 4-8 W; 4 = 0.5-1 W; 6 = 50-125 mW; 8 = 2-10 mW\n");
+	printf("	Power level 8 starts with level 6 and is then reduced on SpK.\n");
 	printf(" -A --authentication <challenge>\n");
 	printf("        Enable authorization flag on the base station and use given challenge\n");
 	printf("        as autorization random. Depending on the key inside the card you will\n");
@@ -307,7 +308,11 @@ static int handle_options(int short_option, int argi, char **argv)
 		}
 		break;
 	case 'P':
-		ms_power = atoi_limit(argv[argi], 0, 3);
+		ms_power = atoi_limit(argv[argi], 0, 9);
+		if (ms_power < 1 || ms_power == 3 || ms_power == 5 || ms_power == 7 || ms_power > 8) {
+			fprintf(stderr, "Given power level '%s' is illegal, use '-h' for help!\n", argv[argi]);
+			return -EINVAL;
+		}
 		break;
 	case 'A':
 		authentifikationsbit = 1;
