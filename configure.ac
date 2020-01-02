@@ -108,6 +108,7 @@ AC_CONFIG_FILES([src/liblogging/Makefile
     src/magnetic/Makefile
     src/fuvst/Makefile
     src/dcf77/Makefile
+    src/mate/Makefile
     src/test/Makefile
     src/Makefile
     extra/Makefile
