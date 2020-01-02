@@ -415,7 +415,7 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 #endif
 
 	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
-	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using ID %d,%d,%d  Name '%s'\n", si.fuz_nat, si.fuz_fuvst, si.fuz_rest, get_station_name(si.fuz_nat, si.fuz_fuvst, si.fuz_rest));
+	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using cell ID: Nat=%d FuVst=%d Rest=%d Name='%s'\n", si.fuz_nat, si.fuz_fuvst, si.fuz_rest, get_station_name(si.fuz_nat, si.fuz_fuvst, si.fuz_rest));
 
 	return 0;
 
