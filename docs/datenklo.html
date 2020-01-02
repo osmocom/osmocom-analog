@@ -1,0 +1,64 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>Das Datenklo</center></h2>
+
+<center><img src="datenklo.jpg"/></center>
+
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks">How it works</a>
+	<li><a href="#terminal">Setup of a terminal</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
+</p>
+
+<p>
+geschichte
+name
+was kann der chip
+TBD
+</p>
+
+<center><img src="datenklo2.jpg"/></center>
+
+<p class="toppic">
+<a name="howitworks"></a>
+How it works
+</p>
+
+<p>
+The program 'datenklo' is an emulator for the original "CCC modem", a building instruction released by the Chaos Computer Club in 1985.
+The heart of this software is the AM7911 modem chip emulation.
+It modulates digital levels to FSK tones and demodulates FSK tones to digital levels.
+A software UART (serial transceiver) converts characters (bytes) into levels and leves into bytes.
+The modem chip emulation is linked to sound card via ALSA driver.
+The UART is linked to a tty emulation.
+The tty emulation uses FUSE, so that the linux kernel provides a virtual serial interface. (/dev/ttyDATENKLO0 by default)
+</p>
+
+<p>
+* TBD *
+</p>
+
+<p class="toppic">
+<a name="terminal"></a>
+Setup of a terminal
+</p>
+
+<p>
+* TBD *
+</p>
+
+<hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
+</td></tr></table></center>
+</body>
+</html>

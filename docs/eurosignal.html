@@ -1,0 +1,216 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>Eurosignal</center></h2>
+
+<center><img src="eurosignal.jpg"/></center>
+
+<ul>
+	<li><a href="#history">History</a>
+	<li><a href="#howitworks">How it works</a>
+	<li><a href="#basestation">Setup of a base station</a>
+</ul>
+
+<p class="toppic">
+<a name="history"></a>
+History
+</p>
+
+<p>
+Eurosignal (a.k.a Europäischer Funkrufdienst EFuRD) was a paging service in Europe.
+It was introduced in 1974 in Germany, 1975 in France and 1985 in Switzerland.
+The system was shut down in France and Switzerland in 31. December 1997, in Germany on 1. April 1998.
+It did not support any message forwarding.
+An incoming call was indicated as a beep (and/or vibration) by the pager.
+But up to 4 paging IDs could be assigned to one single device.
+The device showed which ID was paged.
+</p>
+
+<p>
+Paging a subscriber was done via telephone dial up.
+The prefix was assigned to large areas having multiple transmitters with the same frequency/channel.
+(In Germany were three areas: North, Middle, South)
+The suffix (the pager ID) was then encoded into tones and transmitted with up to 2 KW of power.
+The pager device decoded the tones and checked if they match with the assigned ID.
+Inside the pager were jumpers and later a chip with diodes to match the received tone sequence with the assigned ID.
+Up to four numbers were assigned to one pager.
+</p>
+
+<p>
+One may remember the sound at the beginning of the FM broadcast band:
+</p>
+
+<center>Listen to the base station's paging sequences:<br>
+<audio src="eurosignal.wav" controls></audio></center>
+
+<p>
+Check out <a href="http://www.oebl.de">oebl.de</a> for much more detailed description in German.
+</p>
+
+<p class="toppic">
+<a name="howitworks"></a>
+How it works
+</p>
+
+<p>
+4 frequencies were used by the system:
+</p>
+
+<ul>
+	<li>Channel A: 87,340 MHz
+	<li>Channel B: 87,365 MHz
+	<li>Channel C: 87,390 MHz
+	<li>Channel D: 87,415 MHz
+</ul>
+
+<p>
+The caller calls a prefix followed by a 6 digits number.
+The system puts the number into a queue, so that simultaneous calls can be handled and paging is performed in series.
+</p>
+
+<p>
+A train of paging messages are transmitted without interruption.
+There are two types of messages: A paging message and an idle message.
+Each message was about 8.2 seconds long, divided into a sequence of tones.
+</p>
+
+<p>
+This is how a paging message looks like:
+</p>
+
+<pre class="list">
++---------------+-------+-------+-------+-------+-------+-------+
+|     Idle      | Digit | Digit | Digit | Digit | Digit | Digit |
+|     Tone      |   1   |   2   |   3   |   4   |   5   |   6   |
++---------------+-------+-------+-------+-------+-------+-------+
+      220 ms      100 ms  100 ms  100 ms  100 ms  100 ms  100 ms
+</pre>
+
+<p>
+The digit clock is retrieved from the change of tones.
+If two subsequent digits are the same, the second digit was replaced by a 'Repeat' digit, so that there is always a change of tone between digits.
+The Idle tone resets the receiver register and indicates a new message.
+A pager ID '122233' would be transmitted as 1-2-R-2-3-R.
+A message is repeated multiple times, depending on the load of the system. (2-5 times ???)
+If there is no message to be transmitted, the following idle message is sent.
+</p>
+
+<p>
+This is how an idle message looks like:
+</p>
+
+<pre class="list">
+
++---------------+-------+---------------------------------------+
+|     Idle      | Digit |                 Idle                  |
+|     Tone      |   R   |                 Tone                  |
++---------------+-------+---------------------------------------+
+      220 ms      100 ms                  500 ms                
+
+</pre>
+
+<p>
+Here is a list of all frequencies used.
+The distance between frequencies increases on higher frequencies, allowing simple RC filters to be used to detect the tones.
+</p>
+
+<pre class="list">
+
+ Digit / Tone | Frequency
+--------------+----------------
+     Idle     | 1153.1 Hz
+    Repeat    | 1062.9 Hz
+      0       | 979.8 Hz
+      1       | 903.1 Hz
+      2       | 832.5 Hz
+      3       | 767.4 Hz
+      4       | 707.4 Hz
+      5       | 652.0 Hz
+      6       | 601.0 Hz
+      7       | 554.0 Hz
+      8       | 510.7 Hz
+      9       | 470.8 Hz
+   Spare 1    | 433.9 Hz
+   Spare 2    | 400.0 Hz
+   Spare 3    | 368.7 Hz
+   Spare 4    | 339.9 Hz
+   Spare 5    | 313.3 Hz
+
+</pre>
+
+<p>
+The message is amplitude modulated.
+The modulation index is 92 %. 
+</p>
+
+<p>
+Alternatively the signal can be transmitted frequency modulated, to reduce interference with TV stations.
+The frequency is shifted by 7.5 KHz above or below the actual channel frequency.
+The frequency deviation causes a change of amplitude in the demodulator of the pager, so it works as well.
+</p>
+
+<p class="toppic">
+<a name="basestation"></a>
+Setup of a base station
+</p>
+
+<p>
+Find out what channel your pager can receive and select the same channel on the transmitting side.
+Assume that your pager is set to channel B, select channel B:
+</p>
+
+<pre>
+
+# src/eurosignal/eurosignal -k B
+
+...
+eurosignal.c:290 notice : Created 'Kanal' B
+Base station for channel B ready, please tune transmitter and/or receiver to 87.3650 MHz
+...
+
+</pre>
+
+<p>
+If you don't have a FM transmitter instead of an AM transmitter, tune it 7.5 KHz below or above the indicated channel.
+I suggest to use SDR, so check out the SDR page.
+Then enter the ID of your pager. You will find it printed on the device and/or on the 18 pin chip inside.
+If your pager's ID is 123456, enter it and press 'd' to start paging:
+</p>
+
+<pre>
+
+on-hook: 123456 (press d=dial)
+mncc_console.c:358 info   : Outgoing call to '123456'
+call.c:699 info   : Received MNCC call from fixed network '' to mobile '123456'
+call.c:706 info   : Indicate MNCC call confirm towards fixed network
+call.c:717 info   : Outgoing call from '' to '123456'
+eurosignal.c:318 info   : Creating call instance to page ID '123456'.
+call.c:478 info   : Call has been answered by '123456'
+call.c:466 info   : Indicate MNCC answer towards fixed network
+mncc_console.c:206 info   : Call connected to '123456'
+eurosignal.c:605 info   : Station acknowledges, playing announcement.
+eurosignal.c:387 notice : Transmitting ID '123456'.
+eurosignal.c:387 notice : Transmitting ID '123456'.
+eurosignal.c:387 notice : Transmitting ID '123456'.
+eurosignal.c:387 notice : Transmitting ID '123456'.
+mncc_console.c:388 info   : Call hangup
+call.c:774 info   : Received MNCC release from fixed network with cause 16
+call.c:778 info   : Call released toward mobile network
+eurosignal.c:760 info   : Call has been disconnected by network.
+
+</pre>
+
+<p>
+In order to receive a paging message, use -R (--rx).
+Then the software will decode the received IDs and display them.
+</p>
+
+<hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
+</td></tr></table></center>
+</body>
+</html>
