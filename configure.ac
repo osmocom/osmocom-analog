@@ -54,7 +54,7 @@ AS_IF([test "x$with_soapy" == "xyes"],[AC_MSG_NOTICE( Compiling with SoapySDR su
 AS_IF([test "x$with_imagemagick" == "xyes"],[AC_MSG_NOTICE( Compiling with ImageMagick )],[AC_MSG_NOTICE( ImageMagick not supported. Consider adjusting the PKG_CONFIG_PATH environment variable if you installed software in a non-standard prefix. )])
 AS_IF([test "x$with_fuse" == "xyes"],[AC_MSG_NOTICE( Compiling with FUSE )],[AC_MSG_NOTICE( FUSE not supported. There will be no analog modem support. Consider adjusting the PKG_CONFIG_PATH environment variable if you installed software in a non-standard prefix. )])
 
-AS_IF([test "x$with_alsa" != "xyes" -a "x$with_sdr" != "xyes"],[AC_MSG_FAILURE( Without sound nor SDR support this project does not make sense. Please support sound card for analog transceivers or better SDR!" )],[])
+AS_IF([test "x$with_alsa" != "xyes" -a "x$with_sdr" != "xyes"],[AC_MSG_NOTICE( Without sound nor SDR support this project does not make sense. Please support sound card for analog transceivers or better SDR!" )],[])
 
 AC_OUTPUT(
     src/liboptions/Makefile
@@ -98,6 +98,7 @@ AC_OUTPUT(
     src/tv/Makefile
     src/radio/Makefile
     src/datenklo/Makefile
+    src/zeitansage/Makefile
     src/test/Makefile
     src/Makefile
     sim/Makefile

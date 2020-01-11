@@ -70,6 +70,7 @@ struct debug_cat {
 	{ "uart", "\033[0;32m" },
 	{ "device", "\033[0;33m" },
 	{ "datenklo", "\033[1;34m" },
+	{ "zeit", "\033[1;34m" },
 	{ NULL, NULL }
 };
 

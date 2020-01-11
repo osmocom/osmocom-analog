@@ -33,6 +33,7 @@
 #define DUART		26
 #define DDEVICE		27
 #define DDATENKLO	28
+#define DZEIT		29
 
 void get_win_size(int *w, int *h);
 

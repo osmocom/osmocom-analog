@@ -50,7 +50,8 @@ SUBDIRS += \
 	jolly \
 	eurosignal \
 	tv \
-	radio
+	radio \
+	zeitansage
 
 if HAVE_SDR
 if HAVE_FUSE

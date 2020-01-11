@@ -67,6 +67,7 @@ src/eurosignal/eurosignal
 src/tv/osmotv
 src/radio/osmoradio
 src/datenklo/datenklo
+src/zeitansage/zeitansage
 sim/cnetz_sim
 src/test/test_filter
 src/test/test_sendevolumenregler
