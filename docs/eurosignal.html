@@ -76,7 +76,7 @@ The system puts the number into a queue, so that simultaneous calls can be handl
 <p>
 A train of paging messages are transmitted without interruption.
 There are two types of messages: A paging message and an idle message.
-Each message was about 8.2 seconds long, divided into a sequence of tones.
+Each message is 0.82 seconds long, divided into a sequence of tones.
 </p>
 
 <p>
@@ -94,7 +94,7 @@ This is how a paging message looks like:
 <p>
 The digit clock is retrieved from the change of tones.
 If two subsequent digits are the same, the second digit was replaced by a 'Repeat' digit, so that there is always a change of tone between digits.
-The Idle tone resets the receiver register and indicates a new message.
+The Idle tone indicates a new message and resets the receiver's register to start over receiving a message.
 A pager ID '122233' would be transmitted as 1-2-R-2-3-R.
 A message is repeated multiple times, depending on the load of the system. (2-5 times ???)
 If there is no message to be transmitted, the following idle message is sent.
@@ -116,7 +116,7 @@ This is how an idle message looks like:
 
 <p>
 Here is a list of all frequencies used.
-The distance between frequencies increases on higher frequencies, allowing simple RC filters to be used to detect the tones.
+The distances between frequencies increase on higher frequencies (proportional to the frequency), allowing simple RC filters to be used to detect the tones.
 </p>
 
 <pre class="list">
@@ -176,7 +176,8 @@ Base station for channel B ready, please tune transmitter and/or receiver to 87.
 </pre>
 
 <p>
-If you don't have a FM transmitter instead of an AM transmitter, tune it 7.5 KHz below or above the indicated channel.
+If you have an FM transmitter instead of an AM transmitter, tune it 7.5 KHz below or above the indicated channel.
+Use narrow band deviation up to 5 kHz without pre-emphasis, if possible.
 I suggest to use SDR, so check out the SDR page.
 Then enter the ID of your pager. You will find it printed on the device and/or on the 18 pin chip inside.
 If your pager's ID is 123456, enter it and press 'd' to start paging:
@@ -208,6 +209,7 @@ eurosignal.c:760 info   : Call has been disconnected by network.
 <p>
 In order to receive a paging message, use -R (--rx).
 Then the software will decode the received IDs and display them.
+You may also use both -R -T to allow the software to decode while it is encoding.
 </p>
 
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
