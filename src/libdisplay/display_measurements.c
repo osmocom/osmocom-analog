@@ -340,10 +340,8 @@ void display_measurements(double elapsed)
 	if (!measurements_on)
 		return;
 
-	if (!has_init) {
-		fprintf(stderr, "Not initialized prior display measurement values, please fix!\n");
-		abort();
-	}
+	if (!has_init)
+		return;
 
 	/* count and check if we need to display this time */
 	time_elapsed += elapsed;
