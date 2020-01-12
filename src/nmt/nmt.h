@@ -5,6 +5,7 @@
 #include "../libmobile/call.h"
 #include "../libfsk/fsk.h"
 #include "../libgoertzel/goertzel.h"
+typedef struct nmt nmt_t;
 #include "dms.h"
 #include "sms.h"
 
@@ -73,7 +74,7 @@ typedef struct nmt_sysinfo {
 
 const char *nmt_dir_name(enum nmt_direction dir);
 
-typedef struct nmt {
+struct nmt {
 	sender_t		sender;
 	nmt_sysinfo_t		sysinfo;
 	compandor_t		cstate;
@@ -136,7 +137,7 @@ typedef struct nmt {
 	sms_t			sms;			/* SMS states */
 	char			smsc_number[33];	/* digits to match SMSC */
 	struct timer		sms_timer;
-} nmt_t;
+};
 
 void nmt_channel_list(int nmt_system);
 int nmt_channel_by_short_name(int nmt_system, const char *short_name);

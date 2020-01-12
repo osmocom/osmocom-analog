@@ -1,6 +1,4 @@
 
-typedef struct amps amps_t;
-
 enum amps_trans_state {
 	TRANS_NULL = 0,
 	TRANS_REGISTER_ACK,		/* attach request received, waiting to ack */

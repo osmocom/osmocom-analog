@@ -1,8 +1,9 @@
 #include "../libcompandor/compandor.h"
 #include "../libtimer/timer.h"
 #include "../libmobile/sender.h"
-#include "fsk_demod.h"
 #include "../libscrambler/scrambler.h"
+typedef struct cnetz cnetz_t;
+#include "fsk_demod.h"
 #include "transaction.h"
 
 #define CNETZ_OGK_KANAL		131
@@ -63,7 +64,7 @@ struct clock_speed {
 };
 
 /* instance of cnetz sender */
-typedef struct cnetz {
+struct cnetz {
 	sender_t		sender;
 	enum cnetz_chan_type	chan_type;		/* channel type */
 	scrambler_t		scrambler_tx;		/* mirror what we transmit to MS */
@@ -130,7 +131,7 @@ typedef struct cnetz {
 	struct clock_speed	clock_speed;
 
 	transaction_t		*trans_list;		/* list of transactions */
-} cnetz_t;
+};
 
 double cnetz_kanal2freq(int kanal, int unterband);
 void cnetz_channel_list(void);

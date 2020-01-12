@@ -2,6 +2,7 @@
 #include "../libmobile/sender.h"
 #include "../libtimer/timer.h"
 #include "../libcompandor/compandor.h"
+typedef struct amps amps_t;
 #include "sysinfo.h"
 #include "transaction.h"
 
@@ -35,7 +36,7 @@ enum fsk_rx_sync {
 
 #define FSK_MAX_BITS		1032	/* maximum number of bits to process (FVC with dotting+sync) */
 
-typedef struct amps {
+struct amps {
 	sender_t		sender;
 	compandor_t		cstate;
 	int			pre_emphasis;		/* use pre_emphasis by this instance */
@@ -159,7 +160,7 @@ typedef struct amps {
 	double			when_received;		/* time stamp of received frame start (start of dotting) */
 	double			when_transmitted[16];	/* time stamps of filler frames with different count */
 	int			when_count;		/* counter of the filler frame */
-} amps_t;
+};
 
 void amps_channel_list(void);
 int amps_channel_by_short_name(const char *short_name);

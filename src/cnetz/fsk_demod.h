@@ -16,8 +16,6 @@ enum demod_type {
 	FSK_DEMOD_LEVEL, /* check for zero crossing (good for SDR) */
 };
 
-typedef struct cnetz cnetz_t;
-
 typedef struct fsk_fm_demod {
 	cnetz_t		*cnetz;			/* pointer back to cnetz instance */
 

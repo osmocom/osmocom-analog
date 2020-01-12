@@ -1,4 +1,3 @@
-typedef struct nmt nmt_t;
 
 struct dms_frame {
 	struct dms_frame	*next;
