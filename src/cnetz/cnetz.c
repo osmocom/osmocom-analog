@@ -560,6 +560,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	}
 }
 
+void call_down_clock(void) {}
+
 int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	sender_t *sender;

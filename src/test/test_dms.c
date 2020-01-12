@@ -253,5 +253,7 @@ int main(void)
 	return 0;
 }
 
+void call_down_clock(void) {}
+
 void print_image(void) {}
 

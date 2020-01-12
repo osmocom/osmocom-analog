@@ -265,13 +265,6 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 
 	if (euro->rx)
 		tone_decode(euro, down, count);
-
-	/* whenever a chunk of anouncement audio should be played toward caller */
-	euro->chunk_count += count;
-	if (euro->chunk_count >= 160) {
-		euro->chunk_count -= 160;
-		euro_clock_chunk(sender);
-	}
 }
 
 /* Generate tone of paging digits. */

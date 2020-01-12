@@ -525,31 +525,34 @@ static void call_play_beep(euro_call_t *call)
 }
 
 /* loop through all calls and play the announcement */
-void euro_clock_chunk(sender_t *sender)
+void call_down_clock(void)
 {
+	sender_t *sender;
 	euro_t *euro;
 	euro_call_t *call;
 
-	if (sender == sender_head) {
-		/* use first tranceiver clock to clock calls without a transceiver */
-		for (call = ooo_call_list; call; call = call->next) {
-			/* no callref */
-			if (!call->callref)
-				continue;
-			/* beep or announcement */
-			if (call->state == EURO_CALL_BEEPING)
-				call_play_beep(call);
-			else
-				call_play_announcement(call);
-		}
-	}
-	euro = (euro_t *) sender;
-	for (call = euro->call_list; call; call = call->next) {
+	/* clock all calls without a transceiver */
+	for (call = ooo_call_list; call; call = call->next) {
 		/* no callref */
 		if (!call->callref)
 			continue;
-		/* announcement */
-		call_play_announcement(call);
+		/* beep or announcement */
+		if (call->state == EURO_CALL_BEEPING)
+			call_play_beep(call);
+		else
+			call_play_announcement(call);
+	}
+
+	/* clock all calls that have a transceiver */
+	for (sender = sender_head; sender; sender = sender->next) {
+		euro = (euro_t *) sender;
+		for (call = euro->call_list; call; call = call->next) {
+			/* no callref */
+			if (!call->callref)
+				continue;
+			/* announcement */
+			call_play_announcement(call);
+		}
 	}
 }
 

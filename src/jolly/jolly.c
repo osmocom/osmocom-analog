@@ -632,5 +632,7 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	}
 }
 
+void call_down_clock(void) {}
+
 void dump_info(void) {}
 

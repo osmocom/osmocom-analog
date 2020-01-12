@@ -67,7 +67,6 @@ typedef struct eurosignal {
 	double			tx_time;		/* current elapsed time of tone */
 	char			tx_digits[7];		/* current ID beeing transmitted */
 	int			tx_digit_index;		/* current digit beein transmitted */
-	int			chunk_count;		/* current elapsed sample of 20ms audio chunk */
 	fm_demod_t		rx_demod;		/* demodulator for frequency */
 	iir_filter_t		rx_lp;			/* low pass to filter the frequency result */
 	int			rx_digit_count;		/* count the tone until detected */
@@ -87,5 +86,4 @@ int euro_create(const char *kanal, const char *audiodev, int use_sdr, int sample
 void euro_destroy(sender_t *sender);
 void euro_get_id(euro_t *euro, char *id);
 void euro_receive_id(euro_t *euro, char *id);
-void euro_clock_chunk(sender_t *sender);
 

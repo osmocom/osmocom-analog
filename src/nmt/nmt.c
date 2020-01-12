@@ -1905,6 +1905,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	}
 }
 
+void call_down_clock(void) {}
+
 /*
  * SMS layer messages
  */

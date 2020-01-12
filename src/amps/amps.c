@@ -1076,6 +1076,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	}
 }
 
+void call_down_clock(void) {}
+
 /* Timeout handling */
 void transaction_timeout(struct timer *timer)
 {

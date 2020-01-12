@@ -586,6 +586,8 @@ void call_clock(void)
 	uint8_t buf[sizeof(struct gsm_data_frame) + 160 * sizeof(int16_t)];
 	struct gsm_data_frame *data = (struct gsm_data_frame *)buf;
 
+	call_down_clock();
+
 	while(process) {
 		if (process->pattern != PATTERN_NONE) {
 			data->msg_type = ANALOG_8000HZ;
