@@ -51,7 +51,7 @@ static double level_of(double *samples, int count)
 }
 #endif
 
-static int send_patterns;		/* send patterns towards fixed network */
+static int connect_on_setup;		/* send patterns towards fixed network */
 static int release_on_disconnect;	/* release towards mobile phone, if MNCC call disconnects, don't send disconnect tone */
 
 /* stream patterns/announcements */
@@ -353,7 +353,7 @@ static void process_timeout(struct timer *timer)
 
 int call_init(int _send_patterns, int _release_on_disconnect)
 {
-	send_patterns = _send_patterns;
+	connect_on_setup = _send_patterns;
 	release_on_disconnect = _release_on_disconnect;
 
 	return 0;
@@ -439,10 +439,16 @@ void call_up_alerting(int callref)
 
 	PDEBUG(DCALL, DEBUG_INFO, "Call is alerting\n");
 
-	if (!send_patterns)
+	if (!connect_on_setup)
 		_indicate_alerting(callref);
 	set_pattern_process(callref, PATTERN_RINGBACK);
 	new_state_process(callref, PROCESS_ALERTING_RT);
+}
+
+/* Transceiver indicates early audio */
+void call_up_early(int callref)
+{
+	set_pattern_process(callref, PATTERN_NONE);
 }
 
 /* Transceiver indicates answer. */
@@ -477,7 +483,7 @@ void call_up_answer(int callref, const char *connect_id)
 
 	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connect_id);
 
-	if (!send_patterns)
+	if (!connect_on_setup)
 		_indicate_answer(callref, connect_id);
 	set_pattern_process(callref, PATTERN_NONE);
 	new_state_process(callref, PROCESS_CONNECT);
@@ -517,7 +523,7 @@ void call_up_release(int callref, int cause)
 	if (process) {
 		/* just keep MNCC connection if tones shall be sent.
 		 * no tones while setting up / alerting the call. */
-		if (send_patterns
+		if (connect_on_setup
 		 && process->state != PROCESS_SETUP_RO
 		 && process->state != PROCESS_ALERTING_RO)
 			disconnect_process(callref, cause);
@@ -721,7 +727,7 @@ void mncc_down(uint8_t *buf, int length)
 		rc = call_down_setup(callref, caller_id, caller_type, number);
 		if (rc < 0) {
 			PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
-			if (send_patterns) {
+			if (connect_on_setup) {
 				PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
 				_indicate_answer(callref, number);
 			} else {
@@ -732,7 +738,7 @@ void mncc_down(uint8_t *buf, int length)
 			break;
 		}
 
-		if (send_patterns) {
+		if (connect_on_setup) {
 			PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
 			_indicate_answer(callref, number);
 			break;

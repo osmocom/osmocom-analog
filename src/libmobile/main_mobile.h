@@ -12,6 +12,7 @@ extern int uses_emphasis;
 extern int do_pre_emphasis;
 extern int do_de_emphasis;
 extern double rx_gain;
+extern int send_patterns;
 extern int loopback;
 extern int rt_prio;
 extern int fast_math;

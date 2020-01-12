@@ -21,6 +21,7 @@ void mncc_flush(void);
 /* received messages */
 int call_up_setup(int callref, const char *callerid, const char *dialing);
 void call_up_alerting(int callref);
+void call_up_early(int callref);
 void call_up_answer(int callref, const char *connect_id);
 void call_up_release(int callref, int cause);
 void call_tone_recall(int callref, int on);
