@@ -98,7 +98,7 @@ void print_help(const char *arg0)
 	printf(" -f --frequency <frequency>\n");
 	printf("        Give frequency in Hertz.\n");
 	printf(" -c --channel <channel>\n");
-	printf("        Or give channel number.\n");
+	printf("        Or give channel number. Special channels start with 's' or 'S'.\n");
 	printf("        Use 'list' to get a channel list.\n");
 	printf(" -s --samplerate <frequency>\n");
 	printf("        Give sample rate in Hertz.\n");
@@ -173,11 +173,12 @@ static int handle_options(int short_option, int argi, char **argv)
 			list_tv_channels();
 			return 0;
 		}
-		frequency = get_tv_frequency(atoi(argv[argi]), &audio_offset);
+		frequency = get_tv_frequency(argv[argi], &audio_offset);
 		if (frequency == 0.0) {
 			fprintf(stderr, "Given channel number unknown, use \"-c list\" to get a list.\n");
 			return -EINVAL;
 		}
+		printf("Given channel is '%s' (video = %.2f MHz, audio = %.2f MHz)\n", argv[argi], frequency / 1e6, (frequency + audio_offset) / 1e6);
 		break;
 	case 's':
 		samplerate = atof(argv[argi]);
