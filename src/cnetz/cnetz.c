@@ -273,22 +273,19 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 	cnetz_t *cnetz;
 	int rc;
 
-	if ((atoi(kanal) & 1) && atoi(kanal) < 1 && atoi(kanal) > 1147) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
+	if ((atoi(kanal) & 1) && (atoi(kanal) < 3 || atoi(kanal) > 1147)) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid. For odd channel numbers, use channel 3 ... 1147.\n", kanal);
 		return -EINVAL;
 	}
 	if ((atoi(kanal) & 1) && atoi(kanal) > 947) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency channel %s, only newer phones support this!\n", kanal);
 	}
-	if (!(atoi(kanal) & 1) && atoi(kanal) < 2 && atoi(kanal) > 918) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
+	if (!(atoi(kanal) & 1) && (atoi(kanal) < 4 || atoi(kanal) > 918)) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid. For even channel numbers, use channel 4 ... 918.\n", kanal);
 		return -EINVAL;
 	}
 	if (!(atoi(kanal) & 1) && atoi(kanal) > 758) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %s, only newer phones support this!\n", kanal);
-	}
-	if (atoi(kanal) == 1 || atoi(kanal) == 2) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Channel ('Kanal') number %s is specified as 'unused', it might not work!\n", kanal);
 	}
 
 	/* OgK must be on channel 131 */
