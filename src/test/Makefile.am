@@ -9,7 +9,8 @@ noinst_PROGRAMS = \
 	test_dms \
 	test_sms \
 	test_performance \
-	test_hagelbarger
+	test_hagelbarger \
+	test_v27scrambler
 
 test_filter_SOURCES = test_filter.c dummy.c
 
@@ -134,5 +135,12 @@ test_hagelbarger_SOURCES = dummy.c test_hagelbarger.c
 test_hagelbarger_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \
+	-lm
+
+test_v27scrambler_SOURCES = dummy.c test_v27scrambler.c
+
+test_v27scrambler_LDADD = \
+	$(COMMON_LA) \
+	$(top_builddir)/src/libv27/libv27.a \
 	-lm
 

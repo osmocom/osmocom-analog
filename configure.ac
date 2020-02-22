@@ -85,6 +85,7 @@ AC_OUTPUT(
     src/libsample/Makefile
     src/libclipper/Makefile
     src/libserial/Makefile
+    src/libv27/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
     src/cnetz/Makefile

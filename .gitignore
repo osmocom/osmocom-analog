@@ -48,6 +48,7 @@ src/libsample/libsample.a
 src/libam/libam.a
 src/libclipper/libclipper.a
 src/libserial/libserial.a
+src/libv27/libv27.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz
@@ -80,3 +81,4 @@ src/test/test_dms
 src/test/test_sms
 src/test/test_performance
 src/test/test_hagelbarger
+src/test/test_v27scrambler
