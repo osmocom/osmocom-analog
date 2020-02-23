@@ -3,6 +3,11 @@ AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 bin_PROGRAMS = \
 	cnetz
 
+noinst_LIBRARIES = libcnetztones.a
+
+libcnetztones_a_SOURCES = \
+	ansage.c
+
 cnetz_SOURCES = \
 	cnetz.c \
 	transaction.c \
@@ -12,12 +17,12 @@ cnetz_SOURCES = \
 	dsp.c \
 	fsk_demod.c \
 	image.c \
-	ansage.c \
 	stations.c \
 	main.c
 cnetz_LDADD = \
 	$(COMMON_LA) \
 	../anetz/libgermanton.a \
+	libcnetztones.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \

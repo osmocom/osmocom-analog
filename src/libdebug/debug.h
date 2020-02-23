@@ -40,6 +40,7 @@
 #define DSIM7		33
 #define DMTP2		34
 #define DMTP3		35
+#define DMUP		36
 
 void get_win_size(int *w, int *h);
 

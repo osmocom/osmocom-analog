@@ -103,6 +103,7 @@ AC_OUTPUT(
     src/datenklo/Makefile
     src/zeitansage/Makefile
     src/sim/Makefile
+    src/fuvst/Makefile
     src/test/Makefile
     src/Makefile
     extra/Makefile

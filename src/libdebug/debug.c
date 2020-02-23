@@ -77,6 +77,7 @@ struct debug_cat {
 	{ "sim layer 7", "\033[0;37m" },
 	{ "mtp layer 2", "\033[1;33m" },
 	{ "mtp layer 3", "\033[1;36m" },
+	{ "MuP", "\033[1;37m" },
 	{ NULL, NULL }
 };
 

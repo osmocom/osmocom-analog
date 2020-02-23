@@ -55,7 +55,8 @@ SUBDIRS += \
 	tv \
 	radio \
 	zeitansage \
-	sim
+	sim \
+	fuvst
 
 if HAVE_SDR
 if HAVE_FUSE

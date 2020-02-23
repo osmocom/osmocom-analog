@@ -16,6 +16,7 @@ generated simultaniously using SDR. Currently supported networks:
  * IMTS / MTS ((Improved) Mobile Telephone Service)
  * Eurosignal (ERuRD paging service)
  * JollyCom (Unofficial network, invented by the author)
+ * C-Netz BSC (Connecting to a C-Netz Base Station)
 
 Additionally the following communication services are implemented:
 
@@ -63,4 +64,7 @@ Dieter Spaar providing TACS recordings to verify and debug TACS support.
 
 Hans Wigger providing Radiocom 2000 recordings, to reverse-enigeer the standard,
 which seems not to exist anymore...
+
+Peter, Peter and Friedhelm and Stephan for providing documentation and hardware
+for C-Netz Base Station and other C-Netz documents.
 

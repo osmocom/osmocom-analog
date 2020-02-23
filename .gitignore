@@ -54,6 +54,7 @@ src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz
 src/bnetz/bnetz-dialer
+src/cnetz/libcnetztones.a
 src/cnetz/cnetz
 src/nmt/libdmssms.a
 src/nmt/nmt
@@ -72,6 +73,8 @@ src/radio/osmoradio
 src/datenklo/datenklo
 src/zeitansage/zeitansage
 src/sim/cnetz_sim
+src/fuvst/fuvst
+src/fuvst/fuvst_sniffer
 extra/cnetz_memory_card_generator
 src/test/test_filter
 src/test/test_sendevolumenregler
