@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
+#include "../libfilter/fir_filter.h"
 #include "../libdebug/debug.h"
 
 #define level2db(level)		(20 * log10(level))
@@ -40,6 +41,7 @@ int main(void)
 {
 	iir_filter_t filter_low;
 	iir_filter_t filter_high;
+	fir_filter_t	*fir_low/*, *fir_high*/;
 	sample_t samples[SAMPLERATE];
 	double level;
 	int iter = 2;
@@ -101,6 +103,46 @@ int main(void)
 		else
 			printf("\n");
 	}
+
+	double freq = 2000.0;
+	double tb = 400.0;
+	printf("testing low-pass FIR filter with %.0fHz transition bandwidth\n", tb);
+
+	fir_low = fir_lowpass_init(SAMPLERATE, freq, tb);
+	printf("Using %d taps\n", fir_low->ntaps);
+
+	for (i = 0; i < 4001; i += 100) {
+		gen_samples(samples, (double)i);
+		fir_process(fir_low, samples, SAMPLERATE);
+		level = get_level(samples);
+		printf("%s%s%4d Hz: %.1f dB", debug_amplitude(level), debug_db(level), i, level2db(level));
+		if (i == freq)
+			printf(" cutoff\n");
+		else
+			printf("\n");
+	}
+	fir_exit(fir_low);
+
+#if 0
+	double freq1 = 1000.0, freq2 = 2000.0;
+	tb = 100.0;
+	printf("testing two-pass FIR filter\n");
+
+	fir_high = fir_twopass_init(SAMPLERATE, freq1, freq2, tb);
+	printf("Using %d taps\n", fir_high->ntaps);
+
+	for (i = 0; i < 4001; i += 100) {
+		gen_samples(samples, (double)i);
+		fir_process(fir_high, samples, SAMPLERATE);
+		level = get_level(samples);
+		printf("%s%s%4d Hz: %.1f dB", debug_amplitude(level), debug_db(level), i, level2db(level));
+		if (i == freq1 || i == freq2)
+			printf(" cutoff\n");
+		else
+			printf("\n");
+	}
+	fir_exit(fir_high);
+#endif
 
 	return 0;
 }
