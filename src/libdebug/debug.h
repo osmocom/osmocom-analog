@@ -38,6 +38,8 @@
 #define DSIM2		31
 #define DSIMI		32
 #define DSIM7		33
+#define DMTP2		34
+#define DMTP3		35
 
 void get_win_size(int *w, int *h);
 
@@ -57,4 +59,6 @@ extern void (*clear_console_text)(void);
 extern void (*print_console_text)(void);
 
 extern int debug_limit_scroll;
+
+const char *debug_hex(const uint8_t *data, int len);
 

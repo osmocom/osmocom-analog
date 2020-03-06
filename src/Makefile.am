@@ -27,7 +27,8 @@ SUBDIRS = \
 	libmncc \
 	libclipper \
 	libserial \
-	libv27
+	libv27 \
+	libmtp
 
 if HAVE_ALSA
 SUBDIRS += \

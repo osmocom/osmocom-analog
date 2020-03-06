@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 #include "../libdebug/debug.h"
 #include "squelch.h"
 

@@ -75,6 +75,8 @@ struct debug_cat {
 	{ "sim layer 2", "\033[0;33m" },
 	{ "sim ICL layer", "\033[0;36m" },
 	{ "sim layer 7", "\033[0;37m" },
+	{ "mtp layer 2", "\033[1;33m" },
+	{ "mtp layer 3", "\033[1;36m" },
 	{ NULL, NULL }
 };
 
@@ -231,5 +233,24 @@ int parse_debug_opt(const char *optarg)
 	}
 
 	return 0;
+}
+
+const char *debug_hex(const uint8_t *data, int len)
+{
+	static char *text = NULL;
+	char *p;
+	int i;
+
+	if (text)
+		free(text);
+	p = text = calloc(1, len * 3 + 1);
+	for (i = 0; i < len; i++) {
+		sprintf(p, "%02x ", *data++);
+		p += 3;
+	}
+	if (text[0])
+		p[-1] = '\0';
+
+	return text;
 }
 

@@ -49,6 +49,7 @@ src/libam/libam.a
 src/libclipper/libclipper.a
 src/libserial/libserial.a
 src/libv27/libv27.a
+src/libmtp/libmtp.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz
