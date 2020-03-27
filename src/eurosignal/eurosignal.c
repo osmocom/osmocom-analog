@@ -422,9 +422,13 @@ void euro_get_id(euro_t *euro, char *id)
 	}
 
 encode:
-	/* return station ID with repeat digit */
-	for (i = 1; i < 6; i++) {
-		if (id[i - 1] == id[i])
+	/* return station ID (upper case) with repeat digit, when required */
+	for (i = 0; i < 6; i++) {
+		/* to upper case */
+		if (id[i] >= 'a' && id[i] <= 'z')
+			id[i] = id[i] - 'a' + 'A';
+		/* repeat digit */
+		if (i && id[i - 1] == id[i])
 			id[i] = 'R';
 	}
 }
@@ -687,7 +691,9 @@ inval:
 		return -CAUSE_INVALNUMBER;
 	}
 	for (i = 0; i < 6; i++) {
-		if (dialing[i] < '0' || dialing[i] > '9')
+		if (!(dialing[i] >= '0' && dialing[i] <= '9')
+		 && !(dialing[i] >= 'a' && dialing[i] <= 'e')
+		 && !(dialing[i] >= 'A' && dialing[i] <= 'E'))
 			goto inval;
 	}
 

@@ -212,6 +212,19 @@ Then the software will decode the received IDs and display them.
 You may also use both -R -T to allow the software to decode while it is encoding.
 </p>
 
+<p>
+You may append a station ID as command line option, so it is pre-selected and must not be typed in.
+You can also use digits like 'A', 'B', 'C', 'D' and 'E' to define Spare digits 1..5.
+I guess that these extension digis were never used, but it is supported by most pagers.
+Using a "Spare 2" as third digit looks like this:
+</p>
+
+<pre>
+
+# src/eurosignal/eurosignal -k B 12B456
+
+</pre>
+
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
 </td></tr></table></center>
 </body>
