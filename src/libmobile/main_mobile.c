@@ -76,6 +76,7 @@ const char *write_tx_wave = NULL;
 const char *write_rx_wave = NULL;
 const char *read_tx_wave = NULL;
 const char *read_rx_wave = NULL;
+const char *console_digits = "0123456789";
 
 void main_mobile_init(void)
 {
@@ -473,7 +474,7 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 			return;
 		}
 	} else {
-		console_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, echo_test);
+		console_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, echo_test, console_digits);
 	}
 
 	/* init call control instance */
@@ -617,7 +618,7 @@ next_char:
 			dump_info();
 			goto next_char;
 #ifdef HAVE_SDR
-		case 'B':
+		case 'b':
 			calibrate_bias();
 			goto next_char;
 #endif

@@ -102,7 +102,7 @@ void sdr_config_print_hotkeys(void)
 {
 	printf("Press 'q' key to toggle display of RX I/Q vector.\n");
 	printf("Press 's' key to toggle display of RX spectrum.\n");
-	printf("Press shift + 'B' key to remove DC level.\n");
+	printf("Press 'b' key to remove DC level.\n");
 }
 
 #define	OPT_SDR_UHD		1500

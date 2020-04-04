@@ -20,6 +20,7 @@ extern const char *write_rx_wave;
 extern const char *write_tx_wave;
 extern const char *read_rx_wave;
 extern const char *read_tx_wave;
+extern const char *console_digits;
 
 void main_mobile_init(void);
 void main_mobile_print_help(const char *arg0, const char *ext_usage);

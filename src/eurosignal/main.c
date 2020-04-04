@@ -177,6 +177,8 @@ int main(int argc, char *argv[])
 	init_es_teilges();
 	init_es_kaudn();
 
+	/* init mobile interface */
+	console_digits = "0123456789ABCDE";
 	main_mobile_init();
 
 	/* handle options / config file */

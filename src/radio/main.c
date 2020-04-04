@@ -482,7 +482,7 @@ next_char:
 			display_spectrum_on(0);
 			display_wave_on(-1);
 			goto next_char;
-		case 'B':
+		case 'b':
 			calibrate_bias();
 			goto next_char;
 		}

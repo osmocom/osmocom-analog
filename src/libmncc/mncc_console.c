@@ -75,9 +75,10 @@ typedef struct console {
 	int test_audio_pos;	/* position for test tone toward mobile */
 	sample_t tx_buffer[160];/* transmit audio buffer */
 	int tx_buffer_pos;	/* current position in transmit audio buffer */
-	int dial_digits;	/* number of digits to be dialed */
+	int num_digits;		/* number of digits to be dialed */
 	int loopback;		/* loopback test for echo */
 	int echo_test;		/* send echo back to mobile phone */
+	const char *digits;	/* list of dialable digits */
 } console_t;
 
 static console_t console;
@@ -187,8 +188,8 @@ static int console_mncc_up(uint8_t *buf, int length)
 		}
 		console.callref = mncc->callref;
 		if (mncc->calling.number[0]) {
-			strncpy(console.station_id, mncc->calling.number, console.dial_digits);
-			console.station_id[console.dial_digits] = '\0';
+			strncpy(console.station_id, mncc->calling.number, console.num_digits);
+			console.station_id[console.num_digits] = '\0';
 		}
 		strncpy(console.dialing, mncc->called.number, sizeof(console.dialing) - 1);
 		console.dialing[sizeof(console.dialing) - 1] = '\0';
@@ -205,8 +206,8 @@ static int console_mncc_up(uint8_t *buf, int length)
 	case MNCC_SETUP_CNF:
 		PDEBUG(DMNCC, DEBUG_INFO, "Call connected to '%s'\n", mncc->connected.number);
 		console_new_state(CONSOLE_CONNECT);
-		strncpy(console.station_id, mncc->connected.number, console.dial_digits);
-		console.station_id[console.dial_digits] = '\0';
+		strncpy(console.station_id, mncc->connected.number, console.num_digits);
+		console.station_id[console.num_digits] = '\0';
 		/* send down reused MNCC */
 		mncc->msg_type = MNCC_SETUP_COMPL_REQ;
 		mncc_down(buf, length);
@@ -249,7 +250,7 @@ static void _print_console_text(void)
 	printf("\033[0;39m");
 }
 
-int console_init(const char *station_id, const char *audiodev, int samplerate, int latency, int dial_digits, int loopback, int echo_test)
+int console_init(const char *station_id, const char *audiodev, int samplerate, int latency, int num_digits, int loopback, int echo_test, const char *digits)
 {
 	int rc = 0;
 
@@ -263,9 +264,10 @@ int console_init(const char *station_id, const char *audiodev, int samplerate, i
 	strncpy(console.audiodev, audiodev, sizeof(console.audiodev) - 1);
 	console.samplerate = samplerate;
 	console.latspl = latency * samplerate / 1000;
-	console.dial_digits = dial_digits;
+	console.num_digits = num_digits;
 	console.loopback = loopback;
 	console.echo_test = echo_test;
+	console.digits = digits;
 
 	mncc_up = console_mncc_up;
 
@@ -339,18 +341,23 @@ static void process_ui(int c)
 {
 	char text[256];
 	int len;
+	int i;
 
 	switch (console.state) {
 	case CONSOLE_IDLE:
 		if (c > 0) {
-			if (c >= '0' && c <= '9' && (int)strlen(console.station_id) < console.dial_digits) {
-				console.station_id[strlen(console.station_id) + 1] = '\0';
-				console.station_id[strlen(console.station_id)] = c;
+			if ((int)strlen(console.station_id) < console.num_digits) {
+				for (i = 0; i < (int)strlen(console.digits); i++) {
+					if (c == console.digits[i]) {
+						console.station_id[strlen(console.station_id) + 1] = '\0';
+						console.station_id[strlen(console.station_id)] = c;
+					}
+				}
 			}
 			if ((c == 8 || c == 127) && strlen(console.station_id))
 				console.station_id[strlen(console.station_id) - 1] = '\0';
 dial_after_hangup:
-			if (c == 'd' && (int)strlen(console.station_id) == console.dial_digits) {
+			if (c == 'd' && (int)strlen(console.station_id) == console.num_digits) {
 				int callref = ++new_callref;
 				uint8_t buf[sizeof(struct gsm_mncc)];
 				struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
@@ -372,8 +379,8 @@ dial_after_hangup:
 				mncc_down(buf, sizeof(struct gsm_mncc));
 			}
 		}
-		if (console.dial_digits != (int)strlen(console.station_id))
-			sprintf(text, "on-hook: %s%s (enter digits 0..9)\r", console.station_id, "..............." + 15 - console.dial_digits + strlen(console.station_id));
+		if (console.num_digits != (int)strlen(console.station_id))
+			sprintf(text, "on-hook: %s%s (enter digits 0..9)\r", console.station_id, "..............." + 15 - console.num_digits + strlen(console.station_id));
 		else
 			sprintf(text, "on-hook: %s (press d=dial)\r", console.station_id);
 		break;
