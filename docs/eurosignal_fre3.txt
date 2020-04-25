@@ -1,0 +1,100 @@
+Kennungsspeicher fuer folgende Geraete:
+
+E 13-1 TeKaDe
+FRE 3 Bosch
+ES-E1 BBC
+ES-5 Telefunken
+D 200 E ANT
+
+
+Chip mit den Pins:
+------------------
+
+K = Kathode, A = Anode
+     ___ ___
+K 1 o   U   o A 18
+K 2 o       o A 17
+K 3 o       o A 16
+K 4 o       o A 15
+A 5 o       o K 14
+A 6 o       o K 13
+A 7 o       o K 12
+A 8 o       o K 11
+A 9 o_______o K 10
+
+
+Jede Ziffer besteht aus 4 Bit.
+In Klammern steht der Speicherplatz, da ja bis zu 4 Kennungen gespeichert werden koennen.
+Wenn nichts in Klammern steht, gilt die Ziffer fuer alle 4 Kennungen.
+
+
+		Anoden 15-18	Anoden 6-9
+--------------------------------------------
+Kathode 14	Ziffer 1(1)	Ziffer 1(2)
+Kathode 1	Ziffer 1(3)	Ziffer 1(4)
+Kathode 2	Ziffer 2	Ziffer 3
+Kathode 4			Ziffer 4
+Kathode 13	Ziffer 5(1)	Ziffer 5(2)
+Kathode 12	Ziffer 5(3)	Ziffer 5(4)
+Kathode 11	Ziffer 6(1)	Ziffer 6(2)
+Kathode 10	Ziffer 6(3)	Ziffer 6(4)
+
+
+Kathode 3 ist nicht belegt, sowie die Annoden 6-9 an Kathode 4.
+
+
+Die Ziffern sind wie folgt kodiert. Immer wenn ein Stern in der Tabelle steht, muss die jeweilige Kathode mit der Anode verbunden werden.
+Da immer 2 Ziffern pro Kathode kodiert werden, sind beide Anoden angegeben.
+
+		Anoden:
+Ziffer		16/6	15/7	18/8	17/9
+------------------------------------------------
+0		*	*	*	*
+1			*	*	*
+2		*	 	*	*
+3			 	*	*
+4		*	*	 	*
+5			*	 	*
+6		*	 	 	*
+7			 	 	*
+8		*	*	*	 
+9			*	*	 
+W		*
+
+Die Ziffer 'W' ist die Widerholzuffer.
+
+
+Um eine Kennung nicht zu verwenden, kann man einfach die Dioden weglassen.
+
+
+
+Beispiel:
+
+773002
+773003
+773004
+773005
+
+Kathode 14 mit	Anode 17, 9
+Kathode 1 mit	Anode 17, 9
+Kathode 2 mit	Anode 16, 8, 9
+Kathode 4 mit	Anode 6, 7, 8, 9
+Kathode 13 mit	Anode 16, 6
+Kathode 12 mit	Anode 16, 6
+Kathode 11 mit	Anode 16, 18, 17, 8, 9
+Kathode 10 mit	Anode 16, 15, 17, 7, 9
+(ungetestet)
+
+
+Beispiel mit so wenig Dioden, wie möglich:
+
+777777
+
+Kathode	14 -|<- Anode 17
+Kathode 2  -|<- Anode 16, 9
+Kathode 2  -|<- Anode 9
+Kathode 4  -|<- Anode 6
+Kathode 13 -|<- Anode 17
+Kathode 11 -|<- Anode 16
+(getestet)
+

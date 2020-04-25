@@ -1,0 +1,105 @@
+Kennungsspeicher SEL E299 oder Bosch FRE 2
+
+
+Chip mit den Pins:
+------------------
+
+K = Kathode, A = Anode
+     ___ ___
+A 1 o   U   o A 14
+K 2 o       o A 13
+K 3 o       o K 12
+K 4 o       o K 11
+K 5 o       o K 10
+K 6 o       o A 9
+A 7 o_______o A 8
+
+
+Kathoden 2,3,11,12:
+-------------------
+
+Die Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
+
+K 2 : Bit 0 (Wertigkeit 1)
+K 12: Bit 1 (Wertigkeit 2)
+K 3 : Bit 2 (Wertigkeit 4)
+K 11: Bit 3 (Wertigkeit 8)
+
+Ziffer 1: Verbunden mit A 1
+Ziffer 2: Verbunden mit A 7
+Ziffer 3: Verbunden mit A 14
+Ziffer 5: Verbunden mit A 8
+Ziffer 6: Verbunden mit A 9
+Ziffer 6: Verbunden mit A 13
+
+
+Kathoden 4,5,6,10:
+------------------
+
+Die Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
+
+K 4 : Bit 0 (Wertigkeit 1)
+K 10: Bit 1 (Wertigkeit 2)
+K 5 : Bit 2 (Wertigkeit 4)
+K 6 : Bit 3 (Wertigkeit 8)
+
+Ziffer 4: Verbunden mit A 14
+Ziffer 6: Verbunden mit A 9
+Ziffer 6: Verbunden mit A 13
+
+Hinweis: Es gibt also 4 mal die Ziffer 6, weil man 4 Rufnummern haben kann.
+(Habe mir nicht gemerkt, welche Ziffer welches Rufzeichen ist)
+
+
+Ziffern:
+--------
+W:	Wert 0 (alle 4 Bits ohne Diode)
+0:	Wert 1 (Diode nach Bit 0)
+1:	Wert 2 (Diode nach Bit 1)
+2:	Wert 3 (Diode nach Bits 1,0)
+3:	Wert 4 (Diode nach Bit 2)
+4:	Wert 5 (Diode nach Bits 2,0)
+5:	Wert 6 (Diode nach Bits 2,1)
+6:	Wert 7 (Diode nach Bits 2,1,0)
+7:	Wert 8 (Diode nach Bit 3)
+8:	Wert 9 (Diode nach Bits 3,0)
+9:	Wert 10 (Diode nach Bits 3,1)
+W ist die Widerholziffer
+
+
+Beispiel:
+
+Rufnummer: 162475
+
+	A1	A7	A8	A9	A13	A14
+K 2		*		*		*
+K 3		*		*	*
+K 4	*		*	*		*
+K 5		*	*	*	*	*
+K 6	*	*	*	*
+K 10	*	*	*	*	*
+K 11			*	*
+K 12	*	*		*	*	*
+
+
+Beispiel:
+
+Rufnummer: 773003
+
+A1 ->|- K11
+A14 ->|- K3
+A14 ->|- K4
+A9 ->|- K5
+
+
+Beispiel: (minimale Diodenzahl)
+
+Rufnummer: 111111
+
+A1 ->|- K12
+A14 ->|- K3
+A8 ->|- K11
+
+
+
+

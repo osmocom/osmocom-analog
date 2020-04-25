@@ -14,6 +14,7 @@
 	<li><a href="#history">History</a>
 	<li><a href="#howitworks">How it works</a>
 	<li><a href="#basestation">Setup of a base station</a>
+	<li><a href="#hacking">Make your own station ID ROM</a>
 </ul>
 
 <p class="toppic">
@@ -224,6 +225,64 @@ Using a "Spare 2" as third digit looks like this:
 # src/eurosignal/eurosignal -k B 12B456
 
 </pre>
+
+<p class="toppic">
+<a name="hacking"></a>
+Make your own station ID ROM
+</p>
+
+<center><img src="eurosignal_rom.jpg"/></center>
+
+<p>
+Sometimes you find a pager but the internal ROM with the station ID is missing.
+This is because there was no database (in the first place) to block unallocated / unsubcribed station IDs.
+Instead the ROM was removed from the pager when the subscriber unsubscribed the service.
+Learn how to build your own ROM from a few diodes:
+</p>
+
+<p>
+<a href="eurosignal_fre3.txt">
+<ul>
+<li>TeKaDe E 13-1</li>
+<li>Bosch FRE 3</li>
+<li>BBC ES-E1</li>
+<li>Telefunken ES-5</li>
+<li>ANT D 200 E</li>
+</ul>
+</a>
+
+<p>
+<a href="eurosignal_e299.txt">
+<ul>
+<li>SEL E299</li>
+<li>Bosch FRE 2</li>
+</ul>
+</a>
+</p>
+
+<p>
+<a href="eurosignal_fu20.txt">
+<ul>
+<li>Gundig FU 20</li>
+<li>Storno CRP 3000</li>
+<li>Dantronik DT 400</li>
+<li>Grundig FU20.1</li>
+<li>Storno CRP 3000.1</li>
+<li>Dantronik DT 400.1</li>
+<li>Multitone RPR 390</li>
+</ul>
+</a>
+</p>
+
+
+<p>
+<a href="eurosignal_es1.tiff">
+<ul>
+<li>Telefunken ES 1/2</li>
+</ul>
+</a>
+</p>
+
 
 <hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
 </td></tr></table></center>
