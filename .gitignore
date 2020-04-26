@@ -47,6 +47,7 @@ src/libsdr/libsdr.a
 src/libsample/libsample.a
 src/libam/libam.a
 src/libclipper/libclipper.a
+src/libserial/libserial.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz

@@ -84,6 +84,7 @@ AC_OUTPUT(
     src/libsdr/Makefile
     src/libsample/Makefile
     src/libclipper/Makefile
+    src/libserial/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
     src/cnetz/Makefile

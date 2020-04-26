@@ -25,7 +25,8 @@ SUBDIRS = \
 	libwave \
 	libfft \
 	libmncc \
-	libclipper
+	libclipper \
+	libserial
 
 if HAVE_ALSA
 SUBDIRS += \
