@@ -52,7 +52,8 @@ SUBDIRS += \
 	eurosignal \
 	tv \
 	radio \
-	zeitansage
+	zeitansage \
+	sim
 
 if HAVE_SDR
 if HAVE_FUSE

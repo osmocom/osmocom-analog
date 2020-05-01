@@ -91,6 +91,15 @@ table.imts {
 	border-collapse: collapse;
 }
 
+table.sim {
+	width: 816;
+	text-align: left;
+	table-layout: fixed;
+	border-spacing: 0px;
+	border: none;
+	border-collapse: collapse;
+}
+
 li {
 	font-size: 20;
 	color: #000000;

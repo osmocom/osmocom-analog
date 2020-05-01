@@ -71,6 +71,10 @@ struct debug_cat {
 	{ "device", "\033[0;33m" },
 	{ "datenklo", "\033[1;34m" },
 	{ "zeit", "\033[1;34m" },
+	{ "sim layer 1", "\033[0;31m" },
+	{ "sim layer 2", "\033[0;33m" },
+	{ "sim ICL layer", "\033[0;36m" },
+	{ "sim layer 7", "\033[0;37m" },
 	{ NULL, NULL }
 };
 

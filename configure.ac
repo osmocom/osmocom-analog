@@ -100,6 +100,7 @@ AC_OUTPUT(
     src/radio/Makefile
     src/datenklo/Makefile
     src/zeitansage/Makefile
+    src/sim/Makefile
     src/test/Makefile
     src/Makefile
     extra/Makefile

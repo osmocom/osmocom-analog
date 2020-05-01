@@ -1,0 +1,472 @@
+<html>
+<head>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<title>osmocom-analog</title>
+</head>
+<body>
+<center><table><tr><td>
+
+<h2><center>C-Netz SIM Emulator</center></h2>
+
+<center><img src="sim.jpg"/></center>
+
+<p>
+Why emulating a SIM card?
+Maybe you got an a C-Netz phone from the attic, friend or Ebay?
+But the SIM card is missing. Without SIM card you cannot use your C-Netz phone at all.
+Then you buy a high price on Ebay to get a used SIM card.
+You find out that the SIM card requires a PIN that you don't know.
+Even if you find a SIM card with no PIN enabled, it may not work with newer phones.
+The emulator can help you in this case. 
+</p>
+
+<p>
+Also the emulator can be used to emulate service cards or special cards that enable cell monitoring.
+With this emulator you can modify all subscriber data without restrictions.
+</p>
+
+<ul>
+	<li><a href="#emu">Emulating SIM Card</a>
+	<li><a href="#sniff">Sniffing SIM Card</a>
+	<li><a href="#byo">Build Your Own SIM Card</a>
+	<li><a href="#usage">Using the SIM Card</a>
+	<li><a href="#service">Service Cards</a>
+</ul>
+
+
+<p class="toppic">
+<a name="emu"></a>
+Emulating SIM Card
+</p>
+
+<center><img src="sim-rs232.jpg"/></center>
+
+<p>
+The easiest way to emulate a C-Netz SIM card is to use your Linux PC with a serial interface connected to the card reader of the phone.
+Connection can be made directly via wires or via ISO card PCB.
+You may also use an old ISO card an drill away the chip inside. Then solder thin wires close to the pads and connect them to a serial interface.
+</p>
+
+<p>
+In order to connect the card to your Linux PC, you need a serial-to-USB interface.
+Don't use the 9 pin SUB-D type of interface, because they have level shifters and will brick your phone.
+Use TTL level interface as shown in the image above.
+</p>
+
+<p>
+Because the SIM cards uses TTL level, we can connect a CP2102 controller directly to the card reader of a phone.
+Don't worry about 5 Volts level from the card reader. The CP2102 can handle it.
+In order to connect TX and RX together on one pad of the SIM card, we need to add a diode between the I/O pad and the TX output.
+The cathode must point towards the TX output, so that TX can only pull the I/O line low (0).
+Use a diode with a low forward voltage drop, like a Schottky diode. I use a simple 1n4148 Silicon diode and it works too.
+</p>
+
+<p>
+<font color="red">Important: Some serial interfaces have wrong signal labels.
+TX and RX might be reversed, so that TX is actually an input and RX an ouput.
+You will find out when you connect an Milliamp meter between signal and ground.
+The output will have several Milliamps, but the input doesn't.
+</font>
+</p>
+
+<p>
+<font color="red">Important: Be sure to run your phone on battery and not via gounded power supply.
+If the output of the power supply is grounded, the ground of your power line is also connected to the phone's card reader.
+Voltage spikes on the power line's ground between your PC and your phone may kill the card reader or the USB port.
+Use an isolating transformer!
+</font>
+</p>
+
+<p>
+<font color="red">Important: The serial interface must support 8e2. (8 data bits, even parity, two stop bits)
+I suggest to use the CP2102. If you know other serial interfaces that work, let me know.
+</font>
+</p>
+
+<table><tr>
+<td><img src="sim-contacts.jpg"/></td>
+<td><p>
+Connect Ground to GND.
+<br>
+Connect CTS input to RESET.
+<br>
+Connect RX input to I/O.
+<br>
+Connect TX output via diode to I/O.
+<br>
+(Place cathode towards TX output)
+</p></td>
+</tr></table>
+
+<p>
+To run the emulator, use the "sim" keyword at the end of the command line.
+Use the '-s' option to give the correct serial interface:
+</p>
+
+<pre>
+
+# src/sim/cnetz_sim -s /dev/ttyUSB0 sim
+
+...
+FUTLN=23100001, Sicherungscode=3103, Kartekennung=3, Sonderheitenschluessel=0, Wartungsschluessel=65535
+Telephone directory has 80 entries.
+SIM emulator ready, please start the phone!
+sim.c:1352 info   : Reset singnal on (low)
+sim.c:1352 info   : Reset singnal off (high)
+sim.c:1371 info   : Card has disabled PIN (system PIN '0000') Selecting card #1.
+sim.c:1374 info   : Sending ATR
+sim.c:1125 info   : RX message
+sim.c:1135 info   :  control I: N(S)=0 N(R)=0
+sim.c: 473 info   :  SL-APPL app 3
+sim.c:1222 info   : TX resonse
+sim.c:1228 info   :  control I: N(S)=0 N(R)=1
+sim.c:1125 info   : RX message
+sim.c:1135 info   :  control I: N(S)=1 N(R)=1
+sim.c: 558 info   :  RD-EBDT
+sim.c:1222 info   : TX resonse
+sim.c:1228 info   :  control I: N(S)=1 N(R)=2
+sim.c:1125 info   : RX message
+sim.c:1135 info   :  control I: N(S)=2 N(R)=2
+sim.c: 473 info   :  SL-APPL app 4
+sim.c:1222 info   : TX resonse
+sim.c:1228 info   :  control I: N(S)=2 N(R)=3
+sim.c:1125 info   : RX message
+sim.c:1135 info   :  control I: N(S)=3 N(R)=3
+sim.c: 473 info   :  SL-APPL app 3
+sim.c:1222 info   : TX resonse
+sim.c:1228 info   :  control I: N(S)=3 N(R)=4
+sim.c:1125 info   : RX message
+sim.c:1135 info   :  control I: N(S)=4 N(R)=4
+sim.c: 558 info   :  RD-EBDT
+sim.c:1222 info   : TX resonse
+sim.c:1228 info   :  control I: N(S)=4 N(R)=5
+sim.c:1125 info   : RX message
+sim.c:1135 info   :  control I: N(S)=5 N(R)=5
+sim.c: 599 info   :  RD-RUFN (loc=0)
+sim.c: 655 info   :  80 numbers can be stored in EEPROM
+sim.c:1222 info   : TX resonse
+sim.c:1228 info   :  control I: N(S)=5 N(R)=6
+sim.c:1352 info   : Reset singnal on (low)
+
+</pre>
+
+<p>
+Use '-h' command line option to get a list of all options.
+</p>
+
+
+<p class="toppic">
+<a name="sniff"></a>
+Sniffing SIM Card
+</p>
+
+<p>
+To run the sniffer, use the "sniff" keyword at the end of the command line.
+You only need to connect I/O line to the RX line of your serial interface. (And ground of course!)
+Use the '-s' option to give the correct serial interface:
+</p>
+
+
+<pre>
+
+# src/sim/cnetz_sim -s /dev/ttyUSB0 sniff
+
+sniffer.c: 602 info   : ----------------------------------------
+sniffer.c: 609 info   : Reading ATR normal bit order:
+sniffer.c: 547 info   :  TD1 T=14: Refers to transmission protocols not standardized by ISO/IEC JTC 1/SC 17.
+sniffer.c: 590 info   : ----------------------------------------
+sniffer.c: 547 info   :  TD2 T=14: Refers to transmission protocols not standardized by ISO/IEC JTC 1/SC 17.
+sniffer.c: 590 info   : ----------------------------------------
+sniffer.c: 418 info   :  TA3 fsmin = 3 MHz
+sniffer.c: 433 info   :  TA3 fsmax = 5 MHz (Default)
+sniffer.c: 470 info   :  TB3 Maximum block size = 42
+sniffer.c: 516 info   :  TC3 Character Waiting Time = 3
+sniffer.c: 547 info   :  TD3 T=14: Refers to transmission protocols not standardized by ISO/IEC JTC 1/SC 17.
+sniffer.c: 590 info   : ----------------------------------------
+sniffer.c: 440 info   :  TA4 Block Waiting Time = 4
+sniffer.c: 590 info   : ----------------------------------------
+sniffer.c: 595 info   :  History byte #1: 0x92
+sniffer.c: 595 info   :  History byte #2: 0x80
+sniffer.c: 595 info   :  History byte #3: 0x00
+sniffer.c: 595 info   :  History byte #4: 0x41
+sniffer.c: 595 info   :  History byte #5: 0x32
+sniffer.c: 595 info   :  History byte #6: 0x36
+sniffer.c: 595 info   :  History byte #7: 0x01
+sniffer.c: 595 info   :  History byte #8: 0x11
+sniffer.c: 690 info   :  Checksum 0xe4 ok.
+sniffer.c: 697 info   : ATR done!
+sniffer.c: 715 info   : ----------------------------------------
+sniffer.c: 734 info   : Layer 2:
+sniffer.c: 735 info   :  source 3 -&gt; to 1
+sniffer.c: 737 info   :  control I: N(S)=0 N(R)=0
+sniffer.c: 744 info   :  length 15
+sniffer.c: 203 info   : Interface control layer ICB1:
+sniffer.c: 207 info   :  ON-LINE-BIT:         0 = Off-line data
+sniffer.c: 211 info   :  CONFIRM-BIT:         0 = No meaning
+sniffer.c: 213 info   :  MASTER/SLAVE-BIT:    1 = Sender is master
+sniffer.c: 219 info   :  WT-EXTENSION-BIT:    0 = No request for WT-Extension
+sniffer.c: 223 info   :  ABORT/TERMINATE-BIT: 0 = No meaning
+sniffer.c: 227 info   :  ERROR-BIT:           0 = No meaning
+sniffer.c: 231 info   :  CHAINING-BIT:        0 = No more ICL data follows
+sniffer.c: 235 info   :  ICB-EXTENSION-BIT:   0 = no ICB follows
+sniffer.c:  48 info   : Layer 7:
+sniffer.c:  50 info   :  I = Command
+sniffer.c:  51 info   :  CLA = 0x02
+sniffer.c:  54 info   :   -&gt; CNTR (Control Class)
+sniffer.c:  75 info   :  INS = 0xf1
+sniffer.c:  80 info   :   -&gt; SL-APPL (Select Application)
+sniffer.c: 180 info   :  DLNG = 11
+sniffer.c: 187 info   :  DATA(0) = 0x38 '8' 56
+sniffer.c: 187 info   :  DATA(1) = 0x39 '9' 57
+sniffer.c: 187 info   :  DATA(2) = 0x34 '4' 52
+sniffer.c: 187 info   :  DATA(3) = 0x39 '9' 57
+sniffer.c: 187 info   :  DATA(4) = 0x30 '0' 48
+sniffer.c: 187 info   :  DATA(5) = 0x31 '1' 49
+sniffer.c: 187 info   :  DATA(6) = 0x30 '0' 48
+sniffer.c: 187 info   :  DATA(7) = 0x30 '0' 48
+sniffer.c: 187 info   :  DATA(8) = 0x33 '3' 51
+sniffer.c: 187 info   :  DATA(9) = 0x30 '0' 48
+sniffer.c: 187 info   :  DATA(10) = 0x31 '1' 49
+sniffer.c: 715 info   : ----------------------------------------
+sniffer.c: 734 info   : Layer 2:
+sniffer.c: 735 info   :  source 1 -&gt; to 3
+sniffer.c: 737 info   :  control I: N(S)=0 N(R)=1
+sniffer.c: 744 info   :  length 4
+sniffer.c: 203 info   : Interface control layer ICB1:
+sniffer.c: 207 info   :  ON-LINE-BIT:         0 = Off-line data
+sniffer.c: 211 info   :  CONFIRM-BIT:         0 = No meaning
+sniffer.c: 215 info   :  MASTER/SLAVE-BIT:    0 = Sender is slave
+sniffer.c: 219 info   :  WT-EXTENSION-BIT:    0 = No request for WT-Extension
+sniffer.c: 223 info   :  ABORT/TERMINATE-BIT: 0 = No meaning
+sniffer.c: 227 info   :  ERROR-BIT:           0 = No meaning
+sniffer.c: 231 info   :  CHAINING-BIT:        0 = No more ICL data follows
+sniffer.c: 235 info   :  ICB-EXTENSION-BIT:   0 = no ICB follows
+sniffer.c:  48 info   : Layer 7:
+sniffer.c: 142 info   :  I = Response
+sniffer.c: 143 info   :  CCRC = 0x05
+sniffer.c: 145 info   :   -&gt; PIN-NOT-OK
+sniffer.c: 149 info   :   -&gt; APRC valid
+sniffer.c: 158 info   :  APRC = 0x02
+sniffer.c: 160 info   :   -&gt; Bit 2 = 1:PIN-Check required
+sniffer.c: 166 info   :   -&gt; Bit 3 = 0:Application unlocked
+sniffer.c: 170 info   :   -&gt; Bit 5 = 0:GEBZ/RUFN unlocked
+sniffer.c: 174 info   :   -&gt; Bit 6 = 0:GEBZ not full
+sniffer.c: 180 info   :  DLNG = 0
+sniffer.c: 302 info   : Resetting sniffer
+
+</pre>
+
+<p>
+When the phone is switched on, the SIM card is powered up and outputs the ATR sequence (Answer To Reset).
+</p>
+
+<p>
+The first message is a command message that is transmitted from the phone towards the SIM card.
+The layer 2 header indicates the direction and the length of 15 bytes.
+The ICR layer has no meaning with the C-Netz.
+Except for the MASTER/SLAVE-BIT, no other bit is used.
+The layer 7 (application) header indicates the command and the message type and length, followed by 11 bytes of data.
+This command tells the SIM card to select C-Netz application.
+</p>
+
+<p>
+The second message is a response message that is transmitted from the SIM card towards the phone.
+The layer 2 header indicates the direction and the length of 4 bytes.
+The layer 7 header indicates the response and status bits and length, followed by 0 bytes of data.
+The response tells the SIM card that a PIN is required to complete the command.
+The user is prompted to enter the pin.
+</p>
+
+<p>
+To read more about the protocol, and the meaning of messages, refer to <a href="http://download.eversberg.eu/mobilfunk/C-Netz-Dokus/FTZ%20171%20TR%2060%20-%20Anhang%201%20Berechtigungskarte%20als%20Prozessorkarte.pdf">FTZ 171 TR 60 - Anhang 1 Berechtigungskarte als Prozessorkarte.pdf</a>
+</p>
+
+
+<p class="toppic">
+<a name="byo"></a>
+Build Your Own SIM Card
+</p>
+
+<center><img src="sim_layout.png"/></center>
+
+<p>
+You find the PCB drawings inside the "layout" directory of the git repository.
+Be sure to print it without scaling!
+Check if the printed size matches an ISO card.
+Also there is the source files for the 'Eagle' layout program, if you like to change it.
+</p>
+
+<p>
+You may use an "Arduino UNO" or "ATTINY85" to emulate a SIM card without a PC.
+In case of the Arduino, you still need wires to connect it to the card reader of the phone.
+If you use an ATTINY85, you can put the micro controller directly on a PCB card, as shown on top of this page.
+</p>
+
+<p>
+To compile and run with Arduino, you need to open "src/sim/sim.ino" with Arduino software and select the "Arduino UNO" board.
+The RESET input is at pin 6 and the I/O line at pin 7.
+Connect these two lines together with ground line to the card reader or ISO card PCB.
+You don't need a diode this time, since pin 7 is automatically switched between input and output.
+The serial protocol is emulated in software.
+The status LED (pin 13) will flash whenever a message is received from the card reader.
+</p>
+
+<p>
+To compile and run with ATTINY85, you need to open "src/sim/sim.ino" with Arduino software and select the "ATiny25/45/85" board and the "ATiny85" chip.
+Refer to the internet on how to compile and flash the ATTINY85 without boot-loader.
+It is beyond the scope of this documentation.
+This time you need 5 wires to connect (VCC and Clock also).
+</p>
+
+<p>
+<font color="red">Important: After flashing you need to wait 10 seconds before removing power.
+During that time the EEPROM is initialized.
+If you would read out the EEPROM, you will notice the letter 'C' at address 0.
+Then you would know that the init process was finished with success.
+</font>
+</p>
+
+<p>
+If you use the DIP version of the ATTINY85, you cannot put it on the card itself.
+The PCB in the picture on top of this page shows the DIP socket next to the actual card area.
+Be sure to put the chip on the back side of the SIM card.
+This works only if the phone does not completely enclose the card.
+</p>
+
+<p>
+If you use the SOIC version of the ATTINY85, you need to make it flat, so it fits into your phone.
+You may use the full size SIM or just the mini SIM.
+I prefer the mini SIM and use an adapter card for larger phones.
+</p>
+
+<center><img src="sim-attiny85.jpg"/></center>
+
+<p>
+The original ATTINY85 (1) is shown upside down.
+Bend the legs straight and shorten them, so they still fit into a programmer's socket. (2)
+The use P400 sand paper to sand off the bottom of the case until you reach copper plate. (3)
+Make a hole into the PBC and solder the chip upside down into that hole.
+Pin 1 is marked on the PCB.
+</p>
+
+<p>
+<font color="red">Important: You need to change clock source to pin 1.
+</font>
+</p>
+
+<p>
+Change lower fuse of 0xc0.
+Note that you will not be able to do any further programming unless you apply clock signal to pin 1.
+Use a crystal oscillator connected to pin 1 when you like to update the firmware in the future.
+You may also use other type of clock signal.
+Try something between 1 and 8 MHz.
+I recommend to use the USBasp or a clone of that. It is cheap and easy and works with USB.
+To set the fuses using "avrdude" in conjunction with "usbasp" flash tool, use:<br>
+<br>
+avrdude -c usbasp-clone -p t85 -U lfuse:w:0xc0:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m<br>
+<br>
+If you run it again, you might notice that there is no response without a clock applied.
+Apply a clock to pin 1 and see if you get a response again.
+</p>
+
+<p class="toppic">
+<a name="usage"></a>
+Using the SIM Card
+</p>
+
+<p>
+After powering up the phone with SIM adapter/emulator attached, the phone should show the default subscriber number (FUTLN) on the display.
+(Not all phones do. Read the manual to get the key code on how to show the subscriber number.)
+There is no PIN enabled by default, so the SIM card is ready after inserting or poweing up the phone.
+Now you can make calls, add telephone numbers or change PIN.
+</p>
+
+<p>
+The SIM card can emulate 8 different cards.
+They share the same telephone directory, but have different subscriber data.
+Subscriber data can be changed to anything you like.
+This way it is possible to even emulate service cards ("Wartungskarten"), to put phones into service mode or special cell monitor mode.
+</p>
+
+<p>
+If the PIN is disabled (default), the first card with first subscriber data is emulates.
+To select different card with dfferent subscriber data, change the PIN to 0001 .. 0008.
+Refer to the phone's manual on how to change the PIN.
+E.g. if you store the PIN 0000 or 0001, the first card with the first subscriber data is emulated.
+E.g. if you store the PIN 0005, the fifth card with the fifth subscriber data is emulated.
+In all cases, there is no PIN required when you turn on the phone.
+</p>
+
+<p>
+<table class="sim">
+<tr><th>PIN</th><th>FUTLN =<br>Subscriber</th><th>Sicherungs-<br>code</th><th>Karten-<br>kennung</th><th>Sonderheiten-<br>schl&uuml;ssel</th><th>Wartungs-<br>schl&uuml;ssel</th></tr>
+<tr><td>0000 or 0001</td><td>2222001</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0002</td><td>2222002</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0003</td><td>2222003</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0004</td><td>2222004</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0005</td><td>2222005</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0006</td><td>2222006</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0007</td><td>2222007</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+<tr><td>0008</td><td>2222008</td><td>3103</td><td>3</td><td>0</td><td>65535</td></tr>
+</table>
+</p>
+
+<p>
+You may want to use a PIN to select the card whenever you turn on the phone.
+Use the phone to enable a PIN that does not start with "000".
+When you restart your phone, you may enter that PIN, to select the first card.
+Alternatively you may enter the PIN 0000 or 0001, to select the first card, no matter what the PIN was.
+Or you may enter the PIN 0002 .. 0008, to select second to eight card.
+</p>
+
+<p>
+You may also alter each of the 8 different subscriber data store on the SIM.
+In order to do that, you need to set a PIN, so the phone will ask for a PIN whenever it is turned on.
+Choose any PIN you like, but not a PIN stat starts with 000.
+Turn on the phone and you will be asked for a PIN.
+Enter the PIN 9991 to alter the first subscriber data.
+Enter the PIN 9992 .. 9998 to alter second to eigtht subscriber data.
+The subscriber data is shown in the telephone directory and can be altered by changing the numbers in that directory.
+</p>
+
+<p>
+The default subscriber data and where to change them in the telephone directory:
+<br><br>
+<table class="sim">
+<tr><th>Entry</th><th>Name</th><th>Number</th></tr>
+<tr><td>01</td><td>FUTLN</td><td>2222001 *</td></tr>
+<tr><td>02</td><td>Sicherungscode</td><td>3103</td></tr>
+<tr><td>03</td><td>Kartenkennung</td><td>3</td></tr>
+<tr><td>04</td><td>Sonderheitsschl.</td><td>0</td></tr>
+<tr><td>05</td><td>Wartungsschl.</td><td>65535</td></tr>
+</table>
+<br>
+(*) When PIN 9991 was entered.
+</p>
+
+
+<p class="toppic">
+<a name="service"></a>
+Service Cards
+</p>
+
+<p>
+To program one of the following service cards, change the subscriber data to the indicated values.
+</p>
+
+<p>
+<table class="sim">
+<tr><th>Type</th><th>FUTLN =<br>Subscriber</th><th>Sicherungs-<br>code</th><th>Karten-<br>kennung</th><th>Sonderheiten-<br>schl&uuml;ssel</th><th>Wartungs-<br>schl&uuml;ssel</th></tr>
+<tr><td>Siemens C5<br>service mode</td><td>-</td><td>-</td><td>-</td><td>900</td><td>1000</td></tr>
+<tr><td>Phillips Miniporty<br>service mode</td><td>-</td><td>-</td><td>-</td><td>900</td><td>1000</td></tr>
+<tr><td>Phillips Miniporty<br>cell monitor</td><td>-</td><td>-</td><td>-</td><td>900</td><td>1728 or<br>2729</td></tr>
+<tr><td>Phillips Porty<br>service mode</td><td>0</td><td>0</td><td>0</td><td>2304</td><td>-</td></tr>
+<tr><td>Phillips Porty<br>cell monitor</td><td>-</td><td>-</td><td>-</td><td>898</td><td>-</td></tr>
+</table>
+</p>
+
+
+<hr><center>[<a href="index.html">Back to main page</a>]</center><hr>
+</td></tr></table></center>
+</body>
+</html>

@@ -34,6 +34,10 @@
 #define DDEVICE		27
 #define DDATENKLO	28
 #define DZEIT		29
+#define DSIM1		30
+#define DSIM2		31
+#define DSIMI		32
+#define DSIM7		33
 
 void get_win_size(int *w, int *h);
 
