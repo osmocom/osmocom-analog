@@ -136,7 +136,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 		get_win_size(&w, &h);
 		printf("\0337\033[%d;%dr\0338", debug_limit_scroll + 1, h);
 	}
-	printf("%s%s:%d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
+	printf("%s%s:%4d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
 	if (debug_limit_scroll)
 		printf("\0337\033[%d;%dr\0338", 1, h);
 	if (print_console_text)
