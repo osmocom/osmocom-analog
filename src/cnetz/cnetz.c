@@ -568,29 +568,41 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	transaction_t *trans;
 	uint8_t futln_nat;
 	uint8_t futln_fuvst;
-	uint16_t futln_rest;
+	int futln_rest; /* use int for checking size > 65535 */
+	int len;
 	int i;
 
 	/* 1. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) == 11 && !strncmp(dialing, "0160", 4))
+	len = strlen(dialing);
+	if (len >= 11 && !strncmp(dialing, "0161", 4)) {
 		dialing += 4;
-	if (strlen(dialing) != 7) {
+		len -= 4;
+	}
+	if (len < 7 || len > 8) {
 inval:
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
 	}
-	for (i = 0; i < 7; i++) {
+	for (i = 0; i < len; i++) {
 		if (dialing[i] < '0' || dialing[i] > '9')
 			goto inval;
 	}
-	if (atoi(dialing + 2) > 65535) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Last 5 digits '%s' must not exceed '65535', but they do!\n", dialing + 2);
-		goto inval;
-	}
 
 	futln_nat = dialing[0] - '0';
-	futln_fuvst = dialing[1] - '0';
-	futln_rest = atoi(dialing + 2);
+	if (len == 7)
+		futln_fuvst = dialing[1] - '0';
+	else {
+		futln_fuvst = (dialing[1] - '0') * 10 + (dialing[2] - '0');
+		if (futln_fuvst > 31) {
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "Digit 2 and 3 '%02d' must not exceed '31', but they do!\n", futln_fuvst);
+			goto inval;
+		}
+	}
+	futln_rest = atoi(dialing + len - 5);
+	if (futln_rest > 65535) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "Last 5 digits '%05d' must not exceed '65535', but they do!\n", futln_rest);
+		goto inval;
+	}
 
 	/* 2. check if the subscriber is attached */
 	rc = find_db(futln_nat, futln_fuvst, futln_rest, NULL, &extended);
