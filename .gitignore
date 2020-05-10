@@ -69,7 +69,7 @@ src/tv/osmotv
 src/radio/osmoradio
 src/datenklo/datenklo
 src/zeitansage/zeitansage
-sim/cnetz_sim
+extra/cnetz_memory_card_generator
 src/test/test_filter
 src/test/test_sendevolumenregler
 src/test/test_compandor

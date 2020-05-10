@@ -102,7 +102,7 @@ AC_OUTPUT(
     src/zeitansage/Makefile
     src/test/Makefile
     src/Makefile
-    sim/Makefile
+    extra/Makefile
     Makefile)
 
 
