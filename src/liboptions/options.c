@@ -154,6 +154,7 @@ done:
 int options_command_line(int argc, char *argv[], int (*handle_options)(int short_option, int argi, char *argv[]))
 {
 	option_t *option;
+	char params[256];
 	int argi, i;
 	int rc;
 
@@ -167,9 +168,12 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 				/* -x */
 				for (option = option_head; option; option = option->next) {
 					if (argv[argi][1] == option->short_option) {
-						if (option->parameter_count && argi + option->parameter_count < argc)
-							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s' ('--%s'), parameter '%s'\n", argv[argi], option->long_option, argv[argi + 1]);
-						else
+						if (option->parameter_count && argi + option->parameter_count < argc) {
+							params[0] = '\0';
+							for (i = 0; i < option->parameter_count; i++)
+								sprintf(strchr(params, '\0'), " '%s'", argv[argi + 1 + i]);
+							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s' ('--%s'), parameter%s\n", argv[argi], option->long_option, params);
+						} else
 							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s' ('--%s')\n", argv[argi], option->long_option);
 						break;
 					}
@@ -178,9 +182,12 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 				/* --xxxxxx */
 				for (option = option_head; option; option = option->next) {
 					if (!strcmp(argv[argi] + 2, option->long_option)) {
-						if (option->parameter_count && argi + option->parameter_count < argc)
-							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s', parameter '%s'\n", argv[argi], argv[argi + 1]);
-						else
+						if (option->parameter_count && argi + option->parameter_count < argc) {
+							params[0] = '\0';
+							for (i = 0; i < option->parameter_count; i++)
+								sprintf(strchr(params, '\0'), " '%s'", argv[argi + 1 + i]);
+							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s', parameter%s\n", argv[argi], params);
+						} else
 							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s'\n", argv[argi]);
 						break;
 					}
