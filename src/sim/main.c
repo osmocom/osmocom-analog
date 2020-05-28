@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <math.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <sys/time.h>
 #include "../libdebug/debug.h"
 #include "../liboptions/options.h"
@@ -101,7 +102,7 @@ void print_help(const char *arg0)
 	printf(" -A --authenticate 0x...\n");
 	printf("        Give 64 Bit value for authentication response. (default = all bits 1)\n");
 	printf("\nCommands are:\n");
-	printf("        sniff - To passively sniff ATR and message\n");
+	printf("        sniff - To passively sniff SIM card communication\n");
 	printf("        sim - To simulate a SIM card\n");
 }
 
@@ -225,7 +226,7 @@ size_t eeprom_length(void)
 
 int main_loop(serial_t *serial, int sniffer)
 {
-	int rc, cts, last_cts = 0;
+	int rc, cts = 0, last_cts = 0;
 	uint8_t byte;
 	int skip_bytes = 0;
 	int work = 0;
@@ -333,7 +334,7 @@ int main(int argc, char *argv[])
 	debuglevel = DEBUG_INFO;
 
 	add_options();
-	rc = options_config_file("~/.osmocom/analog/simsim.conf", handle_options);
+	rc = options_config_file("~/.osmocom/analog/sim.conf", handle_options);
 	if (rc < 0)
 		return 0;
 
@@ -423,7 +424,7 @@ int main(int argc, char *argv[])
 	} else if (!strcmp(argv[argi], "sim")) {
 		sniffer = 0;
 	} else {
-		fprintf(stderr, "Unknown command '%s', use '-h' for help!\n", argv[argi]);
+		print_help(argv[0]);
 		return -EINVAL;
 	}
 
@@ -441,6 +442,13 @@ int main(int argc, char *argv[])
 		print_image();
 		decode_ebdt(ebdt_data, temp[0], temp[1], temp[2], temp[3], temp[4]);
 		printf("FUTLN=%s, Sicherungscode=%s, Kartekennung=%s, Sonderheitenschluessel=%s, Wartungsschluessel=%s\n", temp[0], temp[1], temp[2], temp[3], temp[4]);
+		for (i = 0; i < 8; i++)
+			temp[0][i] = eeprom_read(EEPROM_PIN_DATA + i);
+		temp[0][(eeprom_read(EEPROM_FLAGS) >> EEPROM_FLAG_PIN_LEN) & 0xf] = '\0';
+		uint64_t auth_value = 0;
+		for (i = 0; i < 8; i++)
+			auth_value |= eeprom_read(EEPROM_AUTH_DATA + i) << (8 * (7 - i));
+		printf("PIN=%s, auth response=0x%016" PRIx64 "\n", temp[0], auth_value);
 		printf("Telephone directory has %d entries.\n", directory_size() - 1);
 		for (i = 0; i < directory_size() - 1; i++) {
 			uint8_t data[24];

@@ -472,21 +472,21 @@ static void sl_appl(sim_sim_t *sim, uint8_t *data, int length)
 
 	PDEBUG(DSIM7, DEBUG_INFO, " SL-APPL app %d\n", app);
 
-	/* if PIN is required */
-	if (sim->pin_required) {
-		return_pin_not_ok(sim);
-		return;
-	}
-
-	/* check application */
+	/* check and set application */
 	if (app != APP_NETZ_C && app != APP_RUFN_GEBZ) {
 		PDEBUG(DSIM7, DEBUG_NOTICE, "SL-APPL invalid app %d\n", sim->app);
 		return_error(sim);
 		return;
 	}
+	sim->app = app;
+
+	/* if PIN is required, we request it, but we've already selected the app */
+	if (sim->pin_required) {
+		return_pin_not_ok(sim);
+		return;
+	}
 
 	/* respond */
-	sim->app = app;
 	data = alloc_msg(sim, 0);
 	tx_sdu(sim, 0, data, 0);
 }
@@ -913,7 +913,7 @@ static void aut_1(sim_sim_t *sim)
 	uint8_t *data;
 	int i;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-EBDT\n");
+	PDEBUG(DSIM7, DEBUG_INFO, " AUTH-1\n");
 
 	/* respond */
 	data = alloc_msg(sim, 1);
@@ -1337,7 +1337,10 @@ int sim_init_eeprom(void)
 	eeprom_write(EEPROM_FLAGS, (strlen(PIN_DEFAULT) << EEPROM_FLAG_PIN_LEN) | (MAX_PIN_TRY << EEPROM_FLAG_PIN_TRY));
 	for (i = 0; i < (int)strlen(PIN_DEFAULT); i++)
 		eeprom_write(EEPROM_PIN_DATA + i, PIN_DEFAULT[i]);
+	for (i = 0; i < 8; i++)
+		eeprom_write(EEPROM_AUTH_DATA + i, AUTH_DEFAULT >> ((7 - i) * 8));
 
+	/* now write magic characters to identify virgin or initialized EEPROM */
 	eeprom_write(EEPROM_MAGIC + 0, 'C');
 	eeprom_write(EEPROM_MAGIC + 1, '0' + EEPROM_VERSION);
 

@@ -5,7 +5,7 @@
 #define SONDER_DEFAULT		"0"
 #define WARTUNG_DEFAULT		"65535"
 #define PIN_DEFAULT		"0000"
-#define AUTH_DEFAULT		"0xffffffffffffffff"
+#define AUTH_DEFAULT		((uint64_t)0x000000000badefee)
 
 enum l1_state {
 	L1_STATE_RESET = 0,	/* reset is held */
