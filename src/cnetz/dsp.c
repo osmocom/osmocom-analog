@@ -54,6 +54,27 @@ scrambler_t scrambler_test_scrambler1;
 scrambler_t scrambler_test_scrambler2;
 #endif
 
+const char *cnetz_dsp_mode_name(enum dsp_mode mode)
+{
+        static char invalid[16];
+
+	switch (mode) {
+        case DSP_SCHED_NONE:
+		return "SCHED_NONE";
+	case DSP_MODE_OFF:
+		return "OFF";
+	case DSP_MODE_OGK:
+		return "OGK";
+	case DSP_MODE_SPK_K:
+		return "SPK_K";
+	case DSP_MODE_SPK_V:
+		return "SPK_V";
+	}
+
+	sprintf(invalid, "invalid(%d)", mode);
+	return invalid;
+}
+
 static sample_t ramp_up[256], ramp_down[256];
 
 void dsp_init(void)
@@ -165,6 +186,8 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	scrambler_setup(&scrambler_test_scrambler1, cnetz->sender.samplerate);
 	scrambler_setup(&scrambler_test_scrambler2, cnetz->sender.samplerate);
 #endif
+
+	cnetz->sched_dsp_mode_ts = -1;
 
 	return 0;
 
@@ -636,10 +659,11 @@ again:
 		}
 
 		/* switch to speech channel */
-		if (cnetz->sched_switch_mode && cnetz->sched_r_m == 0) {
-			if (--cnetz->sched_switch_mode == 0) {
+		if (cnetz->sched_dsp_mode_ts >= 0 && cnetz->sched_r_m == 0) {
+			if (cnetz->sched_dsp_mode_ts == cnetz->sched_ts) {
 				/* OgK / SpK(K) / SpK(V) */
-				PDEBUG_CHAN(DDSP, DEBUG_INFO, "Switching channel (mode)\n");
+				PDEBUG_CHAN(DDSP, DEBUG_INFO, "Now switchting channel mode to %s at timeslot %d\n", cnetz_dsp_mode_name(cnetz->sched_dsp_mode), cnetz->sched_dsp_mode_ts);
+				cnetz->sched_dsp_mode_ts = -1;
 				cnetz_set_dsp_mode(cnetz, cnetz->sched_dsp_mode);
 			}
 		}
@@ -843,39 +867,22 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 	cnetz->sender.rxbuf_pos = pos;
 }
 
-const char *cnetz_dsp_mode_name(enum dsp_mode mode)
-{
-        static char invalid[16];
-
-	switch (mode) {
-        case DSP_SCHED_NONE:
-		return "SCHED_NONE";
-	case DSP_MODE_OFF:
-		return "OFF";
-	case DSP_MODE_OGK:
-		return "OGK";
-	case DSP_MODE_SPK_K:
-		return "SPK_K";
-	case DSP_MODE_SPK_V:
-		return "SPK_V";
-	}
-
-	sprintf(invalid, "invalid(%d)", mode);
-	return invalid;
-}
-
 void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode));
-	cnetz->dsp_mode = mode;
+	if (mode != cnetz->dsp_mode) {
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "DSP mode %s -> %s\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode));
+		cnetz->dsp_mode = mode;
+	}
 	/* we must get rid of partly received frame */
 	fsk_demod_reset(&cnetz->fsk_demod);
 }
 
-void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int frames_ahead)
+void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int timeslot)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " Schedule DSP mode %s -> %s in %d frames\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode), frames_ahead);
-	cnetz->sched_dsp_mode = mode;
-	cnetz->sched_switch_mode = frames_ahead;
+	if (mode != cnetz->dsp_mode) {
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Schedule DSP mode %s -> %s at timeslot %d\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode), timeslot);
+		cnetz->sched_dsp_mode = mode;
+		cnetz->sched_dsp_mode_ts = timeslot;
+	}
 }
 

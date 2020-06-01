@@ -377,21 +377,23 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 		goto error;
 
 	/* go into idle state */
-	cnetz_set_dsp_mode(cnetz, DSP_MODE_OGK);
-	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_OGK, 0);
+	if (chan_type == CHAN_TYPE_OGK || chan_type == CHAN_TYPE_OGK_SPK)
+		cnetz_set_dsp_mode(cnetz, DSP_MODE_OGK);
+	else
+		cnetz_set_dsp_mode(cnetz, DSP_MODE_OFF);
 	cnetz_go_idle(cnetz);
 
 #ifdef DEBUG_SPK
 	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002, -1, -1);
 	trans->mo_call = 1;
-	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 2);
+	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, (cnetz->sched_ts + 2) & 31);
 #else
 	/* create transaction for speech channel loopback */
 	if (loopback && chan_type == CHAN_TYPE_SPK) {
 		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ_K, 2, 2, 22002, -1, -1);
 		trans->mo_call = 1;
 		cnetz_set_dsp_mode(cnetz, DSP_MODE_SPK_K);
-		cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, 0);
+		cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, (cnetz->sched_ts + 1) & 31);
 	}
 #endif
 
@@ -509,10 +511,11 @@ void cnetz_go_idle(cnetz_t *cnetz)
 
 	/* set scheduler to OgK or turn off SpK */
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
-		/* go idle after next frame/slot */
-		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 1);
+		/* switch next frame after distributed signaling boundary (mutliple of 8 slots) */
+		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 8) & 24);
 	} else {
-		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, 0);
+		/* switch next frame */
+		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 1) & 31);
 		cnetz_set_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF);
 	}
 
@@ -533,7 +536,7 @@ static void cnetz_release(transaction_t *trans, uint8_t cause)
 	trans_new_state(trans, (trans->cnetz->dsp_mode == DSP_MODE_OGK) ? TRANS_VA : TRANS_AF);
 	trans->repeat = 0;
 	trans->release_cause = cause;
-	trans->cnetz->sched_switch_mode = 0;
+	trans->cnetz->sched_dsp_mode_ts = -1;
 	timer_stop(&trans->timer);
 }
 
@@ -1068,7 +1071,7 @@ vak:
 			/* change state to busy */
 			cnetz_new_state(spk, CNETZ_BUSY);
 			/* schedule switching two slots ahead */
-			cnetz_set_sched_dsp_mode(spk, DSP_MODE_SPK_K, 2);
+			cnetz_set_sched_dsp_mode(spk, DSP_MODE_SPK_K, (cnetz->sched_ts + 2) & 31);
 			/* relink */
 			unlink_transaction(trans);
 			link_transaction(trans, spk);
@@ -1384,7 +1387,7 @@ no_auth:
 			/* next sub frame */
 			trans_new_state(trans, TRANS_VHQ_V);
 			trans->repeat = 0;
-			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
+			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, (cnetz->sched_ts + 1) & 31);
 #ifndef DEBUG_SPK
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
 #endif
@@ -1401,7 +1404,7 @@ no_auth:
 			/* next sub frame */
 			trans_new_state(trans, TRANS_VHQ_V);
 			trans->repeat = 0;
-			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, 1);
+			cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_V, (cnetz->sched_ts + 1) & 31);
 			timer_start(&trans->timer, 0.075 + 0.6 * F_VHQ); /* one slot + F_VHQ frames */
 		}
 		break;

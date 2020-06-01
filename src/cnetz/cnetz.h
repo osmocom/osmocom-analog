@@ -94,8 +94,8 @@ struct cnetz {
 	int			sched_ts;		/* current time slot */
 	int			sched_last_ts;		/* last timeslot we transmitted, to sync time of the receiver */
 	int			sched_r_m;		/* Rufblock (0) / Meldeblock (1) */
-	int			sched_switch_mode;	/* counts slots until mode is switched */
-	enum dsp_mode		sched_dsp_mode;		/* what mode shall be switched to  */
+	enum dsp_mode		sched_dsp_mode;		/* what mode shall be switched to */
+	int			sched_dsp_mode_ts;	/* time slot when to switch mode (-1 = don't switch) */
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, "Telegramm", .... */
