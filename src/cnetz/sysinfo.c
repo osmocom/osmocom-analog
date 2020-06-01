@@ -4,9 +4,12 @@
 
 cnetz_si si;
 
-void init_sysinfo(uint8_t fuz_nat, uint8_t fuz_fuvst, uint8_t fuz_rest, uint8_t kennung_fufst, uint8_t authentifikationsbit, uint8_t ws_kennung, uint8_t vermittlungstechnische_sperren, uint8_t grenz_einbuchen, uint8_t grenz_umschalten, uint8_t grenz_ausloesen, uint8_t mittel_umschalten, uint8_t mittel_ausloesen, uint8_t genauigkeit, uint8_t bewertung, uint8_t entfernung, uint8_t reduzierung, uint8_t nachbar_prio, int8_t teilnehmergruppensperre, uint8_t anzahl_gesperrter_teilnehmergruppen)
+void init_sysinfo(uint8_t timeslot, uint8_t fuz_nat, uint8_t fuz_fuvst, uint8_t fuz_rest, uint8_t kennung_fufst, uint8_t authentifikationsbit, uint8_t ws_kennung, uint8_t vermittlungstechnische_sperren, uint8_t grenz_einbuchen, uint8_t grenz_umschalten, uint8_t grenz_ausloesen, uint8_t mittel_umschalten, uint8_t mittel_ausloesen, uint8_t genauigkeit, uint8_t bewertung, uint8_t entfernung, uint8_t reduzierung, uint8_t nachbar_prio, int8_t teilnehmergruppensperre, uint8_t anzahl_gesperrter_teilnehmergruppen)
 {
 	memset(&si, 0, sizeof(si));
+
+	/* timeslot to use */
+	si.timeslot = timeslot;
 
 	/* ID of base station */
 	si.fuz_nat = fuz_nat;

@@ -677,11 +677,11 @@ again:
 			if (cnetz->auto_polarity)
 				cnetz->negative_polarity = (cnetz->sched_ts & 7) >> 2;
 			/* send on timeslots depending on the polarity:
-			 * positive polarity: 0, 8, 16, 24
-			 * negative polarity: 4, 12, 20, 28
+			 * positive polarity: ts, ts+8, ts+16, ts+24
+			 * negative polarity: ts+4, ts+12, ts+20, ts+28
 			 */
-			if (((cnetz->sched_ts & 7) == 0 && cnetz->negative_polarity == 0)
-			 || ((cnetz->sched_ts & 7) == 4 && cnetz->negative_polarity == 1)) {
+			if (((cnetz->sched_ts & 7) == (si.timeslot & 7) && cnetz->negative_polarity == 0)
+			 || ((cnetz->sched_ts & 7) == ((si.timeslot + 4) & 7) && cnetz->negative_polarity == 1)) {
 				if (cnetz->sched_r_m == 0) {
 					/* set last time slot, so we know to which time slot the message from mobile station belongs to */
 					cnetz->sched_last_ts = cnetz->sched_ts;

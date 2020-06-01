@@ -51,6 +51,7 @@ int challenge_valid;
 uint64_t challenge;
 int response_valid;
 uint64_t response;
+uint8_t timeslot = 0;
 uint8_t fuz_nat = 1;
 uint8_t fuz_fuvst = 4;
 uint8_t fuz_rest = 66;
@@ -120,6 +121,11 @@ void print_help(const char *arg0)
 	printf("        It is unclear what the actual voice deviation is. Please decrease, if\n");
 	printf("        mobile's microphone is too loud and speaker is too quiet.\n");
 	printf("        (default = %.0f)\n", speech_deviation);
+	printf(" -S --sysinfo timeslot=<0..31>\n");
+	printf("        Set time slot of OgK broadcast. There are 32 time slots, but every 8th\n");
+	printf("	slot is used. This means if you select time slot 0, also slots 8, 16\n");
+	printf("	and 24 will be used. If you select slot 14, also slots 6, 22 and 30\n");
+	printf("	will be used. (default = %d)\n", timeslot);
 	printf(" -S --sysinfo fuz-nat=<nat>\n");
 	printf("        Set country ID of base station. All IDs were used inside Germany only.\n");
 	printf("        (default = %d)\n", fuz_nat);
@@ -139,10 +145,10 @@ void print_help(const char *arg0)
 	printf("        2 = Higher priority base station.\n");
 	printf("        3 = Highest priority base station.\n");
 	printf("	Note: Priority has no effect, because there is only one base station.\n");
-	printf(" -A --sysinfo authentifikationsbit=auth>\n");
+	printf(" -S --sysinfo auth=<auth>\n");
 	printf("        Enable authentication flag on the base station. Since we cannot\n");
 	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
-	printf("	we just accept any card. Useful get the vendor IDs of the phone.\n");
+	printf("	we just accept any card. Useful to get the vendor IDs of the phone.\n");
 	printf("        0 = Disable. Even chip card phones behave like magnetic card phones.\n");
 	printf("        1 = Enable. Chip card phones send their card ID.\n");
 	printf("        (default = %d)\n", authentifikationsbit);
@@ -341,6 +347,9 @@ static int handle_options(int short_option, int argi, char **argv)
 			return -EINVAL;
 		}
 		p++;
+		if (!strncasecmp(argv[argi], "timeslot=", p - argv[argi])) {
+			timeslot = atoi_limit(p, 0, 31);
+		} else
 		if (!strncasecmp(argv[argi], "fuz-nat=", p - argv[argi])) {
 			fuz_nat = atoi_limit(p, 0, 7);
 		} else
@@ -556,7 +565,7 @@ int main(int argc, char *argv[])
 	}
     	if (anzahl_gesperrter_teilnehmergruppen)
 		printf("Blocked subscriber with number's last 4 bits from 0x%x to 0x%x\n", teilnehmergruppensperre, (teilnehmergruppensperre + anzahl_gesperrter_teilnehmergruppen - 1) & 0xf);
-	init_sysinfo(fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
+	init_sysinfo(timeslot, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
 	dsp_init();
 	rc = init_telegramm();
 	if (rc < 0) {
