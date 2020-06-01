@@ -118,20 +118,20 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	}
 
 	if (clock_speed[0] > 1000 || clock_speed[0] < -1000 || clock_speed[1] > 1000 || clock_speed[1] < -1000) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Clock speed %.1f,%.1f ppm out of range! Plese use range between +-1000 ppm!\n", clock_speed[0], clock_speed[1]);
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Clock speed %.1f,%.1f ppm out of range! Plese use range between +-1000 ppm!\n", clock_speed[0], clock_speed[1]);
 		return -EINVAL;
 	}
-	PDEBUG(DDSP, DEBUG_INFO, "Using clock speed of %.1f ppm (RX) and %.1f ppm (TX) to correct sound card's clock.\n", clock_speed[0], clock_speed[1]);
+	PDEBUG_CHAN(DDSP, DEBUG_INFO, "Using clock speed of %.1f ppm (RX) and %.1f ppm (TX) to correct sound card's clock.\n", clock_speed[0], clock_speed[1]);
 
 	cnetz->fsk_bitduration = (double)cnetz->sender.samplerate / ((double)BITRATE / (1.0 + clock_speed[1] / 1000000.0));
 	cnetz->fsk_tx_bitstep = 1.0 / cnetz->fsk_bitduration;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Use %.4f samples for one bit duration @ %d.\n", cnetz->fsk_bitduration, cnetz->sender.samplerate);
+	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Use %.4f samples for one bit duration @ %d.\n", cnetz->fsk_bitduration, cnetz->sender.samplerate);
 
 	size = cnetz->fsk_bitduration * (double)BLOCK_BITS * 16.0; /* 16 blocks for distributed frames */
 	cnetz->fsk_tx_buffer_size = size * 1.1; /* more to compensate clock speed */
 	cnetz->fsk_tx_buffer = calloc(sizeof(sample_t), cnetz->fsk_tx_buffer_size);
 	if (!cnetz->fsk_tx_buffer) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -146,7 +146,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	/* create speech buffer */
 	cnetz->dsp_speech_buffer = calloc(sizeof(sample_t), (int)(cnetz->fsk_bitduration * 70.0)); /* more to compensate clock speed. we just need it to fill 62 bits (60 bits, including pause bits). */
 	if (!cnetz->dsp_speech_buffer) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -180,7 +180,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 #ifdef TEST_SCRAMBLE
 	rc = jitter_create(&scrambler_test_jb, cnetz->sender.samplerate / 5);
 	if (rc < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to init jitter buffer for scrambler test!\n");
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Failed to init jitter buffer for scrambler test!\n");
 		exit(0);
 	}
 	scrambler_setup(&scrambler_test_scrambler1, cnetz->sender.samplerate);
@@ -685,11 +685,11 @@ again:
 				if (cnetz->sched_r_m == 0) {
 					/* set last time slot, so we know to which time slot the message from mobile station belongs to */
 					cnetz->sched_last_ts = cnetz->sched_ts;
+					bits = cnetz_encode_telegramm(cnetz);
 					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
-					bits = cnetz_encode_telegramm(cnetz);
 				} else {
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
 					bits = cnetz_encode_telegramm(cnetz);
+					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
 				}
 				fsk_block_encode(cnetz, bits, 1);
 			} else {
@@ -697,14 +697,14 @@ again:
 			}
 			break;
 		case DSP_MODE_SPK_K:
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung'\n");
 			bits = cnetz_encode_telegramm(cnetz);
 			fsk_block_encode(cnetz, bits, 0);
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung' at timeslot %d.%d\n", cnetz->sched_ts, cnetz->sched_r_m * 5);
 			break;
 		case DSP_MODE_SPK_V:
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung'\n");
 			bits = cnetz_encode_telegramm(cnetz);
 			fsk_distributed_encode(cnetz, bits);
+			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung' starting at timeslot %d\n", cnetz->sched_ts);
 			break;
 		case DSP_MODE_OFF:
 		default:

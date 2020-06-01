@@ -126,7 +126,7 @@
  * The encoder generates a precise clocked signal using correction value given
  * by command line. For multichannel, the second sound card's channel (slave) is
  * synced to the first one (master), if calculation of signal phase might drift
- * due to routing errors.
+ * due to rounding errors.
  *
  * The decoder is synced to the phone, whenever it receives a valid frame.
  *
@@ -1169,7 +1169,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		else
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Attachment 'Einbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
 		if (telegramm->erweitertes_frequenzbandbit)
-			PDEBUG(DCNETZ, DEBUG_INFO, " -> Phone support extended frequency band\n");
+			PDEBUG(DCNETZ, DEBUG_INFO, " -> Phone supports extended frequency band\n");
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Attachment from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
@@ -1190,7 +1190,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		else
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received Roaming 'Umbuchen' message from Subscriber '%s' with %s card's security code %d\n", rufnummer, (telegramm->chipkarten_futelg_bit) ? "chip":"magnet", telegramm->sicherungs_code);
 		if (telegramm->erweitertes_frequenzbandbit)
-			PDEBUG(DCNETZ, DEBUG_INFO, " -> Phone support extended frequency band\n");
+			PDEBUG(DCNETZ, DEBUG_INFO, " -> Phone supports extended frequency band\n");
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Roaming from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
