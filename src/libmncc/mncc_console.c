@@ -260,7 +260,8 @@ int console_init(const char *station_id, const char *audiodev, int samplerate, i
 	print_console_text = _print_console_text;
 
 	memset(&console, 0, sizeof(console));
-	strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
+	if (station_id)
+		strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
 	strncpy(console.audiodev, audiodev, sizeof(console.audiodev) - 1);
 	console.samplerate = samplerate;
 	console.latspl = latency * samplerate / 1000;
@@ -442,7 +443,7 @@ dial_after_hangup:
  * returns 1 on exit (ctrl+c) */
 void process_console(int c)
 {
-	if (!console.loopback)
+	if (!console.loopback && console.num_digits)
 		process_ui(c);
 
 	if (!console.sound)
