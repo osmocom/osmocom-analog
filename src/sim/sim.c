@@ -320,6 +320,9 @@ void decode_directory(uint8_t *data, char *number, char *name)
 				digit = (data[i >> 1] & 0xf) + '0';
 			if (digit <= '9')
 				number[j++] = digit;
+			/* stop if we have digit=0xf (end of line) */
+			if (digit == 0xf)
+				break;
 		}
 		number[j] = '\0';
 	}
@@ -684,7 +687,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 		char number[17];
 
 		decode_directory(data + 1, number, NULL);
-		/* if number is cleared, we ignore that */
+		/* if number is cleared (no digits), we ignore that */
 		if (number[0] == '\0')
 			goto respond;
 		switch (rufn) {
