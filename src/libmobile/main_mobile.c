@@ -53,6 +53,7 @@ int num_kanal = 0;
 const char *kanal[MAX_SENDER];
 int num_audiodev = 0;
 const char *audiodev[MAX_SENDER] = { "hw:0,0" };
+int allow_sdr = 1;
 int use_sdr = 0;
 static const char *call_audiodev = "";
 int samplerate = 48000;
@@ -158,11 +159,13 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("    --read-tx-wave <file>\n");
 	printf("        Replace transmitted audio by given wave file.\n");
 #ifdef HAVE_SDR
+    if (allow_sdr) {
 	printf("    --limesdr\n");
 	printf("        Auto-select several required options for LimeSDR\n");
 	printf("    --limesdr-mini\n");
 	printf("        Auto-select several required options for LimeSDR Mini\n");
 	sdr_config_print_help();
+    }
 #endif
 	printf("\nNetwork specific options:\n");
 }
@@ -176,7 +179,9 @@ void main_mobile_print_hotkeys(void)
 	printf("Press 'c' key to toggle display of channel status.\n");
 	printf("Press 'm' key to toggle display of measurement value.\n");
 #ifdef HAVE_SDR
+    if (allow_sdr) {
 	sdr_config_print_hotkeys();
+    }
 #endif
 }
 
@@ -332,7 +337,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		break;
 #ifdef HAVE_SDR
 	case OPT_LIMESDR:
-		{
+		if (allow_sdr) {
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
 				"--sdr-rx-antenna", "LNAL",
@@ -345,8 +350,9 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
 			return options_command_line(argc_lime, argv_lime, main_mobile_handle_options);
 		}
+		break;
 	case OPT_LIMESDR_MINI:
-		{
+		if (allow_sdr) {
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
 				"--sdr-rx-antenna", "LNAW",
@@ -360,13 +366,14 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
 			return options_command_line(argc_lime, argv_lime, main_mobile_handle_options);
 		}
+		break;
 #endif
 	default:
 #ifdef HAVE_SDR
-		return sdr_config_handle_options(short_option, argi, argv);
-#else
-		return -EINVAL;
+		if (allow_sdr)
+			return sdr_config_handle_options(short_option, argi, argv);
 #endif
+		return -EINVAL;
 	}
 
 	return 1;

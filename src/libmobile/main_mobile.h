@@ -4,6 +4,7 @@ extern const char *kanal[];
 extern int swap_links;
 extern int num_audiodev;
 extern const char *audiodev[];
+extern int allow_sdr;
 extern int use_sdr;
 extern int samplerate;
 extern int interval;
