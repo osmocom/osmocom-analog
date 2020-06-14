@@ -64,6 +64,7 @@ int uses_emphasis = 1;
 int do_pre_emphasis = 0;
 int do_de_emphasis = 0;
 double rx_gain = 1.0;
+double tx_gain = 1.0;
 static int echo_test = 0;
 static int use_mncc_sock = 0;
 static int use_mncc_cross = 0;
@@ -121,10 +122,12 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Enable de-emphasis, if you directly connect to the discriminator of\n");
 	printf("        the receiver. (No de-emphasis done by the receiver.)\n");
     }
-	printf(" -g --rx-gain <dB>\n");
-	printf("        Raise receiver RX level by given gain in dB. This is useful if input\n");
-	printf("        level of the sound device is too low, even after setting maximum level\n");
-	printf("        with the mixer settings. (Works with sound card only.)\n");
+	printf("    --rx-gain <dB>\n");
+	printf("        Raise/lower receiver's RX level by given gain in dB.\n");
+	printf("        (Works with sound card only.)\n");
+	printf("    --tx-gain <dB>\n");
+	printf("        Raise/lower transmitters's RX level by given gain in dB.\n");
+	printf("        (Works with sound card only.)\n");
 	printf(" -e --echo-test\n");
 	printf("        Use echo test, to send back audio from mobile phone's microphone to\n");
 	printf("        the speaker. (German: 'Blasprobe').\n");
@@ -186,13 +189,15 @@ void main_mobile_print_hotkeys(void)
 }
 
 #define	OPT_CHANNEL		1000
-#define	OPT_WRITE_RX_WAVE	1001
-#define	OPT_WRITE_TX_WAVE	1002
-#define	OPT_READ_RX_WAVE	1003
-#define	OPT_READ_TX_WAVE	1004
-#define	OPT_CALL_SAMPLERATE	1005
-#define	OPT_MNCC_NAME		1006
-#define	OPT_FAST_MATH		1007
+#define	OPT_RX_GAIN		1001
+#define	OPT_TX_GAIN		1002
+#define	OPT_WRITE_RX_WAVE	1003
+#define	OPT_WRITE_TX_WAVE	1004
+#define	OPT_READ_RX_WAVE	1005
+#define	OPT_READ_TX_WAVE	1006
+#define	OPT_CALL_SAMPLERATE	1007
+#define	OPT_MNCC_NAME		1008
+#define	OPT_FAST_MATH		1009
 #define	OPT_LIMESDR		1100
 #define	OPT_LIMESDR_MINI	1101
 
@@ -208,7 +213,8 @@ void main_mobile_add_options(void)
 	option_add('b', "buffer", 1);
 	option_add('p', "pre-emphasis", 0);
 	option_add('d', "de-emphasis", 0);
-	option_add('g', "rx-gain", 1);
+	option_add(OPT_RX_GAIN, "rx-gain", 1);
+	option_add(OPT_TX_GAIN, "tx-gain", 1);
 	option_add('e', "echo-test", 0);
 	option_add('x', "mncc-cross", 0);
 	option_add('m', "mncc-sock", 0);
@@ -285,13 +291,13 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 			goto no_emph;
 		do_de_emphasis = 1;
 		break;
-	case 'g':
+	case OPT_RX_GAIN:
 		gain_db = atof(argv[argi]);
-		if (gain_db < 0.0) {
-			fprintf(stderr, "Given gain is below 0. To reduce RX signal, use sound card's mixer (or resistor net)!\n");
-			return -EINVAL;
-		}
 		rx_gain = pow(10, gain_db / 20.0);
+		break;
+	case OPT_TX_GAIN:
+		gain_db = atof(argv[argi]);
+		tx_gain = pow(10, gain_db / 20.0);
 		break;
 	case 'e':
 		echo_test = 1;

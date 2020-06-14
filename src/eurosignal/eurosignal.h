@@ -82,7 +82,7 @@ double euro_kanal2freq(const char *kanal, int fm);
 void euro_list_channels(void);
 int euro_init(void);
 void euro_exit(void);
-int euro_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int fm, int tx, int rx, int repeat, int degraded, int random, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
+int euro_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int fm, int tx, int rx, int repeat, int degraded, int random, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
 void euro_destroy(sender_t *sender);
 void euro_get_id(euro_t *euro, char *id);
 void euro_receive_id(euro_t *euro, char *id);

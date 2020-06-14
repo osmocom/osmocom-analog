@@ -277,7 +277,7 @@ static void imts_paging(imts_t *imts, const char *dial_string, int loopback);
 static void imts_detector_test(imts_t *imts, double length_1, double length_2, double length_3);
 
 /* Create transceiver instance and link to a list. */
-int imts_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int ptt, int station_length, double fast_seize, enum mode mode, const char *operator, double length_1, double length_2, double length_3)
+int imts_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int ptt, int station_length, double fast_seize, enum mode mode, const char *operator, double length_1, double length_2, double length_3)
 {
 	imts_t *imts;
 	int rc;
@@ -320,7 +320,7 @@ int imts_create(const char *kanal, const char *audiodev, int use_sdr, int sample
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by imts code, not by common sender code */
-	rc = sender_create(&imts->sender, kanal, imts_channel2freq(kanal, 0), imts_channel2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&imts->sender, kanal, imts_channel2freq(kanal, 0), imts_channel2freq(kanal, 1), audiodev, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DIMTS, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

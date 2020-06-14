@@ -240,7 +240,7 @@ void euro_exit(void)
 static void call_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int euro_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int fm, int tx, int rx, int repeat, int degraded, int random, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
+int euro_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int fm, int tx, int rx, int repeat, int degraded, int random, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	euro_t *euro;
 	int rc;
@@ -264,7 +264,7 @@ int euro_create(const char *kanal, const char *audiodev, int use_sdr, int sample
 	PDEBUG(DEURO, DEBUG_DEBUG, "Creating 'Eurosignal' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&euro->sender, kanal, euro_kanal2freq(kanal, fm), euro_kanal2freq(kanal, fm), audiodev, use_sdr, samplerate, rx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&euro->sender, kanal, euro_kanal2freq(kanal, fm), euro_kanal2freq(kanal, fm), audiodev, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DEURO, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

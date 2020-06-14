@@ -38,7 +38,7 @@ int cant_recover = 0;
 int check_channel = 1;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal)
+int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal)
 {
 	sender_t *master, *slave;
 	int rc = 0;
@@ -49,6 +49,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 	strncpy(sender->audiodev, audiodev, sizeof(sender->audiodev) - 1);
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
+	sender->tx_gain = tx_gain;
 	sender->pre_emphasis = pre_emphasis;
 	sender->de_emphasis = de_emphasis;
 	sender->loopback = loopback;
@@ -59,8 +60,10 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 	sender->read_tx_wave = read_tx_wave;
 
 	/* no gain with SDR */
-	if (use_sdr)
+	if (use_sdr) {
 		sender->rx_gain = 1.0;
+		sender->tx_gain = 1.0;
+	}
 
 	if (samplerate < 8000) {
 		PDEBUG(DSENDER, DEBUG_NOTICE, "Given sample rate is below 8 KHz. Please use higher sample rate!\n");
@@ -378,6 +381,9 @@ cant_recover:
 			/* do pre emphasis towards radio */
 			if (inst->pre_emphasis)
 				pre_emphasis(&inst->estate, samples[i], count);
+			/* tx gain */
+			if (inst->tx_gain != 1.0)
+				gain_samples(samples[i], count, inst->tx_gain);
 			/* normal level to frequency deviation of speech level */
 			gain_samples(samples[i], count, inst->speech_deviation);
 			/* set paging signal */
