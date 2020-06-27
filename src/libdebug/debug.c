@@ -125,7 +125,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 		s -= strlen(buffer);
 	}
 
-	if (!(debug_mask & (1 << cat)))
+	if (!(debug_mask & ((uint64_t)1 << cat)))
 		return;
 
 	va_start(args, fmt);
@@ -229,7 +229,7 @@ int parse_debug_opt(const char *optarg)
 			fprintf(stderr, "Given debug category '%s' unknown, use 'list' to show available categories!\n", p);
 			return -EINVAL;
 		}
-		debug_mask |= (1 << i);
+		debug_mask |= ((uint64_t)1 << i);
 	}
 
 	return 0;
