@@ -631,7 +631,8 @@ void mncc_down(uint8_t *buf, int length)
 		if (mncc->msg_type == MNCC_SETUP_REQ)
 			process = create_process(callref, PROCESS_SETUP_RT);
 		else {
-			if (mncc->msg_type != MNCC_REL_REQ)
+			/* release collisions and audio packet are not forbidden */
+			if (mncc->msg_type != MNCC_REL_REQ && mncc->msg_type != ANALOG_8000HZ)
 				PDEBUG(DCALL, DEBUG_ERROR, "No process!\n");
 			return;
 		}
