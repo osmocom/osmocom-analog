@@ -88,9 +88,9 @@ typedef struct sender {
 	dispmeas_t		dispmeas;		/* display measurements */
 } sender_t;
 
-/* list of all senders */
 extern sender_t *sender_head;
 extern int cant_recover;
+extern int check_channel;
 
 int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal);
 void sender_destroy(sender_t *sender);

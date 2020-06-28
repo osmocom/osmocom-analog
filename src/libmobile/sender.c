@@ -35,6 +35,7 @@
 sender_t *sender_head = NULL;
 static sender_t **sender_tailp = &sender_head;
 int cant_recover = 0;
+int check_channel = 1;
 
 /* Init transceiver instance and link to list of transceivers. */
 int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal)
@@ -80,7 +81,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 			rc = -EIO;
 			goto error;
 		}
-		if (abs(atoi(master->kanal) - atoi(kanal)) == 1) {
+		if (check_channel && abs(atoi(master->kanal) - atoi(kanal)) == 1) {
 			PDEBUG(DSENDER, DEBUG_NOTICE, "------------------------------------------------------------------------\n");
 			PDEBUG(DSENDER, DEBUG_NOTICE, "NOTE: Channel %s is next to channel %s. This will cause interferences.\n", kanal, master->kanal);
 			PDEBUG(DSENDER, DEBUG_NOTICE, "Please use at least one channel distance to avoid that.\n");
