@@ -203,20 +203,20 @@ void decode_ebdt(uint8_t *data, char *futln, char *sicherung, char *karten, char
 		my_ultostr(futln++, data[0] & 0x1f, 1);
 		if (*futln)
 			futln++;
-		my_ultostr(futln, (data[1] << 8) | data[2], 5);
+		my_ultostr(futln, ((uint16_t)data[1] << 8) | (uint16_t)data[2], 5);
 	}
 
 	if (sicherung)
-		my_ultostr(sicherung, (data[3] << 8) | data[4], 1);
+		my_ultostr(sicherung, ((uint16_t)data[3] << 8) | (uint16_t)data[4], 1);
 
 	if (karten)
 		my_ultostr(karten, data[5] >> 5, 1);
 
 	if (sonder)
-		my_ultostr(sonder, ((data[5] & 0x1f) << 8) | data[6], 1);
+		my_ultostr(sonder, ((uint16_t)(data[5] & 0x1f) << 8) | (uint16_t)data[6], 1);
 
 	if (wartung)
-		my_ultostr(wartung, (data[7] << 8) | data[8], 1);
+		my_ultostr(wartung, ((uint16_t)data[7] << 8) | (uint16_t)data[8], 1);
 }
 
 /* get size of phone directory (including allocation map) */
