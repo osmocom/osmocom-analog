@@ -112,6 +112,8 @@ typedef struct telegramm {
 	uint8_t erweitertes_frequenzbandbit;
 	uint8_t reduzierungsfaktor;
 	uint64_t illegaler_opcode;
+	uint8_t bahn_ms;
+	uint8_t bahn_bs;
 } telegramm_t;
 
 int init_telegramm(void);

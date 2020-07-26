@@ -46,7 +46,7 @@ static const char *param_ja[] = {
 static const char *param_betriebsart[] = {
 	"Sprache klar",
 	"Sprache invertiert",
-	"Illegaler Parameter 2",
+	"Datenbetrieb",
 	"Illegaler Parameter 3",
 };
 
@@ -260,7 +260,7 @@ static struct definition_parameter {
 	{ 'H',"OgK-Vorschlag",				10, param_frequenz },
 	{ 'I',"FuZ-Nationalitaet",			 3, NULL },
 	{ 'J',"Sendeleistungsanpassung",		 1, param_anpassen },
-	{ 'K',"Frequenz-Nr.",				11, param_frequenz },
+	{ 'K',"Frequenz-Nr.",				 0, param_frequenz }, /* length 10 or 11 */
 	{ 'L',"Art der Signalisierung im OgK",		 1, param_signalisierung },
 	{ 'M',"OgK-Verkehrsanteil",			 5, param_verkehrsanteil },
 	{ 'N',"FuTln-Nationalitaet",			 3, NULL },
@@ -274,6 +274,7 @@ static struct definition_parameter {
 	{ 'V',"Sicherungs-Code",			16, NULL },
 	{ 'W',"WS-Kennung",				 2, param_wskennung },
 	{ 'X',"Wahlziffer beliebig 16 Ziffern",		64, NULL },
+	{ 'Y',"Bahn-MS",				 1, param_ja },
 	{ 'Z',"Zeitschlitz-Nr.",			 5, NULL },
 	{ 'a',"Grenzert fuer Ausloesen",		 4, param_ausloesen },
 	{ 'b',"Chipkarten-FuTelG-Bit",			 1, param_chipkarte },
@@ -298,6 +299,7 @@ static struct definition_parameter {
 	{ 'u',"Grenzwert fuer Umschalten",		 4, param_ausloesen },
 	{ 'v',"Vermittlungtechnische Sperren",		 2, param_sperren },
 	{ 'w',"Erweitertes Frequenzbandbit",		 1, NULL },
+	{ 'x',"Bahn-BS",				 1, param_ja },
 	{ 'y',"Reduzierungsfaktor",			 2, param_reduzierung },
 	{ '_',"Illegaler Opcode",			64, NULL },
 	{ 0  ,"",					 0, NULL },
@@ -347,12 +349,12 @@ static struct definition_opcode {
 	{ "------dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VH(K)",	BLOCK_K,"Verbindung halten" },
 	{ "------dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "RTAQ(K)",	BLOCK_K,"Quittung Rufton anschalten" },
 	{ "------dJBB------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AH(K)",	BLOCK_K,"Abhebe-Signal" },
-	{ "-----wdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VH(V)",	BLOCK_V,"Verbindung halten" },
+	{ "----YwdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "VH(V)",	BLOCK_V,"Verbindung halten" },
 	{ "------dJ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AT(K)",	BLOCK_K,"Ausloesen durch Funktelefonteilnehmer" },
 	{ "------dJBBC-------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AT(V)",	BLOCK_V,"Ausloesen durch Funktelefonteilnehmer" },
 	{ "------dJBB------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSQ(K)",	BLOCK_K,"Durchschalten Quittung" },
-	{ "-----wdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAI(V)",	BLOCK_V,"Umschaltantrag intern" },
-	{ "-----wdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAE(V)",	BLOCK_V,"Umschaltantrag extern" },
+	{ "----YwdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAI(V)",	BLOCK_V,"Umschaltantrag intern" },
+	{ "----YwdJBBCt----eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USAE(V)",	BLOCK_V,"Umschaltantrag extern" },
 	{ "------dJBB--------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USTLN(K)",	BLOCK_K,"Umschalten Funktelefonteilnehmer" },
 	{ "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo", NULL, "ZFZQ(K)",	BLOCK_K,"Zufallszahlquittung" },
 	{ "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", NULL, "AP(K)",	BLOCK_K,"Autorisierungsparameter" },
@@ -366,7 +368,7 @@ static struct definition_opcode {
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "UBQ(R)",	BLOCK_R,"Umbuchquittung" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WSK(R)",	BLOCK_R,"Warteschglange kommend" },
 	{ "PP-MMMMMDDDDEEEE------HHHHHHHHHHFFFFFFFF------------------------", NULL, "MLR(M)",	BLOCK_M,"Melde-Leer-Ruf" },
-	{ "PPdZZZZZffflvvWW------yyIIIAAAAAFFFFFFFFkkgprrrrmmmmnnnnuuuuaaaa", NULL, "LR(R)",	BLOCK_R,"Leer-Ruf" },
+	{ "PPdZZZZZffflvvWW-----xyyIIIAAAAAFFFFFFFFkkgprrrrmmmmnnnnuuuuaaaa", NULL, "LR(R)",	BLOCK_R,"Leer-Ruf" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "ATQ(R)",	BLOCK_R,"Quittung fuer Ausloesen des FuTelG im OgK-Betrieb" },
 	{ "PPdZZZZZ----------------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "SAR(R)",	BLOCK_R,"Sperraufruf" },
 	{ "PP-MMMMMDDDDEEEE------HHHHHHHHHHFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "WAF(M)",	BLOCK_M,"Wahlaufforderung" },
@@ -385,7 +387,7 @@ static struct definition_opcode {
 	{ "PP----dJ------cc--------IIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "AF(V)",	BLOCK_V,"Ausloesen durch FuFSt in verteilter Signalisierung" },
 	{ "PP----dJ--------eeeeeeeeIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSB(K)",	BLOCK_K,"Durchschaltung" },
 	{ "PP----dJ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "DSBI(V)",	BLOCK_V,"Umschaltbefehl intern (neuer SpK in der gleichen FuZ)" },
-	{ "PP----dJ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USF(K)",	BLOCK_K,"Umschalten FuFst" },
+	{ "PPuuuudJ-xnnnnKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USF(K)",	BLOCK_K,"Umschalten FuFst" },
 	{ "PP----dJ-----KKKKKKKKKKKIIIAAAAAFFFFFFFFNNNUUUUUTTTTTTTTTTTTTTTT", NULL, "USBE(V)",	BLOCK_V,"Umschaltbefehl extern (neuer SpK in einer anderen Funkzelle)" },
 	{ "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo", NULL, "ZFZ(K)",	BLOCK_K,"Zufallszahl" },
 	{ "________________________________________________________________", NULL, "opcode 61",BLOCK_I,"Illegaler Opcode" },
@@ -422,7 +424,7 @@ int init_telegramm(void)
 							printf("Message #%d has invalid digit '%c'\n", i, last_bit);
 							return -1;
 						}
-						if (parameter->bits != count_bits) {
+						if (parameter->bits && parameter->bits != count_bits) {
 							printf("Message #%d has digit '%c' with %d bits, but parameter has %d bits\n", i, last_bit, count_bits, parameter->bits);
 							return -1;
 						}
@@ -718,6 +720,9 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 				abort();
 			}
 			break;
+		case 'Y':
+			value = telegramm->bahn_ms;
+			break;
 		case 'Z':
 			value = telegramm->zeitschlitz_nr;
 			break;
@@ -789,6 +794,9 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 			break;
 		case 'w':
 			value = telegramm->erweitertes_frequenzbandbit;
+			break;
+		case 'x':
+			value = telegramm->bahn_bs;
 			break;
 		case 'y':
 			value = telegramm->reduzierungsfaktor;
@@ -927,6 +935,9 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 		case 'X':
 			decode_dialstring(telegramm->wahlziffern, value);
 			break;
+		case 'Y':
+			telegramm->bahn_ms = value;
+			break;
 		case 'Z':
 			telegramm->zeitschlitz_nr = value;
 			break;
@@ -998,6 +1009,9 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 			break;
 		case 'w':
 			telegramm->erweitertes_frequenzbandbit = value;
+			break;
+		case 'x':
+			telegramm->bahn_bs = value;
 			break;
 		case 'y':
 			telegramm->reduzierungsfaktor = value;
