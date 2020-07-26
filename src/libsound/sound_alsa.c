@@ -28,6 +28,9 @@
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;
 	int pchannels, cchannels;
+	int channels;			/* required number of channels */
+	int samplerate;			/* required sample rate */
+	char *audiodev;			/* required device */
 	double spl_deviation;		/* how much deviation is one sample step */
 	double paging_phaseshift;	/* phase to shift every sample */
 	double paging_phase;	 	/* current phase */
@@ -112,9 +115,48 @@ error:
 	return rc;
 }
 
-static int sound_prepare(sound_t *sound)
+static int dev_open(sound_t *sound)
 {
-	int rc;
+	int rc, rc_rec, rc_play;
+
+	rc_play = snd_pcm_open(&sound->phandle, sound->audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	rc_rec = snd_pcm_open(&sound->chandle, sound->audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	if (rc_play < 0 && rc_rec < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s'! (%s)\n", sound->audiodev, snd_strerror(rc_play));
+		PDEBUG(DSOUND, DEBUG_ERROR, "Run 'aplay -l' to get a list of available cards and devices.\n");
+		PDEBUG(DSOUND, DEBUG_ERROR, "Then use 'hw:<card>:<device>' for audio device.\n");
+		return rc_play;
+	}
+	if (rc_play < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_play));
+		return rc_play;
+	}
+	if (rc_rec < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_rec));
+		return rc_rec;
+	}
+
+	rc = set_hw_params(sound->phandle, sound->samplerate, &sound->pchannels);
+	if (rc < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set playback hw params\n");
+		return rc;
+	}
+	if (sound->pchannels < sound->channels) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
+		return rc;
+	}
+	PDEBUG(DSOUND, DEBUG_DEBUG, "Playback with %d channels.\n", sound->pchannels);
+
+	rc = set_hw_params(sound->chandle, sound->samplerate, &sound->cchannels);
+	if (rc < 0) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set capture hw params\n");
+		return rc;
+	}
+	if (sound->cchannels < sound->channels) {
+		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
+		return -EIO;
+	}
+	PDEBUG(DSOUND, DEBUG_DEBUG, "Capture with %d channels.\n", sound->cchannels);
 
 	rc = snd_pcm_prepare(sound->phandle);
 	if (rc < 0) {
@@ -131,10 +173,18 @@ static int sound_prepare(sound_t *sound)
 	return 0;
 }
 
+static void dev_close(sound_t *sound)
+{
+	if (sound->phandle != NULL)
+		snd_pcm_close(sound->phandle);
+	if (sound->chandle != NULL)
+		snd_pcm_close(sound->chandle);
+}
+
 void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int __attribute__((unused)) *am, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) latspl, double max_deviation, double __attribute__((unused)) max_modulation, double __attribute__((unused)) modulation_index)
 {
 	sound_t *sound;
-	int rc, rc_rec, rc_play;
+	int rc;
 
 	if (channels < 1 || channels > 2) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "Cannot use more than two channels with the same sound card!\n");
@@ -147,49 +197,13 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 		return NULL;
 	}
 
+	sound->audiodev = strdup(audiodev);
+	sound->channels = channels;
+	sound->samplerate = samplerate;
 	sound->spl_deviation = max_deviation / 32767.0;
 	sound->paging_phaseshift = 1.0 / ((double)samplerate / 1000.0);
 
-	rc_play = snd_pcm_open(&sound->phandle, audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	rc_rec = snd_pcm_open(&sound->chandle, audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	if (rc_play < 0 && rc_rec < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s'! (%s)\n", audiodev, snd_strerror(rc_play));
-		PDEBUG(DSOUND, DEBUG_ERROR, "Run 'aplay -l' to get a list of available cards and devices.\n");
-		PDEBUG(DSOUND, DEBUG_ERROR, "Then use 'hw:<card>:<device>' for audio device.\n");
-		goto error;
-	}
-	if (rc_play < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports both direction audio.\n", audiodev, snd_strerror(rc_play));
-		goto error;
-	}
-	if (rc_rec < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports both direction audio.\n", audiodev, snd_strerror(rc_rec));
-		goto error;
-	}
-
-	rc = set_hw_params(sound->phandle, samplerate, &sound->pchannels);
-	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set playback hw params\n");
-		goto error;
-	}
-	if (sound->pchannels < channels) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
-		goto error;
-	}
-	PDEBUG(DSOUND, DEBUG_DEBUG, "Playback with %d channels.\n", sound->pchannels);
-
-	rc = set_hw_params(sound->chandle, samplerate, &sound->cchannels);
-	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set capture hw params\n");
-		goto error;
-	}
-	if (sound->cchannels < channels) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
-		goto error;
-	}
-	PDEBUG(DSOUND, DEBUG_DEBUG, "Capture with %d channels.\n", sound->cchannels);
-
-	rc = sound_prepare(sound);
+	rc = dev_open(sound);
 	if (rc < 0)
 		goto error;
 
@@ -228,10 +242,8 @@ void sound_close(void *inst)
 {
 	sound_t *sound = (sound_t *)inst;
 
-	if (sound->phandle != NULL)
-		snd_pcm_close(sound->phandle);
-	if (sound->chandle != NULL)
-		snd_pcm_close(sound->chandle);
+	dev_close(sound);
+	free(sound->audiodev);
 	free(sound);
 }
 
@@ -344,8 +356,12 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 	if (rc < 0) {
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE) {
-			sound_prepare(sound);
+			dev_close(sound);
+			rc = dev_open(sound);
+			if (rc < 0)
+				return rc;
 			sound_start(sound);
+			return -EPIPE; /* indicate what happened */
 		}
 		return rc;
 	}
@@ -390,8 +406,12 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 		PDEBUG(DSOUND, DEBUG_ERROR, "failed to read audio from interface (%s)\n", snd_strerror(rc));
 		/* recover read */
 		if (rc == -EPIPE) {
-			sound_prepare(sound);
+			dev_close(sound);
+			rc = dev_open(sound);
+			if (rc < 0)
+				return rc;
 			sound_start(sound);
+			return -EPIPE; /* indicate what happened */
 		}
 		return rc;
 	}
@@ -464,8 +484,12 @@ int sound_get_tosend(void *inst, int latspl)
 		else
 			PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE) {
-			sound_prepare(sound);
+			dev_close(sound);
+			rc = dev_open(sound);
+			if (rc < 0)
+				return rc;
 			sound_start(sound);
+			return -EPIPE; /* indicate what happened */
 		}
 		return rc;
 	}
