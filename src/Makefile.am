@@ -28,7 +28,8 @@ SUBDIRS = \
 	libclipper \
 	libserial \
 	libv27 \
-	libmtp
+	libmtp \
+	libosmocc
 
 if HAVE_ALSA
 SUBDIRS += \

@@ -56,7 +56,7 @@ struct debug_cat {
 	{ "eurosignal", "\033[1;34m" },
 	{ "frame", "\033[0;36m" },
 	{ "call", "\033[0;37m" },
-	{ "mncc", "\033[1;32m" },
+	{ "cc", "\033[1;32m" },
 	{ "database", "\033[0;33m" },
 	{ "transaction", "\033[0;32m" },
 	{ "dms", "\033[0;33m" },
