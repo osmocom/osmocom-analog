@@ -33,9 +33,8 @@
 #include "sender.h"
 #include "../libtimer/timer.h"
 #include "call.h"
-#include "../libmncc/mncc_console.h"
-#include "../libmncc/mncc_sock.h"
-#include "../libmncc/mncc_cross.h"
+#include "../libosmocc/endpoint.h"
+#include "console.h"
 #ifdef HAVE_SDR
 #include "../libsdr/sdr.h"
 #include "../libsdr/sdr_config.h"
@@ -66,9 +65,11 @@ int do_de_emphasis = 0;
 double rx_gain = 1.0;
 double tx_gain = 1.0;
 static int echo_test = 0;
-static int use_mncc_sock = 0;
-static int use_mncc_cross = 0;
-const char *mncc_name = "";
+static int use_osmocc_cross = 0;
+static int use_osmocc_sock = 0;
+#define MAX_CC_ARGS 1024
+static int cc_argc = 0;
+static const char *cc_argv[MAX_CC_ARGS];
 int send_patterns = 1;
 static int release_on_disconnect = 1;
 int loopback = 0;
@@ -82,6 +83,8 @@ const char *console_digits = "0123456789";
 
 void main_mobile_init(void)
 {
+	cc_argv[cc_argc++] = strdup("remote auto");
+	
 	got_init = 1;
 #ifdef HAVE_SDR
 	sdr_config_init(DEFAULT_LO_OFFSET);
@@ -135,15 +138,14 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
 	printf("    --call-samplerate <rate>\n");
 	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
-	printf(" -x --mncc-cross\n");
+	printf(" -x --osmocc-cross\n");
 	printf("        Enable built-in call forwarding between mobiles. Be sure to have\n");
 	printf("        at least one control channel and two voice channels. Alternatively\n");
 	printf("        use one combined control+voice channel and one voice channels.\n");
-	printf(" -m --mncc-sock\n");
-	printf("        Disable built-in call contol and offer socket (to LCR)\n");
-	printf("    --mncc-name <name>\n");
-	printf("        '/tmp/bsc_mncc' is used by default, give name to change socket to\n");
-	printf("        '/tmp/bsc_mncc_<name>'. (Useful to run multiple networks.)\n");
+	printf(" -o --osmocc-sock\n");
+	printf("        Disable built-in call contol and offer socket\n");
+	printf("    --cc \"<osmo-cc arg>\" [--cc ...]\n");
+	printf("        Pass arguments to Osmo-CC endpoint. Use '-cc help' for description.\n");
 	printf(" -t --tones 0 | 1\n");
 	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
 	printf("        network (default = '%d')\n", send_patterns);
@@ -191,12 +193,12 @@ void main_mobile_print_hotkeys(void)
 #define	OPT_CHANNEL		1000
 #define	OPT_RX_GAIN		1001
 #define	OPT_TX_GAIN		1002
-#define	OPT_WRITE_RX_WAVE	1003
-#define	OPT_WRITE_TX_WAVE	1004
-#define	OPT_READ_RX_WAVE	1005
-#define	OPT_READ_TX_WAVE	1006
-#define	OPT_CALL_SAMPLERATE	1007
-#define	OPT_MNCC_NAME		1008
+#define	OPT_OSMO_CC		1003
+#define	OPT_WRITE_RX_WAVE	1004
+#define	OPT_WRITE_TX_WAVE	1005
+#define	OPT_READ_RX_WAVE	1006
+#define	OPT_READ_TX_WAVE	1007
+#define	OPT_CALL_SAMPLERATE	1008
 #define	OPT_FAST_MATH		1009
 #define	OPT_LIMESDR		1100
 #define	OPT_LIMESDR_MINI	1101
@@ -204,7 +206,7 @@ void main_mobile_print_hotkeys(void)
 void main_mobile_add_options(void)
 {
 	option_add('h', "help", 0);
-	option_add('v', "debug", 1);
+	option_add('v', "verbose", 1);
 	option_add('k', "kanal", 1);
 	option_add(OPT_CHANNEL, "channel", 1);
 	option_add('a', "audio-device", 1);
@@ -216,9 +218,9 @@ void main_mobile_add_options(void)
 	option_add(OPT_RX_GAIN, "rx-gain", 1);
 	option_add(OPT_TX_GAIN, "tx-gain", 1);
 	option_add('e', "echo-test", 0);
-	option_add('x', "mncc-cross", 0);
-	option_add('m', "mncc-sock", 0);
-	option_add(OPT_MNCC_NAME, "mncc-name", 1);
+	option_add('x', "osmocc-cross", 0);
+	option_add('o', "osmocc-sock", 0);
+	option_add(OPT_OSMO_CC, "cc", 1);
 	option_add('c', "call-device", 1);
 	option_add(OPT_CALL_SAMPLERATE, "call-samplerate", 1);
 	option_add('t', "tones", 1);
@@ -303,13 +305,21 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		echo_test = 1;
 		break;
 	case 'x':
-		use_mncc_cross = 1;
+		use_osmocc_cross = 1;
 		break;
-	case 'm':
-		use_mncc_sock = 1;
+	case 'o':
+		use_osmocc_sock = 1;
 		break;
-	case OPT_MNCC_NAME:
-		mncc_name = strdup(argv[argi]);
+	case OPT_OSMO_CC:
+		if (!strcasecmp(argv[argi], "help")) {
+			osmo_cc_help();
+			return 0;
+		}
+		if (cc_argc == MAX_CC_ARGS) {
+			fprintf(stderr, "Too many osmo-cc args!\n");
+			break;
+		}
+		cc_argv[cc_argc++] = strdup(argv[argi]);
 		break;
 	case 'c':
 		call_audiodev = strdup(argv[argi]);
@@ -420,7 +430,7 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits)
+void main_mobile(const char *name, int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits)
 {
 	int latspl;
 	sender_t *sender;
@@ -437,61 +447,42 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 	/* latency of send buffer in samples */
 	latspl = samplerate * latency / 1000;
 
-	/* check MNCC support */
-	if (use_mncc_cross && num_kanal == 1) {
+	/* check OSMO-CC support */
+	if (use_osmocc_cross && num_kanal == 1) {
 		fprintf(stderr, "You selected built-in call forwarding, but only channel is used. Does this makes sense?\n");
 		return;
 	}
-	if (use_mncc_sock && use_mncc_cross) {
-		fprintf(stderr, "You selected MNCC socket interface and built-in call forwarding, but only one can be selected.\n");
+	if (use_osmocc_sock && use_osmocc_cross) {
+		fprintf(stderr, "You selected OSMO-CC socket interface and built-in call forwarding, but only one can be selected.\n");
 		return;
 	}
 	if (echo_test && call_audiodev[0]) {
 		fprintf(stderr, "You selected call device (headset) and echo test, but only one can be selected.\n");
 		return;
 	}
-	if (use_mncc_sock && call_audiodev[0]) {
-		fprintf(stderr, "You selected MNCC socket interface, but it cannot be used with call device (headset).\n");
+	if (use_osmocc_sock && call_audiodev[0]) {
+		fprintf(stderr, "You selected OSMO-CC socket interface, but it cannot be used with call device (headset).\n");
 		return;
 	}
-	if (use_mncc_cross && call_audiodev[0]) {
+	if (use_osmocc_cross && call_audiodev[0]) {
 		fprintf(stderr, "You selected built-in call forwarding, but it cannot be used with call device (headset).\n");
 		return;
 	}
-	if (use_mncc_sock && echo_test) {
-		fprintf(stderr, "You selected MNCC socket interface, but it cannot be used with echo test.\n");
+	if (use_osmocc_sock && echo_test) {
+		fprintf(stderr, "You selected OSMO-CC socket interface, but it cannot be used with echo test.\n");
 		return;
 	}
-	if (use_mncc_cross && echo_test) {
+	if (use_osmocc_cross && echo_test) {
 		fprintf(stderr, "You selected built-in call forwarding, but it cannot be used with echo test.\n");
 		return;
 	}
 
-	/* init mncc */
-	if (use_mncc_sock) {
-		char mncc_sock_name[64];
-		if (mncc_name[0]) {
-			snprintf(mncc_sock_name, sizeof(mncc_sock_name), "/tmp/bsc_mncc_%s", mncc_name);
-			mncc_sock_name[sizeof(mncc_sock_name) - 1] = '\0';
-		} else
-			strcpy(mncc_sock_name, "/tmp/bsc_mncc");
-		rc = mncc_sock_init(mncc_sock_name);
-		if (rc < 0) {
-			fprintf(stderr, "Failed to setup MNCC socket. Quitting!\n");
-			return;
-		}
-	} else if (use_mncc_cross) {
-		rc = mncc_cross_init();
-		if (rc < 0) {
-			fprintf(stderr, "Failed to setup MNCC crossing process. Quitting!\n");
-			return;
-		}
-	} else {
+	/* init OSMO-CC */
+	if (!use_osmocc_sock)
 		console_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, echo_test, console_digits);
-	}
 
 	/* init call control instance */
-	rc = call_init((use_mncc_sock) ? send_patterns : 0, release_on_disconnect);
+	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		return;
@@ -558,7 +549,7 @@ void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), 
 		/* process timers */
 		process_timer();
 
-		/* process audio for mncc call instances */
+		/* process audio for call instances */
 		now = get_time();
 		if (now - last_time_call >= 0.1)
 			last_time_call = now;
@@ -638,11 +629,9 @@ next_char:
 		}
 
 		/* process call control */
-		if (use_mncc_sock)
-			mncc_sock_handle();
-		else if (use_mncc_cross)
-			mncc_cross_handle();
-		else
+		call_media_handle();
+		while (call_handle());
+		if (!use_osmocc_sock)
 			process_console(c);
 
 		if (myhandler)
@@ -683,16 +672,11 @@ next_char:
 		sched_setscheduler(0, SCHED_OTHER, &schedp);
 	}
 
-	/* cleanup call control */
-	if (!use_mncc_sock && !use_mncc_cross)
+	//* cleanup call control */
+	call_exit();
+
+	/* cleanup console */
+	if (!use_osmocc_sock)
 		console_cleanup();
-
-	/* close mncc socket */
-	if (use_mncc_sock)
-		mncc_sock_exit();
-
-	/* close mncc forwarding */
-	if (use_mncc_cross)
-		mncc_cross_exit();
 }
 

@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
 
 	r2000_check_channels();
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 9);
+	main_mobile("radiocom2000", &quit, latency, interval, NULL, station_id, 9);
 
 fail:
 	/* destroy transceiver instance */

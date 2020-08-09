@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 		printf("Base station for channel %s ready, please tune transmitter and/or receiver to %.4f MHz\n", kanal[i], euro_kanal2freq(kanal[i], fm) / 1e6);
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 6);
+	main_mobile("eurosignal", &quit, latency, interval, NULL, station_id, 6);
 
 fail:
 	/* destroy transceiver instance */

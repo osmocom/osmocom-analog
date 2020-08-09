@@ -27,7 +27,7 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
 #include "zeitansage.h"
 
 #define db2level(db)	pow(10, (double)(db) / 20.0)

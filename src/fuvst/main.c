@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
 			printf("Using Speech Channel:    SPK-%s\n", kanal[i]);
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 7);
+	main_mobile("fuvst", &quit, latency, interval, NULL, station_id, 7);
 fail:
 
 	/* destroy transceiver instance */

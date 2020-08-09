@@ -28,13 +28,10 @@
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "anetz.h"
 #include "dsp.h"
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* Timers */
 #define PAGING_TO	30	/* Nach dieser Zeit ist der Operator genervt... */
@@ -326,17 +323,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		/* throughconnect speech when calling/answer tone is gone */
 		if (tone != 1) {
 			if (!anetz->callref) {
-				int callref = ++new_callref;
-				int rc;
-
 				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
-				rc = call_up_setup(callref, NULL, anetz->operator);
-				if (rc < 0) {
-					PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), sending release tone.\n", -rc);
-					anetz_release(anetz);
-					break;
-				}
-				anetz->callref = callref;
+				anetz->callref = call_up_setup(NULL, anetz->operator, OSMO_CC_NETWORK_ANETZ_NONE, "");
 			} else {
 				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
 				call_up_answer(anetz->callref, anetz->station_id);

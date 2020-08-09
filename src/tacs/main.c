@@ -11,5 +11,5 @@ int main(int argc, char *argv[])
 	init_tones();
 	init_outoforder();
 
-	return main_amps_tacs(argc, argv);
+	return main_amps_tacs("tacs", argc, argv);
 }

@@ -45,7 +45,8 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
@@ -62,10 +63,6 @@
 #define PAGE_TO2	4.0	/* max time to wait for last paging reply */
 #define ALERT_TO	60.0	/* max time to wait for answer */
 #define RELEASE_TIMER	5.0	/* max time to send release messages */
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* Convert channel number to frequency number of base station.
    Set 'uplink' to 1 to get frequency of mobile station. */
@@ -599,7 +596,7 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *au
 	uint32_t min1;
 	uint16_t min2;
 	amps_number2min("1234567890", &min1, &min2);
-	transaction_t __attribute__((__unused__)) *trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, 0, 0, 0, amps->sender.kanal);
+	transaction_t __attribute__((__unused__)) *trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, 0, 0, 0, 0, amps->sender.kanal);
 //	amps_new_state(amps, STATE_BUSY);
 #endif
 
@@ -820,7 +817,7 @@ _register:
 			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home country: %s\n", country);
 		if (national_number)
 			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home number: %s\n", national_number);
-		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, msg_type, ordq, order, 0);
+		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, esn, msg_type, ordq, order, 0);
 		if (!trans) {
 			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
 			return;
@@ -847,7 +844,7 @@ _register:
 			PDEBUG(DAMPS, DEBUG_NOTICE, "No free channel, rejecting call\n");
 reject:
 			if (!trans) {
-				trans = create_transaction(amps, TRANS_CALL_REJECT, min1, min2, 0, 0, 3, 0);
+				trans = create_transaction(amps, TRANS_CALL_REJECT, min1, min2, esn, 0, 0, 3, 0);
 				if (!trans) {
 					PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
 					return;
@@ -862,7 +859,7 @@ reject:
 			return;
 		}
 		if (!trans) {
-			trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, 0, 0, 0, atoi(vc->sender.kanal));
+			trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, esn, 0, 0, 0, atoi(vc->sender.kanal));
 			strncpy(trans->dialing, dialing, sizeof(trans->dialing) - 1);
 			if (!trans) {
 				PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
@@ -957,7 +954,7 @@ inval:
 	PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
-	trans = create_transaction(amps, TRANS_PAGE, min1, min2, 0, 0, 0, 0);
+	trans = create_transaction(amps, TRANS_PAGE, min1, min2, 0, 0, 0, 0, 0);
 	if (!trans) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
@@ -1120,8 +1117,6 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 {
 	amps_t *amps = trans->amps, *vc;
 	const char *callerid = amps_min2number(trans->min1, trans->min2);
-	int callref = ++new_callref;
-	int rc;
 
 	vc = search_channel(trans->chan);
 	if (!vc) {
@@ -1146,15 +1141,11 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 	amps_flush_other_transactions(vc, trans);
 
 	if (!trans->callref) {
+		char esn_text[16];
+		sprintf(esn_text, "%u", trans->esn);
 		/* setup call */
 		PDEBUG(DAMPS, DEBUG_INFO, "Setup call to network.\n");
-		rc = call_up_setup(callref, callerid, trans->dialing);
-		if (rc < 0) {
-			PDEBUG(DAMPS, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", rc);
-			amps_release(trans, 0);
-			return NULL;
-		}
-		trans->callref = callref;
+		trans->callref = call_up_setup(callerid, trans->dialing, OSMO_CC_NETWORK_AMPS_ESN, esn_text);
 	}
 
 	return vc;

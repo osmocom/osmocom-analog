@@ -23,7 +23,7 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
 #include "amps.h"
 //#include "database.h"
 
@@ -103,7 +103,7 @@ const char *trans_short_state_name(int state)
 }
 
 /* create transaction */
-transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan)
+transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uint32_t min1, uint16_t min2, uint32_t esn, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan)
 {
 	sender_t *sender;
 	transaction_t *trans = NULL;
@@ -140,6 +140,7 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 	trans_new_state(trans, state);
 	trans->min1 = min1;
 	trans->min2 = min2;
+	trans->esn = esn;
 	trans->msg_type = msg_type;
 	trans->ordq = ordq;
 	trans->order = order;

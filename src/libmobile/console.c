@@ -28,16 +28,16 @@
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
 #include "../libdebug/debug.h"
+#include "../libtimer/timer.h"
+#include "../libosmocc/endpoint.h"
+#include "../libosmocc/helper.h"
 #include "testton.h"
-#include "mncc.h"
-#include "mncc_console.h"
+#include "console.h"
 #include "cause.h"
 #include "../libmobile/call.h"
 #ifdef HAVE_ALSA
 #include "../libsound/sound.h"
 #endif
-
-static int new_callref = 0; /* toward mobile */
 
 enum console_state {
 	CONSOLE_IDLE = 0,	/* IDLE */
@@ -46,7 +46,7 @@ enum console_state {
 	CONSOLE_ALERTING_RO,	/* call from radio to console */
 	CONSOLE_ALERTING_RT,	/* call from console to radio */
 	CONSOLE_CONNECT,
-	CONSOLE_DISCONNECT,
+	CONSOLE_DISCONNECT_RO,
 };
 
 static const char *console_state_name[] = {
@@ -56,11 +56,13 @@ static const char *console_state_name[] = {
 	"ALERTING_RO",
 	"ALERTING_RT",
 	"CONNECT",
-	"DISCONNECT",
+	"DISCONNECT_RO",
 };
 
 /* console call instance */
 typedef struct console {
+	osmo_cc_session_t *session;
+	osmo_cc_session_codec_t *codec;
 	uint32_t callref;
 	enum console_state state;
 	int disc_cause;		/* cause that has been sent by transceiver instance for release */
@@ -82,6 +84,16 @@ typedef struct console {
 } console_t;
 
 static console_t console;
+
+extern osmo_cc_endpoint_t *ep;
+
+void encode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len);
+void decode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len);
+
+static struct osmo_cc_helper_audio_codecs codecs[] = {
+	{ "L16", 8000, 1, encode_l16, decode_l16 },
+	{ NULL, 0, 0, NULL, NULL},
+};
 
 /* stream test music */
 int16_t *test_spl = NULL;
@@ -112,118 +124,214 @@ static void get_test_patterns(int16_t *samples, int length)
 
 static void console_new_state(enum console_state state)
 {
-	PDEBUG(DMNCC, DEBUG_DEBUG, "Call state '%s' -> '%s'\n", console_state_name[console.state], console_state_name[state]);
+	PDEBUG(DCC, DEBUG_DEBUG, "Call state '%s' -> '%s'\n", console_state_name[console.state], console_state_name[state]);
 	console.state = state;
 	console.test_audio_pos = 0;
 }
 
-static int console_mncc_up(uint8_t *buf, int length)
+static void free_console(void)
 {
-	struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
+	if (console.session) {
+		osmo_cc_free_session(console.session);
+		console.session = NULL;
+	}
+	console.codec = NULL;
+	console.callref = 0;
+}
 
-	if (mncc->msg_type == ANALOG_8000HZ) {
-		struct gsm_data_frame *data = (struct gsm_data_frame *)buf;
-		int count = 160;
-		sample_t samples[count];
+void up_audio(struct osmo_cc_session_codec *codec, uint16_t __attribute__((unused)) sequence_number, uint32_t __attribute__((unused)) timestamp, uint8_t *data, int len)
+{
+	int count = len / 2;
+	sample_t samples[count];
 
-		/* save audio from transceiver to jitter buffer */
-		if (console.sound) {
-			sample_t up[(int)((double)count * console.srstate.factor + 0.5) + 10];
-			int16_to_samples(samples, (int16_t *)data->data, count);
-			count = samplerate_upsample(&console.srstate, samples, count, up);
-			jitter_save(&console.dejitter, up, count);
-			return 0;
-		}
-		/* if echo test is used, send echo back to mobile */
-		if (console.echo_test) {
-			/* send down reused MNCC */
-			mncc_down(buf, length);
-			return 0;
-		}
-		/* if no sound is used, send test tone to mobile */
-		if (console.state == CONSOLE_CONNECT) {
-			/* send down reused MNCC */
-			get_test_patterns((int16_t *)data->data, count);
-			mncc_down(buf, length);
-			return 0;
-		}
-		return 0;
+	/* save audio from transceiver to jitter buffer */
+	if (console.sound) {
+		sample_t up[(int)((double)count * console.srstate.factor + 0.5) + 10];
+		int16_to_samples(samples, (int16_t *)data, count);
+		count = samplerate_upsample(&console.srstate, samples, count, up);
+		jitter_save(&console.dejitter, up, count);
+		return;
+	}
+	/* if echo test is used, send echo back to mobile */
+	if (console.echo_test) {
+		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 1, count);
+		return;
+	}
+	/* if no sound is used, send test tone to mobile */
+	if (console.state == CONSOLE_CONNECT) {
+		get_test_patterns((int16_t *)data, count);
+		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 1, count);
+		return;
+	}
+}
+
+static void request_setup(int callref, const char *dialing)
+{
+	osmo_cc_msg_t *msg;
+
+	msg = osmo_cc_new_msg(OSMO_CC_MSG_SETUP_REQ);
+	/* called number */
+	if (dialing)
+		osmo_cc_add_ie_called(msg, OSMO_CC_TYPE_UNKNOWN, OSMO_CC_PLAN_TELEPHONY, dialing);
+	/* bearer capability */
+	osmo_cc_add_ie_bearer(msg, OSMO_CC_CODING_ITU_T, OSMO_CC_CAPABILITY_AUDIO, OSMO_CC_MODE_CIRCUIT);
+	/* sdp offer */
+	console.session = osmo_cc_helper_audio_offer(NULL, codecs, up_audio, msg, 1);
+
+	osmo_cc_ul_msg(ep, callref, msg);
+}
+
+static void request_answer(int callref, const char *connectid, const char *sdp)
+{
+	osmo_cc_msg_t *msg;
+
+	msg = osmo_cc_new_msg(OSMO_CC_MSG_SETUP_RSP);
+	/* calling number */
+	if (connectid)
+		osmo_cc_add_ie_calling(msg, OSMO_CC_TYPE_SUBSCRIBER, OSMO_CC_PLAN_TELEPHONY, OSMO_CC_PRESENT_ALLOWED, OSMO_CC_SCREEN_NETWORK, connectid);
+	/* SDP */
+	if (sdp)
+		osmo_cc_add_ie_sdp(msg, sdp);
+
+	osmo_cc_ul_msg(ep, callref, msg);
+}
+
+static void request_answer_ack(int callref)
+{
+	osmo_cc_msg_t *msg;
+
+	msg = osmo_cc_new_msg(OSMO_CC_MSG_SETUP_COMP_REQ);
+
+	osmo_cc_ul_msg(ep, callref, msg);
+}
+
+static void request_disconnect_release_reject(int callref, int cause, uint8_t msg_type)
+{
+	osmo_cc_msg_t *msg;
+
+	msg = osmo_cc_new_msg(msg_type);
+	osmo_cc_add_ie_cause(msg, OSMO_CC_LOCATION_USER, cause, 0, 0);
+
+	osmo_cc_ul_msg(ep, callref, msg);
+}
+
+void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
+{
+	uint8_t location, isdn_cause, socket_cause;
+	uint16_t sip_cause;
+	uint8_t type, plan, present, screen;
+	uint8_t progress, coding;
+	char caller_id[33], number[33];
+	const char *sdp;
+	int rc;
+
+	if (msg->type != OSMO_CC_MSG_SETUP_IND && console.callref != call->callref) {
+		PDEBUG(DCC, DEBUG_ERROR, "invalid call ref %u (msg=0x%02x).\n", call->callref, msg->type);
+		request_disconnect_release_reject(call->callref, CAUSE_INVALCALLREF, OSMO_CC_MSG_REL_REQ);
+		osmo_cc_free_msg(msg);
+		return;
 	}
 
-	if (mncc->msg_type != MNCC_SETUP_IND && console.callref != mncc->callref) {
-		PDEBUG(DMNCC, DEBUG_ERROR, "invalid call ref.\n");
-		/* send down reused MNCC */
-		mncc->msg_type = MNCC_REL_REQ;
-		mncc->fields |= MNCC_F_CAUSE;
-		mncc->cause.location = LOCATION_USER;
-		mncc->cause.value = CAUSE_INVALCALLREF;
-		mncc_down(buf, length);
-		return 0;
-	}
-
-	switch(mncc->msg_type) {
-	case MNCC_SETUP_IND:
-		PDEBUG(DMNCC, DEBUG_INFO, "Incoming call from '%s'\n", mncc->calling.number);
+	switch(msg->type) {
+	case OSMO_CC_MSG_SETUP_IND:
+	    {
+		/* caller id */
+		rc = osmo_cc_get_ie_calling(msg, 0, &type, &plan, &present, &screen, caller_id, sizeof(caller_id));
+		if (rc < 0)
+			caller_id[0] = '\0';
+		/* dialing */
+		rc = osmo_cc_get_ie_called(msg, 0, &type, &plan, number, sizeof(number));
+		if (rc < 0)
+			number[0] = '\0';
+		PDEBUG(DCC, DEBUG_INFO, "Incoming call from '%s'\n", caller_id);
 		/* setup is also allowed on disconnected call */
-		if (console.state == CONSOLE_DISCONNECT) {
-			PDEBUG(DMNCC, DEBUG_INFO, "Releasing pending disconnected call\n");
+		if (console.state == CONSOLE_DISCONNECT_RO) {
+			PDEBUG(DCC, DEBUG_INFO, "Releasing pending disconnected call\n");
 			if (console.callref) {
-				uint8_t buf[sizeof(struct gsm_mncc)];
-				struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
-
-				memset(buf, 0, sizeof(buf));
-				mncc->msg_type = MNCC_REL_REQ;
-				mncc->callref = console.callref;
-				mncc->fields |= MNCC_F_CAUSE;
-				mncc->cause.location = LOCATION_USER;
-				mncc->cause.value = CAUSE_NORMAL;
-				mncc_down(buf, sizeof(struct gsm_mncc));
-				console.callref = 0;
+				request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REL_REQ);
+				free_console();
 			}
 			console_new_state(CONSOLE_IDLE);
 		}
 		if (console.state != CONSOLE_IDLE) {
-			PDEBUG(DMNCC, DEBUG_NOTICE, "We are busy, rejecting.\n");
-			return -CAUSE_BUSY;
+			PDEBUG(DCC, DEBUG_NOTICE, "We are busy, rejecting.\n");
+			request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REJ_REQ);
+			osmo_cc_free_msg(msg);
+			return;
 		}
-		console.callref = mncc->callref;
-		if (mncc->calling.number[0]) {
-			strncpy(console.station_id, mncc->calling.number, console.num_digits);
+		console.callref = call->callref;
+		/* sdp accept */
+		sdp = osmo_cc_helper_audio_accept(NULL, codecs, up_audio, msg, &console.session, &console.codec, 0);
+		if (!sdp) {
+			PDEBUG(DCC, DEBUG_NOTICE, "Cannot accept codec, rejecting.\n");
+			request_disconnect_release_reject(console.callref, CAUSE_RESOURCE_UNAVAIL, OSMO_CC_MSG_REJ_REQ);
+			osmo_cc_free_msg(msg);
+			return;
+		}
+		if (caller_id[0]) {
+			strncpy(console.station_id, caller_id, console.num_digits);
 			console.station_id[console.num_digits] = '\0';
 		}
-		strncpy(console.dialing, mncc->called.number, sizeof(console.dialing) - 1);
+		strncpy(console.dialing, number, sizeof(console.dialing) - 1);
 		console.dialing[sizeof(console.dialing) - 1] = '\0';
 		console_new_state(CONSOLE_CONNECT);
-		PDEBUG(DMNCC, DEBUG_INFO, "Call automatically answered\n");
-		/* send down reused MNCC */
-		mncc->msg_type = MNCC_SETUP_RSP;
-		mncc_down(buf, length);
+		PDEBUG(DCC, DEBUG_INFO, "Call automatically answered\n");
+		request_answer(console.callref, number, sdp);
 		break;
-	case MNCC_ALERT_IND:
-		PDEBUG(DMNCC, DEBUG_INFO, "Call alerting\n");
+	    }
+	case OSMO_CC_MSG_SETUP_ACK_IND:
+	case OSMO_CC_MSG_PROC_IND:
+		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
+		break;
+	case OSMO_CC_MSG_ALERT_IND:
+		PDEBUG(DCC, DEBUG_INFO, "Call alerting\n");
+		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		console_new_state(CONSOLE_ALERTING_RT);
 		break;
-	case MNCC_SETUP_CNF:
-		PDEBUG(DMNCC, DEBUG_INFO, "Call connected to '%s'\n", mncc->connected.number);
+	case OSMO_CC_MSG_SETUP_CNF:
+	    {
+		/* connected id */
+		rc = osmo_cc_get_ie_calling(msg, 0, &type, &plan, &present, &screen, caller_id, sizeof(caller_id));
+		if (rc < 0)
+			caller_id[0] = '\0';
+		PDEBUG(DCC, DEBUG_INFO, "Call connected to '%s'\n", caller_id);
+		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		console_new_state(CONSOLE_CONNECT);
-		strncpy(console.station_id, mncc->connected.number, console.num_digits);
+		strncpy(console.station_id, caller_id, console.num_digits);
 		console.station_id[console.num_digits] = '\0';
-		/* send down reused MNCC */
-		mncc->msg_type = MNCC_SETUP_COMPL_REQ;
-		mncc_down(buf, length);
+		request_answer_ack(console.callref);
 		break;
-	case MNCC_DISC_IND:
-		PDEBUG(DMNCC, DEBUG_INFO, "Call disconnected (%s)\n", cause_name(mncc->cause.value));
-		console_new_state(CONSOLE_DISCONNECT);
-		console.disc_cause = mncc->cause.value;
+	    }
+	case OSMO_CC_MSG_SETUP_COMP_IND:
 		break;
-	case MNCC_REL_IND:
-		PDEBUG(DMNCC, DEBUG_INFO, "Call released (%s)\n", cause_name(mncc->cause.value));
+	case OSMO_CC_MSG_DISC_IND:
+		rc = osmo_cc_get_ie_cause(msg, 0, &location, &isdn_cause, &sip_cause, &socket_cause);
+		if (rc < 0)
+			isdn_cause = OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR;
+		rc = osmo_cc_get_ie_progress(msg, 0, &coding, &location, &progress);
+		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
+		if (rc >= 0 && (progress == 1 || progress == 8)) {
+			PDEBUG(DCC, DEBUG_INFO, "Call disconnected with audio (%s)\n", cause_name(isdn_cause));
+			console_new_state(CONSOLE_DISCONNECT_RO);
+			console.disc_cause = isdn_cause;
+		} else {
+			PDEBUG(DCC, DEBUG_INFO, "Call disconnected without audio (%s)\n", cause_name(isdn_cause));
+			request_disconnect_release_reject(console.callref, isdn_cause, OSMO_CC_MSG_REL_REQ);
+			console_new_state(CONSOLE_IDLE);
+			free_console();
+		}
+		break;
+	case OSMO_CC_MSG_REL_IND:
+	case OSMO_CC_MSG_REJ_IND:
+		rc = osmo_cc_get_ie_cause(msg, 0, &location, &isdn_cause, &sip_cause, &socket_cause);
+		if (rc < 0)
+			isdn_cause = OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR;
+		PDEBUG(DCC, DEBUG_INFO, "Call released (%s)\n", cause_name(isdn_cause));
 		console_new_state(CONSOLE_IDLE);
-		console.callref = 0;
+		free_console();
 		break;
 	}
-	return 0;
+	osmo_cc_free_msg(msg);
 }
 
 static char console_text[256];
@@ -269,8 +377,6 @@ int console_init(const char *station_id, const char *audiodev, int samplerate, i
 	console.loopback = loopback;
 	console.echo_test = echo_test;
 	console.digits = digits;
-
-	mncc_up = console_mncc_up;
 
 	if (!audiodev[0])
 		return 0;
@@ -331,16 +437,23 @@ void console_cleanup(void)
 {
 #ifdef HAVE_ALSA
 	/* close sound devoice */
-	if (console.sound)
+	if (console.sound) {
 		sound_close(console.sound);
+		console.sound = NULL;
+	}
 #endif
 
 	jitter_destroy(&console.dejitter);
+
+	if (console.session) {
+		osmo_cc_free_session(console.session);
+		console.session = NULL;
+	}
 }
 
 static void process_ui(int c)
 {
-	char text[256];
+	char text[256] = "";
 	int len;
 	int i;
 
@@ -359,25 +472,11 @@ static void process_ui(int c)
 				console.station_id[strlen(console.station_id) - 1] = '\0';
 dial_after_hangup:
 			if (c == 'd' && (int)strlen(console.station_id) == console.num_digits) {
-				int callref = ++new_callref;
-				uint8_t buf[sizeof(struct gsm_mncc)];
-				struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
-
-				PDEBUG(DMNCC, DEBUG_INFO, "Outgoing call to '%s'\n", console.station_id);
+				PDEBUG(DCC, DEBUG_INFO, "Outgoing call to '%s'\n", console.station_id);
 				console.dialing[0] = '\0';
 				console_new_state(CONSOLE_SETUP_RT);
-				console.callref = callref;
-				memset(buf, 0, sizeof(buf));
-				mncc->msg_type = MNCC_SETUP_REQ;
-				mncc->callref = callref;
-				mncc->fields |= MNCC_F_CALLED;
-				strncpy(mncc->called.number, console.station_id, sizeof(mncc->called.number) - 1);
-				mncc->called.type = 0; /* dialing is of type 'unknown' */
-				mncc->lchan_type = GSM_LCHAN_TCH_F;
-				mncc->fields |= MNCC_F_BEARER_CAP;
-				mncc->bearer_cap.speech_ver[0] = BCAP_ANALOG_8000HZ;
-				mncc->bearer_cap.speech_ver[1] = -1;
-				mncc_down(buf, sizeof(struct gsm_mncc));
+				console.callref = osmo_cc_new_callref();
+				request_setup(console.callref, console.station_id);
 			}
 		}
 		if (console.num_digits != (int)strlen(console.station_id))
@@ -390,24 +489,18 @@ dial_after_hangup:
 	case CONSOLE_ALERTING_RO:
 	case CONSOLE_ALERTING_RT:
 	case CONSOLE_CONNECT:
-	case CONSOLE_DISCONNECT:
+	case CONSOLE_DISCONNECT_RO:
 		if (c > 0) {
-			if (c == 'h' || (c == 'd' && console.state == CONSOLE_DISCONNECT)) {
-				PDEBUG(DMNCC, DEBUG_INFO, "Call hangup\n");
-				console_new_state(CONSOLE_IDLE);
+			if (c == 'h' || (c == 'd' && console.state == CONSOLE_DISCONNECT_RO)) {
+				PDEBUG(DCC, DEBUG_INFO, "Call hangup\n");
 				if (console.callref) {
-					uint8_t buf[sizeof(struct gsm_mncc)];
-					struct gsm_mncc *mncc = (struct gsm_mncc *)buf;
-
-					memset(buf, 0, sizeof(buf));
-					mncc->msg_type = MNCC_REL_REQ;
-					mncc->callref = console.callref;
-					mncc->fields |= MNCC_F_CAUSE;
-					mncc->cause.location = LOCATION_USER;
-					mncc->cause.value = CAUSE_NORMAL;
-					mncc_down(buf, sizeof(struct gsm_mncc));
-					console.callref = 0;
+					if (console.state == CONSOLE_SETUP_RO)
+						request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REJ_REQ);
+					else
+						request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REL_REQ);
+					free_console();
 				}
+				console_new_state(CONSOLE_IDLE);
 				if (c == 'd')
 					goto dial_after_hangup;
 			}
@@ -422,7 +515,7 @@ dial_after_hangup:
 			else
 				sprintf(text, "call active: %s (press h=hangup)\r", console.station_id);
 		}
-		if (console.state == CONSOLE_DISCONNECT)
+		if (console.state == CONSOLE_DISCONNECT_RO)
 			sprintf(text, "call disconnected: %s (press h=hangup d=redial)\r", cause_name(console.disc_cause));
 		break;
 	}
@@ -445,6 +538,9 @@ void process_console(int c)
 {
 	if (!console.loopback && console.num_digits)
 		process_ui(c);
+
+	if (console.session)
+		osmo_cc_session_handle(console.session);
 
 	if (!console.sound)
 		return;
@@ -496,14 +592,10 @@ void process_console(int c)
 			if (++console.tx_buffer_pos == 160) {
 				console.tx_buffer_pos = 0;
 				/* only if we have a call */
-				if (console.callref) {
-					uint8_t buf[sizeof(struct gsm_data_frame) + 160 * sizeof(int16_t)];
-					struct gsm_data_frame *data = (struct gsm_data_frame *)buf;
-
-					data->msg_type = ANALOG_8000HZ;
-					data->callref = console.callref;
-					samples_to_int16((int16_t *)data->data, console.tx_buffer, 160);
-					mncc_down(buf, sizeof(struct gsm_mncc));
+				if (console.callref && console.codec) {
+					int16_t data[160];
+					samples_to_int16(data, console.tx_buffer, 160);
+					osmo_cc_rtp_send(console.codec, (uint8_t *)data, 160 * 2, 1, 160);
 				}
 			}
 		}

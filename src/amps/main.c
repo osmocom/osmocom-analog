@@ -17,5 +17,5 @@ int main(int argc, char *argv[])
 	init_invalidnumber();
 	init_congestion();
 
-	return main_amps_tacs(argc, argv);
+	return main_amps_tacs("amps", argc, argv);
 }

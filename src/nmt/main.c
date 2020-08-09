@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 
 	nmt_check_channels(nmt_system);
 
-	main_mobile(&quit, latency, interval, myhandler, station_id, 7);
+	main_mobile("nmt", &quit, latency, interval, myhandler, station_id, 7);
 
 fail:
 	/* fifo */

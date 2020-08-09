@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 			goto fail;
 	}
 
-	main_mobile(&quit, latency, interval, NULL, NULL, 0);
+	main_mobile(NULL, &quit, latency, interval, NULL, NULL, 0);
 
 fail:
 	/* destroy transceiver instance */

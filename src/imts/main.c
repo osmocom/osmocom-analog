@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], imts_channel2freq(kanal[i], 0) / 1e6, imts_channel2freq(kanal[i], 1) / 1e6, imts_channel2freq(kanal[i], 2) / 1e6);
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, station_length);
+	main_mobile((mode == MODE_IMTS) ? "imts" : "mts", &quit, latency, interval, NULL, station_id, station_length);
 
 fail:
 	/* destroy transceiver instance */

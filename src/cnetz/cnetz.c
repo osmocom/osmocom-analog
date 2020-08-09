@@ -145,7 +145,8 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "cnetz.h"
 #include "database.h"
 #include "sysinfo.h"
@@ -157,10 +158,6 @@
 //#define DEBUG_SPK
 
 #define CUT_OFF_EMPHASIS_CNETZ	796.0 /* 200 uS time constant */
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* Convert channel number to frequency number of base station.
    Set 'unterband' to 1 to get frequency of mobile station. */
@@ -1359,15 +1356,7 @@ no_auth:
 		if (!cnetz->sender.loopback && (cnetz->sched_ts & 7) == 7 && cnetz->sched_r_m && !timer_running(&trans->timer)) {
 			/* next sub frame */
 			if (trans->mo_call) {
-				int rc;
-				trans->callref = ++new_callref;
-				rc = call_up_setup(trans->callref, transaction2rufnummer(trans), trans->dialing);
-				if (rc < 0) {
-					PDEBUG(DCNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
-					trans->callref = 0;
-					cnetz_release(trans, cnetz_cause_isdn2cnetz(-rc));
-					goto call_failed;
-				}
+				trans->callref = call_up_setup(transaction2rufnummer(trans), trans->dialing, OSMO_CC_NETWORK_CNETZ_NONE, "");
 				trans_new_state(trans, TRANS_DS);
 				trans->repeat = 0;
 				timer_start(&trans->timer, 0.0375 * F_DS); /* F_DS frames */
@@ -1410,7 +1399,6 @@ no_auth:
 		}
 		break;
 	case TRANS_AF:
-call_failed:
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending 'Ausloesen durch FuFSt' on traffic channel\n");
 		telegramm.opcode = OPCODE_AF_K;
 		if (++trans->repeat < N_AFKT)

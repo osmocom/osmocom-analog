@@ -28,7 +28,8 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "eurosignal.h"
 #include "dsp.h"
 
@@ -41,10 +42,6 @@
 #define ACKNOWLEDGE_TIME1	2.8	/* announcement 1.7 s, pause 1.1 s */
 #define ACKNOWLEDGE_TIME2	4.6	/* announcement 1.7 s, pause 2.9 s */
 #define BEEP_TIME		4.0	/* beep after answer */
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* these calls are not associated with a transmitter */
 euro_call_t *ooo_call_list = NULL;
@@ -469,10 +466,9 @@ void euro_receive_id(euro_t *euro, char *id)
 
 	/* we want to send beep via MNCC */
 	if (id_list) {
+		uint32_t callref;
 		euro_call_t *call;
 		char dialing[32];
-		int callref;
-		int rc;
 
 		/* check if we already have a call that beeps */
 		for (call = ooo_call_list; call; call = call->next) {
@@ -485,13 +481,10 @@ void euro_receive_id(euro_t *euro, char *id)
 
 		/* create call and send setup */
 		PDEBUG_CHAN(DEURO, DEBUG_INFO, "Sending setup towards network.'\n");
-		callref = ++new_callref;
+		sprintf(dialing, "%d", count);
+		callref = call_up_setup(call->station_id, dialing, OSMO_CC_NETWORK_EUROSIGNAL_NONE, "");
 		call = euro_call_create(NULL, callref, id);
 		call_new_state(call, EURO_CALL_BEEPING);
-		sprintf(dialing, "%d", count);
-		rc = call_up_setup(callref, call->station_id, dialing);
-		if (rc < 0)
-			euro_call_destroy(call);
 	}
 }
 

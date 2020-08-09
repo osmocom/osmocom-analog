@@ -19,7 +19,6 @@
 #define DEURO		12
 #define DFRAME		13
 #define DCALL		14
-#define DMNCC		15
 #define DCC		15
 #define DDB		16
 #define DTRANS		17

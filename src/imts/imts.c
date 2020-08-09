@@ -42,15 +42,12 @@
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "imts.h"
 #include "dsp.h"
 
 #define CUT_OFF_EMPHASIS_IMTS	796.0 /* FIXME: really 200 uS time constant? */
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* band info */
 #define VHF_LOW 0
@@ -535,17 +532,8 @@ void imts_signal_indication(imts_t *imts)
 {
 	/* setup a call from mobile to base station */
 	if (imts->mode == MODE_MTS && imts->state == IMTS_IDLE) {
-		int callref = ++new_callref;
-		int rc;
-
 		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Detectes RF signal in IDLE mode, calling the opterator at '%s'.\n", imts->operator);
-		rc = call_up_setup(callref, NULL, imts->operator);
-		if (rc < 0) {
-			PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing!\n", -rc);
-			imts_release(imts);
-			return;
-		}
-		imts->callref = callref;
+		imts->callref = call_up_setup(NULL, imts->operator, OSMO_CC_NETWORK_MTS_NONE, "");
 		imts_new_state(imts, IMTS_CONVERSATION);
 		imts_set_dsp_mode(imts, DSP_MODE_AUDIO, 0, 0.0, 0);
 	}
@@ -864,17 +852,8 @@ static void dial_after_digit(imts_t *imts)
 		imts->dial_number[++imts->rx_dial_index] = '\0';
 		timer_start(&imts->timer, DIALING_TO);
 	} else {
-		int callref = ++new_callref;
-		int rc;
-
 		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Timeout receiving dialing from mobile phone, number complete.\n");
-		rc = call_up_setup(callref, imts->station_id, imts->dial_number);
-		if (rc < 0) {
-			PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing!\n", -rc);
-			imts_release(imts);
-			return;
-		}
-		imts->callref = callref;
+		imts->callref = call_up_setup(imts->station_id, imts->dial_number, OSMO_CC_NETWORK_IMTS_NONE, "");
 		imts_new_state(imts, IMTS_CONVERSATION);
 		imts_set_dsp_mode(imts, DSP_MODE_AUDIO, 0, 0.0, 0);
 		imts->rx_disc_pulse = 0;

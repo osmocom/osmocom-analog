@@ -27,7 +27,8 @@
 #include <time.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "r2000.h"
 //#include "transaction.h"
 #include "frame.h"
@@ -44,10 +45,6 @@
 #define SUPER_TIME1		4.0	/* time to release if not receiving initial supervisory signal */
 #define SUPER_TIME2		20.0	/* time to release after loosing supervisory signal */
 #define RELEASE_TIME		2.0	/* time to wait for release response */
-
-/* Call reference for calls from station mobile to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* definition of bands and channels */
 #define CHANNEL_SPACING	0.0125
@@ -900,20 +897,9 @@ static void tx_alert(r2000_t *r2000, frame_t *frame)
 
 static int setup_call(r2000_t *r2000)
 {
-	int callref = ++new_callref;
-	int rc;
-
 	/* make call toward network */
 	PDEBUG(DR2000, DEBUG_INFO, "Setup call to network.\n");
-	/* must set callref, since MNCC may directly call call_down_answer to trigger recall, nested in call_up_setup */
-	r2000->callref = callref;
-	rc = call_up_setup(callref, subscriber2string(&r2000->subscriber), r2000->subscriber.dialing);
-	if (rc < 0) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
-		r2000->callref = 0;
-		r2000_release(r2000);
-		return rc;
-	}
+	r2000->callref = call_up_setup(subscriber2string(&r2000->subscriber), r2000->subscriber.dialing, OSMO_CC_NETWORK_R2000_NONE, "");
 
 	return 0;
 }

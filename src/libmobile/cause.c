@@ -39,6 +39,8 @@ const char *cause_name(int cause)
 		return "no-channel";
 	case CAUSE_TEMPFAIL:
 		return "link-failure";
+	case CAUSE_RESOURCE_UNAVAIL:
+		return "resource-unavail";
 	case CAUSE_INVALCALLREF:
 		return "invalid-callref";
 	default:

@@ -41,7 +41,6 @@ src/libfm/libfm.a
 src/libfilter/libfilter.a
 src/libwave/libwave.a
 src/libfft/libfft.a
-src/libmncc/libmncc.a
 src/libsound/libsound.a
 src/libsdr/libsdr.a
 src/libsample/libsample.a

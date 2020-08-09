@@ -42,7 +42,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv);
 extern int quit;
 void sighandler(int sigset);
 
-void main_mobile(int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits);
+void main_mobile(const char *name, int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits);
 
 void dump_info(void);
 

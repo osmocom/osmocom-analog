@@ -10,5 +10,5 @@ int main(int argc, char *argv[])
 	/* init common tones */
 	init_tones();
 
-	return main_amps_tacs(argc, argv);
+	return main_amps_tacs("jtacs", argc, argv);
 }

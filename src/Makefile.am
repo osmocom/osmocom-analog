@@ -24,7 +24,6 @@ SUBDIRS = \
 	libfilter \
 	libwave \
 	libfft \
-	libmncc \
 	libclipper \
 	libserial \
 	libv27 \

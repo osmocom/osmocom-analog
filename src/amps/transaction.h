@@ -26,6 +26,7 @@ typedef struct transaction {
 	int			page_retry;		/* current number of paging (re)try */
 	uint32_t		min1;			/* current station ID (2 values) */
 	uint16_t		min2;
+	uint32_t		esn;			/* ESN */
 	uint8_t			msg_type;		/* message type (3 values) */
 	uint8_t			ordq;
 	uint8_t			order;
@@ -37,7 +38,7 @@ typedef struct transaction {
 	int			dtx;			/* if set, DTX is used with this call */
 } transaction_t;
 
-transaction_t *create_transaction(amps_t *amps, enum amps_trans_state trans_state, uint32_t min1, uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan);
+transaction_t *create_transaction(amps_t *amps, enum amps_trans_state trans_state, uint32_t min1, uint16_t min2, uint32_t esn, uint8_t msg_type, uint8_t ordq, uint8_t order, uint16_t chan);
 void destroy_transaction(transaction_t *trans);
 void link_transaction(transaction_t *trans, amps_t *amps);
 void unlink_transaction(transaction_t *trans);

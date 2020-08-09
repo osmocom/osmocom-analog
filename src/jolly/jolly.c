@@ -137,14 +137,11 @@
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "jolly.h"
 #include "dsp.h"
 #include "voice.h"
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 #define db2level(db)	pow(10, (double)db / 20.0)
 
@@ -390,18 +387,9 @@ void jolly_receive_dtmf(void *priv, char digit, dtmf_meas_t *meas)
 			break;
 		}
 		if (digit == '#') {
-			int callref = ++new_callref;
-			int rc;
-
 			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received ack digit, entering call state.\n");
 			timer_stop(&jolly->timer);
-			rc = call_up_setup(callref, NULL, jolly->dialing);
-			if (rc < 0) {
-				PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Call rejected (cause %d), going idle.\n", -rc);
-				jolly_release(jolly);
-				break;
-			}
-			jolly->callref = callref;
+			jolly->callref = call_up_setup(NULL, jolly->dialing, OSMO_CC_NETWORK_JOLLYCOM_NONE, "");
 			jolly_new_state(jolly, STATE_CALL);
 		}
 		break;

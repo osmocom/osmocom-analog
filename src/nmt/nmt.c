@@ -27,7 +27,8 @@
 #include <time.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "nmt.h"
 #include "transaction.h"
 #include "dsp.h"
@@ -48,10 +49,6 @@
  */
 
 static int sms_ref = 0;
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* Timers */
 #define PAGING_TO	1.0	/* wait for paging response: fictive value */
@@ -915,16 +912,8 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			PDEBUG(DNMT, DEBUG_INFO, "Setup call to SMSC.\n");
 			trans->dms_call = 1;
 		} else {
-			int callref = ++new_callref;
-			int rc;
 			PDEBUG(DNMT, DEBUG_INFO, "Setup call to network.\n");
-			rc = call_up_setup(callref, &trans->subscriber.country, nmt->dialing);
-			if (rc < 0) {
-				PDEBUG(DNMT, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", rc);
-				nmt_release(nmt);
-				return;
-			}
-			trans->callref = callref;
+			trans->callref = call_up_setup(&trans->subscriber.country, nmt->dialing, OSMO_CC_NETWORK_NMT_NONE, "");
 		}
 		timer_stop(&nmt->timer);
 		nmt_new_state(nmt, STATE_MO_COMPLETE);

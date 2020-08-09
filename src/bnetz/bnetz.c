@@ -27,14 +27,11 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
+#include "../libosmocc/message.h"
 #include "bnetz.h"
 #include "telegramm.h"
 #include "dsp.h"
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* mobile originating call */
 #define CARRIER_TO		0.08	/* 80 ms search for carrier */
@@ -565,8 +562,6 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 			break;
 		case DIAL_MODE_NUMBER2:
 			if (digit == 'e') {
-				int callref = ++new_callref;
-				int rc;
 				/* add 0 in front of number */
 				char dialing[sizeof(bnetz->dial_number) + 1] = "0";
 				strcpy(dialing + 1, bnetz->dial_number);
@@ -594,13 +589,7 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 
 				/* setup call */
 				PDEBUG(DBNETZ, DEBUG_INFO, "Setup call to network.\n");
-				rc = call_up_setup(callref, bnetz->station_id, dialing);
-				if (rc < 0) {
-					PDEBUG(DBNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
-					bnetz_release(bnetz, TRENN_COUNT);
-					return;
-				}
-				bnetz->callref = callref;
+				bnetz->callref = call_up_setup(bnetz->station_id, dialing, OSMO_CC_NETWORK_BNETZ_MUENZ, (bnetz->dial_type == DIAL_TYPE_METER_MUENZ) ? "MUENZ" : "");
 				break;
 			}
 			if (digit < '0' || digit > '9') {

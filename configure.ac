@@ -79,7 +79,6 @@ AC_OUTPUT(
     src/libfilter/Makefile
     src/libwave/Makefile
     src/libfft/Makefile
-    src/libmncc/Makefile
     src/libsound/Makefile
     src/libsdr/Makefile
     src/libsample/Makefile

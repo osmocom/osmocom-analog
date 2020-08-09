@@ -5,6 +5,9 @@ noinst_LIBRARIES = libmobile.a
 libmobile_a_SOURCES = \
 	sender.c \
 	call.c \
+	console.c \
+	testton.c \
+	cause.c \
 	main_mobile.c
 
 if HAVE_ALSA

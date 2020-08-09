@@ -227,7 +227,7 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
-int main_amps_tacs(int argc, char *argv[])
+int main_amps_tacs(const char *name, int argc, char *argv[])
 {
 	int rc, argi;
 	const char *station_id = "";
@@ -392,7 +392,7 @@ int main_amps_tacs(int argc, char *argv[])
 			printf("Base station on channel %s ready (%s), please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(atoi(kanal[i]), 0) / 1e6, amps_channel2freq(atoi(kanal[i]), 1) / 1e6, amps_channel2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 10);
+	main_mobile(name, &quit, latency, interval, NULL, station_id, 10);
 
 fail:
 	/* destroy transceiver instance */

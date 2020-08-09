@@ -23,7 +23,7 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
 #include "cnetz.h"
 #include "telegramm.h"
 #include "database.h"

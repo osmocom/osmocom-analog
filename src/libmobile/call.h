@@ -9,7 +9,10 @@ enum number_type {
 	TYPE_INTERNATIONAL,
 };
 
-int call_init(int _send_patterns, int _release_on_disconnect);
+int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[]);
+void call_exit(void);
+int call_handle(void);
+void call_media_handle(void);
 
 /* function pointer to delive MNCC messages to upper layer */
 extern int (*mncc_up)(uint8_t *buf, int length);
@@ -19,7 +22,7 @@ void mncc_down(uint8_t *buf, int length);
 void mncc_flush(void);
 
 /* received messages */
-int call_up_setup(int callref, const char *callerid, const char *dialing);
+int call_up_setup(const char *callerid, const char *dialing, uint8_t network, const char *network_id);
 void call_up_alerting(int callref);
 void call_up_early(int callref);
 void call_up_answer(int callref, const char *connect_id);

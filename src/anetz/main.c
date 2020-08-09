@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], anetz_kanal2freq(atoi(kanal[i]), 0) / 1e6, anetz_kanal2freq(atoi(kanal[i]), 1) / 1e6, anetz_kanal2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 5);
+	main_mobile("anetz", &quit, latency, interval, NULL, station_id, 5);
 
 fail:
 	/* destroy transceiver instance */

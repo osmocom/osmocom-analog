@@ -31,7 +31,6 @@
 #include "../libmobile/main_mobile.h"
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
-#include "../libmncc/mncc_sock.h"
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
 #include "../liboptions/options.h"
@@ -199,7 +198,7 @@ int main(int argc, char *argv[])
 		printf("base station on channel %s ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.4f MHz offset)\n", kanal[i], dl_freq + step / 1e3 * (double)atoi(kanal[i]), ul_freq + step / 1e3 * (double)atoi(kanal[i]), ul_freq - dl_freq);
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 4);
+	main_mobile("jollycom", &quit, latency, interval, NULL, station_id, 4);
 
 fail:
 	/* destroy transceiver instance */

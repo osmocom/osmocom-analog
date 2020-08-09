@@ -37,8 +37,9 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
-#include "../libmncc/cause.h"
+#include "../libmobile/cause.h"
 #include "../libtimer/timer.h"
+#include "../libosmocc/message.h"
 #include "fuvst.h"
 
 /* digital loopback test */
@@ -366,10 +367,6 @@ static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, 
 /*
  * transactions
  */
-
-/* Call reference for calls from mobile station to network
-   This offset of 0x400000000 is required for MNCC interface. */
-static int new_callref = 0x40000000;
 
 /* Release timeout */
 #define RELEASE_TO 3.0
@@ -982,19 +979,8 @@ outgoing:
 		message_send(ident, opcode, data, len);
 		/* no callref == outgoing call */
 		if (!trans->callref) {
-			int rc;
 			PDEBUG(DCNETZ, DEBUG_INFO, "Setup call to network. (Ident = %d, FuTln=%s, number=%s)\n", ident, transaction2rufnummer(trans), trans->number);
-			trans->callref = trans->old_callref = ++new_callref;
-			rc = call_up_setup(trans->callref, transaction2rufnummer(trans), trans->number);
-			/* rejected by network, release towards BS */
-			if (rc < 0) {
-				len = encode_aau(&opcode, &data, Q, 0, cnetz_cause2futln(-rc));
-				message_send(ident, opcode, data, len);
-				trans->callref = 0;
-				PDEBUG(DCNETZ, DEBUG_NOTICE, "Call rejected (cause %d), releasing.\n", -rc);
-				destroy_transaction(trans);
-				break;
-			}
+			trans->callref = trans->old_callref = call_up_setup(transaction2rufnummer(trans), trans->number, OSMO_CC_NETWORK_CNETZ_NONE, "");
 		} else {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Call to mobile is alerting.\n");
 			new_call_state(trans, STATE_MT_ALERTING);

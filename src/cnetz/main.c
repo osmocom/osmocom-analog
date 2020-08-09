@@ -647,7 +647,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	main_mobile(&quit, latency, interval, NULL, station_id, 7);
+	main_mobile("cnetz", &quit, latency, interval, NULL, station_id, 7);
 
 fail:
 	flush_db();
