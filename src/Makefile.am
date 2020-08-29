@@ -29,7 +29,8 @@ SUBDIRS = \
 	libserial \
 	libv27 \
 	libmtp \
-	libosmocc
+	libosmocc \
+	libg711
 
 if HAVE_ALSA
 SUBDIRS += \

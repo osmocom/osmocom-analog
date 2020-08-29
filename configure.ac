@@ -88,6 +88,7 @@ AC_OUTPUT(
     src/libv27/Makefile
     src/libmtp/Makefile
     src/libosmocc/Makefile
+    src/libg711/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
     src/cnetz/Makefile

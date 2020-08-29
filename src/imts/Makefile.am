@@ -26,6 +26,7 @@ imts_LDADD = \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsample/libsample.a \
+	$(top_builddir)/src/libg711/libg711.a \
 	-lm
 
 imts_dialer_SOURCES = \

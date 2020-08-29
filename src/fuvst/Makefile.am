@@ -32,6 +32,7 @@ fuvst_LDADD = \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(top_builddir)/src/libsound/libsound.a \
+	$(top_builddir)/src/libg711/libg711.a \
 	$(ALSA_LIBS) \
 	-lm
 
@@ -57,6 +58,7 @@ fuvst_sniffer_LDADD = \
 	$(top_builddir)/src/libmncc/libmncc.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(top_builddir)/src/libsound/libsound.a \
+	$(top_builddir)/src/libg711/libg711.a \
 	$(ALSA_LIBS) \
 	-lm
 
