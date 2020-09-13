@@ -264,7 +264,7 @@ int main_amps_tacs(int argc, char *argv[])
 	}
 
 	if (!num_kanal) {
-		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", (!tacs) ? 334 : 323);
+		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", (!tacs) ? 333 : 323);
 		print_help(argv[0]);
 		return 0;
 	}
