@@ -62,16 +62,16 @@ void option_add(int short_option, const char *long_option, int parameter_count)
 	option_tailp = &(option->next);
 }
 
-// FIXME: support more than one option */
 int options_config_file(const char *config_file, int (*handle_options)(int short_option, int argi, char *argv[]))
 {
 	static const char *home;
 	char config[256];
 	FILE *fp;
-	char buffer[256], opt[256], param[256], *p, *argv[1];
+	char buffer[256], opt[256], param[256], *p, *argv[16];
+	char params[1024];
 	int line;
 	int rc = 1;
-	int i;
+	int i, j;
 	option_t *option;
 
 	/* open config file */
@@ -113,18 +113,29 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 		while (*p > '\0' && *p <= ' ')
 			p++;
 		/* get param from line */
+		params[0] = '\0';
 		i = 0;
-		while (*p > ' ')
-			param[i++] = *p++;
-		param[i] = '\0';
+		while (*p) {
+			/* copy parameter */
+			j = 0;
+			while (*p > ' ')
+				param[j++] = *p++;
+			param[j] = '\0';
+			argv[i] = strdup(param);
+			sprintf(strchr(params, '\0'), " '%s'", param);
+			/* skip white spaces behind option */
+			while (*p > '\0' && *p <= ' ')
+				p++;
+			i++;
+		}
 		/* search option */
 		for (option = option_head; option; option = option->next) {
 			if (opt[0] == option->short_option && opt[1] == '\0') {
-				PDEBUG(DOPTIONS, DEBUG_INFO, "Config file option '%s' ('%s'), parameter '%s'\n", opt, option->long_option, param);
+				PDEBUG(DOPTIONS, DEBUG_INFO, "Config file option '%s' ('%s'), parameter%s\n", opt, option->long_option, params);
 				break;
 			}
 			if (!strcmp(opt, option->long_option)) {
-				PDEBUG(DOPTIONS, DEBUG_INFO, "Config file option '%s', parameter '%s'\n", opt, param);
+				PDEBUG(DOPTIONS, DEBUG_INFO, "Config file option '%s', parameter%s\n", opt, params);
 				break;
 			}
 		}
@@ -133,11 +144,11 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 			rc = -EINVAL;
 			goto done;
 		}
-		if (option->parameter_count && !param[0]) {
+		if (option->parameter_count != i) {
 			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
 			return -EINVAL;
 		}
-		argv[0] = strdup(param);
+		for (j = 0; j < i; j++)
 		rc = handle_options(option->short_option, 0, argv);
 		if (rc <= 0)
 			goto done;
@@ -154,7 +165,7 @@ done:
 int options_command_line(int argc, char *argv[], int (*handle_options)(int short_option, int argi, char *argv[]))
 {
 	option_t *option;
-	char params[256];
+	char params[1024];
 	int argi, i;
 	int rc;
 
