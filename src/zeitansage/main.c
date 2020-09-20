@@ -73,6 +73,8 @@ int main(int argc, char *argv[])
 {
 	int rc, argi;
 
+	allow_sdr = 0;
+
 	/* init system specific tones */
 	init_samples();
 
