@@ -71,7 +71,7 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 	char params[1024];
 	int line;
 	int rc = 1;
-	int i, j;
+	int i, j, quote;
 	option_t *option;
 
 	/* open config file */
@@ -118,8 +118,45 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 		while (*p) {
 			/* copy parameter */
 			j = 0;
-			while (*p > ' ')
+			quote = 0;
+			while (*p) {
+				/* escape allows all following characters */
+				if (*p == '\\') {
+					p++;
+					if (*p)
+						param[j++] = *p++;
+					continue;
+				}
+				/* no quote, check for them or break on white space */
+				if (quote == 0) {
+					if (*p == '\'') {
+						quote = 1;
+						p++;
+						continue;
+					}
+					if (*p == '\"') {
+						quote = 2;
+						p++;
+						continue;
+					}
+					if (*p <= ' ')
+						break;
+				}
+				/* single quote, check for unquote */
+				if (quote == 1 && *p == '\'') {
+					quote = 0;
+					p++;
+					continue;
+				}
+				/* double quote, check for unquote */
+				if (quote == 2 && *p == '\"') {
+					quote = 0;
+					p++;
+					continue;
+				}
+				/* copy character */
 				param[j++] = *p++;
+			}
 			param[j] = '\0';
 			argv[i] = strdup(param);
 			sprintf(strchr(params, '\0'), " '%s'", param);
@@ -148,7 +185,6 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
 			return -EINVAL;
 		}
-		for (j = 0; j < i; j++)
 		rc = handle_options(option->short_option, 0, argv);
 		if (rc <= 0)
 			goto done;
