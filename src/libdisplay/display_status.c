@@ -37,6 +37,8 @@ static void print_status(int on)
 	int w, h;
 
 	get_win_size(&w, &h);
+	if (w > MAX_DISPLAY_WIDTH - 1)
+		w = MAX_DISPLAY_WIDTH - 1;
 
 	if (w > MAX_DISPLAY_WIDTH)
 		w = MAX_DISPLAY_WIDTH;

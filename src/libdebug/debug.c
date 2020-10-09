@@ -101,8 +101,6 @@ void get_win_size(int *w, int *h)
 
 	*h = win.ws_row;
 	*w = win.ws_col;
-	if (*w > MAX_DISPLAY_WIDTH - 1)
-		*w = MAX_DISPLAY_WIDTH - 1;
 }
 
 void _printdebug(const char *file, const char __attribute__((unused)) *function, int line, int cat, int level, const char *kanal, const char *fmt, ...)

@@ -95,6 +95,8 @@ void display_spectrum_on(int on)
 	int w, h;
 
 	get_win_size(&w, &h);
+	if (w > MAX_DISPLAY_WIDTH - 1)
+		w = MAX_DISPLAY_WIDTH - 1;
 
 	if (spectrum_on) {
 		memset(&screen, ' ', sizeof(screen));
@@ -139,8 +141,8 @@ void display_spectrum(float *samples, int length)
 		return;
 
 	get_win_size(&width, &h);
-	if (width > MAX_DISPLAY_WIDTH)
-		width = MAX_DISPLAY_WIDTH;
+	if (width > MAX_DISPLAY_WIDTH - 1)
+		width = MAX_DISPLAY_WIDTH - 1;
 
 	/* calculate size of FFT */
 	int m, fft_size = 0, fft_taps = 0;

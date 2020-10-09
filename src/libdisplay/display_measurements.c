@@ -102,6 +102,8 @@ static void print_measurements(int on)
 	int bar_width, bar_left, bar_right, bar_hold, bar_mark;
 
 	get_win_size(&width, &h);
+	if (width > MAX_DISPLAY_WIDTH - 1)
+		width = MAX_DISPLAY_WIDTH - 1;
 
 	/* no display, if bar graph is less than one character */
 	bar_width = width - MAX_NAME_LEN - MAX_UNIT_LEN;

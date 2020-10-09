@@ -54,6 +54,8 @@ void display_iq_on(int on)
 	int w, h;
 
 	get_win_size(&w, &h);
+	if (w > MAX_DISPLAY_WIDTH - 1)
+		w = MAX_DISPLAY_WIDTH - 1;
 
 	if (iq_on) {
 		memset(&screen, ' ', sizeof(screen));
@@ -113,6 +115,8 @@ void display_iq(float *samples, int length)
 		return;
 
 	get_win_size(&width, &h);
+	if (width > MAX_DISPLAY_WIDTH - 1)
+		width = MAX_DISPLAY_WIDTH - 1;
 
 	/* at what line we draw our zero-line and what character we use */
 	x_center = width >> 1;

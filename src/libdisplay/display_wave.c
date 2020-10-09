@@ -47,6 +47,8 @@ void display_wave_on(int on)
 	int w, h;
 
 	get_win_size(&w, &h);
+	if (w > MAX_DISPLAY_WIDTH - 1)
+		w = MAX_DISPLAY_WIDTH - 1;
 
 	if (wave_on) {
 		memset(&screen, ' ', sizeof(screen));
@@ -101,6 +103,8 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 		return;
 
 	get_win_size(&width, &h);
+	if (width > MAX_DISPLAY_WIDTH - 1)
+		width = MAX_DISPLAY_WIDTH - 1;
 
 	/* at what line we draw our zero-line and what character we use */
 	center_line = (HEIGHT - 1) >> 1;
