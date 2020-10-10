@@ -375,6 +375,7 @@ int wave_read(wave_play_t *play, sample_t **samples, int length)
 	int __attribute__((__unused__)) len;
 	int i, c;
 	int to_read;
+	int got = 0;
 
 	/* we have finished */
 	if (play->left == 0) {
@@ -384,7 +385,7 @@ read_empty:
 			for (c = 0; c < play->channels; c++)
 				samples[c][i] = 0;
 		}
-		return length;
+		return got;
 	}
 
 	/* how much do we read from buffer */
@@ -413,6 +414,7 @@ read_empty:
 			samples[c][i] = (double)value / 32767.0 * max_deviation;
 		}
 	}
+	got += to_read;
 	play->left -= to_read;
 
 	if (!play->left)
@@ -421,7 +423,7 @@ read_empty:
 	if (to_read < length)
 		goto read_empty;
 
-	return length;
+	return got;
 }
 
 void wave_destroy_record(wave_rec_t *rec)
