@@ -12,7 +12,7 @@ typedef struct dtmf_dec {
 	void		*priv;
 	void		(*recv_digit)(void *priv, char digit, dtmf_meas_t *meas);
 	int		samplerate;		/* samplerate */
-	double		freq_tollerance;	/* +- limit of frequency deviation to allow */
+	double		freq_margin;		/* +- limit of frequency deviation (percent) valid tone*/
 	double		min_amplitude;		/* minimum amplitude relative to 0 dBm */
 	double		max_amplitude;		/* maximum amplitude relative to 0 dBm */
 	double		forward_twist;		/* how much do higher frequencies are louder than lower frequencies */

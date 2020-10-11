@@ -64,7 +64,7 @@ int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv
 	dtmf->priv = priv;
 	dtmf->recv_digit = recv_digit;
 	dtmf->samplerate = samplerate;
-	dtmf->freq_tollerance = 3.0;
+	dtmf->freq_margin = 1.03; /* 1.8 .. 3.5 % */
 	dtmf->max_amplitude = max_amplitude;
 	dtmf->min_amplitude = min_amplitude;
 	dtmf->forward_twist = db2level(4.0);
@@ -119,15 +119,15 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 {
 	sample_t frequency_low[length], amplitude_low[length];
 	sample_t frequency_high[length], amplitude_high[length];
-	double tollerance, min_amplitude, max_amplitude, forward_twist, reverse_twist, f1, f2;
+	double margin, min_amplitude, max_amplitude, forward_twist, reverse_twist, f1, f2;
 	int time_detect, time_meas, time_pause;
 	int low = 0, high = 0;
 	char detected, digit;
 	int count;
-	int aplitude_ok, twist_ok;
+	int amplitude_ok, twist_ok;
 	int i;
 
-	tollerance = dtmf->freq_tollerance;
+	margin = dtmf->freq_margin;
 	min_amplitude = dtmf->min_amplitude;
 	max_amplitude = dtmf->max_amplitude;
 	forward_twist = dtmf->forward_twist;
@@ -143,27 +143,27 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 
 	for (i = 0; i < length; i++) {
 #ifdef DEBUG
-		printf("%s %.5f\n", _debug_amplitude(samples[i]/2.0), samples[i]/2.0);
+//		printf("%s %.5f\n", _debug_amplitude(samples[i]/2.0), samples[i]/2.0);
 #endif
 		/* get frequency of low frequencies, correct amplitude drop at cutoff point */
 		f1 = frequency_low[i] + (DTMF_LOW_1 + DTMF_LOW_4) / 2.0;
-		if (f1 >= DTMF_LOW_1 - tollerance && f1 <= DTMF_LOW_1 + tollerance) {
+		if (f1 >= DTMF_LOW_1 / margin && f1 <= DTMF_LOW_1 * margin) {
 			/* cutoff point */
 			amplitude_low[i] /= 0.7071;
 			low = 1;
 			f1 -= DTMF_LOW_1;
 		} else
-		if (f1 >= DTMF_LOW_2 - tollerance && f1 <= DTMF_LOW_2 + tollerance) {
+		if (f1 >= DTMF_LOW_2 / margin && f1 <= DTMF_LOW_2 * margin) {
 			amplitude_low[i] /= 1.0734;
 			low = 2;
 			f1 -= DTMF_LOW_2;
 		} else
-		if (f1 >= DTMF_LOW_3 - tollerance && f1 <= DTMF_LOW_3 + tollerance) {
+		if (f1 >= DTMF_LOW_3 / margin && f1 <= DTMF_LOW_3 * margin) {
 			amplitude_low[i] /= 1.0389;
 			low = 3;
 			f1 -= DTMF_LOW_3;
 		} else
-		if (f1 >= DTMF_LOW_4 - tollerance && f1 <= DTMF_LOW_4 + tollerance) {
+		if (f1 >= DTMF_LOW_4 / margin && f1 <= DTMF_LOW_4 * margin) {
 			/* cutoff point */
 			amplitude_low[i] /= 0.7071;
 			low = 4;
@@ -172,23 +172,23 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 			low = 0;
 		/* get frequency of high frequencies, correct amplitude drop at cutoff point */
 		f2 = frequency_high[i] + (DTMF_HIGH_1 + DTMF_HIGH_4) / 2.0;
-		if (f2 >= DTMF_HIGH_1 - tollerance && f2 <= DTMF_HIGH_1 + tollerance) {
+		if (f2 >= DTMF_HIGH_1 / margin && f2 <= DTMF_HIGH_1 * margin) {
 			/* cutoff point */
 			amplitude_high[i] /= 0.7071;
 			high = 1;
 			f2 -= DTMF_HIGH_1;
 		} else
-		if (f2 >= DTMF_HIGH_2 - tollerance && f2 <= DTMF_HIGH_2 + tollerance) {
+		if (f2 >= DTMF_HIGH_2 / margin && f2 <= DTMF_HIGH_2 * margin) {
 			amplitude_high[i] /= 1.0731;
 			high = 2;
 			f2 -= DTMF_HIGH_2;
 		} else
-		if (f2 >= DTMF_HIGH_3 - tollerance && f2 <= DTMF_HIGH_3 + tollerance) {
+		if (f2 >= DTMF_HIGH_3 / margin && f2 <= DTMF_HIGH_3 * margin) {
 			amplitude_high[i] /= 1.0372;
 			high = 3;
 			f2 -= DTMF_HIGH_3;
 		} else
-		if (f2 >= DTMF_HIGH_4 - tollerance && f2 <= DTMF_HIGH_4 + tollerance) {
+		if (f2 >= DTMF_HIGH_4 / margin && f2 <= DTMF_HIGH_4 * margin) {
 			/* cutoff point */
 			amplitude_high[i] /= 0.7071;
 			high = 4;
@@ -196,15 +196,15 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 		} else
 			high = 0;
 		digit = 0;
-		aplitude_ok = 0;
+		amplitude_ok = 0;
 		twist_ok = 0;
 		if (low && high) {
 			digit = dtmf_digit[low*4+high];
 			/* check for limits */
 			if (amplitude_low[i] <= max_amplitude && amplitude_low[i] >= min_amplitude && amplitude_high[i] <= max_amplitude && amplitude_high[i] >= min_amplitude) {
-				aplitude_ok = 1;
+				amplitude_ok = 1;
 #ifdef DEBUG
-				printf("%.5f %.5f %.1f\n", amplitude_low[i], amplitude_high[i], level2db(amplitude_high[i] / amplitude_low[i]));
+				printf("%.1f %.1f (limits %.1f .. %.1f) %.1f\n", level2db(amplitude_low[i]), level2db(amplitude_high[i]), level2db(min_amplitude), level2db(max_amplitude), level2db(amplitude_high[i] / amplitude_low[i]));
 #endif
 				if (amplitude_high[i] / amplitude_low[i] <= forward_twist && amplitude_low[i] / amplitude_high[i] <= reverse_twist)
 					twist_ok = 1;
@@ -212,7 +212,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 		}
 
 		if (!detected) {
-			if (digit && aplitude_ok && twist_ok) {
+			if (digit && amplitude_ok && twist_ok) {
 				if (count == 0) {
 					memset(&dtmf->meas, 0, sizeof(dtmf->meas));
 				}
@@ -236,7 +236,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 			} else
 				count = 0;
 		} else {
-			if (!digit || digit != detected || !aplitude_ok || !twist_ok) {
+			if (!digit || digit != detected || !amplitude_ok || !twist_ok) {
 				count++;
 				if (count >= time_pause) {
 					detected = 0;
@@ -249,7 +249,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 		}
 #ifdef DEBUG
 		if (digit)
-			printf("DTMF tone='%c' diff frequency=%.1f %.1f amplitude=%.1f %.1f dB (%s) twist=%.1f dB (%s)\n", digit, f1, f2, level2db(amplitude_low[i]), level2db(amplitude_high[i]), (aplitude_ok) ? "OK" : "nok", level2db(amplitude_high[i] / amplitude_low[i]), (twist_ok) ? "OK" : "nok");
+			printf("DTMF tone='%c' diff frequency=%.1f %.1f amplitude=%.1f %.1f dB (%s) twist=%.1f dB (%s)\n", digit, f1, f2, level2db(amplitude_low[i]), level2db(amplitude_high[i]), (amplitude_ok) ? "OK" : "nok", level2db(amplitude_high[i] / amplitude_low[i]), (twist_ok) ? "OK" : "nok");
 #endif
 
 		dtmf->detected = detected;
