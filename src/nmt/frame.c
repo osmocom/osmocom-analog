@@ -450,7 +450,7 @@ static const char *param_country(uint64_t value, int __attribute__((unused)) ndi
 	case 5:
 		return "Denmark";
 	case 6:
-		return "Sweden / Slovakia";
+		return "Sweden / Slovakia / Hungary";
 	case 7:
 		return "Norway / Czech";
 	case 8:

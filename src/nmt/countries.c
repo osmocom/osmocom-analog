@@ -87,6 +87,13 @@ static struct nmt_frequency frq_450_cz_sk[] = {
 	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
 };
 
+/* channel allocation used in Hungary */
+static struct nmt_frequency frq_450_hu[] = {
+	{   132,239,	467.370,	-0.020,	0.8,	10.0,	0 },
+	{   1,	72,	469.990,	-0.020,	0.8,	10.0,	0 },
+	{   0,	0,	0.0,		0.0,	0.0,	0.0,	0 }
+};
+
 /* channel allocation used in Turkey */
 static struct nmt_frequency frq_900_tr[] = {
 	{   1,	180,	461.500,	0.025,	1.0,	10.0,	0 },
@@ -142,6 +149,7 @@ static struct nmt_country {
 	{ 450, 1, 2, 1,9,	"B",	"Belgium",		"Belgacom Mobile",		frq_450_nl_l_b },
 	{ 450, 1, 7, 1,9,	"CZ",	"Czech Republic",	"Eurotel Prague",		frq_450_cz_sk },
 	{ 450, 1, 6, 1,9,	"SK",	"Slovakia",		"Eurotel Bratislava",		frq_450_cz_sk },
+	{ 450, 1, 6, 1,15,	"HU",	"Hungary",		"WESTEL 0660",			frq_450_hu },
 	/* 900 */
 	{ 900, 1, 1, 1,9,	"DK",	"Denmark",		"Tele Danmark Mobile",		frq_900_scandinavia },
 	{ 900, 1, 2, 1,9,	"SE",	"Sweden",		"Telia Mobitel",		frq_900_scandinavia },
