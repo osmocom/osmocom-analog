@@ -30,14 +30,24 @@
 int jitter_create(jitter_t *jitter, int length)
 {
 	memset(jitter, 0, sizeof(*jitter));
-	jitter->spl = calloc(length * sizeof(sample_t), 1);
+	jitter->spl = malloc(length * sizeof(sample_t));
 	if (!jitter->spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory for jitter buffer.\n");
 		return -ENOMEM;
 	}
 	jitter->len = length;
 
+	jitter_reset(jitter);
+
 	return 0;
+}
+
+void jitter_reset(jitter_t *jitter)
+{
+	memset(jitter->spl, 0, jitter->len * sizeof(sample_t));
+
+	/* put write pointer ahead by half of the buffer length */
+	jitter->inptr = jitter->len / 2;
 }
 
 void jitter_destroy(jitter_t *jitter)
