@@ -30,7 +30,7 @@ Ziffer 2: Verbunden mit A 7
 Ziffer 3: Verbunden mit A 14
 Ziffer 5: Verbunden mit A 8
 Ziffer 6: Verbunden mit A 9
-Ziffer 6: Verbunden mit A 13
+Ziffer 6: Verbunden mit A 13 (weitere Ziffer 6)
 
 
 Kathoden 4,5,6,10:
@@ -43,12 +43,13 @@ K 10: Bit 1 (Wertigkeit 2)
 K 5 : Bit 2 (Wertigkeit 4)
 K 6 : Bit 3 (Wertigkeit 8)
 
+Ziffer 1: Verbunden mit A 1 (weitere Ziffer 1)
 Ziffer 4: Verbunden mit A 14
-Ziffer 6: Verbunden mit A 9
-Ziffer 6: Verbunden mit A 13
+Ziffer 6: Verbunden mit A 9 (weitere Ziffer 6)
+Ziffer 6: Verbunden mit A 13 (weitere Ziffer 6)
 
-Hinweis: Es gibt also 4 mal die Ziffer 6, weil man 4 Rufnummern haben kann.
-(Habe mir nicht gemerkt, welche Ziffer welches Rufzeichen ist)
+Hinweis: Es gibt 2x die Ziffer 1 und 4x die Ziffer 6, Damit ist es moeglich 4 verschiedene Kennungen zu kodieren, die sich in der 6. Ziffer unterscheiden. Zudem koennen sich jeweils zwei Kennungen in der 1. Ziffer unterscheiden.
+(Habe mir nicht gemerkt, welche Ziffer welches der 4 Rufzeichen ist.)
 
 
 Ziffern:
@@ -94,7 +95,7 @@ A9 ->|- K5
 
 Beispiel: (minimale Diodenzahl)
 
-Rufnummer: 111111
+Rufnummer: 113377
 
 A1 ->|- K12
 A14 ->|- K3
