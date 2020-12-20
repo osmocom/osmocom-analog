@@ -1300,9 +1300,10 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	transaction_t *trans = cnetz->trans_list;
 	cnetz_t *ogk;
 
-	memset(&telegramm, 0, sizeof(telegramm));
 	if (!trans)
-		return &telegramm;
+		return NULL;
+
+	memset(&telegramm, 0, sizeof(telegramm));
 
 	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);
 	telegramm.sendeleistungsanpassung = (cnetz->ms_power < 8) ? 1 : 0;
@@ -1623,9 +1624,10 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	transaction_t *trans = cnetz->trans_list;
 	int meter = 0;
 
-	memset(&telegramm, 0, sizeof(telegramm));
 	if (!trans)
-		return &telegramm;
+		return NULL;
+
+	memset(&telegramm, 0, sizeof(telegramm));
 
 	if (cnetz->metering) {
 		double now = get_time();

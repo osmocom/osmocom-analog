@@ -686,25 +686,38 @@ again:
 					/* set last time slot, so we know to which time slot the message from mobile station belongs to */
 					cnetz->sched_last_ts = cnetz->sched_ts;
 					bits = cnetz_encode_telegramm(cnetz);
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
+					if (bits) {
+						PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Rufblock' at timeslot %d\n", cnetz->sched_ts);
+						fsk_block_encode(cnetz, bits, 1);
+					} else
+						fsk_nothing_encode(cnetz);
 				} else {
 					bits = cnetz_encode_telegramm(cnetz);
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
+					if (bits) {
+						PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Meldeblock' at timeslot %d\n", cnetz->sched_ts);
+						fsk_block_encode(cnetz, bits, 1);
+					} else
+						fsk_nothing_encode(cnetz);
 				}
-				fsk_block_encode(cnetz, bits, 1);
 			} else {
 				fsk_nothing_encode(cnetz);
 			}
 			break;
 		case DSP_MODE_SPK_K:
 			bits = cnetz_encode_telegramm(cnetz);
-			fsk_block_encode(cnetz, bits, 0);
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung' at timeslot %d.%d\n", cnetz->sched_ts, cnetz->sched_r_m * 5);
+			if (bits) {
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Konzentrierte Signalisierung' at timeslot %d.%d\n", cnetz->sched_ts, cnetz->sched_r_m * 5);
+				fsk_block_encode(cnetz, bits, 0);
+			} else
+				fsk_nothing_encode(cnetz);
 			break;
 		case DSP_MODE_SPK_V:
 			bits = cnetz_encode_telegramm(cnetz);
-			fsk_distributed_encode(cnetz, bits);
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung' starting at timeslot %d\n", cnetz->sched_ts);
+			if (bits) {
+				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Transmitting 'Verteilte Signalisierung' starting at timeslot %d\n", cnetz->sched_ts);
+				fsk_distributed_encode(cnetz, bits);
+			} else
+				fsk_nothing_encode(cnetz);
 			break;
 		case DSP_MODE_OFF:
 		default:
@@ -879,10 +892,12 @@ void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
 
 void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int timeslot)
 {
-	if (mode != cnetz->dsp_mode) {
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Schedule DSP mode %s -> %s at timeslot %d\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode), timeslot);
-		cnetz->sched_dsp_mode = mode;
-		cnetz->sched_dsp_mode_ts = timeslot;
+	if (cnetz->sched_dsp_mode_ts < 0 && mode == cnetz->dsp_mode) {
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Schedule DSP mode %s not required, we are already in that mode\n", cnetz_dsp_mode_name(mode));
+		return;
 	}
+	PDEBUG_CHAN(DDSP, DEBUG_INFO, "Schedule DSP mode %s -> %s at timeslot %d\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode), timeslot);
+	cnetz->sched_dsp_mode = mode;
+	cnetz->sched_dsp_mode_ts = timeslot;
 }
 

@@ -1597,6 +1597,9 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 		;
 	}
 
+	if (!telegramm)
+		return NULL;
+
 	opcode = telegramm->opcode;
 	bits = assemble_telegramm(telegramm, (opcode != OPCODE_LR_R) && (opcode != OPCODE_MLR_M));
 	bits = encode(bits);
