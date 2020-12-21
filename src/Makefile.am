@@ -59,7 +59,7 @@ SUBDIRS += \
 	sim \
 	fuvst
 
-if HAVE_SDR
+if HAVE_ALSA
 if HAVE_FUSE
 SUBDIRS += \
 	datenklo
