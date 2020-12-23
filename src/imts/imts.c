@@ -140,13 +140,13 @@ void imts_list_channels(void)
 #define PAGE_PULSE_TO	0.200	/* Time to detect end of digit */
 
 /* Counters */
-#define DISC_COUNT	6	/* Number of pulses to detect disconnect FIXME */
+#define DISC_COUNT	2	/* Number of pulses to detect disconnect (100 ms) */
 #define RING_PULSES	40	/* 2 seconds ringer on */
 
 /* Durations */
 #define IDLE_DETECT	0.500	/* Time to detect Idle signal (loopback) */
 #define PAGE_SEIZE	0.400	/* Time to seize channel until start paging pulses FIXME */
-#define PAGE_PAUSE	0.400	/* Time to pause after each digit FIXME */
+#define PAGE_PAUSE	0.225	/* Time to pause after each digit */
 #define PAGE_MARK	0.050	/* Mark duration of page pulse */
 #define PAGE_SPACE	0.050	/* Space duration of page pulse */
 #define PAGE_PULSE	0.100	/* Duration of a complete pulse (MTS) */
