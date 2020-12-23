@@ -165,7 +165,7 @@ If the (only) channel with the Idle tone is seized by a mobile phone or the publ
 <p>
 When a mobile phone is idle, it will search for a radio channel with Idle tone and suitable quality.
 The transmitter will be off while the phone listens to the Idle tone or an incoming call from the base station.
-When the Idle tone disappears for about 250 ms ???, it will search for another idle channel.
+When the Idle tone disappears, it will search for another idle channel after 300 ms.
 </p>
 
 <p>
@@ -189,7 +189,7 @@ The base station sends 250 ms of the Seize tone.
 </p>
 
 <p>
-If the mobile phone receives the Seize tone, it will send the ANI sequence.
+200 ms after the mobile phone has received the Seize tone, it will send the ANI sequence.
 The ANI sequence consists of 190 ms of Guard tone, followed by 7 pulsed digits.
 Each digit is formed by pulses consisting of 25 ms Mark tone and 25 ms of Space tone.
 After the last pulse of each digit the mobile phone sends 190 ms of Space tone.
@@ -205,11 +205,11 @@ The base station verifies the received ANI and presents a dial tone or forwards 
 </p>
 
 <p>
-When a number is dialed from a mobile phone, Guard tone is sent continuously as soon a the dial goes off normal (when the dial is moved from its resting position), which should be about 400 ms ???.
+When a number is dialed from a mobile phone, Guard tone is sent continuously as soon a the dial goes off normal (when the dial is moved from its resting position).
 Each digit is formed by pulses consisting of 60 ms Mark tone and 40 ms of Space tone.
 The Mark tone is transmitted as 1633 Hz Connect tone.
 The Space tone is transmitted as 2150 Hz Guard tone.
-The Space tone continues until the dial returned to normal, which should be about 200 ms ???.
+The Space tone continues until the dial returned to normal, which is about two steps of the rotary dial (200 ms).
 </p>
 
 <p>
@@ -227,8 +227,10 @@ First, the base station selects the idle channel that is transmitting the 2000 H
 (Another channel that is turned off, will then transmit the 2000 Hz Idle tone.)
 If there is no channel available, the land user receives a busy signal.
 The 7 digit number is transmitted towards the mobile phone via alternating tones.
-The base station transmits a 1800 Hz Seize tone for about 400 ms (???) before, between and after each digit.
+The base station transmits a 1800 Hz Seize tone and waits about 400 ms (???) before transmitting digits.
 Each digit is formed by pulses consisting of 50 ms Mark tone and 50 ms of Space tone.
+After each digit the base station continues sending 1800 Hz Seize tone.
+The interdigit delay is 225 ms.
 The Mark tone is transmitted as 2000 Hz Idle tone.
 The Space tone is transmitted as 1800 Hz Seize tone.
 The base station will start timer for 3 to 4 seconds waiting for the mobile phone to respond with a 2150 Hz Guard tone.
@@ -244,7 +246,7 @@ After sending Guard tone, the mobile phone will ring and wait for answer.
 <p>
 If the base station does not receive the Guard tone from the mobile phone, it will return to idle state.
 The land user will receive an announcement that the called phone is not available at this moment.
-If the base station receives the Guard tone from the mobile phone, it will send a ringing sequence for about 45 seconds.
+If the base station receives the Guard tone from the mobile phone, it will send a ringing sequence up to 45 seconds.
 Ringing by the base station is composed of 1800 Hz Seize tone and 2000 Hz Idle tone, each alternating after 25 ms for 2 seconds, then 4 seconds of Seize tone.
 </p>
 
@@ -272,7 +274,7 @@ After 750 ms sending that sequence, the mobile phone turns off transmitter and s
 </p>
 
 <p>
-When the base station receives the release sequence, it will return to idle state.
+When the base station receives the release sequence for 100 ms, it will return to idle state.
 </p>
 
 
