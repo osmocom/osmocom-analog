@@ -39,13 +39,13 @@
  * 0-level of the phone's transmitter is. (level of carrier frequency) Also we
  * use receiver and sound card that cause any level to return to 0 after some
  * time, Even if the transmitter still transmits a level above or below the
- * carrier frequnecy. Insted we look at the change of the received signal. An
+ * carrier frequnecy. Instead we look at the change of the received signal. An
  * upward change indicates 1. An downward change indicates 0. (This may also be
  * reversed, if we find out, that we received a sync sequence in reversed
  * polarity.) If there is no significant change in level, we keep the value of
  * last change, regardless of what level we actually receive.
  *
- * To determine a change from noise, we use a theshold. This is set to half of
+ * To determine a change from noise, we use a threshold. This is set to half of
  * the level of last received change. This means that the next change may be
  * down to a half lower.  There is a special case during distributed signaling.
  * The first level change of each data chunk raises or falls from 0-level
@@ -65,7 +65,7 @@
  * determine the highest slope, the highest difference between subsequent
  * samples is used.  For every sample we move the window one bit to the right
  * (next sample), check if change level matches the threshold and highest slope
- * is in the middle and so forth. Only if the highes slope is exactly in the
+ * is in the middle and so forth. Only if the highest slope is exactly in the
  * middle, we declare a change.  This means that we detect a slope about half of
  * a bit duration later.
  *
@@ -342,12 +342,12 @@ static inline void got_bit(fsk_fm_demod_t *fsk, int bit, double change_level)
 	case FSK_SYNC_NONE:
 		fsk->rx_sync = (fsk->rx_sync << 1) | bit;
 		/* use half level of last change for threshold change detection.
-		 * if there is no change detected for 5 bits, set theshold to
+		 * if there is no change detected for 5 bits, set threshold to
 		 * 1 percent, so the 7 pause bits before a frame will make sure
 		 * that the change is below noise level, so the first sync
 		 * bit is detected. then the change is set and adjusted
 		 * for all other bits in the sync sequence.
-		 * after sync, the theshold is set to half of the average of
+		 * after sync, the threshold is set to half of the average of
 		 * all changes in the sync sequence */
 		if (change_level > 0.0) {
 			fsk->level_threshold = change_level / 2.0;

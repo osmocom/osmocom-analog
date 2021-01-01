@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "*******************************************************************************\n");
 		fprintf(stderr, "I strongly suggest to let me do pre- and de-emphasis (options -p -d)!\n");
 		fprintf(stderr, "Use a transmitter/receiver without emphasis and let me do that!\n");
-		fprintf(stderr, "Because 50 baud supervisory signalling around 150 Hz will not be tranmitted by\n");
+		fprintf(stderr, "Because 50 baud supervisory signalling around 150 Hz will not be transmitted by\n");
 		fprintf(stderr, "regular radio, use direct input to the PLL of your transmitter (or use SDR).\n");
 		fprintf(stderr, "*******************************************************************************\n");
 	}

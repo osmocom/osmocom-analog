@@ -37,10 +37,10 @@ a BSA44 (magnetic card C-Netz hackable phone) back in the 90's.
 
 Andy Zauner for providing signaling specification of C-Netz back in the 90's.
 
-Hans Wigger for providing valuable informations about A-Netz and B-Netz and
+Hans Wigger for providing valuable information about A-Netz and B-Netz and
 helping me to get an A-Netz phone.
 
-Stephan Hessberger for his work on oebl.de, that provides valuable informations
+Stephan Hessberger for his work on oebl.de, that provides valuable information
 about A-Netz, B-Netz, C-Netz, Eurosignal and much more.
 
 Friedhelm Hillebrand for providing complete specification of the mobile phone
@@ -48,7 +48,7 @@ of C-Netz.
 
 Mikko Ristila for providing newer NMT specs (with DMS/SMS specifications).
 
-Dieter Spaar and Mark Atherton for prividing AMPS informations and recordings
+Dieter Spaar and Mark Atherton for providing AMPS information and recordings
 to verify and debug AMPS support.
 See http://www.idesignz.org/AMPS/AMPS_BS.html for first base station
 implementation of AMPS.

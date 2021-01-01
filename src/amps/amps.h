@@ -89,12 +89,12 @@ struct amps {
 	int			fsk_rx_sync_tolerant;	/* be more tolerant to sync */
 	/* the dotting buffer stores the elapsed samples, so we can calculate
 	 * an average time of zero-crossings during dotting sequence.
-	 * this buffer wrapps every 256 values */
+	 * this buffer wrpps every 256 values */
 	double			fsk_rx_dotting_elapsed[256]; /* dotting buffer with elapsed samples since last zero-crossing */
 	uint8_t			fsk_rx_dotting_pos;	/* position of next value in dotting buffer */
 	int			fsk_rx_dotting_life;	/* counter to expire when no sync was found after dotting */
 	double			fsk_rx_dotting_average;	/* last average slope position of dotting sequnece. */
-	/* the ex buffer holds the duration of one bit, and wrapps every
+	/* the ex buffer holds the duration of one bit, and wraps every
 	 * bit. */
 	double			fsk_rx_bitcount;	/* counts the bit. if it reaches or exceeds 1, the bit is complete and the next bit starts */
 	sample_t		*fsk_rx_window;		/* rx buffer for one bit */
@@ -103,7 +103,7 @@ struct amps {
 	int			fsk_rx_window_begin;	/* where to begin detecting level */
 	int			fsk_rx_window_end;	/* where to end detecting level */
 	int			fsk_rx_window_pos;	/* current position in buffer */
-	/* the rx bufffer received one frame until rx length */
+	/* the rx buffer received one frame until rx length */
 	char			fsk_rx_frame[FSK_MAX_BITS + 1];	/* +1 because 0-termination */
 	int			fsk_rx_frame_length;	/* length of expected frame */
 	int			fsk_rx_frame_count;	/* count number of received bit */
@@ -123,7 +123,7 @@ struct amps {
 	char			rx_recc_dialing[33];	/* received dial string */
 	/* FOCC frame states */
 	int			rx_focc_word_count;	/* counts received words */
-	int			tx_focc_frame_count;	/* used to schedule system informations */
+	int			tx_focc_frame_count;	/* used to schedule system information */
 	int			tx_focc_send;		/* if set, send message words */
 	uint32_t		tx_focc_min1;		/* mobile id */
 	uint16_t		tx_focc_min2;
@@ -131,8 +131,8 @@ struct amps {
 	uint8_t			tx_focc_msg_type;	/* message (3 values) */
 	uint8_t			tx_focc_ordq;
 	uint8_t			tx_focc_order;
-	int			tx_focc_word_count;	/* counts transmitted words in a muli word message */
-	int			tx_focc_word_repeat;	/* countrs repeats of mulit word message */
+	int			tx_focc_word_count;	/* counts transmitted words in a multi word message */
+	int			tx_focc_word_repeat;	/* counts repeats of multi word message */
 	/* FVC frame states */
 	int			tx_fvc_send;		/* if set, send message words */
 	int			tx_fvc_chan;		/* channel to assign for voice call */

@@ -118,7 +118,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	}
 
 	if (clock_speed[0] > 1000 || clock_speed[0] < -1000 || clock_speed[1] > 1000 || clock_speed[1] < -1000) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Clock speed %.1f,%.1f ppm out of range! Plese use range between +-1000 ppm!\n", clock_speed[0], clock_speed[1]);
+		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Clock speed %.1f,%.1f ppm out of range! Please use range between +-1000 ppm!\n", clock_speed[0], clock_speed[1]);
 		return -EINVAL;
 	}
 	PDEBUG_CHAN(DDSP, DEBUG_INFO, "Using clock speed of %.1f ppm (RX) and %.1f ppm (TX) to correct sound card's clock.\n", clock_speed[0], clock_speed[1]);
@@ -136,7 +136,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 		goto error;
 	}
 
-	/* create devation and ramp */
+	/* create deviation and ramp */
 	cnetz->fsk_deviation = FSK_DEVIATION;
 	dsp_init_ramp(cnetz);
 
@@ -229,7 +229,7 @@ void calc_clock_speed(cnetz_t *cnetz, double samples, int tx, int result)
 
 	ti = get_time();
 
-	/* skip some time to avoid false mesurement due to filling of buffers */
+	/* skip some time to avoid false measurement due to filling of buffers */
 	if (cs->meas_ti == 0.0) {
 		cs->meas_ti = ti + 1.0;
 		return;
@@ -431,7 +431,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits, int ogk)
  * the marker is placed in the middle of the 6th bit.
  * because we have a transition (ramp) in the middle of each bit.
  * the phone will see the position of the marker as start of the 6th bit.
- * the marker marks the pont where the speech is ramped up, so the phone
+ * the marker marks the point where the speech is ramped up, so the phone
  * will see the speech completely ramped up after the 6th bit
  */
 static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
@@ -662,7 +662,7 @@ again:
 		if (cnetz->sched_dsp_mode_ts >= 0 && cnetz->sched_r_m == 0) {
 			if (cnetz->sched_dsp_mode_ts == cnetz->sched_ts) {
 				/* OgK / SpK(K) / SpK(V) */
-				PDEBUG_CHAN(DDSP, DEBUG_INFO, "Now switchting channel mode to %s at timeslot %d\n", cnetz_dsp_mode_name(cnetz->sched_dsp_mode), cnetz->sched_dsp_mode_ts);
+				PDEBUG_CHAN(DDSP, DEBUG_INFO, "Now switching channel mode to %s at timeslot %d\n", cnetz_dsp_mode_name(cnetz->sched_dsp_mode), cnetz->sched_dsp_mode_ts);
 				cnetz->sched_dsp_mode_ts = -1;
 				cnetz_set_dsp_mode(cnetz, cnetz->sched_dsp_mode);
 			}

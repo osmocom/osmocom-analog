@@ -22,16 +22,16 @@ enum r2000_state {
 	STATE_IDLE,		/* channel is not in use */
 	STATE_INSCRIPTION,	/* SM registers */
 	STATE_OUT_ASSIGN,	/* assign outgoing call on CC */
-	STATE_IN_ASSIGN,	/* assign incomming call on CC */
+	STATE_IN_ASSIGN,	/* assign incoming call on CC */
 	STATE_RECALL_ASSIGN,	/* assign outgoing recall on CC */
 	STATE_OUT_IDENT,	/* identity outgoing call on TC */
-	STATE_IN_IDENT,		/* identity incomming call on TC */
+	STATE_IN_IDENT,		/* identity incoming call on TC */
 	STATE_RECALL_IDENT,	/* identity outgoing recall on TC */
 	STATE_OUT_DIAL1,	/* dialing outgoing call on TC */
 	STATE_OUT_DIAL2,	/* dialing outgoing call on TC */
 	STATE_SUSPEND,		/* suspend after dialing outgoing call on TC */
 	STATE_RECALL_WAIT,	/* wait for calling back the phone */
-	STATE_IN_ALERT,		/* alerting incomming call on TC */
+	STATE_IN_ALERT,		/* alerting incoming call on TC */
 	STATE_OUT_ALERT,	/* alerting outgoing call on TC */
 	STATE_RECALL_ALERT,	/* alerting outgoing recall on TC */
 	STATE_ACTIVE,		/* channel is in use */

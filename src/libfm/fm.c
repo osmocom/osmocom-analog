@@ -72,7 +72,7 @@ int fm_mod_init(fm_mod_t *mod, double samplerate, double offset, double amplitud
 	int i;
 
 	if (!has_init) {
-		fprintf(stderr, "libfm was not initialized, plese fix!\n");
+		fprintf(stderr, "libfm was not initialized, please fix!\n");
 		abort();
 	}
 
@@ -264,7 +264,7 @@ again:
 int fm_demod_init(fm_demod_t *demod, double samplerate, double offset, double bandwidth)
 {
 	if (!has_init) {
-		fprintf(stderr, "libfm was not initialized, plese fix!\n");
+		fprintf(stderr, "libfm was not initialized, please fix!\n");
 		abort();
 	}
 

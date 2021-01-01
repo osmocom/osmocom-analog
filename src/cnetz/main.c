@@ -103,7 +103,7 @@ void print_help(const char *arg0)
 	printf("	Power level 8 starts with level 6 and is then reduced on SpK.\n");
 	printf(" -A --authentication <challenge>\n");
 	printf("        Enable authorization flag on the base station and use given challenge\n");
-	printf("        as autorization random. Depending on the key inside the card you will\n");
+	printf("        as authorization random. Depending on the key inside the card you will\n");
 	printf("        get a response. Any response is accepted. Phone must have smart card!\n");
 	printf("        The challenge can be any 64 bit (hex) number like: 0x0123456789abcdef\n");
 	printf("        Note: Authentication is automatically enabled for the base station\n");

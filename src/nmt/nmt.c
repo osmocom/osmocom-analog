@@ -43,7 +43,7 @@
  * After timeout, all channels with that transaction pointer are released.
  *
  * When paging was replied, other channels with the transaction pointer are
- * relased, but the channel with the reply is linked to transaction in both
+ * released, but the channel with the reply is linked to transaction in both
  * directions. (trans->nmt points to nmt, nmt->trans points to trans)
  *
  */

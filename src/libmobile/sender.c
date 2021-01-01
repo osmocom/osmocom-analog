@@ -295,7 +295,7 @@ void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation
 	sender->speech_deviation = speech_deviation;
 	sender->max_display = max_display;
 
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Maxium deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
+	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Maximum deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
 	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Deviation at speech level: %.1f kHz\n", speech_deviation / 1000.0);
 }
 

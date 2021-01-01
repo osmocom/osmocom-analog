@@ -13,7 +13,7 @@
 #define	TRANS_WBN	(1 << 7)	/* dialing received, waiting for time slot to reject call */
 #define	TRANS_VAG	(1 << 8)	/* establishment of call sent, switching channel */
 	/* mobile terminated call */
-#define	TRANS_WSK	(1 << 9)	/* incomming call in queue */
+#define	TRANS_WSK	(1 << 9)	/* incoming call in queue */
 #define	TRANS_VAK	(1 << 10)	/* establishment of call sent, switching channel */
 	/* traffic channel */
 #define	TRANS_BQ	(1 << 11)	/* accnowledge channel */

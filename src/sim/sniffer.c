@@ -133,7 +133,7 @@ static void rx_icl_sdu(uint8_t *data, int length)
 		case CLA_AUTO:
 			switch (ins_aprc) {
 			case AUT_1:
-				PDEBUG(DSIM7, DEBUG_INFO, "  -> AUTO-1 (Autorization)\n");
+				PDEBUG(DSIM7, DEBUG_INFO, "  -> AUTO-1 (Authorization)\n");
 				break;
 			}
 			break;

@@ -1,6 +1,6 @@
 
-#define BITS_PER_SUPERFRAME	12672.0	/* super frame (Oberrahmen) has duration of excactly 2.4 seconds */
-#define BITS_PER_BLOCK		198.0	/* block has duration of excactly 37.5 milli seconds */
+#define BITS_PER_SUPERFRAME	12672.0	/* super frame (Oberrahmen) has duration of exactly 2.4 seconds */
+#define BITS_PER_BLOCK		198.0	/* block has duration of exactly 37.5 milli seconds */
 #define BITS_PER_SPK_BLOCK	66.0	/* spk block has a duration of exactly 12.5 milli seconds */
 
 /* fsk rx sync state */

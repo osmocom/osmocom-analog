@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Based on orignal Scrambler code from SIT-Rom:
+/* Based on original Scrambler code from SIT-Rom:
 
  r6 already has input bit at position 0.
  r6 (low) and r7 (high) are the shift register.

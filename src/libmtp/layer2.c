@@ -846,7 +846,7 @@ static int ack_msg(mtp_t *mtp, uint8_t bsn)
 {
 	struct mtp_msg *msg = mtp->tx_queue, *temp;
 
-	/* search for frame that has been tranmitted and acked */
+	/* search for frame that has been transmitted and acked */
 	while (msg) {
 		/* is not transmitted, we are done */
 		if (!msg->transmitted) {
@@ -916,13 +916,13 @@ static void mtp_receive_lssu(mtp_t *mtp, uint8_t fsn, uint8_t bib, uint8_t statu
 		handle_event(mtp, MTP_PRIM_SIO, NULL, 0);
 		break;
 	case STATUS_N:
-		/* Adopt intial sequence numbers: SAE does, so do we */
+		/* Adopt initial sequence numbers: SAE does, so do we */
 		mtp->rx_seq = fsn;
 		mtp->fib = bib;
 		handle_event(mtp, MTP_PRIM_SIN, NULL, 0);
 		break;
 	case STATUS_E:
-		/* Adopt intial sequence numbers: SAE does, so do we */
+		/* Adopt initial sequence numbers: SAE does, so do we */
 		mtp->rx_seq = fsn;
 		mtp->fib = bib;
 		handle_event(mtp, MTP_PRIM_SIE, NULL, 0);
@@ -964,7 +964,7 @@ static void mtp_receive_fisu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, 
 	/* if the FSN is different and received FIB equals last BIB sent */
 	if (fsn != mtp->rx_seq && fib == mtp->bib) {
 		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Send nack, because we missed a frame and FIB equals last transmitted BIB.\n");
-		/* shedule NACK */
+		/* schedule NACK */
 		mtp->tx_nack = 1;
 	}
 }
@@ -1017,7 +1017,7 @@ static void mtp_receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, u
 	/* iii) if sequence number is not equal and not one more than the last received,
 	 *      a NACK is sent, if FIB equals last BIB */
 	if (fib == mtp->bib) {
-		/* shedule NACK */
+		/* schedule NACK */
 		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Send nack, because we missed a frame and FIB equals last transmitted BIB.\n");
 		mtp->tx_nack = 1;
 	} else
@@ -1101,9 +1101,9 @@ static int mtp_receive_frame(mtp_t *mtp, uint8_t *data, int len)
 	}
 
 	if (len == 1)
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving LSSU (lentgh = %d) with status flag 0x%02x (%s)\n", len, data[3], mtp_sf_names[data[3] & 0x7]);
+		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving LSSU (length = %d) with status flag 0x%02x (%s)\n", len, data[3], mtp_sf_names[data[3] & 0x7]);
 	if (len == 2)
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving LSSU (lentgh = %d) with status flag 0x%04x (%s)\n", len, data[3] | (data[4] << 8), mtp_sf_names[data[3] & 0x7]);
+		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving LSSU (length = %d) with status flag 0x%04x (%s)\n", len, data[3] | (data[4] << 8), mtp_sf_names[data[3] & 0x7]);
 	if (len == 1 || len == 2) {
 		/* receive LSSU */
 		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
@@ -1138,7 +1138,7 @@ uint8_t mtp_send_bit(mtp_t *mtp)
 		/* start frame after flag */
 		if (++mtp->tx_bit_count == 8) {
 			mtp->tx_bit_count = 0;
-			/* continously send flag when power off */
+			/* continuously send flag when power off */
 			if (mtp->l2_state == MTP_L2STATE_POWER_OFF)
 				return bit;
 			mtp->tx_byte_count = 0;
@@ -1242,7 +1242,7 @@ void mtp_receive_bit(mtp_t *mtp, uint8_t bit)
 {
 	int rc;
 
-	/* octect counting */
+	/* octet counting */
 	if (mtp->rx_octet_counting) {
 		if (++mtp->rx_octet_count == 8 * N) {
 			/* octet counter hits */
@@ -1267,7 +1267,7 @@ void mtp_receive_bit(mtp_t *mtp, uint8_t bit)
 				mtp_monitor(mtp, MONITOR_GOOD);
 			}
 			if (rc == 0 && mtp->rx_octet_counting) {
-				/* stop octect counting */
+				/* stop octet counting */
 				PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop Octet counting, due to correctly received frame\n");
 				mtp->rx_octet_counting = 0;
 			}

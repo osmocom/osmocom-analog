@@ -451,13 +451,13 @@ static void dms_rx_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *data
 
 	if (dms->state.dir != d && !dms_allow_loopback) {
 		/* drop frames with wrong direction indicator */
-		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator missmatch!\n");
+		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator mismatch!\n");
 		return;
 	}
 
 	if (dms->state.n_r != n) {
 		/* ignore out of sequence frames */
-		PDEBUG(DDMS, DEBUG_DEBUG, "DMS frame number missmatch (due to resending)\n");
+		PDEBUG(DDMS, DEBUG_DEBUG, "DMS frame number mismatch (due to resending)\n");
 	} else {
 		PDEBUG(DDMS, DEBUG_INFO, "Received valid DMS frame: %s\n", print_ct_dt(s, n, data, dms->state.eight_bits));
 
@@ -526,7 +526,7 @@ static void dms_rx_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 
 	if (dms->state.dir != d && !dms_allow_loopback) {
 		/* drop frames with wrong direction indicator */
-		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator missmatch!\n");
+		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator mismatch!\n");
 		return;
 	}
 
@@ -539,7 +539,7 @@ static void dms_rx_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 		dms_frame = dms_frame->next;
 	}
 
-	/* if we don't find a frame, it must have been already acked, so we igore RR */
+	/* if we don't find a frame, it must have been already acked, so we ignore RR */
 	if (!dms_frame || i == 4) {
 		PDEBUG(DDMS, DEBUG_DEBUG, "Received already acked DMS frame: RR(%d) (s = %d), ignoring\n", n, s);
 		return;
@@ -581,7 +581,7 @@ static void dms_rx_nr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 
 	if (dms->state.dir != d && !dms_allow_loopback) {
 		/* drop frames with wrong direction indicator */
-		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator missmatch!\n");
+		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator mismatch!\n");
 		return;
 	}
 
@@ -713,7 +713,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			if (dms->rx_bit_count == 9) {
 				dms->rx_bit_count = 0;
 				if (dms->rx_frame[0] != dms->rx_frame[1]) {
-					PDEBUG(DDMS, DEBUG_DEBUG, "Repeated DMS label missmatches!\n");
+					PDEBUG(DDMS, DEBUG_DEBUG, "Repeated DMS label mismatches!\n");
 					dms->rx_in_sync = 0;
 					return;
 				}
@@ -750,7 +750,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
  * calls from upper layer
  */
 
-/* recive data from upper layer to be sent as DT frames
+/* receive data from upper layer to be sent as DT frames
  * the DT frames are generated */
 void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 {

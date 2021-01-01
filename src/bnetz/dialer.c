@@ -153,7 +153,7 @@ static int handle_options(int short_option, int __attribute__((unused)) argi, ch
 
 
 /* process next fsk bit.
- * if the dial string terminats, change to SILENCE mode
+ * if the dial string terminates, change to SILENCE mode
  */
 static int fsk_send_bit(void __attribute__((unused)) *inst)
 {
@@ -236,7 +236,7 @@ again:
 	}
 }
 
-/* loop that gets audio from encoder and fowards it to sound card.
+/* loop that gets audio from encoder and forwards it to sound card.
  * alternatively a sound file is written.
  */
 static void process_signal(void)

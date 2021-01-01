@@ -33,7 +33,7 @@
  * OUT-VERIFY	Outgoing call, digits are repeated
  * CALL		Active call
  * CALL-DIALING	User is dialing during call
- * IN-PAGING	Incomming call, user is paged
+ * IN-PAGING	Incoming call, user is paged
  * RELEASED	Fixed network released call
  *
  * Timers:

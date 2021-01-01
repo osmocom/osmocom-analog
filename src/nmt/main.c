@@ -61,7 +61,7 @@ void print_help(const char *arg0)
 	main_mobile_print_help(arg0, "[-N 900] -Y <traffic area> | list  [-I 1] [-0 1] ");
 	/*      -                                                                             - */
 	printf(" -N --nmt-system 450/900\n");
-	printf("        Give NMT type as first paramer. (default = '%d')\n", nmt_system);
+	printf("        Give NMT type as first parameter. (default = '%d')\n", nmt_system);
 	printf("        Note: This option must be given at first!\n");
 	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(nmt_system, chan_type[0]));

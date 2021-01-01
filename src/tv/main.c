@@ -105,7 +105,7 @@ void print_help(const char *arg0)
 	printf(" -w --wave-file <filename>\n");
 	printf("        Output to wave file instead of SDR\n");
 	printf(" -r --realtime <prio>\n");
-	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
+	printf("        Set prio: 0 to disable, 99 for maximum (default = %d)\n", rt_prio);
 	printf("\nsignal options:\n");
 	printf(" -F --fbas 1 | 0\n");
 	printf("        Turn color on or off. (default = %d)\n", fbas);
@@ -210,7 +210,7 @@ static int handle_options(int short_option, int argi, char **argv)
 	case 'I':
 		station_id = strdup(argv[argi]);
 		if (strlen(station_id) != 12) {
-			fprintf(stderr, "Given station ID must be exactly 12 charaters long. (Use spaces to fill it.)\n");
+			fprintf(stderr, "Given station ID must be exactly 12 characters long. (Use spaces to fill it.)\n");
 			return -EINVAL;
 		}
 		break;

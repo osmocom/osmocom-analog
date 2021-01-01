@@ -647,7 +647,7 @@ static r2000_t *move_call_to_chan(r2000_t *old_r2000, enum r2000_chan_type chan_
  * idle process
  */
 
-/* trasmit beacon */
+/* transmit beacon */
 static void tx_idle(r2000_t __attribute__((unused)) *r2000, frame_t *frame)
 {
 	frame->voie = 1;
@@ -792,7 +792,7 @@ static void tx_ident(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending identity requrest\n");
+		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending identity request\n");
 }
 
 /* receive identity response */
@@ -923,7 +923,7 @@ static void rx_alert(r2000_t *r2000, frame_t *frame)
 
 		switch (r2000->state) {
 		case STATE_IN_ALERT:
-			/* answer incomming call */
+			/* answer incoming call */
 			PDEBUG(DR2000, DEBUG_INFO, "Answer call to network.\n");
 			call_up_answer(r2000->callref, subscriber2string(&r2000->subscriber));
 			break;

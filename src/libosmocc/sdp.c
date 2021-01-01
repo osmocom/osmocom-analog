@@ -141,7 +141,7 @@ char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
 	return sdp;
 }
 
-/* seperate a word from string that is delimited with one or more space characters */
+/* separate a word from string that is delimited with one or more space characters */
 static char *wordsep(char **text_p)
 {
 	char *text = *text_p;

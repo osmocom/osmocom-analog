@@ -442,7 +442,7 @@ static int transmit_conn(osmo_cc_conn_t *conn)
 
 	/* start TX keepalive timeer, if not already
 	 * because we stop at every message above, we actually restart the timer here.
-	 * only if there is no message for the amout of time, the timer fires.
+	 * only if there is no message for the amount of time, the timer fires.
 	 */
 	if (!timer_running(&conn->tx_keepalive_timer))
 		timer_start(&conn->tx_keepalive_timer, OSMO_CC_SOCKET_TX_KEEPALIVE);

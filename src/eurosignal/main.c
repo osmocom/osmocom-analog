@@ -68,8 +68,8 @@ void print_help(const char *arg0)
 	printf("        be the received pager ID. The called number will be '1' for the first\n");
 	printf("        ID given, '2' for scond, ...)\n");
 	printf(" -D --degraded\n");
-	printf("        Play the anouncement that the system is degraded due to failure of one\n");
-	printf("        or more transmitters. If the caller hangs up during or rigt after the\n");
+	printf("        Play the announcement that the system is degraded due to failure of one\n");
+	printf("        or more transmitters. If the caller hangs up during or right after the\n");
 	printf("        announcement, no paging is performed.\n");
 	printf(" -S --scan <from> <to>\n");
 	printf("        Scan through given IDs once (no repetition). This can be useful to find\n");

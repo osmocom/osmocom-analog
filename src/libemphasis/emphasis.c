@@ -74,7 +74,7 @@ int init_emphasis(emphasis_t *state, int samplerate, double cut_off, double cut_
 
 	/* do not pre-emphasis above CUT_OFF_L
 	 * Mobile network specifications want -18 dB per octave.
-	 * With two interations we have 24 dB, - 6 dB (from emphasis). */
+	 * With two iterations we have 24 dB, - 6 dB (from emphasis). */
 	iir_lowpass_init(&state->p.lp, cut_off_l, samplerate, 2);
 
 	/* calibrate amplification to be neutral at 1000 Hz */

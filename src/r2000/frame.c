@@ -445,7 +445,7 @@ static int dissassemble_frame(frame_t *frame, const uint8_t *message, int num)
 
 	PDEBUG(DFRAME, DEBUG_DEBUG, "Decoding frame %s %s\n", r2000_dir_name(dir), r2000_frame_name(frame->message, dir));
 
-	/* dissassemble elements elements */
+	/* disassemble elements elements */
 	value = 0;
 	for (i = 0; i < num; i++) {
 		value = (value << 1) | ((message[i / 8] >> (7 - (i & 7))) & 1);

@@ -1204,7 +1204,7 @@ int init_coding(void)
 		block_code[i] = word;
 	}
 
-	/* check if redunancy of a single bit matches the combined redundancy */
+	/* check if redundancy of a single bit matches the combined redundancy */
 	for (i = 0; i < 128; i++) {
 		int r = 0;
 		for (j = 0; j < 7; j++) {

@@ -60,12 +60,12 @@ serial_t *serial_open(const char *serial_device, int serial_baud, int serial_dat
 
 	if (serial_databits < 5 || serial_databits > 8) {
 		serial_errno = -EINVAL;
-		serial_errnostr = "Only 5 trough 8 stopbits supported.";
+		serial_errnostr = "Only 5 through 8 stopbits supported.";
 		return NULL;
 	}
 	if (serial_stopbits < 1 || serial_stopbits > 2) {
 		serial_errno = -EINVAL;
-		serial_errnostr = "Only 1 trough 2 stopbits supported.";
+		serial_errnostr = "Only 1 through 2 stopbits supported.";
 		return NULL;
 	}
 	if (serial_xonxoff !='e' && serial_xonxoff != 'd') {
@@ -201,7 +201,7 @@ serial_t *serial_open(const char *serial_device, int serial_baud, int serial_dat
 		free(serial);
 	} else {
 		serial_errno = -ENOMEM;
-		serial_errnostr = "not enougth memory for handle";
+		serial_errnostr = "not enough memory for handle";
 	}
 
 	return NULL;
@@ -227,7 +227,7 @@ void serial_close(serial_t *serial)
 /*
 read = serial_read(serial, &buffer, size);
 
-reads until buffer "size" has reached or until timeout has occured.
+reads until buffer "size" has reached or until timeout has occurred.
 "read" gives the number of bytes read.
 */
 
@@ -251,7 +251,7 @@ int serial_read(serial_t *serial, uint8_t *buffer, int size)
 /*
 wrote = serial_write(serial, &buffer, size);
 
-writes until buffer "size" has reached or until timeout has occured.
+writes until buffer "size" has reached or until timeout has occurred.
 "wrote" gives the number of bytes written.
 */
 

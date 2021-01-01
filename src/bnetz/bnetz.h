@@ -89,11 +89,11 @@ typedef struct bnetz {
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, "Telegramm" */
 	fsk_mod_t		fsk_mod;		/* fsk modem instance */
 	fsk_demod_t		fsk_demod;
-	uint16_t		rx_telegramm;		/* rx shift register for receiveing telegramm */
+	uint16_t		rx_telegramm;		/* rx shift register for receiving telegramm */
 	double			rx_telegramm_quality[16];/* quality of each bit in telegramm */
 	double			rx_telegramm_level[16];	/* level of each bit in telegramm */
 	int			rx_telegramm_qualidx;	/* index of quality array above */
-	uint16_t		rx_tone;		/* rx shift register for receiveing continuous tone */
+	uint16_t		rx_tone;		/* rx shift register for receiving continuous tone */
 	double			rx_tone_quality[16];	/* quality of tone fragment (100th of second) */
 	double			rx_tone_level[16];	/* level of tone fragment (100th of second) */
 	int			rx_tone_qualidx;	/* index of quality array above */

@@ -332,7 +332,7 @@ void display_measurements_update(dispmeasparam_t *param, double value, double va
 		param->value_count++;
 		break;
 	default:
-		fprintf(stderr, "Paramer '%s' has unknown type %d, please fix!\n", param->name, param->type);
+		fprintf(stderr, "Parameter '%s' has unknown type %d, please fix!\n", param->name, param->type);
 		abort();
 	}
 }

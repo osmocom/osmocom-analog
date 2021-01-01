@@ -81,7 +81,7 @@ int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 
 	/* remove number of input samples from index */
 	in_index -= (double)input_num;
-	/* in_index cannot be negative, excpet due to rounding error, so... */
+	/* in_index cannot be negative, except due to rounding error, so... */
 	if ((int)in_index < 0)
 		in_index = 0.0;
 
@@ -137,7 +137,7 @@ int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sam
 
 	/* remove number of input samples from index */
 	in_index -= (double)input_num;
-	/* in_index cannot be negative, excpet due to rounding error, so... */
+	/* in_index cannot be negative, except due to rounding error, so... */
 	if ((int)in_index < 0)
 		in_index = 0.0;
 

@@ -102,7 +102,7 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 		fsk->cycles_per_bit65536[1] = waves * 65536.0;
 	}
 
-	/* if filter is enabled, add a band pass filter to smoot the spectrum of the tones
+	/* if filter is enabled, add a band pass filter to smooth the spectrum of the tones
 	 * the bandwidth is twice the difference between f0 and f1
 	 */
 	if (filter) {

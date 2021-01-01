@@ -384,7 +384,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 	int in, rc;
 	int i, ii;
 
-	/* make valgrind happy, because snd_pcm_readi() does not seem to initally fill buffer with values */
+	/* make valgrind happy, because snd_pcm_readi() does not seem to initially fill buffer with values */
 	memset(buff, 0, sizeof(buff));
 
 	/* get samples in rx buffer */

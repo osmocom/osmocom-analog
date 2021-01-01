@@ -33,7 +33,7 @@
 #include "eurosignal.h"
 #include "dsp.h"
 
-/* anouncement timers */
+/* announcement timers */
 #define ANSWER_TIME		1.0	/* wait after answer */
 #define OOO_TIME		3.8	/* announcement 1.7 s, pause 2.1 s */
 #define UNASSIGNED_TIME1	2.2	/* announcement 2.2 s s */
@@ -572,7 +572,7 @@ static void call_timeout(struct timer *timer)
 		}
 		/* if subcriber list is available, but ID is not found, we are unassigned */
 		if (id_list && !search_id(call->station_id)) {
-			PDEBUG(DEURO, DEBUG_INFO, "Subscriber unknwon, playing announcement.\n");
+			PDEBUG(DEURO, DEBUG_INFO, "Subscriber unknown, playing announcement.\n");
 			call->announcement_spl = es_kaudn_spl;
 			call->announcement_size = es_kaudn_size;
 			call->announcement_index = 0;
@@ -768,7 +768,7 @@ static void _release(int callref, int __attribute__((unused)) cause)
 
 	call->callref = 0;
 
-	/* queued ID will keep in release state until trasmission has finished */
+	/* queued ID will keep in release state until transmission has finished */
 	if (call->state == EURO_CALL_ACKNOWLEDGE && call->page_count) {
 		call_new_state(call, EURO_CALL_RELEASED);
 		return;

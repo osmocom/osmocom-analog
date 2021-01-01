@@ -135,7 +135,7 @@ void print_help(const char *arg0)
 	printf("        Give modulation index of amplitude modulated signal. (default %.0f)\n", modulation_index);
 	printf(" -E --emphasis <uS> | 0\n");
 	printf("        Use given time constant of pre- and de-emphasis for frequency\n");
-	printf("        modulation. Give 0 to disbale emphasis. (default = %.0f uS)\n", time_constant_us);
+	printf("        modulation. Give 0 to disable emphasis. (default = %.0f uS)\n", time_constant_us);
 	printf("        VHF broadcast 50 uS in Europe and 75 uS in the United States.\n");
 	printf("        Other radio FM should use 530 uS, to cover complete speech spectrum.\n");
 	printf(" -V --volume %.3f\n", volume);

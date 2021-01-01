@@ -104,7 +104,7 @@ int main(void)
 	/* note at position 6 we have no more change towards 8 bit offset */
 	ret = check_repetition(data, len, 8, 6);
 	if (ret) {
-		printf("Theres is a change of repetition after %d bits after start %d, please fix!\n", ret, 6);
+		printf("There's is a change of repetition after %d bits after start %d, please fix!\n", ret, 6);
 		return 1;
 	}
 	printf("Repetition not detected, good!\n");
@@ -123,7 +123,7 @@ int main(void)
 	/* note at position 6 we have no more change towards 8 bit offset */
 	ret = check_repetition(data, len, 8, 6);
 	if (ret != 34) {
-		printf("Theres is NO change of repetition after 34 bits, but after %d bits, which should not happen!\n", ret);
+		printf("There's is NO change of repetition after 34 bits, but after %d bits, which should not happen!\n", ret);
 		return 1;
 	}
 	printf("Repetition detected after %d bits from start %d, good!\n", ret, 6);

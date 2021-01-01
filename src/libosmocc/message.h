@@ -223,7 +223,7 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_DTMF_MODE_ON			1	/* start tone */
 #define OSMO_CC_DTMF_MODE_DIGITS		2	/* play tone(s) with duration and pauses */
 
-#define OSMO_CC_SOCKET_CAUSE_VERSION_MISMATCH	1	/* version missmatch */
+#define OSMO_CC_SOCKET_CAUSE_VERSION_MISMATCH	1	/* version mismatch */
 #define OSMO_CC_SOCKET_CAUSE_FAILED		2	/* connection failed */
 #define OSMO_CC_SOCKET_CAUSE_BROKEN_PIPE	3	/* connected socket failed */
 #define OSMO_CC_SOCKET_CAUSE_TIMEOUT		4	/* keepalive packets timeout */

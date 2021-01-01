@@ -109,7 +109,7 @@ osmo_cc_msg_t *osmo_cc_new_msg(uint8_t msg_type)
 		PDEBUG(DCC, DEBUG_ERROR, "No memory\n");
 		abort();
 	}
-	/* set message type and zero lentgh */
+	/* set message type and zero length */
 	msg->type = msg_type;
 	msg->length_networkorder = htons(0);
 
@@ -831,7 +831,7 @@ int osmo_cc_get_ie_sdp(osmo_cc_msg_t *msg, int ie_repeat, char *sdp, size_t sdp_
 	return rc;
 }
 
-/* helper to encode socket addresss */
+/* helper to encode socket address */
 void osmo_cc_add_ie_socket_address(osmo_cc_msg_t *msg, const char *address)
 {
 	struct osmo_cc_ie_socket_address *ie_socket_address;
@@ -840,7 +840,7 @@ void osmo_cc_add_ie_socket_address(osmo_cc_msg_t *msg, const char *address)
 	memcpy(ie_socket_address->address, address, strlen(address));
 }
 
-/* helper to decode socket addresss */
+/* helper to decode socket address */
 int osmo_cc_get_ie_socket_address(osmo_cc_msg_t *msg, int ie_repeat, char *address, size_t address_size)
 {
 	struct osmo_cc_ie_socket_address *ie_socket_address;

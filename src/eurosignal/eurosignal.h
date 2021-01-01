@@ -65,13 +65,13 @@ typedef struct eurosignal {
 	double			tx_phaseshift65536;	/* current tone's phase shift per sample */
 	double			tx_phase;		/* current phase of tone */
 	double			tx_time;		/* current elapsed time of tone */
-	char			tx_digits[7];		/* current ID beeing transmitted */
+	char			tx_digits[7];		/* current ID being transmitted */
 	int			tx_digit_index;		/* current digit beein transmitted */
 	fm_demod_t		rx_demod;		/* demodulator for frequency */
 	iir_filter_t		rx_lp;			/* low pass to filter the frequency result */
 	int			rx_digit_count;		/* count the tone until detected */
 	char			rx_digit_last;		/* last tone, so we detect any change */
-	int			rx_digit_receiving;	/* we recive digis */
+	int			rx_digit_receiving;	/* we receive digis */
 	char			rx_digits[7];		/* current ID being received */
 	int			rx_digit_index;		/* current digit receiving */
 	int			rx_timeout_count;	/* count the timeout */

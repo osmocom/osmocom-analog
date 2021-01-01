@@ -181,7 +181,7 @@ void fir_process(fir_filter_t *fir, sample_t *samples, int num)
 		/* convolve samples */
 		y = 0;
 		for (j = 0; j < fir->ntaps; j++) {
-			/* convolve sample from ring buffer, starting with oldes */
+			/* convolve sample from ring buffer, starting with oldest */
 			y += fir->buffer[fir->buffer_pos] * fir->taps[j];
 			if (++fir->buffer_pos == fir->ntaps)
 				fir->buffer_pos = 0;

@@ -305,7 +305,7 @@ static struct nmt_frame {
 	{ NMT_MESSAGE_2b,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 12,	"2b",	"Traffic channel allocation on calling channel" },
 	{ NMT_MESSAGE_2c,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2c",	"Queueing information to MS with priority on calling channel" },
 	{ NMT_MESSAGE_2d,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2d",	"Traffic channel scanning order on calling channel" },
-	{ NMT_MESSAGE_2e,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 4,	"2e",	"Alternative type of call to MS on combinded CC/TC" },
+	{ NMT_MESSAGE_2e,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 4,	"2e",	"Alternative type of call to MS on combined CC/TC" },
 	{ NMT_MESSAGE_2f,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 12,	"2f",	"Queuing information to ordinary MS" },
 	{ NMT_MESSAGE_3a,	"NNNPYYZXXXXXXnnn", MTX_TO_MS, 5,	"3a",	"Traffic channel allocation on traffic channel" },
 	{ NMT_MESSAGE_3b,	"NNNPYYZXXXXXXHHH", MTX_TO_MS, 5,	"3b",	"Identity request on traffic channel" },
@@ -829,7 +829,7 @@ int init_frame(void)
 
 	/* check if all digits actually exist */
 	for (i = 0; nmt_frame[i].digits; i++) {
-		/* check mesage type */
+		/* check message type */
 		if ((int)nmt_frame[i].message_type != i) {
 			PDEBUG(DFRAME, DEBUG_ERROR, "Message type at message index #%d does not have a value of %d, but has %d, please fix!\n", i, i + 1, nmt_frame[i].message_type);
 			return -1;

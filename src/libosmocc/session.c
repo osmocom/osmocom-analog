@@ -470,7 +470,7 @@ static int osmo_cc_session_negotiate(osmo_cc_session_t *session_local, struct os
 
 	PDEBUG(DCC, DEBUG_DEBUG, "Negotiating session.\n");
 
-	/* copy remote session infromation */
+	/* copy remote session information */
 	session_local->origin_remote.username = strdup(session_remote->origin_remote.username);
 	session_local->origin_remote.sess_id = strdup(session_remote->origin_remote.sess_id);
 	session_local->origin_remote.sess_version = strdup(session_remote->origin_remote.sess_version);

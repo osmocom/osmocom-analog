@@ -417,7 +417,7 @@ The transceiver of the base station switches to channel 19 and sends a paging se
 Then the base station returns to the ordered channel and waits 700 ms to 2.1 seconds for the mobile station to send the call acknowledge signal ("Rufbest&auml;tigung").
 If it is not received, the base station repeats the paging sequence again.
 If there is still no call acknowledge signal, it sends a clear signal ("Trennsignal") for at lease 350 ms and returns to idle state and indicates announcement to the calling party that the mobile station is (currently) not available.
-(German announcement sais: "Dieser Anschlu&szlig; ist vorr&uuml;bergehend nicht erreichbar!")
+(German announcement says: "Dieser Anschlu&szlig; ist vorr&uuml;bergehend nicht erreichbar!")
 </p>
 
 <p>
@@ -710,7 +710,7 @@ Detecting loss of carrier signal:
 
 <p>
 This works with SDR only, because we do not have any RSSI (Received Signal Strength Indicator) signal from a radio connected to the sound card.
-With SDR we know the RX level, so we can define a threashold value for a lost signal.
+With SDR we know the RX level, so we can define a threshold value for a lost signal.
 Use '-S &lt;db&gt;' or '--squelch &lt;db&gt;' to define the squelch threshold level.
 To measure the noise floor, use the 'm' key to get a bar graph of the current RSSI. (RF level)
 Add some dB to the noise floor for the squelch threshold value.

@@ -42,7 +42,7 @@
  * If no SpK is available, the call is rejected. If queue (Warteschlange) is
  * enabled, WSK(R) is scheduled. After transmission, the state changes to
  * TRANS_MT_QUEUE. Upon timeout (no channel becomes available), the call is
- * rejected by scheduling VA(R). Upon available channel the call proceeeds with
+ * rejected by scheduling VA(R). Upon available channel the call proceeds with
  * VAK(R) as described above.
  *
  * If an MO (mobile originating) call is made (received VWG(K)), a transaction
@@ -57,11 +57,11 @@
  * (Warteschlange) is enabled, WWBP(R) is scheduled. After transmission, the
  * state is changed to TRANS_MO_QUEUE. Upon timeout (no channel becomes
  * available), the call is rejected by scheduling VA(R). Upon available channel
- * the call proceeeds with VAG(R) as described above.
+ * the call proceeds with VAG(R) as described above.
  *
  * Switching to SpK is performed two time slots after transmitting VAK(R) or
  * VAG(R). The timer is started.  The schedulers schedules 8 times BQ(K) and
- * awaits at least one BEL(K). If BEK(K) is received, the timer is stoped. If
+ * awaits at least one BEL(K). If BEK(K) is received, the timer is stopped. If
  * BQ(K) was sent at least 8 times and if timer is stopped, the scheduler
  * schedules VHQ(K).  If no BEL(K) was received, AFK(K) is scheduled N_AFKT
  * times, then the process on OgK (WBP+VAG or VAK) is repeated N times.
@@ -114,7 +114,7 @@
 /*
  * Notes on the combined channel hack:
  *
- * For combined SpK+OgK hack, the channel is used as SpK as last choise. This
+ * For combined SpK+OgK hack, the channel is used as SpK as last choice. This
  * allows to use only one transceiver for making C-Netz to work. Also it allows
  * to use all transceivers for simultanious phone calls. Some phones may not
  * work with that.
@@ -508,7 +508,7 @@ void cnetz_go_idle(cnetz_t *cnetz)
 
 	/* set scheduler to OgK or turn off SpK */
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
-		/* switch next frame after distributed signaling boundary (mutliple of 8 slots) */
+		/* switch next frame after distributed signaling boundary (multiple of 8 slots) */
 		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 8) & 24);
 	} else {
 		/* switch next frame */

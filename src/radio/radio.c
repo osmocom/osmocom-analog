@@ -75,7 +75,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 		radio->signal_bandwidth = bandwidth;
 		break;
 	case MODULATION_NONE:
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong modulation, plese fix!\n");
+		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong modulation, please fix!\n");
 		goto error;
 	}
 
@@ -333,7 +333,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 		goto error;
 	}
 
-	/* termporary I/Q/carrier buffers, used while demodulating */
+	/* temporary I/Q/carrier buffers, used while demodulating */
 	radio->I_buffer = calloc(latspl, sizeof(*radio->I_buffer));
 	radio->Q_buffer = calloc(latspl, sizeof(*radio->Q_buffer));
 	radio->carrier_buffer = calloc(latspl, sizeof(*radio->carrier_buffer));
@@ -505,7 +505,7 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 		}
 		break;
 	default:
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, plese fix!\n");
+		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, please fix!\n");
 		return -EINVAL;
 	}
 
@@ -740,7 +740,7 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 	}
 #endif
 	if (!radio->rx_audio_mode) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, plese fix!\n");
+		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, please fix!\n");
 		return -EINVAL;
 	}
 

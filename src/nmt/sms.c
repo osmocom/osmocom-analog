@@ -453,7 +453,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* decode orig address */
 	char orig_address[orig_digits + 1];
 	decode_address(orig_data, orig_digits, orig_address);
-	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded originating addess: '%s'\n", orig_address);
+	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded originating address: '%s'\n", orig_address);
 
 	/* go into TP */
 	data = tpdu_data;
@@ -500,7 +500,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	length -= 2 + dest_len;
 	char dest_address[dest_digits + 1];
 	decode_address(dest_data, dest_digits, dest_address);
-	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded destination addess: '%s'\n", dest_address);
+	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded destination address: '%s'\n", dest_address);
 
 	/* skip above protocol identifier */
 	if (length < 1) {

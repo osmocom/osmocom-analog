@@ -22,7 +22,7 @@
  *
  * AMPS modulates the carrier frequency. If it is 8 kHz above, it is high level,
  * if it is 8 kHz below, it is low level.  The bits are coded using Manchester
- * code. A 1 is coded by low level, followed by a hight level. A 0 is coded by
+ * code. A 1 is coded by low level, followed by a high level. A 0 is coded by
  * a high level, followed by a low level. This will cause at least one level
  * change within each bit.  Also the level changes between equal bits, see
  * Manchester coding.  The bit rate is 10 KHz.
@@ -239,7 +239,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	}
 	amps->fsk_rx_window = spl;
 
-	/* create devation and ramp */
+	/* create deviation and ramp */
 	amps->fsk_deviation = (!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION;
 	dsp_init_ramp(amps);
 
@@ -508,7 +508,7 @@ static void fsk_rx_bit(amps_t *amps, sample_t *spl, int len, int pos, int begin,
 	int bit;
 	double max = 0, min = 0;
 
-	/* decode one bit. substact the first half from the second half.
+	/* decode one bit. subtract the first half from the second half.
 	 * the result shows the direction of the bit change: 1 == positive.
 	 */
 	pos -= begin; /* possible wrap is handled below */

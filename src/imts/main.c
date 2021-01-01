@@ -69,9 +69,9 @@ void print_help(const char *arg0)
 	printf("        To compensate audio processing latency, give delay when to respond,\n");
 	printf("        after detection of Guard tone from mobile phone.\n");
 	printf("        Run software in loopback mode '-l 2' to measure round trip delay.\n");
-	printf("        Substract delay from 350 ms. If the phone has different Guard tone\n");
-	printf("        length, substract from that value.\n");
-	printf(" -D --detector-test <idle length> <seize lenght> <silence length>\n");
+	printf("        Subtract delay from 350 ms. If the phone has different Guard tone\n");
+	printf("        length, subtract from that value.\n");
+	printf(" -D --detector-test <idle length> <seize length> <silence length>\n");
 	printf("        Transmit detector test signal, to adjust decoder inside mobile phone.\n");
 	printf("        Give length of idle / seize and silence in seconds. Listen to it with\n");
 	printf("        a radio receiver. To exclude an element, set its length to '0'.\n");
@@ -84,7 +84,7 @@ void print_help(const char *arg0)
 	printf("        Because there is no dial on the mobile phone, operator assistance is\n");
 	printf("        required to complete the call.\n");
 	printf("        By default, the operator '%s' is dialed.\n", operator);
-	printf(" -D --detector-test <600 Hz length> <1500 Hz lenght> <silence length>\n");
+	printf(" -D --detector-test <600 Hz length> <1500 Hz length> <silence length>\n");
 	printf("        Transmit detector test signal, to adjust decoder inside MTS phone.\n");
 	printf("        Give length of 600/1500 Hz and silence in seconds. Listen to it with\n");
 	printf("        a radio receiver. To exclude an element, set its length to '0'.\n");

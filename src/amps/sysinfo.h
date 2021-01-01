@@ -63,7 +63,7 @@ struct sysinfo_overload {
 	uint8_t		olc[16];
 };
 
-/* Acces Tyoe */
+/* Access Tyoe */
 struct sysinfo_acc_type {
 	uint8_t		bis;
 	uint8_t		pci_home;
@@ -90,7 +90,7 @@ typedef struct system_information {
 	int				overhead_repeat;
 	/* all words */
 	uint8_t				dcc;
-	/* VC assginment */
+	/* VC assignment */
 	uint8_t				vmac;
 	/* broadcast */
 	struct sysinfo_filler		filler;

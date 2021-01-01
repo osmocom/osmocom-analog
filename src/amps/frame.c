@@ -2136,7 +2136,7 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_AUTH,			"AUTH",			"Support of authentication procedures described in TIA/EIA-136-510", ie_yes },
 	{ AMPS_IE_AUTHBS,		"AUTHBS",		"Output response of the authentication algorithm initiated by the Base Station Challenge Order", ie_hex },
 	{ AMPS_IE_AUTHR,		"AUTHR",		"Output response of the authentication algorithm", ie_hex },
-	{ AMPS_IE_AUTHU,		"AUTHU",		"Output of the authentication algorithm when responsing to a Unique Challenge Order", ie_hex },
+	{ AMPS_IE_AUTHU,		"AUTHU",		"Output of the authentication algorithm when responding to a Unique Challenge Order", ie_hex },
 	{ AMPS_IE_Acked_Data,		"Acked Data",		"Used to identidy the selected privacy mode for a data/fax call", ie_acked_data },
 	{ AMPS_IE_Async_Data,		"Async Data",		"Async Data is supported on the current Analog Control Channel", ie_yes },
 	{ AMPS_IE_BIS,			"BIS",			"Busy-Idle status field", ie_bis },
@@ -2149,7 +2149,7 @@ struct amps_ie_desc amps_ie_desc[] = {
 	{ AMPS_IE_CHARACTER_3,		"CHARACTER 3",		"ASCII Character", ie_ascii },
 	{ AMPS_IE_CMAC,			"CMAC",			"Control mobile attenuation field", ie_cmac },
 	{ AMPS_IE_CMAX_1,		"CMAX-1",		"CMAX is the number of access channels in the system", ie_cmax },
-	{ AMPS_IE_COUNT,		"COUNT",		"A modulo-64 count for authenticaiton", NULL },
+	{ AMPS_IE_COUNT,		"COUNT",		"A modulo-64 count for authentication", NULL },
 	{ AMPS_IE_CPA,			"CPA",			"Combined paging/access field", ie_yes },
 	{ AMPS_IE_CPN_RL,		"CPN_RL",		"Number of Characters in Calling Party Number", NULL },
 	{ AMPS_IE_CRC,			"CRC",			"Identifies used CRC", ie_crc },
@@ -3192,7 +3192,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		}
 		amps->rx_recc_nawc--;
 		if (amps->rx_recc_nawc != nawc) {
-			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word with NAWC missmatch!\n");
+			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word with NAWC mismatch!\n");
 		}
 	}
 
@@ -3661,7 +3661,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0) {
 			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX RECC: DCC=%d (%d of 5 CRCs are ok)\n", dcc, crc_ok_count);
 			if (dcc != amps->si.dcc) {
-				PDEBUG(DFRAME, DEBUG_INFO, "received DCC=%d missmatches the base station's DCC=%d\n", dcc, amps->si.dcc);
+				PDEBUG(DFRAME, DEBUG_INFO, "received DCC=%d mismatches the base station's DCC=%d\n", dcc, amps->si.dcc);
 				return 0;
 			}
 		}

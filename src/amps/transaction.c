@@ -65,7 +65,7 @@ static const char *trans_state_name(int state)
 	case TRANS_PAGE_REPLY:
 		return "PAGE REPLY";
 	default:
-		return "<invald transaction state>";
+		return "<invalid transaction state>";
 	}
 }
 
@@ -98,7 +98,7 @@ const char *trans_short_state_name(int state)
 	case TRANS_PAGE_REPLY:
 		return "PAGE";
 	default:
-		return "<invald transaction state>";
+		return "<invalid transaction state>";
 	}
 }
 
@@ -109,7 +109,7 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 	transaction_t *trans = NULL;
 	amps_t *search_amps;
 
-	/* search transaction for this subsriber */
+	/* search transaction for this subscriber */
 	for (sender = sender_head; sender; sender = sender->next) {
 		search_amps = (amps_t *) sender;
 		/* search transaction for this callref */
@@ -121,7 +121,7 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 		const char *number = amps_min2number(trans->min1, trans->min2);
 		int old_callref = trans->callref;
 		amps_t *old_amps = trans->amps;
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', deleting!\n", number);
+		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", number);
 		destroy_transaction(trans);
 		if (old_amps) /* should be... */
 			amps_go_idle(old_amps);

@@ -23,7 +23,7 @@
  *
  * There are call states defined by imts->state.
  * imts_receive_tone() is called whenever a tone/silence/noise is detected.
- * imts_lost_tone() is calles as soon as (only) a tone is gone.
+ * imts_lost_tone() is calls as soon as (only) a tone is gone.
  * imts_timeout() is called when the timer has timed out.
  * All these callbacks are used to process the call setup and disconnect.
  * The imts_timeout() function will not only handle failures due to timeouts,
@@ -532,7 +532,7 @@ void imts_signal_indication(imts_t *imts)
 {
 	/* setup a call from mobile to base station */
 	if (imts->mode == MODE_MTS && imts->state == IMTS_IDLE) {
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Detectes RF signal in IDLE mode, calling the opterator at '%s'.\n", imts->operator);
+		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Detects RF signal in IDLE mode, calling the opterator at '%s'.\n", imts->operator);
 		imts->callref = call_up_setup(NULL, imts->operator, OSMO_CC_NETWORK_MTS_NONE, "");
 		imts_new_state(imts, IMTS_CONVERSATION);
 		imts_set_dsp_mode(imts, DSP_MODE_AUDIO, 0, 0.0, 0);

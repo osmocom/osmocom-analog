@@ -50,7 +50,7 @@
  */
 #define RX_MIN_FREQ		50.0				/* minimum frequency error to detect tone */
 #define MAX_DISPLAY		(MAX_DEVIATION / SPEECH_DEVIATION)/* as much as MAX_DEVIATION */
-/* Note that FILTER_BW / SUSTAIN and QUAL_TIME sum up and should not exeed minimum tone length */
+/* Note that FILTER_BW / SUSTAIN and QUAL_TIME sum up and should not exceed minimum tone length */
 #define RX_FILTER_BW		100.0				/* amplitude filter (causes delay) */
 #define RX_SUSTAIN		0.010				/* how long a tone must sustain until detected (causes delay) */
 #define RX_QUAL_TIME		0.005				/* how long a quality measurement lasts after detecting a tone */
@@ -164,7 +164,7 @@ int dsp_init_transceiver(imts_t *imts, double squelch_db, int ptt)
 
 	/* delay buffer */
 	if (ptt) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Push to talk: Adding delay buffer to remove noise when singal gets lost.\n");
+		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Push to talk: Adding delay buffer to remove noise when signal gets lost.\n");
 		imts->delay_max = (int)((double)imts->sender.samplerate * DELAY_TIME);
 		imts->delay_spl = calloc(imts->delay_max, sizeof(*imts->delay_spl));
 		if (!imts->delay_spl) {

@@ -31,7 +31,7 @@
  * DTR state:
  * When DTR is off, state is clamped to INIT state.
  * When DTR becomes on, RX and TX state machines begin to run.
- * When DTR becomes off, state machines change to INIT state immidiately.
+ * When DTR becomes off, state machines change to INIT state immediately.
  *
  * (B)RTS state:
  * When (B)RTS becomes on, data transmission is enabled.
@@ -61,7 +61,7 @@
  * When data reception is not blocked, data is received from the demodulator
  * and forwarded towards upper layer.
  * While receiving in half duplex mode, (B)RD is blocked, meaning that '1'
- * (MARK) is forwarded toward upper layer, regardless fo the data from the
+ * (MARK) is forwarded toward upper layer, regardless of the data from the
  * demodulator.
  * Squelch (mute receive audio) is used to prevent noise when turning off
  * half duplex transmission.
@@ -91,7 +91,7 @@
 #define RX_CD_ON_7911	-42.0	/* according to datasheet (at 600 Ohms) */
 #define RX_CD_OFF_7910	-45.0	/* according to datasheet (at 600 Ohms) */
 #define RX_CD_OFF_7911	-47.5	/* according to datasheet (at 600 Ohms) */
-#define RX_QUALITY	0.1	/* FIXME: minium quality */
+#define RX_QUALITY	0.1	/* FIXME: minimum quality */
 #define BIT_ADJUST	0.5 /* must be 0.5 to completely sync each bit */
 
 /* frequencies used */

@@ -44,7 +44,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 	transaction_t *trans = NULL;
 	cnetz_t *search_cnetz;
 
-	/* search transaction for this subsriber */
+	/* search transaction for this subscriber */
 	for (sender = sender_head; sender; sender = sender->next) {
 		search_cnetz = (cnetz_t *) sender;
 		/* search transaction for this callref */
@@ -56,7 +56,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 		const char *rufnummer = transaction2rufnummer(trans);
 		int old_callref = trans->callref;
 		cnetz_t *old_cnetz = trans->cnetz;
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', deleting!\n", rufnummer);
+		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", rufnummer);
 		destroy_transaction(trans);
 		if (old_cnetz) /* should be... */
 			cnetz_go_idle(old_cnetz);
@@ -261,7 +261,7 @@ static const char *trans_state_name(uint64_t state)
 	case TRANS_MT_DELAY:
 		return "MT_DELAY";
 	default:
-		return "<invald transaction state>";
+		return "<invalid transaction state>";
 	}
 }
 
@@ -309,7 +309,7 @@ const char *trans_short_state_name(uint64_t state)
 	case TRANS_MT_DELAY:
 		return "IN QUEUE";
 	default:
-		return "<invald transaction state>";
+		return "<invalid transaction state>";
 	}
 }
 

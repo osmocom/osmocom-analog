@@ -84,7 +84,7 @@ void reset_init(uint8_t pin)
   out = portOutputRegister(port);
   reset_in = portInputRegister(port);
 
-  *mode &= ~reset_bit; /* intput */
+  *mode &= ~reset_bit; /* input */
   *out |= reset_bit; /* pullup */
 }
 #endif
@@ -178,7 +178,7 @@ void setup() {
   pinMode(STATUS_LED, OUTPUT);
 #endif
 
-  /* intial eeprom init */
+  /* initial eeprom init */
   byte = eeprom_read(EEPROM_MAGIC + 0);
   ver = eeprom_read(EEPROM_MAGIC + 1);
   if (byte != 'C' || ver != '0' + EEPROM_VERSION)
@@ -261,7 +261,7 @@ tx_again:
     /* perform RX, when low (start bit) */
     if (!(*serial_in & serial_bit)) {
       c = serial_rx();
-      /* if block was completly received, go to tx_again */
+      /* if block was completely received, go to tx_again */
       if (sim_rx(&sim, c) < 0)
 	      goto tx_again;
       /* start counting timeout condition */

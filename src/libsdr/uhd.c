@@ -80,7 +80,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			error = uhd_string_vector_make(&clocks);
 			if (error) {
 				clock_vector_error:
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to hande UHD vector, please fix!\n");
+				PDEBUG(DUHD, DEBUG_ERROR, "Failed to handle UHD vector, please fix!\n");
 				uhd_close();
 				return -EIO;
 			}
@@ -139,7 +139,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 				error = uhd_string_vector_make(&antennas);
 				if (error) {
 					tx_vector_error:
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to hande UHD vector, please fix!\n");
+					PDEBUG(DUHD, DEBUG_ERROR, "Failed to handle UHD vector, please fix!\n");
 					uhd_close();
 					return -EIO;
 				}
@@ -249,7 +249,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		tune_request.args = strdup(_tune_args);
 		error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequeny to %.0f Hz\n", tx_frequency);
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
 			uhd_close();
 			return -EIO;
 		}
@@ -320,7 +320,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 				error = uhd_string_vector_make(&antennas);
 				if (error) {
 					rx_vector_error:
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to hande UHD vector, please fix!\n");
+					PDEBUG(DUHD, DEBUG_ERROR, "Failed to handle UHD vector, please fix!\n");
 					uhd_close();
 					return -EIO;
 				}
@@ -437,7 +437,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		tune_request.args = strdup(_tune_args);
 		error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequeny to %.0f Hz\n", rx_frequency);
+			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
 			uhd_close();
 			return -EIO;
 		}

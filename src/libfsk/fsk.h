@@ -16,7 +16,7 @@ typedef struct fsk_mod {
 	int		tx_bit;			/* current transmitting bit (-1 if not set) */
 	double		tx_bitpos;		/* current transmit position in bit */
 	int		filter;			/* set, if filters are used */
-	iir_filter_t	lp[2];			/* filter to smoot transmission spectrum */
+	iir_filter_t	lp[2];			/* filter to smooth transmission spectrum */
 } fsk_mod_t;
 
 typedef struct fsk_demod {

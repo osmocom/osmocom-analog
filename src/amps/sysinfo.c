@@ -56,7 +56,7 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dtx, int dcc, int sid1, i
 
 	/* all words */
 	si->dcc = dcc;
-	/* VC assginment */
+	/* VC assignment */
 	si->vmac = vmac;
 
 	/* filler */
@@ -100,15 +100,15 @@ void init_sysinfo(amps_si *si, int cmac, int vmac, int dtx, int dcc, int sid1, i
 	for (i = 0; i < 16; i++)
 		si->overload.olc[i] = 1;
 
-	/* Acces Tyoe */
+	/* Access Tyoe */
 	/* 'bis' must be 0, so the phone does not wait for busy bit.
 	 * We cannot respond with B/I fast enough due to processing delay.
 	 * So we don't set the B/I bit to busy on reception of message.
 	 * The access type message (including this 'bis') must also be included.
 	 */
 	si->acc_type.bis = bis; /* must be clear to ignore B/I bit */
-	si->acc_type.pci_home = 0; /* if set, bscap must allso be set */
-	si->acc_type.pci_roam = 0; /* if set, bscap must allso be set */
+	si->acc_type.pci_home = 0; /* if set, bscap must also be set */
+	si->acc_type.pci_roam = 0; /* if set, bscap must also be set */
 	si->acc_type.bspc = 0;
 	si->acc_type.bscap = 0;
 
@@ -145,7 +145,7 @@ void prepare_sysinfo(amps_si *si)
 	si->num = i; /* train is running */
 	si->count = 0; /* first message in train */
 	if (i > (int)(sizeof(si->type) / sizeof(si->type[0]))) {
-		fprintf(stderr, "si type array overflow, pleas fix!\n");
+		fprintf(stderr, "si type array overflow, please fix!\n");
 		abort();
 	}
 }

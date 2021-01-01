@@ -133,7 +133,7 @@ int zeit_init(double audio_level_dBm, int alerting)
 	}
 	sekunden_time += minuten_time;
 
-	PDEBUG(DZEIT, DEBUG_DEBUG, "Total time to play anouncement, starting with beep: %.2f seconds\n", (double)sekunden_time / 8000.0);
+	PDEBUG(DZEIT, DEBUG_DEBUG, "Total time to play announcement, starting with beep: %.2f seconds\n", (double)sekunden_time / 8000.0);
 
 	return 0;
 }

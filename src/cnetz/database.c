@@ -94,7 +94,7 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 {
 	cnetz_db_t *db, **dbp;
 
-	/* search transaction for this subsriber */
+	/* search transaction for this subscriber */
 	db = cnetz_db_head;
 	while (db) {
 		if (db->futln_nat == futln_nat

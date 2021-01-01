@@ -143,7 +143,7 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        at least one control channel and two voice channels. Alternatively\n");
 	printf("        use one combined control+voice channel and one voice channels.\n");
 	printf(" -o --osmocc-sock\n");
-	printf("        Disable built-in call contol and offer socket\n");
+	printf("        Disable built-in call control and offer socket\n");
 	printf("    --cc \"<osmo-cc arg>\" [--cc ...]\n");
 	printf("        Pass arguments to Osmo-CC endpoint. Use '-cc help' for description.\n");
 	printf(" -t --tones 0 | 1\n");
@@ -152,7 +152,7 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" -l --loopback <type>\n");
 	printf("        Loopback test: 1 = internal | 2 = external | 3 = echo\n");
 	printf(" -r --realtime <prio>\n");
-	printf("        Set prio: 0 to diable, 99 for maximum (default = %d)\n", rt_prio);
+	printf("        Set prio: 0 to disable, 99 for maximum (default = %d)\n", rt_prio);
 	printf("    --fast-math\n");
 	printf("        Use fast math approximation for slow CPU / ARM based systems.\n");
 	printf("    --write-rx-wave <file>\n");

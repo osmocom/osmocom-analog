@@ -960,7 +960,7 @@ static int osmo_cc_handle_endpoint(osmo_cc_endpoint_t *ep)
 }
 
 /* main handler
- * note that it must be called in a loop (with ohter handlers) until no work was done
+ * note that it must be called in a loop (with other handlers) until no work was done
  */ 
 int osmo_cc_handle(void)
 {
@@ -1071,7 +1071,7 @@ static void osmo_cc_help_address(void)
 	printf("remote [<IPv6 address>]:<port>\n\n");
 
 	printf("These options can be used to define local and remote IP and port for the socket\n");
-	printf("interface. Note that IPv6 adresses must be enclosed by '[' and ']'.\n\n");
+	printf("interface. Note that IPv6 addresses must be enclosed by '[' and ']'.\n\n");
 
 	printf("If no local address was given, the IPv4 loopback IP and port %d is used. If\n", OSMO_CC_DEFAULT_PORT);
 	printf("this port is already in use, the first free higher port is used.\n\n");

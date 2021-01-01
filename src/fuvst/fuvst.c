@@ -21,7 +21,7 @@
  *
  * The release timer will release the call, if no release response from BS has
  * been received. This may happen due to signaling link error. Since there
- * is no document available about message timout conditions, I just use
+ * is no document available about message timeout conditions, I just use
  * that timer when there is no response. I think that the base station does
  * the same and releases the call, if no release response has been received.
  */
@@ -133,7 +133,7 @@ static void config_send(uint8_t ident, uint8_t job, uint16_t offset, uint16_t le
 	uint32_t checksum = 0;
 	uint8_t rc = 1; /* Auftrag angenommen */
 
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "MSC requests data base block. (offset=%d, lenght=%d)\n", offset, length);
+	PDEBUG(DCNETZ, DEBUG_NOTICE, "MSC requests data base block. (offset=%d, length=%d)\n", offset, length);
 
 	if (!conf.loaded) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "MSC requests data base, but no file name given. Please give file name!\n");
@@ -288,7 +288,7 @@ static cnetz_db_t *find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futl
 {
         cnetz_db_t *db;
 
-        /* search transaction for this subsriber */
+        /* search transaction for this subscriber */
         db = cnetz_db_head;
         while (db) {
                 if (db->futln_nat == futln_nat
@@ -588,7 +588,7 @@ static transaction_t *create_transaction(uint8_t ident, uint8_t futln_nat, uint8
 	trans = search_transaction_number(futln_nat, futln_fuvst, futln_rest);
 	if (trans && mo) {
 		const char *rufnummer = transaction2rufnummer(trans);
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', dropping that!\n", rufnummer);
+		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', dropping that!\n", rufnummer);
 		if (trans->callref)
 			call_up_release(trans->callref, CAUSE_NORMAL);
 		trans->callref = 0;
@@ -597,7 +597,7 @@ static transaction_t *create_transaction(uint8_t ident, uint8_t futln_nat, uint8
 	}
 	if (trans) {
 		const char *rufnummer = transaction2rufnummer(trans);
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found alredy pending transaction for subscriber '%s', we are busy!\n", rufnummer);
+		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', we are busy!\n", rufnummer);
 		return NULL;
 	}
 
@@ -963,7 +963,7 @@ outgoing:
 		trans->spk_nr = Q;
 		/* SPK not exist, release */
 		if (!trans->spk) {
-			PDEBUG(DCNETZ, DEBUG_ERROR, "SpK '%d' requested by BS not configured, please configure all SpK that base station has avaiable!\n", Q);
+			PDEBUG(DCNETZ, DEBUG_ERROR, "SpK '%d' requested by BS not configured, please configure all SpK that base station has available!\n", Q);
 			len = encode_stnqu(&opcode, &data, Q);
 			message_send(ident, opcode, data, len);
 			if (trans->callref)

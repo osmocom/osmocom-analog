@@ -56,7 +56,7 @@ static void my_ultostr(char *nptr, uint32_t value, int zeros)
 		digits++;
 	}
 
-	/* minium digits to fill up with '0' */
+	/* minimum digits to fill up with '0' */
 	if (digits < zeros)
 		digits = zeros;
 
@@ -1044,7 +1044,7 @@ static void rx_sdu(sim_sim_t *sim, uint8_t *data, int length)
 	}
 
 	/* unsupported message */
-	PDEBUG(DSIM7, DEBUG_NOTICE, "CLA 0x%02x INS 0x%02x uknown\n", cla, ins);
+	PDEBUG(DSIM7, DEBUG_NOTICE, "CLA 0x%02x INS 0x%02x unknown\n", cla, ins);
 	data = alloc_msg(sim, 0);
 	tx_sdu(sim, CCRC_ERROR, data, 0);
 }
@@ -1222,7 +1222,7 @@ static int rx_char(sim_sim_t *sim, uint8_t c)
 /* create layer 2 message for layer 1 */
 static void tx_block(sim_sim_t *sim, enum l2_cmd cmd, uint8_t __attribute__((unused)) *data, int length)
 {
-	PDEBUG(DSIM2, DEBUG_INFO, "TX resonse\n");
+	PDEBUG(DSIM2, DEBUG_INFO, "TX response\n");
 
 	/* header */
 	sim->block_address = (sim->addr_dst << 4) | sim->addr_src;
@@ -1355,7 +1355,7 @@ void sim_reset(sim_sim_t *sim, int reset)
 	int i;
 	char pin[8];
 
-	PDEBUG(DSIM1, DEBUG_INFO, "Reset singnal %s\n", (reset) ? "on (low)" : "off (high)");
+	PDEBUG(DSIM1, DEBUG_INFO, "Reset signal %s\n", (reset) ? "on (low)" : "off (high)");
 	memset(sim, 0, sizeof(*sim));
 
 	if (reset)

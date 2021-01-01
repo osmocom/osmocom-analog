@@ -10,7 +10,7 @@ typedef struct cnetz cnetz_t;
 
 /* dsp modes of transmission */
 enum dsp_mode {
-	DSP_SCHED_NONE = 0,	/* use for sheduling: nothing to shedule */
+	DSP_SCHED_NONE = 0,	/* use for scheduling: nothing to schedule */
 	DSP_MODE_OFF,		/* send nothing on unused SpK */
 	DSP_MODE_OGK,		/* send "Telegramm" on OgK */
 	DSP_MODE_SPK_K,		/* send concentrated "Telegramm" SpK */

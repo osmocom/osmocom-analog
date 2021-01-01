@@ -14,7 +14,7 @@ typedef struct datenklo {
 
 	/* settings */
 	uint8_t		mc;			/* modem chip mode */
-	int		auto_rts;		/* automatic RTS controling for half duplex */
+	int		auto_rts;		/* automatic RTS controlling for half duplex */
 	double		max_baud;		/* limit to what the mode supports */
 	double		force_tx_baud, force_rx_baud; /* override IOCTL */
 	int		tx_back, rx_back;	/* set if back channel is used for path */

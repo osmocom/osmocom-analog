@@ -170,7 +170,7 @@ again:
 		goto again;
 }
 
-/* loop that gets audio from encoder and fowards it to sound card.
+/* loop that gets audio from encoder and forwards it to sound card.
  * alternatively a sound file is written.
  */
 static void process_signal(void)

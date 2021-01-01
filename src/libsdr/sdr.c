@@ -180,7 +180,7 @@ void *sdr_open(const char __attribute__((__unused__)) *audiodev, double *tx_freq
 	sdr->amplitude = 1.0 / (double)channels;
 	sdr->samplerate = samplerate;
 	sdr->latspl = latspl;
-	sdr->threads = threads; /* always requried, because write may block */
+	sdr->threads = threads; /* always required, because write may block */
 	sdr->oversample = oversample;
 
 	if (threads) {

@@ -532,7 +532,7 @@ dial_after_hangup:
 	fflush(stdout);
 }
 
-/* get keys from keyboad to control call via console
+/* get keys from keyboard to control call via console
  * returns 1 on exit (ctrl+c) */
 void process_console(int c)
 {
@@ -588,7 +588,7 @@ void process_console(int c)
 		/* put samples into ring buffer */
 		for (i = 0; i < count; i++) {
 			console.tx_buffer[console.tx_buffer_pos] = samples[i];
-			/* if ring buffer wrapps, deliver data down to call process */
+			/* if ring buffer wraps, deliver data down to call process */
 			if (++console.tx_buffer_pos == 160) {
 				console.tx_buffer_pos = 0;
 				/* only if we have a call */

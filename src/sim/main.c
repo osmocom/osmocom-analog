@@ -84,7 +84,7 @@ void print_help(const char *arg0)
 	printf("        the default values are used. Values are always overwritten with card\n");
 	printf("        data, if defined.\n");
 	printf(" -F --futln <phone number>\n");
-	printf("        Give 7 digits subsriber ID (default = '%s')\n", FUTLN_DEFAULT);
+	printf("        Give 7 digits subscriber ID (default = '%s')\n", FUTLN_DEFAULT);
 	printf(" --sicherung <security code>\n");
 	printf("        Card's security code for simple authentication (default = '%s')\n", SICHERUNG_DEFAULT);
 	printf(" --kartenkennung <card ID>\n");
@@ -246,7 +246,7 @@ int main_loop(serial_t *serial, int sniffer)
 		 */
 		if (!work) {
 			cts = serial_cts(serial);
-			/* initally AND when CTS becomes 1 (pulled to low by reset line) */
+			/* initially AND when CTS becomes 1 (pulled to low by reset line) */
 			if (last_cts != cts) {
 				if (sniffer == 1)
 					sniffer_reset(&sim_sniffer);
