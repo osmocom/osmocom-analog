@@ -66,6 +66,7 @@ src/jtacs/jtacs
 src/r2000/radiocom2000
 src/imts/imts
 src/imts/imts-dialer
+src/mpt1327/mpt1327
 src/jolly/jollycom
 src/eurosignal/eurosignal
 src/tv/osmotv

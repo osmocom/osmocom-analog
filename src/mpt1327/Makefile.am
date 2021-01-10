@@ -1,14 +1,14 @@
 AM_CPPFLAGS = -Wall -Wextra -g $(all_includes)
 
 bin_PROGRAMS = \
-	jollycom
+	mpt1327
 
-jollycom_SOURCES = \
-	jolly.c \
+mpt1327_SOURCES = \
+	mpt1327.c \
 	dsp.c \
-	voice.c \
+	message.c \
 	main.c
-jollycom_LDADD = \
+mpt1327_LDADD = \
 	$(COMMON_LA) \
 	../anetz/libgermanton.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
@@ -22,21 +22,22 @@ jollycom_LDADD = \
 	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
+	$(top_builddir)/src/libfsk/libfsk.a \
+	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \
-	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libg711/libg711.a \
 	-lm
 
 if HAVE_ALSA
-jollycom_LDADD += \
+mpt1327_LDADD += \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(ALSA_LIBS)
 endif
 
 if HAVE_SDR
-jollycom_LDADD += \
+mpt1327_LDADD += \
 	$(top_builddir)/src/libsdr/libsdr.a \
 	$(top_builddir)/src/libam/libam.a \
 	$(top_builddir)/src/libfft/libfft.a \

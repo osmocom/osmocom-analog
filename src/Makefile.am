@@ -51,6 +51,7 @@ SUBDIRS += \
 	jtacs \
 	r2000 \
 	imts \
+	mpt1327 \
 	jolly \
 	eurosignal \
 	tv \
