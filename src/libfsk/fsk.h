@@ -9,7 +9,7 @@ typedef struct fsk_mod {
 	double		cycles_per_bit65536[2];	/* cycles of one bit */
 	double		tx_phase65536;		/* current transmit phase */
 	double		level;			/* level (amplitude) of signal */
-	int		coherent;		/* set, if coherent TX mode */
+	int		ffsk;			/* set, if FFSK TX mode */
 	double		f0_deviation;		/* deviation of frequencies, relative to center */
 	double		f1_deviation;
 	int		low_bit, high_bit;	/* a low or high deviation means which bit? */

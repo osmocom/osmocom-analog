@@ -1,4 +1,4 @@
-/* FSK audio processing (coherent FSK modem)
+/* FSK audio processing (FSK/FFSK modem)
  *
  * (C) 2017 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -37,9 +37,9 @@
  * bitrate = bits per second
  * f0, f1 = two frequencies for bit 0 and bit 1
  * level = level to modulate the frequencies
- * coherent = use coherent modulation (FFSK)
+ * ffsk = use FFSK modulation (each symbol ends at zero crossing)
  */
-int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int coherent, int filter)
+int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int ffsk, int filter)
 {
 	int i;
 	int rc;
@@ -80,23 +80,23 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	fsk->phaseshift65536[1] = f1 / (double)samplerate * 65536.0;
 	PDEBUG(DDSP, DEBUG_DEBUG, "F1 = %.0f Hz (phaseshift65536[1] = %.4f)\n", f1, fsk->phaseshift65536[1]);
 
-	/* use coherent modulation, i.e. each bit has an integer number of
+	/* use ffsk modulation, i.e. each bit has an integer number of
 	 * half waves and starts/ends at zero crossing
 	 */
-	if (coherent) {
+	if (ffsk) {
 		double waves;
 
-		PDEBUG(DDSP, DEBUG_DEBUG, "enable coherent FSK modulation mode\n");
-		fsk->coherent = 1;
+		PDEBUG(DDSP, DEBUG_DEBUG, "enable FFSK modulation mode\n");
+		fsk->ffsk = 1;
 		waves = (f0 / bitrate);
 		if (fabs(round(waves * 2) - (waves * 2)) > 0.001) {
-			fprintf(stderr, "Failed to set coherent mode, half waves of F0 does not fit exactly into one bit, please fix!\n");
+			fprintf(stderr, "Failed to set FFSK mode, half waves of F0 does not fit exactly into one bit, please fix!\n");
 			abort();
 		}
 		fsk->cycles_per_bit65536[0] = waves * 65536.0;
 		waves = (f1 / bitrate);
 		if (fabs(round(waves * 2) - (waves * 2)) > 0.001) {
-			fprintf(stderr, "Failed to set coherent mode, half waves of F1 does not fit exactly into one bit, please fix!\n");
+			fprintf(stderr, "Failed to set FFSK mode, half waves of F1 does not fit exactly into one bit, please fix!\n");
 			abort();
 		}
 		fsk->cycles_per_bit65536[1] = waves * 65536.0;
@@ -141,7 +141,7 @@ void fsk_mod_cleanup(fsk_mod_t *fsk)
  * return -1. In this case, this function stops and returns the number of
  * samples that have been rendered so far, if any.
  *
- * For coherent mode (FSK), we round the phase on every bit change to the
+ * For FFSK mode, we round the phase on every bit change to the
  * next zero crossing. This prevents phase shifts due to rounding errors.
  */
 int fsk_mod_send(fsk_mod_t *fsk, sample_t *sample, int length, int add)
@@ -161,7 +161,7 @@ next_bit:
 		if (fsk->tx_bit < 0)
 			goto done;
 		/* correct phase when changing bit */
-		if (fsk->coherent) {
+		if (fsk->ffsk) {
 			/* round phase to nearest zero crossing */
 			if (phase > 16384.0 && phase < 49152.0)
 				phase = 32768.0;
