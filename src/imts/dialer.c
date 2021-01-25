@@ -106,16 +106,16 @@ static int handle_options(int short_option, int __attribute__((unused)) argi, ch
 		print_help(argv[0]);
 		return 0;
 	case 'i':
-		station_id = strdup(argv[argi]);
+		station_id = options_strdup(argv[argi]);
 		break;
 	case 'a':
-		audiodev = strdup(argv[argi]);
+		audiodev = options_strdup(argv[argi]);
 		break;
 	case 's':
 		samplerate = atoi(argv[argi]);
 		break;
 	case 'w':
-		write_tx_wave = strdup(argv[argi]);
+		write_tx_wave = options_strdup(argv[argi]);
 		break;
 	default:
 		return -EINVAL;
@@ -347,6 +347,8 @@ exit:
 	if (audio)
 		sound_close(audio);
 #endif
+
+	options_free();
 
 	return 0;
 }

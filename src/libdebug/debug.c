@@ -28,6 +28,7 @@
 #include "../libsample/sample.h"
 #include "debug.h"
 #include "../libdisplay/display.h"
+#include "../liboptions/options.h"
 
 const char *debug_level[] = {
 	"debug  ",
@@ -206,7 +207,7 @@ int parse_debug_opt(const char *optarg)
 	for (i = 0; debug_level[i]; i++)
 		max_level = i;
 	
-	dstring = strdup(optarg);
+	dstring = options_strdup(optarg);
 	p = strsep(&dstring, ",");
 	for (i = 0; i < p[i]; i++) {
 		if (p[i] < '0' || p[i] > '9') {

@@ -27,6 +27,7 @@
 #include <SoapySDR/Formats.h>
 #include "soapy.h"
 #include "../libdebug/debug.h"
+#include "../liboptions/options.h"
 
 extern int sdr_rx_overflow;
 
@@ -40,7 +41,7 @@ static uint64_t			tx_count = 0;
 
 static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 {
-	char *args_string = strdup(_args_string), *key, *val;
+	char *args_string = options_strdup(_args_string), *key, *val;
 
 	memset(args, 0, sizeof(*args));
 	while (args_string && *args_string) {

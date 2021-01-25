@@ -100,6 +100,8 @@ int main(int argc, char *argv[])
 	zeit_exit();
 	fm_exit();
 
+	options_free();
+
 	return 0;
 }
 

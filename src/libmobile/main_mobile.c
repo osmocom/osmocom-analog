@@ -83,7 +83,7 @@ const char *console_digits = "0123456789";
 
 void main_mobile_init(void)
 {
-	cc_argv[cc_argc++] = strdup("remote auto");
+	cc_argv[cc_argc++] = options_strdup("remote auto");
 	
 	got_init = 1;
 #ifdef HAVE_SDR
@@ -265,7 +265,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		OPT_ARRAY(num_kanal, kanal, argv[argi])
 		break;
 	case 'a':
-		OPT_ARRAY(num_audiodev, audiodev, strdup(argv[argi]))
+		OPT_ARRAY(num_audiodev, audiodev, options_strdup(argv[argi]))
 		break;
 	case 's':
 		samplerate = atoi(argv[argi]);
@@ -319,10 +319,10 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 			fprintf(stderr, "Too many osmo-cc args!\n");
 			break;
 		}
-		cc_argv[cc_argc++] = strdup(argv[argi]);
+		cc_argv[cc_argc++] = options_strdup(argv[argi]);
 		break;
 	case 'c':
-		call_audiodev = strdup(argv[argi]);
+		call_audiodev = options_strdup(argv[argi]);
 		break;
 	case OPT_CALL_SAMPLERATE:
 		call_samplerate = atoi(argv[argi]);
@@ -340,16 +340,16 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		fast_math = 1;
 		break;
 	case OPT_WRITE_RX_WAVE:
-		write_rx_wave = strdup(argv[argi]);
+		write_rx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_WRITE_TX_WAVE:
-		write_tx_wave = strdup(argv[argi]);
+		write_tx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_READ_RX_WAVE:
-		read_rx_wave = strdup(argv[argi]);
+		read_rx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_READ_TX_WAVE:
-		read_tx_wave = strdup(argv[argi]);
+		read_tx_wave = options_strdup(argv[argi]);
 		break;
 #ifdef HAVE_SDR
 	case OPT_LIMESDR:

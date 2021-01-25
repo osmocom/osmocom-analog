@@ -276,6 +276,8 @@ fail:
 //	zeit_exit();
 	fm_exit();
 
+	options_free();
+
 	return 0;
 }
 

@@ -109,7 +109,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		metering = atoi(argv[argi]);
 		break;
 	case 'P':
-		paging = strdup(argv[argi]);
+		paging = options_strdup(argv[argi]);
 		break;
 	case 'S':
 		if (!strcasecmp(argv[argi], "auto"))
@@ -203,6 +203,8 @@ fail:
 
 	/* exits */
 	fm_exit();
+
+	options_free();
 
 	return 0;
 }

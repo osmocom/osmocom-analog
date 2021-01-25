@@ -18,6 +18,7 @@ test_filter_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	-lm
 
 test_sendevolumenregler_SOURCES = test_sendevolumenregler.c
@@ -41,6 +42,7 @@ test_emphasis_LDADD = \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	-lm
 
 test_dtmf_SOURCES = dummy.x test_dtmf.c

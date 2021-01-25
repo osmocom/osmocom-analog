@@ -192,14 +192,14 @@ static int handle_options(int short_option, int argi, char **argv)
 		samplerate = atof(argv[argi]);
 		break;
 	case 'r':
-		tx_wave_file = strdup(argv[argi]);
+		tx_wave_file = options_strdup(argv[argi]);
 		break;
 	case 'w':
-		rx_wave_file = strdup(argv[argi]);
+		rx_wave_file = options_strdup(argv[argi]);
 		break;
 	case 'a':
-		tx_audiodev = strdup(argv[argi]);
-		rx_audiodev = strdup(argv[argi]);
+		tx_audiodev = options_strdup(argv[argi]);
+		rx_audiodev = options_strdup(argv[argi]);
 		break;
 	case 'M':
 		if (!strcasecmp(argv[argi], "fm"))
@@ -515,6 +515,8 @@ error:
 	/* global exits */
 	fm_exit();
 	am_exit();
+
+	options_free();
 
 	return 0;
 }

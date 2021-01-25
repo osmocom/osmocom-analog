@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include "../libtimer/timer.h"
 #include "../libdebug/debug.h"
+#include "../liboptions/options.h"
 #include "endpoint.h"
 
 #define NTP_OFFSET      2208988800
@@ -38,7 +39,7 @@ void osmo_cc_set_local_peer(enum osmo_cc_session_nettype nettype, enum osmo_cc_s
 {
 	default_nettype = nettype;
 	default_addrtype = addrtype;
-	default_unicast_address = strdup(address);
+	default_unicast_address = options_strdup(address);
 }
 
 osmo_cc_session_t *osmo_cc_new_session(void *priv, const char *username, const char *sess_id, const char *sess_version, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *unicast_address, const char *session_name, int debug)

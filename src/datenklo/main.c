@@ -194,13 +194,13 @@ static int handle_options(int short_option, int argi, char **argv)
 		OPT_ARRAY(num_tx_baudrate, tx_baudrate, atoi(argv[argi + 1]))
 		break;
 	case 'D':
-		OPT_ARRAY(num_ttydev, ttydev, strdup(argv[argi]))
+		OPT_ARRAY(num_ttydev, ttydev, options_strdup(argv[argi]))
 		break;
 	case 'S':
 		stereo = 1;
 		break;
 	case 'a':
-		audiodev = strdup(argv[argi]);
+		audiodev = options_strdup(argv[argi]);
 		break;
 	case 's':
 		samplerate = atoi(argv[argi]);
@@ -215,16 +215,16 @@ static int handle_options(int short_option, int argi, char **argv)
 		fast_math = 1;
 		break;
 	case OPT_WRITE_RX_WAVE:
-		write_rx_wave = strdup(argv[argi]);
+		write_rx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_WRITE_TX_WAVE:
-		write_tx_wave = strdup(argv[argi]);
+		write_tx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_READ_RX_WAVE:
-		read_rx_wave = strdup(argv[argi]);
+		read_rx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_READ_TX_WAVE:
-		read_tx_wave = strdup(argv[argi]);
+		read_tx_wave = options_strdup(argv[argi]);
 		break;
 	}
 
@@ -314,6 +314,8 @@ int main(int argc, char *argv[])
 fail:
 	for (i = 0; i < num_kanal; i++)
 		datenklo_exit(&datenklo[i]);
+
+	options_free();
 
 	return 0;
 }

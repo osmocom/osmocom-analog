@@ -175,13 +175,13 @@ int sdr_config_handle_options(int short_option, int argi, char **argv)
 		sdr_config->channel = atoi(argv[argi]);
 		break;
 	case OPT_SDR_DEVICE_ARGS:
-		sdr_config->device_args = strdup(argv[argi]);
+		sdr_config->device_args = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_STREAM_ARGS:
-		sdr_config->stream_args = strdup(argv[argi]);
+		sdr_config->stream_args = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_TUNE_ARGS:
-		sdr_config->tune_args = strdup(argv[argi]);
+		sdr_config->tune_args = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_SAMPLERATE:
 		sdr_config->samplerate = atoi(argv[argi]);
@@ -193,13 +193,13 @@ int sdr_config_handle_options(int short_option, int argi, char **argv)
 		sdr_config->bandwidth = atof(argv[argi]);
 		break;
 	case OPT_SDR_RX_ANTENNA:
-		sdr_config->rx_antenna = strdup(argv[argi]);
+		sdr_config->rx_antenna = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_TX_ANTENNA:
-		sdr_config->tx_antenna = strdup(argv[argi]);
+		sdr_config->tx_antenna = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_CLOCK_SOURCE:
-		sdr_config->clock_source = strdup(argv[argi]);
+		sdr_config->clock_source = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_RX_GAIN:
 		sdr_config->rx_gain = atof(argv[argi]);
@@ -208,16 +208,16 @@ int sdr_config_handle_options(int short_option, int argi, char **argv)
 		sdr_config->tx_gain = atof(argv[argi]);
 		break;
 	case OPT_WRITE_IQ_RX_WAVE:
-		sdr_config->write_iq_rx_wave = strdup(argv[argi]);
+		sdr_config->write_iq_rx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_WRITE_IQ_TX_WAVE:
-		sdr_config->write_iq_tx_wave = strdup(argv[argi]);
+		sdr_config->write_iq_tx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_READ_IQ_RX_WAVE:
-		sdr_config->read_iq_rx_wave = strdup(argv[argi]);
+		sdr_config->read_iq_rx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_READ_IQ_TX_WAVE:
-		sdr_config->read_iq_tx_wave = strdup(argv[argi]);
+		sdr_config->read_iq_tx_wave = options_strdup(argv[argi]);
 		break;
 	case OPT_SDR_SWAP_LINKS:
 		sdr_config->swap_links = 1;

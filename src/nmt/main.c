@@ -202,7 +202,7 @@ error_ta:
 		OPT_ARRAY(num_supervisory, supervisory, super)
 		break;
 	case 'S':
-		smsc_number = strdup(argv[argi]);
+		smsc_number = options_strdup(argv[argi]);
 		break;
 	case 'I':
 		send_callerid = atoi(argv[argi]);
@@ -421,6 +421,8 @@ fail:
 
 	/* exits */
 	fm_exit();
+
+	options_free();
 
 	return 0;
 }

@@ -197,7 +197,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 		return NULL;
 	}
 
-	sound->audiodev = strdup(audiodev);
+	sound->audiodev = strdup(audiodev); // is feed when closed
 	sound->channels = channels;
 	sound->samplerate = samplerate;
 	sound->spl_deviation = max_deviation / 32767.0;

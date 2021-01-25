@@ -250,6 +250,8 @@ fail:
 	fm_exit();
 	euro_exit();
 
+	options_free();
+
 	return 0;
 }
 

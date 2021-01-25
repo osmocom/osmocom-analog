@@ -198,6 +198,8 @@ fail:
 	/* exits */
 	fm_exit();
 
+	options_free();
+
 	return 0;
 }
 

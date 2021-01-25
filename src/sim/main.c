@@ -148,42 +148,42 @@ int handle_options(int short_option, int argi, char **argv)
 		}
 		break;
 	case 's':
-		serialdev = strdup(argv[argi]);
+		serialdev = options_strdup(argv[argi]);
 		break;
 	case 'b':
 		baudrate = atoi(argv[argi]);
 		break;
 	case 'E':
-		eeprom_name = strdup(argv[argi]);
+		eeprom_name = options_strdup(argv[argi]);
 		break;
 	case 'F':
-		futln = strdup(argv[argi]);
+		futln = options_strdup(argv[argi]);
 		break;
 	case OPT_SICHERUNG:
-		sicherung = strdup(argv[argi]);
+		sicherung = options_strdup(argv[argi]);
 		break;
 	case OPT_KARTEN:
-		karten = strdup(argv[argi]);
+		karten = options_strdup(argv[argi]);
 		break;
 	case OPT_SONDER:
-		sonder = strdup(argv[argi]);
+		sonder = options_strdup(argv[argi]);
 		break;
 	case OPT_WARTUNG:
-		wartung = strdup(argv[argi]);
+		wartung = options_strdup(argv[argi]);
 		break;
 	case 'P':
-		pin = strdup(argv[argi]);
+		pin = options_strdup(argv[argi]);
 		break;
 	case 'D':
 		if (dir_count == MAX_DIR_COUNT)
 			break;
 		dir_location[dir_count] = atoi(argv[argi + 0]);
-		dir_number[dir_count] = strdup(argv[argi + 1]);
-		dir_name[dir_count] = strdup(argv[argi + 2]);
+		dir_number[dir_count] = options_strdup(argv[argi + 1]);
+		dir_name[dir_count] = options_strdup(argv[argi + 2]);
 		dir_count++;
 		break;
 	case 'A':
-		auth = strdup(argv[argi]);
+		auth = options_strdup(argv[argi]);
 		break;
 	default:
 		return -EINVAL;
@@ -490,6 +490,8 @@ int main(int argc, char *argv[])
 error:
 	if (serial)
 		serial_close(serial);
+
+	options_free();
 
 	return 0;
 }

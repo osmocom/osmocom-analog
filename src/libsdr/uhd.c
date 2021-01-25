@@ -26,6 +26,7 @@
 #include <uhd/usrp/usrp.h>
 #include "uhd.h"
 #include "../libdebug/debug.h"
+#include "../liboptions/options.h"
 
 /* use to TX time stamp */
 //#define TX_TIMESTAMP
@@ -246,7 +247,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		} else
 			tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 		tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
-		tune_request.args = strdup(_tune_args);
+		tune_request.args = options_strdup(_tune_args);
 		error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
 		if (error) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
@@ -291,7 +292,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		memset(&stream_args, 0, sizeof(stream_args));
 		stream_args.cpu_format = "fc32";
 		stream_args.otw_format = "sc16";
-		stream_args.args = strdup(_stream_args);
+		stream_args.args = options_strdup(_stream_args);
 		stream_args.channel_list = &channel;
 		stream_args.n_channels = 1;
 		error = uhd_usrp_get_tx_stream(usrp, &stream_args, tx_streamer);
@@ -434,7 +435,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		} else
 			tune_request.rf_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
 		tune_request.dsp_freq_policy = UHD_TUNE_REQUEST_POLICY_AUTO;
-		tune_request.args = strdup(_tune_args);
+		tune_request.args = options_strdup(_tune_args);
 		error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
 		if (error) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
@@ -479,7 +480,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		memset(&stream_args, 0, sizeof(stream_args));
 		stream_args.cpu_format = "fc32";
 		stream_args.otw_format = "sc16";
-		stream_args.args = strdup(_stream_args);
+		stream_args.args = options_strdup(_stream_args);
 		stream_args.channel_list = &channel;
 		stream_args.n_channels = 1;
 		error = uhd_usrp_get_rx_stream(usrp, &stream_args, rx_streamer);

@@ -184,7 +184,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		samplerate = atof(argv[argi]);
 		break;
 	case 'w':
-		wave_file = strdup(argv[argi]);
+		wave_file = options_strdup(argv[argi]);
 		break;
 	case 'r':
 		rt_prio = atoi(argv[argi]);
@@ -208,7 +208,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		grid_width = atoi(argv[argi]);
 		break;
 	case 'I':
-		station_id = strdup(argv[argi]);
+		station_id = options_strdup(argv[argi]);
 		if (strlen(station_id) != 12) {
 			fprintf(stderr, "Given station ID must be exactly 12 characters long. (Use spaces to fill it.)\n");
 			return -EINVAL;
@@ -534,6 +534,8 @@ int main(int argc, char *argv[])
 
 	/* exits */
 	fm_exit();
+
+	options_free();
 
 	return 0;
 }

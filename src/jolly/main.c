@@ -87,7 +87,7 @@ static int handle_options(int short_option, int argi, char **argv)
 
 	switch (short_option) {
 	case 'F':
-		string = strdup(argv[argi]);
+		string = options_strdup(argv[argi]);
 		string_dl = strsep(&string, ",");
 		string_ul = strsep(&string, ",");
 		string_step = strsep(&string, ",");
@@ -207,6 +207,8 @@ fail:
 
 	/* exits */
 	fm_exit();
+
+	options_free();
 
 	return 0;
 }

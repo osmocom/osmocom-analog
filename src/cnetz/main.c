@@ -376,7 +376,7 @@ error_fuz:
 			fuz_rest = atoi_limit(p, 0, 255);
 		} else
 		if (!strncasecmp(argv[argi], "fuz-name=", p - argv[argi])) {
-			fuz_name = strdup(p);
+			fuz_name = options_strdup(p);
 		} else
 		if (!strncasecmp(argv[argi], "kennung-fufst=", p - argv[argi])) {
 			kennung_fufst = atoi_limit(p, 0, 3);
@@ -658,6 +658,8 @@ fail:
 
 	/* exits */
 	fm_exit();
+
+	options_free();
 
 	return 0;
 }

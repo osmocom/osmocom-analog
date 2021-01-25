@@ -36,6 +36,7 @@
 #include <inttypes.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
+#include "../liboptions/options.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
 #include "../libtimer/timer.h"
@@ -1157,7 +1158,7 @@ int fuvst_create(const char *kanal, enum fuvst_chan_type chan_type, const char *
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by fuvst code, not by common sender code */
-	rc = sender_create(&fuvst->sender, strdup(chan_name), 0, 0, audiodev, 0, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&fuvst->sender, options_strdup(chan_name), 0, 0, audiodev, 0, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -1169,7 +1170,7 @@ int fuvst_create(const char *kanal, enum fuvst_chan_type chan_type, const char *
 
 	if (fuvst->chan_type == CHAN_TYPE_ZZK) {
 		/* create link */
-		rc = mtp_init(&fuvst->mtp, strdup(chan_name), fuvst, mtp_receive, 4800, ignore_link_monitor, sio, local_pc, remote_pc);
+		rc = mtp_init(&fuvst->mtp, options_strdup(chan_name), fuvst, mtp_receive, 4800, ignore_link_monitor, sio, local_pc, remote_pc);
 		if (rc < 0)
 			goto error;
 		/* power on stack */

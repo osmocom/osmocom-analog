@@ -36,6 +36,27 @@ static option_t *option_head = NULL;
 static option_t **option_tailp = &option_head;
 static int first_option = 1;
 
+static struct options_strdup_entry {
+	struct options_strdup_entry *next;
+	char s[1];
+} *options_strdup_list = NULL;
+
+char *options_strdup(const char *s)
+{
+	struct options_strdup_entry *o;
+
+	o = malloc(sizeof(struct options_strdup_entry) + strlen(s));
+	if (!o) {
+		PDEBUG(DOPTIONS, DEBUG_ERROR, "No mem!\n");
+		abort();
+	}
+	o->next = options_strdup_list;
+	options_strdup_list = o;
+	strcpy(o->s, s);
+
+	return o->s;
+}
+
 void option_add(int short_option, const char *long_option, int parameter_count)
 {
 	option_t *option;
@@ -158,7 +179,7 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 				param[j++] = *p++;
 			}
 			param[j] = '\0';
-			argv[i] = strdup(param);
+			argv[i] = options_strdup(param);
 			sprintf(strchr(params, '\0'), " '%s'", param);
 			/* skip white spaces behind option */
 			while (*p > '\0' && *p <= ' ')
@@ -271,5 +292,23 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 int option_is_first(void)
 {
 	return first_option;
+}
+
+void options_free(void)
+{
+	while (options_strdup_list) {
+		struct options_strdup_entry *o;
+		o = options_strdup_list;
+		options_strdup_list = o->next;
+		free(o);
+	}
+
+	while (option_head) {
+		option_t *o;
+		o = option_head;
+		option_head = o->next;
+		free(o);
+	}
+	option_tailp = &option_head;
 }
 
