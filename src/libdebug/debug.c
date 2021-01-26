@@ -25,10 +25,7 @@
 #include <errno.h>
 #include <math.h>
 #include <sys/ioctl.h>
-#include "../libsample/sample.h"
 #include "debug.h"
-#include "../libdisplay/display.h"
-#include "../liboptions/options.h"
 
 const char *debug_level[] = {
 	"debug  ",
@@ -79,6 +76,13 @@ struct debug_cat {
 	{ "mtp layer 2", "\033[1;33m" },
 	{ "mtp layer 3", "\033[1;36m" },
 	{ "MuP", "\033[1;37m" },
+	{ "router", "\033[1;35m" },
+	{ "stderr", "\033[1;37m" },
+	{ "ss5", "\033[1;34m" },
+	{ "isdn", "\033[1;35m" },
+	{ "misdn", "\033[0;34m" },
+	{ "dss1", "\033[1;34m" },
+	{ "sip", "\033[1;35m" },
 	{ NULL, NULL }
 };
 
@@ -202,22 +206,24 @@ void debug_list_cat(void)
 int parse_debug_opt(const char *optarg)
 {
 	int i, max_level = 0;
-	char *dstring, *p;
+	char *dup, *dstring, *p;
 
 	for (i = 0; debug_level[i]; i++)
 		max_level = i;
 	
-	dstring = options_strdup(optarg);
+	dup = dstring = strdup(optarg);
 	p = strsep(&dstring, ",");
 	for (i = 0; i < p[i]; i++) {
 		if (p[i] < '0' || p[i] > '9') {
 			fprintf(stderr, "Only digits are allowed for debug level!\n");
+			free(dup);
 			return -EINVAL;
 		}
 	}
 	debuglevel = atoi(p);
 	if (debuglevel > max_level) {
 		fprintf(stderr, "Debug level too high, use 'list' to show available levels!\n");
+		free(dup);
 		return -EINVAL;
 	}
 	if (dstring)
@@ -229,11 +235,13 @@ int parse_debug_opt(const char *optarg)
 		}
 		if (!debug_cat[i].name) {
 			fprintf(stderr, "Given debug category '%s' unknown, use 'list' to show available categories!\n", p);
+			free(dup);
 			return -EINVAL;
 		}
 		debug_mask |= ((uint64_t)1 << i);
 	}
 
+	free(dup);
 	return 0;
 }
 
