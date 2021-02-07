@@ -251,6 +251,8 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_NETWORK_IMTS_NONE		0x87
 #define OSMO_CC_NETWORK_EUROSIGNAL_NONE		0x88
 #define OSMO_CC_NETWORK_JOLLYCOM_NONE		0x89	/* call from JollyCom... */
+#define OSMO_CC_NETWORK_MPT1327_PSTN		0x8a	/* call from MPT1327 */
+#define OSMO_CC_NETWORK_MPT1327_PBX		0x8b	/* id is selected PBX number */
 
 typedef struct osmo_cc_msg {
 	uint8_t type;
@@ -379,6 +381,7 @@ struct osmo_cc_ie_private {
 
 uint32_t osmo_cc_new_callref(void);
 const char *osmo_cc_msg_name(uint8_t msg_type);
+const char *osmo_cc_network_type_name(uint8_t type);
 osmo_cc_msg_t *osmo_cc_new_msg(uint8_t msg_type);
 osmo_cc_msg_t *osmo_cc_clone_msg(osmo_cc_msg_t *msg);
 osmo_cc_msg_t *osmo_cc_msg_list_dequeue(osmo_cc_msg_list_t **mlp, uint32_t *callref_p);

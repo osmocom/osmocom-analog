@@ -98,6 +98,60 @@ const char *osmo_cc_msg_name(uint8_t msg_type)
 	}
 }
 
+const char *osmo_cc_network_type_name(uint8_t type)
+{
+	switch (type) {
+	case OSMO_CC_NETWORK_UNDEFINED:
+		return "";
+	case OSMO_CC_NETWORK_ALSA_NONE:
+		return "alsa";
+	case OSMO_CC_NETWORK_POTS_NONE:
+		return "pots";
+	case OSMO_CC_NETWORK_ISDN_NONE:
+		return "isdn";
+	case OSMO_CC_NETWORK_SIP_NONE:
+		return "sip";
+	case OSMO_CC_NETWORK_GSM_IMSI:
+		return "gsm-imsi";
+	case OSMO_CC_NETWORK_GSM_IMEI:
+		return "gsm-imei";
+	case OSMO_CC_NETWORK_WEB_NONE:
+		return "web";
+	case OSMO_CC_NETWORK_DECT_NONE:
+		return "decs";
+	case OSMO_CC_NETWORK_BLUETOOTH_NONE:
+		return "bluetooth";
+	case OSMO_CC_NETWORK_SS5_NONE:
+		return "ss5";
+	case OSMO_CC_NETWORK_ANETZ_NONE:
+		return "anetz";
+	case OSMO_CC_NETWORK_BNETZ_MUENZ:
+		return "bnetz";
+	case OSMO_CC_NETWORK_CNETZ_NONE:
+		return "cnetz";
+	case OSMO_CC_NETWORK_NMT_NONE:
+		return "nmt";
+	case OSMO_CC_NETWORK_R2000_NONE:
+		return "radiocom2000";
+	case OSMO_CC_NETWORK_AMPS_ESN:
+		return "amps";
+	case OSMO_CC_NETWORK_MTS_NONE:
+		return "mts";
+	case OSMO_CC_NETWORK_IMTS_NONE:
+		return "imts";
+	case OSMO_CC_NETWORK_EUROSIGNAL_NONE:
+		return "eurosignal";
+	case OSMO_CC_NETWORK_JOLLYCOM_NONE:
+		return "jollycom";
+	case OSMO_CC_NETWORK_MPT1327_PSTN:
+		return "mpt1327-pstn";
+	case OSMO_CC_NETWORK_MPT1327_PBX:
+		return "mpt1327-pbx";
+	default:
+		return "<unknown>";
+	}
+}
+
 /* create message with maximum size */
 osmo_cc_msg_t *osmo_cc_new_msg(uint8_t msg_type)
 {
