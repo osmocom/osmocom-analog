@@ -66,8 +66,8 @@ typedef struct console {
 	uint32_t callref;
 	enum console_state state;
 	int disc_cause;		/* cause that has been sent by transceiver instance for release */
-	char station_id[16];
-	char dialing[16];
+	char station_id[33];
+	char dialing[33];
 	char audiodev[64];	/* headphone interface, if used */
 	int samplerate;		/* sample rate of headphone interface */
 	void *sound;		/* headphone interface */

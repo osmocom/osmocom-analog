@@ -709,9 +709,10 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 
 		/* caller id */
 		rc = osmo_cc_get_ie_calling(msg, 0, &type, &plan, &present, &screen, caller_id, sizeof(caller_id));
-		if (rc < 0)
+		if (rc < 0) {
 			caller_type = TYPE_NOTAVAIL;
-		else {
+			caller_id[0] = '\0';
+		} else {
 			switch (type) {
 			case OSMO_CC_TYPE_INTERNATIONAL:
 				caller_type = TYPE_INTERNATIONAL;
