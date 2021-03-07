@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) -fstack-check $(FUSE_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(FUSE_CFLAGS)
 
 bin_PROGRAMS = \
 	zeitansage

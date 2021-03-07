@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) -fstack-check $(IMAGEMAGICK_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(IMAGEMAGICK_CFLAGS)
 
 bin_PROGRAMS = \
 	osmotv
