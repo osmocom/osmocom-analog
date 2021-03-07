@@ -477,6 +477,14 @@ void main_mobile(const char *name, int *quit, int latency, int interval, void (*
 		return;
 	}
 
+	/* OSMO-CC crossover */
+	if (use_osmocc_cross) {
+		use_osmocc_sock = 1;
+		cc_argc = 0;
+		cc_argv[cc_argc++] = options_strdup("local 127.0.0.1:4200");
+		cc_argv[cc_argc++] = options_strdup("remote 127.0.0.1:4200");
+	}
+
 	/* init OSMO-CC */
 	if (!use_osmocc_sock)
 		console_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, echo_test, console_digits);
