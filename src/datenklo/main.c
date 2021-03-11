@@ -75,6 +75,11 @@ void print_help(const char *arg0)
 {
 	printf("Usage: %s [options] -M <mode>\n\n", arg0);
 	/*      -                                                                             - */
+	printf(" -h --help\n");
+	printf("        This help\n");
+	printf(" --config [~/]<path to config file>\n");
+	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
+	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
 	printf(" -T --am791x-type 7910 | 7911\n");
 	printf("        Give modem chip type. (Default = 791%d)\n", am791x_type);
 	printf(" -M --mc <mode>\n");
@@ -262,7 +267,7 @@ int main(int argc, char *argv[])
 
 	/* handle options / config file */
 	add_options();
-	rc = options_config_file("~/.osmocom/analog/datenklo.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/datenklo.conf", handle_options);
 	if (rc < 0)
 		return 0;
 	argi = options_command_line(argc, argv, handle_options);

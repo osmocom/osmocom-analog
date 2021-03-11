@@ -61,8 +61,12 @@ void option_add(int short_option, const char *long_option, int parameter_count)
 {
 	option_t *option;
 
-	/* check if option already exists */
+	/* check if option already exists or is not allowed */
 	for (option = option_head; option; option = option->next) {
+		if (!strcmp(option->long_option, "config")) {
+			PDEBUG(DOPTIONS, DEBUG_ERROR, "Option '%s' is not allowed to add, please fix!\n", option->long_option);
+			abort();
+		}
 		if (option->short_option == short_option
 		 || !strcmp(option->long_option, long_option)) {
 			PDEBUG(DOPTIONS, DEBUG_ERROR, "Option '%s' added twice, please fix!\n", option->long_option);
@@ -83,24 +87,32 @@ void option_add(int short_option, const char *long_option, int parameter_count)
 	option_tailp = &(option->next);
 }
 
-int options_config_file(const char *config_file, int (*handle_options)(int short_option, int argi, char *argv[]))
+int options_config_file(int argc, char *argv[], const char *config_file, int (*handle_options)(int short_option, int argi, char *argv[]))
 {
 	static const char *home;
 	char config[256];
 	FILE *fp;
-	char buffer[256], opt[256], param[256], *p, *argv[16];
+	char buffer[256], opt[256], param[256], *p, *args[16];
 	char params[1024];
 	int line;
 	int rc = 1;
 	int i, j, quote;
 	option_t *option;
 
-	/* open config file */
-	home = getenv("HOME");
-        if (home == NULL)
-		return 1;
-	sprintf(config, "%s/%s", home, config_file + 2);
+	/* select for alternative config file */
+	if (argc > 2 && !strcmp(argv[1], "--config"))
+		config_file = argv[2];
+
+	/* add home directory */
+	if (config_file[0] == '~' && config_file[1] == '/') {
+		home = getenv("HOME");
+		if (home == NULL)
+			return 1;
+		sprintf(config, "%s/%s", home, config_file + 2);
+	} else
+		strcpy(config, config_file);
 		
+	/* open config file */
 	fp = fopen(config, "r");
 	if (!fp) {
 		PDEBUG(DOPTIONS, DEBUG_INFO, "Config file '%s' seems not to exist, using command line options only.\n", config);
@@ -179,7 +191,7 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 				param[j++] = *p++;
 			}
 			param[j] = '\0';
-			argv[i] = options_strdup(param);
+			args[i] = options_strdup(param);
 			sprintf(strchr(params, '\0'), " '%s'", param);
 			/* skip white spaces behind option */
 			while (*p > '\0' && *p <= ' ')
@@ -206,7 +218,7 @@ int options_config_file(const char *config_file, int (*handle_options)(int short
 			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
 			return -EINVAL;
 		}
-		rc = handle_options(option->short_option, 0, argv);
+		rc = handle_options(option->short_option, 0, args);
 		if (rc <= 0)
 			goto done;
 		first_option = 0;
@@ -227,6 +239,19 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 	int rc;
 
 	for (argi = 1; argi < argc; argi++) {
+		/* --config */
+		if (!strcmp(argv[argi], "--config")) {
+			if (argi > 1) {
+				PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' must be the first option specified, use '-h' for help!\n", argv[argi]);
+				return -EINVAL;
+			}
+			if (argc <= 2) {
+				PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' requires 1 parameter, use '-h' for help!\n", argv[argi]);
+				return -EINVAL;
+			}
+			argi += 1;
+			continue;
+		}
 		if (argv[argi][0] == '-') {
 			if (argv[argi][1] != '-') {
 				if (strlen(argv[argi]) != 2) {

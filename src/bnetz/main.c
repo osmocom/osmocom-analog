@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 
 	/* handle options / config file */
 	add_options();
-	rc = options_config_file("~/.osmocom/analog/bnetz.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/bnetz.conf", handle_options);
 	if (rc < 0)
 		return 0;
 	argi = options_command_line(argc, argv, handle_options);

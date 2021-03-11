@@ -98,6 +98,9 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	/*      -                                                                             - */
 	printf(" -h --help\n");
 	printf("        This help\n");
+	printf(" --config [~/]<path to config file>\n");
+	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
+	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
 	printf(" -v --verbose <level> | <level>,<category>[,<category>[,...]] | list\n");
 	printf("        Use 'list' to get a list of all levels and categories\n");
 	printf("        Verbose level: digit of debug level (default = '%d')\n", debuglevel);

@@ -106,6 +106,11 @@ void print_help(const char *arg0)
 	printf("Usage: %s --sdr-soapy|--sdr-uhd <sdr options> -f <frequency> -M <modulation> -R|-T [options]\n", arg0);
 	/*      -                                                                             - */
 	printf("\noptions:\n");
+	printf(" -h --help\n");
+	printf("        This help\n");
+	printf(" --config [~/]<path to config file>\n");
+	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
+	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
 	printf(" -f --frequency <frequency>\n");
 	printf("        Give frequency in Hertz.\n");
 	printf(" -s --samplerate <sample rate>\n");
@@ -298,7 +303,7 @@ int main(int argc, char *argv[])
 
 	/* handle options / config file */
 	add_options();
-	rc = options_config_file("~/.osmocom/analog/radio.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/radio.conf", handle_options);
 	if (rc < 0)
 		return 0;
 	argi = options_command_line(argc, argv, handle_options);

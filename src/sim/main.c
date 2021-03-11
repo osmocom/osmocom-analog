@@ -68,6 +68,9 @@ void print_help(const char *arg0)
 	printf("General options:\n");
 	printf(" -h --help\n");
 	printf("        This help\n");
+	printf(" --config [~/]<path to config file>\n");
+	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
+	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
 	printf(" -v --verbose <level> | <level>,<category>[,<category>[,...]] | list\n");
 	printf("        Use 'list' to get a list of all levels and categories\n");
 	printf("        Verbose level: digit of debug level (default = '%d')\n", debuglevel);
@@ -334,7 +337,7 @@ int main(int argc, char *argv[])
 	debuglevel = DEBUG_INFO;
 
 	add_options();
-	rc = options_config_file("~/.osmocom/analog/sim.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/sim.conf", handle_options);
 	if (rc < 0)
 		return 0;
 

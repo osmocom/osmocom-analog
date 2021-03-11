@@ -242,11 +242,11 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 	/* handle options / config file */
 	add_options();
     if (!tacs) {
-	rc = options_config_file("~/.osmocom/analog/amps.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/amps.conf", handle_options);
     } else if (!jtacs) {
-	rc = options_config_file("~/.osmocom/analog/tacs.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/tacs.conf", handle_options);
     } else {
-	rc = options_config_file("~/.osmocom/analog/jtacs.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/analog/jtacs.conf", handle_options);
     }
 	if (rc < 0)
 		return 0;

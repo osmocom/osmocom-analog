@@ -70,7 +70,7 @@ void print_help(const char *arg0)
 	printf("       Give Metering pulse duration is seconds (default = %.2f).\n", gebuehren);
 	printf("    --ignore-link-monitor\n");
 	printf("        Don't do any link error checking at MTP.\n");
-	printf(" -C --config <filename>\n");
+	printf(" -C --bs-config <filename>\n");
 	printf("       Give DKO config file (6 KBytes tape file) to be loaded at boot time.\n");
 	main_mobile_print_hotkeys();
 }
@@ -90,7 +90,7 @@ static void add_options(void)
 	option_add('G', "gebuehren", 1);
 	option_add(OPT_ALARMS, "alarms", 1);
 	option_add(OPT_IGNORE_LINK_MONITOR, "ignore-link-monitor", 0);
-	option_add('C', "config", 1);
+	option_add('C', "bs-config", 1);
 }
 
 static int handle_options(int short_option, int argi, char **argv)
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 
 	/* handle options / config file */
 	add_options();
-	rc = options_config_file("~/.osmocom/cnetz/fuvst.conf", handle_options);
+	rc = options_config_file(argc, argv, "~/.osmocom/cnetz/fuvst.conf", handle_options);
 	if (rc < 0)
 		return 0;
 	argi = options_command_line(argc, argv, handle_options);
