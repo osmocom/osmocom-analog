@@ -259,6 +259,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		{
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
+				"--sdr-device-args", "driver=lime",
 				"--sdr-rx-antenna", "LNAL",
 				"--sdr-rx-gain", "50",
 				"--sdr-tx-gain", "50",
@@ -272,6 +273,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		{
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
+				"--sdr-device-args", "driver=lime",
 				"--sdr-rx-antenna", "LNAW",
 				"--sdr-tx-antenna", "BAND2",
 				"--sdr-rx-gain", "50",

@@ -359,6 +359,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		if (allow_sdr) {
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
+				"--sdr-device-args", "driver=lime",
 				"--sdr-rx-antenna", "LNAL",
 				"--sdr-rx-gain", "30",
 				"--sdr-tx-gain", "30",
@@ -374,6 +375,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		if (allow_sdr) {
 			char *argv_lime[] = { argv[0],
 				"--sdr-soapy",
+				"--sdr-device-args", "driver=lime",
 				"--sdr-rx-antenna", "LNAW",
 				"--sdr-tx-antenna", "BAND2",
 				"--sdr-rx-gain", "25",
