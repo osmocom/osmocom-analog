@@ -83,6 +83,7 @@ struct debug_cat {
 	{ "misdn", "\033[0;34m" },
 	{ "dss1", "\033[1;34m" },
 	{ "sip", "\033[1;35m" },
+	{ "telephone", "\033[1;34m" },
 	{ NULL, NULL }
 };
 

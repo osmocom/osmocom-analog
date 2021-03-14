@@ -49,6 +49,7 @@
 #define DMISDN		42
 #define DDSS1		43
 #define DSIP		44
+#define DTEL		45
 
 void get_win_size(int *w, int *h);
 
