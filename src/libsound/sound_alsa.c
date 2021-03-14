@@ -23,7 +23,11 @@
 #include <alsa/asoundlib.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
+#ifdef HAVE_MOBILE
 #include "../libmobile/sender.h"
+#else
+#include "sound.h"
+#endif
 
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;
@@ -32,10 +36,12 @@ typedef struct sound {
 	int samplerate;			/* required sample rate */
 	char *audiodev;			/* required device */
 	double spl_deviation;		/* how much deviation is one sample step */
+#ifdef HAVE_MOBILE
 	double paging_phaseshift;	/* phase to shift every sample */
 	double paging_phase;	 	/* current phase */
 	double rx_frequency[2];		/* rx frequency of radio connected to channel */
 	dispmeasparam_t *dmp[2];
+#endif
 } sound_t;
 
 static int set_hw_params(snd_pcm_t *handle, int samplerate, int *channels)
@@ -201,12 +207,15 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 	sound->channels = channels;
 	sound->samplerate = samplerate;
 	sound->spl_deviation = max_deviation / 32767.0;
+#ifdef HAVE_MOBILE
 	sound->paging_phaseshift = 1.0 / ((double)samplerate / 1000.0);
+#endif
 
 	rc = dev_open(sound);
 	if (rc < 0)
 		goto error;
 
+#ifdef HAVE_MOBILE
 	if (rx_frequency) {
 		sender_t *sender;
 		int i;
@@ -218,6 +227,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 			sound->dmp[i] = display_measurements_add(&sender->dispmeas, "RX Level", "%.1f dB", DISPLAY_MEAS_PEAK, DISPLAY_MEAS_LEFT, -96.0, 0.0, -INFINITY);
 		}
 	}
+#endif
 
 	return sound;
 
@@ -247,6 +257,7 @@ void sound_close(void *inst)
 	free(sound);
 }
 
+#ifdef HAVE_MOBILE
 static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum paging_signal paging_signal, int on)
 {
 	double phaseshift, phase;
@@ -290,8 +301,9 @@ static void gen_paging_tone(sound_t *sound, int16_t *samples, int length, enum p
 		break;
 	}
 }
+#endif
 
-int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) **power, int num, enum paging_signal *paging_signal, int *on, int channels)
+int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) **power, int num, enum paging_signal __attribute__((unused)) *paging_signal, int __attribute__((unused)) *on, int channels)
 {
 	sound_t *sound = (sound_t *)inst;
 	double spl_deviation = sound->spl_deviation;
@@ -302,6 +314,7 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 
 	if (sound->pchannels == 2) {
 		/* two channels */
+#ifdef HAVE_MOBILE
 		if (paging_signal && on && paging_signal[0] != PAGING_SIGNAL_NONE) {
 			int16_t paging[num << 1];
 			gen_paging_tone(sound, paging, num, paging_signal[0], on[0]);
@@ -314,7 +327,9 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 				buff[ii++] = value;
 				buff[ii++] = paging[i];
 			}
-		} else if (channels == 2) {
+		} else
+#endif
+		if (channels == 2) {
 			for (i = 0, ii = 0; i < num; i++) {
 				value = samples[0][i] / spl_deviation;
 				if (value > 32767)
@@ -374,7 +389,7 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 
 #define KEEP_FRAMES	8	/* minimum frames not to read, due to bug in ALSA */
 
-int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf_level_db)
+int sound_read(void *inst, sample_t **samples, int num, int channels, double __attribute__((unused)) *rf_level_db)
 {
 	sound_t *sound = (sound_t *)inst;
 	double spl_deviation = sound->spl_deviation;
@@ -453,6 +468,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 		}
 	}
 
+#ifdef HAVE_MOBILE
 	sender_t *sender;
 	for (i = 0; i < channels; i++) {
 		sender = get_sender_by_empfangsfrequenz(sound->rx_frequency[i]);
@@ -462,6 +478,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 		if (rf_level_db)
 			rf_level_db[i] = 0.0;
 	}
+#endif
 
 	return rc;
 }
