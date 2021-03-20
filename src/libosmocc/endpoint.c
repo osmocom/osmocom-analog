@@ -1085,6 +1085,7 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 {
 	const char **address_p, **host_p;
 	uint16_t *port_p;
+	int local = 0;
 	int rc;
 
 	if (!strncasecmp(text, "local", 5)) {
@@ -1098,6 +1099,7 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 		address_p = &ep->local_address;
 		host_p = &ep->local_host;
 		port_p = &ep->local_port;
+		local = 1;
 	} else if (!strncasecmp(text, "remote", 6)) {
 		text += 6;
 		/* remove spaces after keyword */
@@ -1137,6 +1139,17 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 	*address_p = strdup(text);
 	*host_p = strdup(*host_p);
 
+	if (local) {
+		enum osmo_cc_session_addrtype addrtype;
+		addrtype = osmo_cc_address_type(*host_p);
+		if (addrtype == osmo_cc_session_addrtype_unknown) {
+			PDEBUG(DCC, DEBUG_ERROR, "Given local address '%s' is invalid.\n", *host_p);
+			return -EINVAL;
+		}
+		osmo_cc_set_local_peer(osmo_cc_session_nettype_inet, addrtype, *host_p);
+		return 0;
+	}
+
 	return 0;
 }
 
@@ -1149,8 +1162,8 @@ static void osmo_cc_help_rtp(void)
 	printf("rtp-ports <first> <last>\n\n");
 
 	printf("These options can be used to alter the local IP and port range for RTP traffic.\n");
-	printf("By default the local IPv4 loopback address is used. To connect interfaces\n");
-	printf("between machines, local machine's IP must be given.\n\n");
+	printf("By default the local peer is used, which is loopback by default. To connect\n");
+	printf("interfaces, between machines, local machine's IP must be given.\n\n");
 }
 
 static int osmo_cc_set_rtp(const char *text)
