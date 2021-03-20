@@ -451,7 +451,7 @@ static void indicate_alerting(int callref)
 	osmo_cc_ll_msg(ep, callref, msg);
 }
 
-static void indicate_answer(int callref, const char *connectid)
+static void indicate_answer(int callref, const char *sdp, const char *connectid)
 {
 	osmo_cc_msg_t *msg;
 
@@ -459,6 +459,10 @@ static void indicate_answer(int callref, const char *connectid)
 	/* calling number */
 	if (connectid && connectid[0])
 		osmo_cc_add_ie_calling(msg, OSMO_CC_TYPE_SUBSCRIBER, OSMO_CC_PLAN_TELEPHONY, OSMO_CC_PRESENT_ALLOWED, OSMO_CC_SCREEN_NETWORK, connectid);
+
+	/* sdp */
+	if (sdp)
+		osmo_cc_add_ie_sdp(msg, sdp);
 
 	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC answer towards fixed network\n");
 	osmo_cc_ll_msg(ep, callref, msg);
@@ -543,7 +547,7 @@ void call_up_answer(int callref, const char *connect_id)
 	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connect_id);
 
 	if (!connect_on_setup)
-		indicate_answer(callref, connect_id);
+		indicate_answer(callref, NULL, connect_id);
 	set_pattern_process(callref, PATTERN_NONE);
 	new_state_process(callref, PROCESS_CONNECT);
 }
@@ -734,26 +738,22 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		if (rc < 0)
 			number[0] = '\0';
 		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC call from fixed network '%s' to mobile '%s'\n", caller_id, number);
-		indicate_proceeding(callref, sdp);
+		if (!connect_on_setup)
+			indicate_proceeding(callref, sdp);
+		else {
+			PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
+			indicate_answer(callref, sdp, number);
+		}
 		PDEBUG(DCALL, DEBUG_INFO, "Outgoing call from '%s' to '%s'\n", caller_id, number);
 
 		rc = call_down_setup(callref, caller_id, caller_type, number);
 		if (rc < 0) {
 			PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
-			if (connect_on_setup) {
-				PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
-				indicate_answer(callref, number);
-			} else {
+			if (!connect_on_setup) {
 				PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", -rc);
 				indicate_disconnect_release(callref, -rc, OSMO_CC_MSG_DISC_IND);
 			}
 			disconnect_process(callref, -rc);
-			break;
-		}
-
-		if (connect_on_setup) {
-			PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
-			indicate_answer(callref, number);
 			break;
 		}
 		break;
