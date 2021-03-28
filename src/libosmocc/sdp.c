@@ -486,14 +486,14 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(void *priv, const char *_sdp)
 				}
 				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload type = %d\n", codec->payload_type_remote);
 				if (!(word = wordsep(&next_word)))
-					break;
+					goto rtpmap_done;
 				if ((p = strchr(word, '/')))
 					*p++ = '\0';
 				free((char *)codec->payload_name); // in case it is already set above
 				codec->payload_name = strdup(word);
 				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload name = %s\n", codec->payload_name);
 				if (!(word = p))
-					break;
+					goto rtpmap_done;
 				if ((p = strchr(word, '/')))
 					*p++ = '\0';
 				codec->payload_rate = atoi(word);
@@ -502,10 +502,15 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(void *priv, const char *_sdp)
 					/* if no channel is given and no default was specified, we must set 1 channel */
 					if (!codec->payload_channels)
 						codec->payload_channels = 1;
-					break;
+					goto rtpmap_done;
 				}
 				codec->payload_channels = atoi(word);
 				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload channels = %d\n", codec->payload_channels);
+				rtpmap_done:
+				if (!codec->payload_name || !codec->payload_rate || !codec->payload_channels) {
+					PDEBUG(DCC, DEBUG_NOTICE, "Broken 'rtpmap' definition in SDP line %d = '%s' Skipping codec!\n", line_no, line);
+					osmo_cc_free_codec(codec);
+				}
 			}
 			break;
 		}
