@@ -578,7 +578,7 @@ osmo_cc_msg_t *osmo_cc_screen_msg(osmo_cc_endpoint_t *ep, osmo_cc_msg_t *old_msg
 		}
 		rc = osmo_cc_get_ie_redir(old_msg, 0, &redir_type, &redir_plan, &redir_present, &redir_screen, &redir_reason, id, sizeof(id));
 		if (rc >= 0) {
-			rc = osmo_cc_screen("incoming redirecting number", ep->screen_calling_in, &redir_type, &redir_present, redir, sizeof(redir), id, routing_p);
+			rc = osmo_cc_screen("incoming redirecting number", ep->screen_calling_in, &redir_type, &redir_present, redir, sizeof(redir), id, NULL);
 			if (rc >= 0)
 				redir_status = 1;
 		}
