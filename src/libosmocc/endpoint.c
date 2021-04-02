@@ -172,6 +172,27 @@ static int split_address(const char *address, const char **host_p, uint16_t *por
 	return 0;
 }
 
+
+osmo_cc_call_t *osmo_cc_get_attached_interface(osmo_cc_endpoint_t *ep, const char *interface)
+{
+	osmo_cc_call_t *att;
+
+	for (att = ep->call_list; att; att = att->next) {
+		if (att->state != OSMO_CC_STATE_ATTACH_IN)
+			continue;
+		/* no interface given, just use the attached peer */
+		if (!interface[0])
+			break;
+		/* no interface name given on attached peer, ignore it */
+		if (!att->attached_name || !att->attached_name[0])
+			continue;
+		/* interface given, use the attached peer with the same interface name */
+		if (!strcmp(interface, att->attached_name))
+			break;
+	}
+
+	return att;
+}
 /* helper to forward message to upper layer */
 static void forward_to_ul(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 {
@@ -233,19 +254,7 @@ reject:
 		if (rc < 0)
 			interface[0] = '\0';
 		/* check for incoming attachment */
-		for (att = call->ep->call_list; att; att = att->next) {
-			if (att->state != OSMO_CC_STATE_ATTACH_IN)
-				continue;
-			/* no interface given, just use the attached peer */
-			if (!interface[0])
-				break;
-			/* no interface name given on attached peer, ignore it */
-			if (!att->attached_name || !att->attached_name[0])
-				continue;
-			/* interface given, use the attached peer with the same interface name */
-			if (!strcmp(interface, att->attached_name))
-				break;
-		}
+		att = osmo_cc_get_attached_interface(call->ep, interface);
 		if (!att && !interface[0]) {
 			PDEBUG(DCC, DEBUG_ERROR, "No remote peer attached, rejecting call.\n");
 			goto reject;

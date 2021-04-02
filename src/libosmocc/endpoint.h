@@ -112,6 +112,7 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 void osmo_cc_delete(struct osmo_cc_endpoint *ep);
 int osmo_cc_handle(void);
 osmo_cc_call_t *osmo_cc_call_by_callref(osmo_cc_endpoint_t *ep, uint32_t callref);
+osmo_cc_call_t *osmo_cc_get_attached_interface(osmo_cc_endpoint_t *ep, const char *interface);
 void osmo_cc_ll_msg(osmo_cc_endpoint_t *ep, uint32_t callref, osmo_cc_msg_t *msg);
 void osmo_cc_ul_msg(void *priv, uint32_t callref, osmo_cc_msg_t *msg);
 osmo_cc_call_t *osmo_cc_call_new(osmo_cc_endpoint_t *ep);
