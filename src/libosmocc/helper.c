@@ -29,14 +29,14 @@
 #include "endpoint.h"
 #include "helper.h"
 
-osmo_cc_session_t *osmo_cc_helper_audio_offer(void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len), osmo_cc_msg_t *msg, int debug)
+osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len), osmo_cc_msg_t *msg, int debug)
 {
 	osmo_cc_session_t *session;
 	osmo_cc_session_media_t *media;
 	const char *sdp;
 	int i;
 
-	session = osmo_cc_new_session(priv, NULL, NULL, NULL, 0, 0, NULL, NULL, debug);
+	session = osmo_cc_new_session(conf, priv, NULL, NULL, NULL, 0, 0, NULL, NULL, debug);
 	if (!session)
 		return NULL;
 
@@ -52,7 +52,7 @@ osmo_cc_session_t *osmo_cc_helper_audio_offer(void *priv, struct osmo_cc_helper_
 	return session;
 }
 
-const char *osmo_cc_helper_audio_accept(void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len), osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, int force_our_codec)
+const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len), osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, int force_our_codec)
 {
 	char offer_sdp[65536];
 	const char *accept_sdp;
@@ -77,7 +77,7 @@ const char *osmo_cc_helper_audio_accept(void *priv, struct osmo_cc_helper_audio_
 		return NULL;
 	}
 
-	*session_p = osmo_cc_session_receive_offer(priv, offer_sdp);
+	*session_p = osmo_cc_session_receive_offer(conf, priv, offer_sdp);
 	if (!*session_p) {
 		PDEBUG(DCC, DEBUG_ERROR, "Failed to parse SDP.\n");
 		return NULL;

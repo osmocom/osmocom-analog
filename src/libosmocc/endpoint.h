@@ -45,6 +45,8 @@ typedef int16_t osmo_cc_sample_t;
 #define OSMO_CC_SAMPLE_MIN -32768 /* lowest level */
 #define OSMO_CC_SAMPLE_MAX 32767 /* highest level */
 
+#include "session.h"
+
 struct osmo_cc_call;
 
 typedef struct osmo_cc_screen_list {
@@ -84,6 +86,7 @@ typedef struct osmo_cc_endpoint {
 	osmo_cc_screen_list_t	*screen_called_out;
 	int			remote_auto;	/* automatic remote address */
 	struct timer		attach_timer;	/* timer to retry attachment */
+	osmo_cc_session_config_t session_config; /* SDP/RTP default configuration */
 } osmo_cc_endpoint_t;
 
 extern osmo_cc_endpoint_t *osmo_cc_endpoint_list;
@@ -121,7 +124,6 @@ enum osmo_cc_session_addrtype osmo_cc_address_type(const char *address);
 const char *osmo_cc_host_of_address(const char *address);
 const char *osmo_cc_port_of_address(const char *address);
 
-#include "session.h"
 #include "rtp.h"
 #include "sdp.h"
 #include "screen.h"

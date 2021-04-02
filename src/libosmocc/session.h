@@ -1,3 +1,24 @@
+/* configuration */
+
+enum osmo_cc_session_nettype {
+	osmo_cc_session_nettype_unknown = 0,
+	osmo_cc_session_nettype_inet,
+};
+
+enum osmo_cc_session_addrtype {
+	osmo_cc_session_addrtype_unknown = 0,
+	osmo_cc_session_addrtype_ipv4,
+	osmo_cc_session_addrtype_ipv6,
+};
+
+typedef struct osmo_cc_session_config {
+	enum osmo_cc_session_nettype default_nettype;
+	enum osmo_cc_session_addrtype default_addrtype;
+	const char *default_unicast_address;
+	uint16_t rtp_port_next;
+	uint16_t rtp_port_from;
+	uint16_t rtp_port_to;
+} osmo_cc_session_config_t;
 
 /* session description, global part: */
 
@@ -12,6 +33,7 @@ typedef struct osmo_cc_session_origin {
 
 /* session instance */
 typedef struct osmo_cc_session {
+	osmo_cc_session_config_t *config;
 	void *priv;
 	osmo_cc_session_origin_t origin_local, origin_remote;
 	const char *name;
@@ -19,17 +41,6 @@ typedef struct osmo_cc_session {
 } osmo_cc_session_t;
 
 /* connection description: */
-
-enum osmo_cc_session_nettype {
-	osmo_cc_session_nettype_unknown = 0,
-	osmo_cc_session_nettype_inet,
-};
-
-enum osmo_cc_session_addrtype {
-	osmo_cc_session_addrtype_unknown = 0,
-	osmo_cc_session_addrtype_ipv4,
-	osmo_cc_session_addrtype_ipv6,
-};
 
 typedef struct osmo_cc_session_connection_data {
 	enum osmo_cc_session_nettype nettype;
@@ -96,8 +107,8 @@ typedef struct osmo_cc_session_codec {
 #define osmo_cc_session_for_each_codec(head, c) \
 	for (c = (head); c; c = c->next)
 
-void osmo_cc_set_local_peer(enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address);
-osmo_cc_session_t *osmo_cc_new_session(void *priv, const char *username, const char *sess_id, const char *sess_version, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *unicast_address, const char *session_name, int debug);
+void osmo_cc_set_local_peer(osmo_cc_session_config_t *conf, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address);
+osmo_cc_session_t *osmo_cc_new_session(osmo_cc_session_config_t *conf, void *priv, const char *username, const char *sess_id, const char *sess_version, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *unicast_address, const char *session_name, int debug);
 void osmo_cc_free_session(osmo_cc_session_t *session);
 osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, enum osmo_cc_session_media_type type, uint16_t port, enum osmo_cc_session_media_proto proto, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len), int debug);
 void osmo_cc_free_media(osmo_cc_session_media_t *media);
@@ -105,7 +116,7 @@ osmo_cc_session_codec_t *osmo_cc_add_codec(osmo_cc_session_media_t *media, const
 void osmo_cc_free_codec(osmo_cc_session_codec_t *codec);
 int osmo_cc_session_check(struct osmo_cc_session *session, int remote);
 const char *osmo_cc_session_send_offer(osmo_cc_session_t *session);
-osmo_cc_session_t *osmo_cc_session_receive_offer(void *priv, const char *sdp);
+osmo_cc_session_t *osmo_cc_session_receive_offer(osmo_cc_session_config_t *conf, void *priv, const char *sdp);
 void osmo_cc_session_accept_media(osmo_cc_session_media_t *media, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len));
 void osmo_cc_session_accept_codec(osmo_cc_session_codec_t *codec, void (*encoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len), void (*decoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len));
 const char *osmo_cc_session_send_answer(osmo_cc_session_t *session);

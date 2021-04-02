@@ -32,15 +32,11 @@
 
 #define RTP_VERSION 2
 
-static uint16_t rtp_port_next = 16384;
-static uint16_t rtp_port_from = 16384;
-static uint16_t rtp_port_to = 32767;
-
-void osmo_cc_set_rtp_ports(uint16_t from, uint16_t to)
+void osmo_cc_set_rtp_ports(osmo_cc_session_config_t *conf, uint16_t from, uint16_t to)
 {
-	rtp_port_next = from;
-	rtp_port_from = from;
-	rtp_port_to = to;
+	conf->rtp_port_next = from;
+	conf->rtp_port_from = from;
+	conf->rtp_port_to = to;
 }
 
 struct rtp_hdr {
@@ -165,6 +161,7 @@ static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t pt, ui
  */
 int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 {
+	osmo_cc_session_config_t *conf = media->session->config;
 	int domain = 0; // make GCC happy
 	uint16_t start_port;
 	struct sockaddr_storage sa;
@@ -204,9 +201,9 @@ int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 	}
 
 	/* rtp_port_from/rtp_port_to may be changed at run time, so rtp_port_next can become out of range. */
-	if (rtp_port_next < rtp_port_from || rtp_port_next > rtp_port_to)
-		rtp_port_next = rtp_port_from;
-	start_port = rtp_port_next;
+	if (conf->rtp_port_next < conf->rtp_port_from || conf->rtp_port_next > conf->rtp_port_to)
+		conf->rtp_port_next = conf->rtp_port_from;
+	start_port = conf->rtp_port_next;
 	while (1) {
 		/* open sockets */
 		rc = socket(domain, SOCK_DGRAM, IPPROTO_UDP);
@@ -223,24 +220,24 @@ socket_error:
 		media->rtcp_socket = rc;
 
 		/* bind sockets */
-		*sport = htons(rtp_port_next);
+		*sport = htons(conf->rtp_port_next);
 		rc = bind(media->rtp_socket, (struct sockaddr *)&sa, slen);
 		if (rc < 0) {
 bind_error:
 			osmo_cc_rtp_close(media);
-			rtp_port_next = (rtp_port_next + 2 > rtp_port_to) ? rtp_port_from : rtp_port_next + 2;
-			if (rtp_port_next == start_port) {
+			conf->rtp_port_next = (conf->rtp_port_next + 2 > conf->rtp_port_to) ? conf->rtp_port_from : conf->rtp_port_next + 2;
+			if (conf->rtp_port_next == start_port) {
 				PDEBUG(DCC, DEBUG_ERROR, "Cannot bind socket (errno=%d(%s))\n", errno, strerror(errno));
 				return -EIO;
 			}
 			continue;
 		}
-		*sport = htons(rtp_port_next + 1);
+		*sport = htons(conf->rtp_port_next + 1);
 		rc = bind(media->rtcp_socket, (struct sockaddr *)&sa, slen);
 		if (rc < 0)
 			goto bind_error;
-		media->description.port_local = rtp_port_next;
-		rtp_port_next = (rtp_port_next + 2 > rtp_port_to) ? rtp_port_from : rtp_port_next + 2;
+		media->description.port_local = conf->rtp_port_next;
+		conf->rtp_port_next = (conf->rtp_port_next + 2 > conf->rtp_port_to) ? conf->rtp_port_from : conf->rtp_port_next + 2;
 		/* set nonblocking io */
 		flags = fcntl(media->rtp_socket, F_GETFL);
 		flags |= O_NONBLOCK;

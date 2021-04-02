@@ -1155,7 +1155,7 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 			PDEBUG(DCC, DEBUG_ERROR, "Given local address '%s' is invalid.\n", *host_p);
 			return -EINVAL;
 		}
-		osmo_cc_set_local_peer(osmo_cc_session_nettype_inet, addrtype, *host_p);
+		osmo_cc_set_local_peer(&ep->session_config, osmo_cc_session_nettype_inet, addrtype, *host_p);
 		return 0;
 	}
 
@@ -1175,7 +1175,7 @@ static void osmo_cc_help_rtp(void)
 	printf("interfaces, between machines, local machine's IP must be given.\n\n");
 }
 
-static int osmo_cc_set_rtp(const char *text)
+static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 {
 	int peer = 0, ports = 0;
 
@@ -1204,7 +1204,7 @@ static int osmo_cc_set_rtp(const char *text)
 			PDEBUG(DCC, DEBUG_ERROR, "Given RTP address '%s' is invalid.\n", text);
 			return -EINVAL;
 		}
-		osmo_cc_set_local_peer(osmo_cc_session_nettype_inet, addrtype, text);
+		osmo_cc_set_local_peer(&ep->session_config, osmo_cc_session_nettype_inet, addrtype, text);
 		return 0;
 	}
 
@@ -1236,7 +1236,7 @@ static int osmo_cc_set_rtp(const char *text)
 			from = from * 10 + *text - '0';
 		}
 
-		osmo_cc_set_rtp_ports(from, to);
+		osmo_cc_set_rtp_ports(&ep->session_config, from, to);
 		return 0;
 	}
 
@@ -1279,6 +1279,9 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 	ep->serving_location = serving_location;
 	ep->priv = priv;
 
+	osmo_cc_set_local_peer(&ep->session_config, osmo_cc_session_nettype_inet, osmo_cc_session_addrtype_ipv4, "127.0.0.1");
+	osmo_cc_set_rtp_ports(&ep->session_config, 16384, 32767);
+
 	/* apply args */
 	for (i = 0; i < argc; i++) {
 		if (!strncasecmp(argv[i], "local", 5)) {
@@ -1294,7 +1297,7 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 			}
 		} else
 		if (!strncasecmp(argv[i], "rtp", 3)) {
-			rc = osmo_cc_set_rtp(argv[i]);
+			rc = osmo_cc_set_rtp(ep, argv[i]);
 			if (rc < 0) {
 				return rc;
 			}

@@ -176,7 +176,7 @@ static void request_setup(int callref, const char *dialing)
 	/* bearer capability */
 	osmo_cc_add_ie_bearer(msg, OSMO_CC_CODING_ITU_T, OSMO_CC_CAPABILITY_AUDIO, OSMO_CC_MODE_CIRCUIT);
 	/* sdp offer */
-	console.session = osmo_cc_helper_audio_offer(NULL, codecs, up_audio, msg, 1);
+	console.session = osmo_cc_helper_audio_offer(&ep->session_config, NULL, codecs, up_audio, msg, 1);
 
 	osmo_cc_ul_msg(ep, callref, msg);
 }
@@ -261,7 +261,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		}
 		console.callref = call->callref;
 		/* sdp accept */
-		sdp = osmo_cc_helper_audio_accept(NULL, codecs, up_audio, msg, &console.session, &console.codec, 0);
+		sdp = osmo_cc_helper_audio_accept(&ep->session_config, NULL, codecs, up_audio, msg, &console.session, &console.codec, 0);
 		if (!sdp) {
 			PDEBUG(DCC, DEBUG_NOTICE, "Cannot accept codec, rejecting.\n");
 			request_disconnect_release_reject(console.callref, CAUSE_RESOURCE_UNAVAIL, OSMO_CC_MSG_REJ_REQ);

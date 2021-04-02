@@ -419,7 +419,7 @@ static void indicate_setup(process_t *process, const char *callerid, const char 
 	/* bearer capability */
 	osmo_cc_add_ie_bearer(msg, OSMO_CC_CODING_ITU_T, OSMO_CC_CAPABILITY_AUDIO, OSMO_CC_MODE_CIRCUIT);
 	/* sdp offer */
-	process->session = osmo_cc_helper_audio_offer(process, codecs, down_audio, msg, 1);
+	process->session = osmo_cc_helper_audio_offer(&ep->session_config, process, codecs, down_audio, msg, 1);
 
 	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC setup towards fixed network\n");
 	osmo_cc_ll_msg(ep, process->callref, msg);
@@ -705,7 +705,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		const char *sdp;
 
 		/* sdp accept */
-		sdp = osmo_cc_helper_audio_accept(process, codecs, down_audio, msg, &process->session, &process->codec, 0);
+		sdp = osmo_cc_helper_audio_accept(&ep->session_config, process, codecs, down_audio, msg, &process->session, &process->codec, 0);
 		if (!sdp) {
 			disconnect_process(callref, 47);
 			break;

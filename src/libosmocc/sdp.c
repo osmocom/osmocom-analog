@@ -244,7 +244,7 @@ int osmo_cc_payload_type_by_attrs(uint8_t *fmt, const char *name, uint32_t *rate
  *
  * sdp = given SDP text
  * return: SDP session description structure */
-struct osmo_cc_session *osmo_cc_session_parsesdp(void *priv, const char *_sdp)
+struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf, void *priv, const char *_sdp)
 {
 	char buffer[strlen(_sdp) + 1], *sdp = buffer;
 	char *line, *p, *word, *next_word;
@@ -260,7 +260,7 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(void *priv, const char *_sdp)
 	memset(&ccd, 0, sizeof(ccd));
 
 	/* create SDP session description */
-	session = osmo_cc_new_session(priv, NULL, NULL, NULL, osmo_cc_session_nettype_inet, osmo_cc_session_addrtype_ipv4, "127.0.0.1", NULL, 0); // values will be replaced by local definitions during negotiation
+	session = osmo_cc_new_session(conf, priv, NULL, NULL, NULL, osmo_cc_session_nettype_inet, osmo_cc_session_addrtype_ipv4, "127.0.0.1", NULL, 0); // values will be replaced by local definitions during negotiation
 
 	/* check every line of SDP and parse its data */
 	while(*sdp) {

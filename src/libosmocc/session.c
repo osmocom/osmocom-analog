@@ -31,18 +31,14 @@
 
 #define NTP_OFFSET      2208988800
 
-enum osmo_cc_session_nettype default_nettype = osmo_cc_session_nettype_inet;
-enum osmo_cc_session_addrtype default_addrtype = osmo_cc_session_addrtype_ipv4;
-const char *default_unicast_address = "127.0.0.1";
-
-void osmo_cc_set_local_peer(enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address)
+void osmo_cc_set_local_peer(osmo_cc_session_config_t *conf, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address)
 {
-	default_nettype = nettype;
-	default_addrtype = addrtype;
-	default_unicast_address = options_strdup(address);
+	conf->default_nettype = nettype;
+	conf->default_addrtype = addrtype;
+	conf->default_unicast_address = options_strdup(address);
 }
 
-osmo_cc_session_t *osmo_cc_new_session(void *priv, const char *username, const char *sess_id, const char *sess_version, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *unicast_address, const char *session_name, int debug)
+osmo_cc_session_t *osmo_cc_new_session(osmo_cc_session_config_t *conf, void *priv, const char *username, const char *sess_id, const char *sess_version, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *unicast_address, const char *session_name, int debug)
 {
 	osmo_cc_session_t *session;
 
@@ -53,6 +49,7 @@ osmo_cc_session_t *osmo_cc_new_session(void *priv, const char *username, const c
 		PDEBUG(DCC, DEBUG_ERROR, "No mem!\n");
 		abort();
 	}
+	session->config = conf;
 	session->priv = priv;
 	if (username) {
 		int i;
@@ -87,17 +84,17 @@ osmo_cc_session_t *osmo_cc_new_session(void *priv, const char *username, const c
 	if (nettype)
 		session->origin_local.nettype = strdup(osmo_cc_session_nettype2string(nettype));
 	else
-		session->origin_local.nettype = strdup(osmo_cc_session_nettype2string(default_nettype));
+		session->origin_local.nettype = strdup(osmo_cc_session_nettype2string(conf->default_nettype));
 	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> network type = %s\n", session->origin_local.nettype);
 	if (addrtype)
 		session->origin_local.addrtype = strdup(osmo_cc_session_addrtype2string(addrtype));
 	else
-		session->origin_local.addrtype = strdup(osmo_cc_session_addrtype2string(default_addrtype));
+		session->origin_local.addrtype = strdup(osmo_cc_session_addrtype2string(conf->default_addrtype));
 	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> address type = %s\n", session->origin_local.addrtype);
 	if (unicast_address)
 		session->origin_local.unicast_address = strdup(unicast_address);
 	else
-		session->origin_local.unicast_address = strdup(default_unicast_address);
+		session->origin_local.unicast_address = strdup(conf->default_unicast_address);
 	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> unicast address = %s\n", session->origin_local.unicast_address);
 	if (session_name)
 		session->name = strdup(session_name);
@@ -132,6 +129,7 @@ void osmo_cc_free_session(osmo_cc_session_t *session)
 
 osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, enum osmo_cc_session_media_type type, uint16_t port, enum osmo_cc_session_media_proto proto, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len), int debug)
 {
+	osmo_cc_session_config_t *conf = session->config;
 	osmo_cc_session_media_t *media, **mediap;
 
 	media = calloc(1, sizeof(*media));
@@ -143,15 +141,15 @@ osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo
 	if (nettype)
 		media->connection_data_local.nettype = nettype;
 	else
-		media->connection_data_local.nettype = default_nettype;
+		media->connection_data_local.nettype = conf->default_nettype;
 	if (addrtype)
 		media->connection_data_local.addrtype = addrtype;
 	else
-		media->connection_data_local.addrtype = default_addrtype;
+		media->connection_data_local.addrtype = conf->default_addrtype;
 	if (address)
 		media->connection_data_local.address = strdup(address);
 	else
-		media->connection_data_local.address = strdup(default_unicast_address);
+		media->connection_data_local.address = strdup(conf->default_unicast_address);
 	media->description.type = type;
 	media->description.port_local = port;
 	media->description.proto = proto;
@@ -355,7 +353,7 @@ const char *osmo_cc_session_send_offer(osmo_cc_session_t *session)
 	return sdp;
 }
 
-osmo_cc_session_t *osmo_cc_session_receive_offer(void *priv, const char *sdp)
+osmo_cc_session_t *osmo_cc_session_receive_offer(osmo_cc_session_config_t *conf, void *priv, const char *sdp)
 {
 	osmo_cc_session_t *session;
 	int rc;
@@ -363,7 +361,7 @@ osmo_cc_session_t *osmo_cc_session_receive_offer(void *priv, const char *sdp)
 	PDEBUG(DCC, DEBUG_DEBUG, "Parsing session offer.\n");
 
 	osmo_cc_debug_sdp(sdp);
-	session = osmo_cc_session_parsesdp(priv, sdp);
+	session = osmo_cc_session_parsesdp(conf, priv, sdp);
 	if (!session)
 		return NULL;
 
@@ -378,20 +376,22 @@ osmo_cc_session_t *osmo_cc_session_receive_offer(void *priv, const char *sdp)
 
 void osmo_cc_session_accept_media(osmo_cc_session_media_t *media, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint8_t *data, int len))
 {
+	osmo_cc_session_config_t *conf = media->session->config;
+
 	media->accepted = 1;
 	if (nettype)
 		media->connection_data_local.nettype = nettype;
 	else
-		media->connection_data_local.nettype = default_nettype;
+		media->connection_data_local.nettype = conf->default_nettype;
 	if (addrtype)
 		media->connection_data_local.addrtype = addrtype;
 	else
-		media->connection_data_local.addrtype = default_addrtype;
+		media->connection_data_local.addrtype = conf->default_addrtype;
 	free((char *)media->connection_data_local.address);
 	if (address)
 		media->connection_data_local.address = strdup(address);
 	else
-		media->connection_data_local.address = strdup(default_unicast_address);
+		media->connection_data_local.address = strdup(conf->default_unicast_address);
 	media->send = send;
 	media->receive = receive;
 	media->receiver = receiver;
@@ -552,7 +552,7 @@ int osmo_cc_session_receive_answer(osmo_cc_session_t *session, const char *sdp)
 	PDEBUG(DCC, DEBUG_DEBUG, "Parsing session answer.\n");
 
 	osmo_cc_debug_sdp(sdp);
-	session_remote = osmo_cc_session_parsesdp(NULL, sdp);
+	session_remote = osmo_cc_session_parsesdp(session->config, NULL, sdp);
 	if (!session_remote)
 		return -EINVAL;
 
