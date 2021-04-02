@@ -26,6 +26,8 @@
 #include "sim.h"
 #include "sniffer.h"
 
+extern const char *write_pdu_file;
+
 /* Layer 7 */
 
 static void rx_icl_sdu(uint8_t *data, int length)
@@ -742,9 +744,18 @@ static void rx_char(sim_sniffer_t *sim, uint8_t c)
 		else
 			PDEBUG(DSIM2, DEBUG_INFO, " control unknown 0x%02x\n", sim->block_control);
 		PDEBUG(DSIM2, DEBUG_INFO, " length %d\n", sim->block_length);
-		if (sim->block_checksum == 0)
+		if (sim->block_checksum == 0) {
+			FILE *fp;
+			if (write_pdu_file && (fp = fopen(write_pdu_file, "a"))) {
+				int i;
+				fprintf(fp, "PDU: addr=0x%02x ctrl=0x%02x len=0x%02x data:", sim->block_address, sim->block_control, sim->block_length);
+				for (i = 0; i < sim->block_length; i++)
+					fprintf(fp, " 0x%02x", sim->block_data[i]);
+				fprintf(fp, "\n");
+				fclose (fp);
+			}
 			rx_icl_pdu(sim->block_data, sim->block_length);
-		else
+		} else
 			PDEBUG(DSIM2, DEBUG_NOTICE, "Received message with checksum error!\n");
 		sim->block_state = BLOCK_STATE_ADDRESS;
 	}

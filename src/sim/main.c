@@ -41,6 +41,7 @@
 int num_kanal = 1;
 sim_sniffer_t sim_sniffer;
 sim_sim_t sim_sim;
+const char *write_pdu_file = NULL;
 static int quit = 0;
 static const char *serialdev = "/dev/ttyUSB0";
 static int baudrate = 9600;
@@ -80,6 +81,8 @@ void print_help(const char *arg0)
 	printf("        Serial device (default = '%s')\n", serialdev);
 	printf(" -b --baud-rate <baud>\n");
 	printf("        Serial baud rate (default = %d)\n", baudrate);
+	printf(" -w --write-pdu <filename>\n");
+	printf("        Write PDU to file (sniffer only)\n");
 	printf("\nSIM card simulator options:\n");
 	printf(" -E --eeprom <name>\n");
 	printf("        Stores and reads EEPROM data to/from file. The file is stored at\n");
@@ -120,6 +123,7 @@ void add_options(void)
 	option_add('v', "debug", 1);
 	option_add('s', "serial-device", 1);
 	option_add('b', "baud-rate", 1);
+	option_add('w', "write-pdu", 1);
 	option_add('E', "eeprom", 1);
 	option_add('F', "futln", 1);
 	option_add(OPT_SICHERUNG, "sicherung", 1);
@@ -155,6 +159,9 @@ int handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'b':
 		baudrate = atoi(argv[argi]);
+		break;
+	case 'w':
+		write_pdu_file = options_strdup(argv[argi]);
 		break;
 	case 'E':
 		eeprom_name = options_strdup(argv[argi]);
