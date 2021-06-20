@@ -121,7 +121,7 @@ static mpt1327_unit_t *unit_list = NULL;
 #define UNIT_CALLING_SAMIS	(1 << 4)	/* wait for SAMIS response */
 #define UNIT_CALLED_AHY		(1 << 5)	/* need to request ACK */
 #define UNIT_CALLED_AHYX	(1 << 6)	/* cancel call */
-#define UNIT_CALLED_ACK		(1 << 7)	/* wait foro AHY response */
+#define UNIT_CALLED_ACK		(1 << 7)	/* wait for AHY response */
 #define UNIT_GTC_P		(1 << 8)	/* need to assign channel (same prefix) */
 #define UNIT_GTC_A		(1 << 9)	/* need to assign channel (calling unit) */
 #define UNIT_GTC_B		(1 << 10)	/* need to assign channel (called unit) */
@@ -965,7 +965,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				unit_new_state(unit, UNIT_IDLE);
 				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				break;
-			case UNIT_CALLED_AHYX: /* channel assignment unit itself */
+			case UNIT_CALLED_AHYX: /* cancel call towards unit */
 				codeword->type = MPT_AHYX;
 				codeword->params[MPT_PFIX] = unit->prefix;
 				codeword->params[MPT_IDENT1] = unit->ident;
@@ -1360,7 +1360,7 @@ answer:
 				sprintf(connected_id, "%03d%04d", unit->prefix, unit->ident);
 				call_up_answer(unit->callref, connected_id);
 			}
-			unit_new_state(unit, UNIT_GTC_A);
+			unit_new_state(unit, UNIT_GTC_B);
 			unit->repeat = REPEAT_GTC;
 			break;
 		}
@@ -1374,11 +1374,13 @@ answer:
 		case 0x00:
 			if (unit->state == UNIT_CALLED_ACK) {
 				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) answers call\n", unit->prefix, unit->ident);
+				// NOTE: GTC acknowledges RQQ
 				goto answer;
 			}
 			break;
 		case 0x1f:
 			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) rejects call, releasing\n", unit->prefix, unit->ident);
+			// NOTE: AHYX acknowledges RQQ
 			mpt1327_release(unit);
 			if (unit->callref) {
 				call_up_release(unit->callref, CAUSE_NORMAL);
