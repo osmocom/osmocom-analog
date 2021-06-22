@@ -28,6 +28,7 @@ AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([pthread], [main])
 
 with_sdr=no
+soapy_0_7_1_or_higher=
 AC_ARG_WITH([alsa], [AS_HELP_STRING([--with-alsa], [compile with Alsa driver @<:@default=check@:>@]) ], [], [with_alsa="check"])
 AC_ARG_WITH([uhd], [AS_HELP_STRING([--with-uhd], [compile with UHD driver @<:@default=check@:>@]) ], [], [with_uhd="check"])
 AC_ARG_WITH([soapy], [AS_HELP_STRING([--with-soapy], [compile with SoapySDR driver @<:@default=check@:>@]) ], [], [with_soapy="check"])
@@ -35,6 +36,7 @@ AC_ARG_WITH([imagemagick], [AS_HELP_STRING([--with-imagemagick], [compile with I
 AC_ARG_WITH([fuse], [AS_HELP_STRING([--with-fuse], [compile with FUSE support @<:@default=check@:>@]) ], [], [with_fuse="check"])
 AS_IF([test "x$with_alsa" != xno], [PKG_CHECK_MODULES(ALSA, alsa >= 1.0, with_alsa=yes, with_alsa=no)])
 AS_IF([test "x$with_uhd" != xno], [PKG_CHECK_MODULES(UHD, uhd >= 3.0.0, with_sdr=yes with_uhd=yes, with_uhd=no)])
+AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.7.1, soapy_0_7_1_or_higher="-DSOAPY_0_7_1_OR_HIGHER", soapy_0_7_1_or_higher=)])
 AS_IF([test "x$with_soapy" != xno], [PKG_CHECK_MODULES(SOAPY, SoapySDR >= 0.5.0, with_sdr=yes with_soapy=yes, with_soapy=no)])
 AS_IF([test "x$with_imagemagick" != xno], [PKG_CHECK_MODULES(IMAGEMAGICK, ImageMagick >= 7.0.0, with_imagemagick=yes, with_imagemagick=no)])
 AS_IF([test "x$with_fuse" != xno], with_fuse=check)
@@ -55,6 +57,8 @@ AS_IF([test "x$with_imagemagick" == "xyes"],[AC_MSG_NOTICE( Compiling with Image
 AS_IF([test "x$with_fuse" == "xyes"],[AC_MSG_NOTICE( Compiling with FUSE )],[AC_MSG_NOTICE( FUSE not supported. There will be no analog modem support. Consider adjusting the PKG_CONFIG_PATH environment variable if you installed software in a non-standard prefix. )])
 
 AS_IF([test "x$with_alsa" != "xyes" -a "x$with_sdr" != "xyes"],[AC_MSG_NOTICE( Without sound nor SDR support this project does not make sense. Please support sound card for analog transceivers or better SDR!" )],[])
+
+SOAPY_CFLAGS="$soapy_0_7_1_or_higher"
 
 AC_OUTPUT(
     src/liboptions/Makefile
