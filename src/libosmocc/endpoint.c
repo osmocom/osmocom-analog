@@ -930,6 +930,8 @@ static void handle_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	PDEBUG(DCC, DEBUG_INFO, "Handle message %s at state %s (callref %d)\n",
 		osmo_cc_msg_name(msg->type), state_names[call->state], call->callref);
+	if (debuglevel <= DEBUG_INFO)
+		osmo_cc_debug_ie(msg, DEBUG_INFO);
 	statemachine_list[i].action(call, msg);
 }
 

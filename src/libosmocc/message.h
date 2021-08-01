@@ -141,6 +141,7 @@ enum osmo_cc_ie_type {
 
 /* cause, see ITU-T Rec. Q.850 */
 #define	OSMO_CC_ISDN_CAUSE_UNASSIGNED_NR	1
+#define	OSMO_CC_ISDN_CAUSE_NO_ROUTE_TRANSIT	2
 #define	OSMO_CC_ISDN_CAUSE_NO_ROUTE		3
 #define	OSMO_CC_ISDN_CAUSE_CHAN_UNACCEPT	6
 #define	OSMO_CC_ISDN_CAUSE_OP_DET_BARRING	8
@@ -381,12 +382,28 @@ struct osmo_cc_ie_private {
 
 uint32_t osmo_cc_new_callref(void);
 const char *osmo_cc_msg_name(uint8_t msg_type);
+const char *osmo_cc_ie_name(uint8_t ie_type);
+const char *osmo_cc_number_type_name(uint8_t type);
+const char *osmo_cc_number_plan_name(uint8_t plan);
+const char *osmo_cc_number_present_name(uint8_t present);
+const char *osmo_cc_number_screen_name(uint8_t screen);
+const char *osmo_cc_redir_reason_name(uint8_t reason);
+const char *osmo_cc_notify_name(uint8_t notify);
+const char *osmo_cc_coding_name(uint8_t coding);
+const char *osmo_cc_isdn_cause_name(uint8_t cause);
+const char *osmo_cc_location_name(uint8_t location);
+const char *osmo_cc_progress_name(uint8_t progress);
+const char *osmo_cc_bearer_capability_name(uint8_t capability);
+const char *osmo_cc_bearer_mode_name(uint8_t mode);
+const char *osmo_cc_dtmf_mode_name(uint8_t mode);
+const char *osmo_cc_socket_cause_name(uint8_t cause);
 const char *osmo_cc_network_type_name(uint8_t type);
 osmo_cc_msg_t *osmo_cc_new_msg(uint8_t msg_type);
 osmo_cc_msg_t *osmo_cc_clone_msg(osmo_cc_msg_t *msg);
 osmo_cc_msg_t *osmo_cc_msg_list_dequeue(osmo_cc_msg_list_t **mlp, uint32_t *callref_p);
 osmo_cc_msg_list_t *osmo_cc_msg_list_enqueue(osmo_cc_msg_list_t **mlp, osmo_cc_msg_t *msg, uint32_t callref);
 void osmo_cc_free_msg(osmo_cc_msg_t *msg);
+void osmo_cc_debug_ie(osmo_cc_msg_t *msg, int level);
 int osmo_cc_get_ie_struct(osmo_cc_msg_t *msg, uint8_t ie_type, int ie_repeat, int ie_len, const osmo_cc_ie_t **ie_struct);
 int osmo_cc_get_ie_data(osmo_cc_msg_t *msg, uint8_t ie_type, int ie_repeat, int ie_len, const void **ie_data);
 int osmo_cc_has_ie(osmo_cc_msg_t *msg, uint8_t ie_type, int ie_repeat);
