@@ -183,6 +183,14 @@ int main(int argc, char *argv[])
 		do_de_emphasis = 1;
 	}
 
+	/* use squelch */
+	if (!use_sdr || isinf(squelch_db)) {
+		fprintf(stderr, "*******************************************************************************\n");
+		fprintf(stderr, "I strongly suggest using squelch on your receiver! This prevents false channel\n");
+		fprintf(stderr, "allocation, due to received noise. For SDR, add '-S auto' to command line.\n");
+		fprintf(stderr, "*******************************************************************************\n");
+	}
+
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
 		rc = bnetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, gfs, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, paging, metering);
