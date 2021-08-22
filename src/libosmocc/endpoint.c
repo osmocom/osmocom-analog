@@ -360,7 +360,7 @@ void attach_req(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 rel:
 		/* change to REL_REQ */
 		msg->type = OSMO_CC_MSG_REL_IND;
-		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 		/* message to socket */
 		forward_to_ul(call, msg);
@@ -391,7 +391,7 @@ rel:
 
 	/* changing to confirm message */
 	msg->type = OSMO_CC_MSG_ATTACH_CNF;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 	/* message to socket */
 	forward_to_ul(call, msg);
@@ -642,7 +642,7 @@ static void disc_collision_ind(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 		/* change to REL_REQ */
 		msg->type = OSMO_CC_MSG_REL_REQ;
-		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 		/* to lower layer */
 		forward_to_ll(call, msg);
@@ -663,7 +663,7 @@ static void disc_collision_req(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	if (call->lower_layer_released) {
 		/* change to REL_REQ */
 		msg->type = OSMO_CC_MSG_REL_IND;
-		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 		/* to upper layer */
 		forward_to_ul(call, msg);
@@ -701,7 +701,7 @@ static void rej_ind_disc(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to REL_IND */
 	msg->type = OSMO_CC_MSG_REL_IND;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 	/* to upper layer */
 	forward_to_ul(call, msg);
@@ -717,7 +717,7 @@ static void rej_req_disc(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to REL_REQ */
 	msg->type = OSMO_CC_MSG_REL_REQ;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 	/* to lower layer */
 	forward_to_ll(call, msg);
@@ -746,7 +746,7 @@ static void rel_ind_other(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to DISC_IND */
 	msg->type = OSMO_CC_MSG_DISC_IND;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 	call->lower_layer_released = 1;
 
 	/* to upper layer */
@@ -773,7 +773,7 @@ static void rel_req_other(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to DISC_REQ */
 	msg->type = OSMO_CC_MSG_DISC_REQ;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_name(msg->type));
+	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 	call->upper_layer_released = 1;
 
 	/* to lower layer */
@@ -923,13 +923,13 @@ static void handle_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 			break;
 	if (i == STATEMACHINE_LEN) {
 		PDEBUG(DCC, DEBUG_INFO, "Message %s unhandled at state %s (callref %d)\n",
-			osmo_cc_msg_name(msg->type), state_names[call->state], call->callref);
+			osmo_cc_msg_value2name(msg->type), state_names[call->state], call->callref);
 		osmo_cc_free_msg(msg);
 		return;
 	}
 
 	PDEBUG(DCC, DEBUG_INFO, "Handle message %s at state %s (callref %d)\n",
-		osmo_cc_msg_name(msg->type), state_names[call->state], call->callref);
+		osmo_cc_msg_value2name(msg->type), state_names[call->state], call->callref);
 	if (debuglevel <= DEBUG_INFO)
 		osmo_cc_debug_ie(msg, DEBUG_INFO);
 	statemachine_list[i].action(call, msg);

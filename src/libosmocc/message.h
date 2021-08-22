@@ -36,12 +36,16 @@ enum osmo_cc_msg_type {
 	OSMO_CC_MSG_ATTACH_CNF =	0xfb,
 	OSMO_CC_MSG_DUMMY_REQ =		0xfc,
 };
+#define OSMO_CC_MSG_NUM			0x100
 
 #define OSMO_CC_MSG_MASK		0x03,
 #define OSMO_CC_MSG_REQ			0x00,
 #define OSMO_CC_MSG_IND			0x01,
 #define OSMO_CC_MSG_RSP			0x02,
 #define OSMO_CC_MSG_CNF			0x03,
+
+const char *osmo_cc_msg_value2name(int value);
+int osmo_cc_msg_name2value(const char *name);
 
 /* information elements */
 enum osmo_cc_ie_type {
@@ -67,6 +71,10 @@ enum osmo_cc_ie_type {
 	OSMO_CC_IE_SOCKET_ADDRESS =	0x5e,
 	OSMO_CC_IE_PRIVATE =		0x5f,
 };
+#define	OSMO_CC_IE_NUM			0x100
+
+const char *osmo_cc_ie_value2name(int value);
+int osmo_cc_ie_name2value(const char *name);
 
 /* type of number, see ITU-T Rec. Q.931 */
 #define OSMO_CC_TYPE_UNKNOWN			0
@@ -76,6 +84,10 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_TYPE_SUBSCRIBER			4
 #define OSMO_CC_TYPE_ABBREVIATED		5
 #define OSMO_CC_TYPE_RESERVED			7
+#define OSMO_CC_TYPE_NUM			8
+
+const char *osmo_cc_type_value2name(int value);
+int osmo_cc_type_name2value(const char *name);
 
 /* numbering plan, see ITU-T Rec. Q.931 */
 #define OSMO_CC_PLAN_UNKNOWN			0
@@ -85,18 +97,30 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_PLAN_NATIONAL_STANDARD		8
 #define OSMO_CC_PLAN_PRIVATE			9
 #define OSMO_CC_PLAN_RESERVED			15
+#define OSMO_CC_PLAN_NUM			16
+
+const char *osmo_cc_plan_value2name(int value);
+int osmo_cc_plan_name2value(const char *name);
 
 /* presentation indicator, see ITU-T Rec. Q.931 */
 #define OSMO_CC_PRESENT_ALLOWED			0
 #define OSMO_CC_PRESENT_RESTRICTED		1
 #define OSMO_CC_PRESENT_NOT_AVAIL		2
 #define OSMO_CC_PRESENT_RESERVED		3
+#define OSMO_CC_PRESENT_NUM			4
+
+const char *osmo_cc_present_value2name(int value);
+int osmo_cc_present_name2value(const char *name);
 
 /* screening indicator, see ITU-T Rec. Q.931 */
 #define OSMO_CC_SCREEN_USER_UNSCREENED		0
 #define OSMO_CC_SCREEN_USER_VERIFIED_PASSED	1
 #define OSMO_CC_SCREEN_USER_VERIFIED_FAILED	2
 #define OSMO_CC_SCREEN_NETWORK			3
+#define OSMO_CC_SCREEN_NUM			4
+
+const char *osmo_cc_screen_value2name(int value);
+int osmo_cc_screen_name2value(const char *name);
 
 /* screening indicator, see ITU-T Rec. Q.931 */
 #define OSMO_CC_REDIR_REASON_UNKNOWN		0
@@ -106,6 +130,10 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_REDIR_REASON_CF_OUTOFORDER	9
 #define OSMO_CC_REDIR_REASON_CF_BY_DTE		10
 #define OSMO_CC_REDIR_REASON_CFU		15
+#define OSMO_CC_REDIR_REASON_NUM		16
+
+const char *osmo_cc_redir_reason_value2name(int value);
+int osmo_cc_redir_reason_name2value(const char *name);
 
 /* notification indicator, see ITU-T Rec. Q.931 ff. */
 #define OSMO_CC_NOTIFY_USER_SUSPENDED		0x00    
@@ -132,12 +160,20 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_NOTIFY_REMOTE_HOLD		0x79
 #define OSMO_CC_NOTIFY_REMOTE_RETRIEVAL		0x7a
 #define OSMO_CC_NOTIFY_CALL_IS_DIVERTING	0x7b
+#define OSMO_CC_NOTIFY_NUM			0x100
+
+const char *osmo_cc_notify_value2name(int value);
+int osmo_cc_notify_name2value(const char *name);
 
 /* coding standard, see ITU-T Rec. Q.931 */
 #define OSMO_CC_CODING_ITU_T			0
 #define OSMO_CC_CODING_ISO_IEC			1
 #define OSMO_CC_CODING_NATIONAL			2
 #define OSMO_CC_CODING_STANDARD_SPECIFIC	3
+#define OSMO_CC_CODING_NUM			4
+
+const char *osmo_cc_coding_value2name(int value);
+int osmo_cc_coding_name2value(const char *name);
 
 /* cause, see ITU-T Rec. Q.850 */
 #define	OSMO_CC_ISDN_CAUSE_UNASSIGNED_NR	1
@@ -190,6 +226,10 @@ enum osmo_cc_ie_type {
 #define	OSMO_CC_ISDN_CAUSE_RECOVERY_TIMER	102
 #define	OSMO_CC_ISDN_CAUSE_PROTO_ERR		111
 #define	OSMO_CC_ISDN_CAUSE_INTERWORKING		127
+#define	OSMO_CC_ISDN_CAUSE_NUM			128
+
+const char *osmo_cc_isdn_cause_value2name(int value);
+int osmo_cc_isdn_cause_name2value(const char *name);
 
 /* location, see ITU-T Rec. Q.931 */
 #define OSMO_CC_LOCATION_USER			0
@@ -199,6 +239,10 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_LOCATION_PUB_SERV_REM_USER	4
 #define OSMO_CC_LOCATION_PRIV_SERV_REM_USER	5
 #define OSMO_CC_LOCATION_BEYOND_INTERWORKING	10
+#define OSMO_CC_LOCATION_NUM			16
+
+const char *osmo_cc_location_value2name(int value);
+int osmo_cc_location_name2value(const char *name);
 
 /* progress description, see ITU-T Rec. Q.931 */
 #define OSMO_CC_PROGRESS_NOT_END_TO_END_ISDN	1
@@ -207,6 +251,10 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_PROGRESS_RETURN_TO_ISDN		4
 #define OSMO_CC_PROGRESS_INTERWORKING		5
 #define OSMO_CC_PROGRESS_INBAND_INFO_AVAILABLE	8
+#define OSMO_CC_PROGRESS_NUM			16
+
+const char *osmo_cc_progress_value2name(int value);
+int osmo_cc_progress_name2value(const char *name);
 
 /* information transfer capability, see ITU-T Rec. Q.931 */
 #define OSMO_CC_CAPABILITY_SPEECH		0
@@ -215,20 +263,36 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_CAPABILITY_AUDIO		16
 #define OSMO_CC_CAPABILITY_DATA_WITH_TONES	17
 #define OSMO_CC_CAPABILITY_VIDEO		24
+#define OSMO_CC_CAPABILITY_NUM			32
+
+const char *osmo_cc_capability_value2name(int value);
+int osmo_cc_capability_name2value(const char *name);
 
 /* transfer mode, see ITU-T Rec. Q.931 */
 #define OSMO_CC_MODE_CIRCUIT			0
 #define OSMO_CC_MODE_PACKET			2
+#define OSMO_CC_MODE_NUM			4
+
+const char *osmo_cc_mode_value2name(int value);
+int osmo_cc_mode_name2value(const char *name);
 
 #define OSMO_CC_DTMF_MODE_OFF			0	/* stop tone */
 #define OSMO_CC_DTMF_MODE_ON			1	/* start tone */
 #define OSMO_CC_DTMF_MODE_DIGITS		2	/* play tone(s) with duration and pauses */
+#define OSMO_CC_DTMF_MODE_NUM			3
+
+const char *osmo_cc_dtmf_mode_value2name(int value);
+int osmo_cc_dtmf_mode_name2value(const char *name);
 
 #define OSMO_CC_SOCKET_CAUSE_VERSION_MISMATCH	1	/* version mismatch */
 #define OSMO_CC_SOCKET_CAUSE_FAILED		2	/* connection failed */
 #define OSMO_CC_SOCKET_CAUSE_BROKEN_PIPE	3	/* connected socket failed */
 #define OSMO_CC_SOCKET_CAUSE_TIMEOUT		4	/* keepalive packets timeout */
 // if you add causes here, add them in process_cause.c also!
+#define OSMO_CC_SOCKET_CAUSE_NUM		5
+
+const char *osmo_cc_socket_cause_value2name(int value);
+int osmo_cc_socket_cause_name2value(const char *name);
 
 /* network type (network IE) and meaning of 'id' */
 #define OSMO_CC_NETWORK_UNDEFINED		0x00
@@ -254,6 +318,10 @@ enum osmo_cc_ie_type {
 #define OSMO_CC_NETWORK_JOLLYCOM_NONE		0x89	/* call from JollyCom... */
 #define OSMO_CC_NETWORK_MPT1327_PSTN		0x8a	/* call from MPT1327 */
 #define OSMO_CC_NETWORK_MPT1327_PBX		0x8b	/* id is selected PBX number */
+#define OSMO_CC_NETWORK_NUM			0x100
+
+const char *osmo_cc_network_value2name(int value);
+int osmo_cc_network_name2value(const char *name);
 
 typedef struct osmo_cc_msg {
 	uint8_t type;
@@ -381,23 +449,6 @@ struct osmo_cc_ie_private {
 } __attribute__((packed));
 
 uint32_t osmo_cc_new_callref(void);
-const char *osmo_cc_msg_name(uint8_t msg_type);
-const char *osmo_cc_ie_name(uint8_t ie_type);
-const char *osmo_cc_number_type_name(uint8_t type);
-const char *osmo_cc_number_plan_name(uint8_t plan);
-const char *osmo_cc_number_present_name(uint8_t present);
-const char *osmo_cc_number_screen_name(uint8_t screen);
-const char *osmo_cc_redir_reason_name(uint8_t reason);
-const char *osmo_cc_notify_name(uint8_t notify);
-const char *osmo_cc_coding_name(uint8_t coding);
-const char *osmo_cc_isdn_cause_name(uint8_t cause);
-const char *osmo_cc_location_name(uint8_t location);
-const char *osmo_cc_progress_name(uint8_t progress);
-const char *osmo_cc_bearer_capability_name(uint8_t capability);
-const char *osmo_cc_bearer_mode_name(uint8_t mode);
-const char *osmo_cc_dtmf_mode_name(uint8_t mode);
-const char *osmo_cc_socket_cause_name(uint8_t cause);
-const char *osmo_cc_network_type_name(uint8_t type);
 osmo_cc_msg_t *osmo_cc_new_msg(uint8_t msg_type);
 osmo_cc_msg_t *osmo_cc_clone_msg(osmo_cc_msg_t *msg);
 osmo_cc_msg_t *osmo_cc_msg_list_dequeue(osmo_cc_msg_list_t **mlp, uint32_t *callref_p);

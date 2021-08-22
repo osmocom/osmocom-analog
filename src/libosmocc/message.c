@@ -25,567 +25,342 @@
 #include "../libdebug/debug.h"
 #include "message.h"
 
+#define _OSMO_CC_VALUE2NAME(array) { \
+	if (value < 0 || (size_t)value >= (sizeof(array) / sizeof(array[0])) || array[value] == NULL) \
+		return "<unknown>"; \
+	else \
+		return array[value]; \
+}
+
+#define _OSMO_CC_NAME2VALUE(array) { \
+	for (int value = 0; (size_t)value < (sizeof(array) / sizeof(array[0])); value++) { \
+		if (!strcasecmp(array[value], name)) \
+			return value; \
+	} \
+	return -1; \
+}
+
+static const char *osmo_cc_msg_name[OSMO_CC_MSG_NUM] = {
+	[OSMO_CC_MSG_SETUP_REQ] = "CC-SETUP-REQ",
+	[OSMO_CC_MSG_SETUP_IND] = "CC-SETUP-IND",
+	[OSMO_CC_MSG_REJ_REQ] = "CC-REJ-REQ",
+	[OSMO_CC_MSG_REJ_IND] = "CC-REJ-IND",
+	[OSMO_CC_MSG_SETUP_ACK_REQ] = "CC-SETUP-ACK-REQ",
+	[OSMO_CC_MSG_SETUP_ACK_IND] = "CC-SETUP-ACK-IND",
+	[OSMO_CC_MSG_PROC_REQ] = "CC-PROC-REQ",
+	[OSMO_CC_MSG_PROC_IND] = "CC-PROC-IND",
+	[OSMO_CC_MSG_ALERT_REQ] = "CC-ALERT-REQ",
+	[OSMO_CC_MSG_ALERT_IND] = "CC-ALERT-IND",
+	[OSMO_CC_MSG_SETUP_RSP] = "CC-SETUP-RSP",
+	[OSMO_CC_MSG_SETUP_CNF] = "CC-SETUP-CNF",
+	[OSMO_CC_MSG_SETUP_COMP_REQ] = "CC-SETUP-COMP-REQ",
+	[OSMO_CC_MSG_SETUP_COMP_IND] = "CC-SETUP-COMP-IND",
+	[OSMO_CC_MSG_DISC_REQ] = "CC-DISC-REQ",
+	[OSMO_CC_MSG_DISC_IND] = "CC-DISC-IND",
+	[OSMO_CC_MSG_REL_REQ] = "CC-REL-REQ",
+	[OSMO_CC_MSG_REL_CNF] = "CC-REL-CNF",
+	[OSMO_CC_MSG_REL_IND] = "CC-REL-IND",
+	[OSMO_CC_MSG_PROGRESS_REQ] = "CC-PROGRESS-REQ",
+	[OSMO_CC_MSG_PROGRESS_IND] = "CC-PROGRESS-IND",
+	[OSMO_CC_MSG_NOTIFY_REQ] = "CC-NOTIFY-REQ",
+	[OSMO_CC_MSG_NOTIFY_IND] = "CC-NOTIFY-IND",
+	[OSMO_CC_MSG_INFO_REQ] = "CC-INFO-REQ",
+	[OSMO_CC_MSG_INFO_IND] = "CC-INFO-IND",
+	[OSMO_CC_MSG_ATTACH_REQ] = "CC-ATTACH-REQ",
+	[OSMO_CC_MSG_ATTACH_IND] = "CC-ATTACH-IND",
+	[OSMO_CC_MSG_ATTACH_RSP] = "CC-ATTACH-RSP",
+	[OSMO_CC_MSG_ATTACH_CNF] = "CC-ATTACH-CNF",
+};
+
+const char *osmo_cc_msg_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_msg_name)
+int osmo_cc_msg_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_msg_name)
+
+static const char *osmo_cc_ie_name[OSMO_CC_IE_NUM] = {
+	[OSMO_CC_IE_CALLED] = "IE_CALLED",
+	[OSMO_CC_IE_CALLED_SUB] = "IE_CALLED_SUB",
+	[OSMO_CC_IE_CALLED_NAME] = "IE_CALLED_NAME",
+	[OSMO_CC_IE_CALLED_INTERFACE] = "IE_CALLED_INTERFACE",
+	[OSMO_CC_IE_DTMF] = "IE_DTMF",
+	[OSMO_CC_IE_KEYPAD] = "IE_KEYPAD",
+	[OSMO_CC_IE_COMPLETE] = "IE_COMPLETE",
+	[OSMO_CC_IE_CALLING] = "IE_CALLING",
+	[OSMO_CC_IE_CALLING_SUB] = "IE_CALLING_SUB",
+	[OSMO_CC_IE_CALLING_NAME] = "IE_CALLING_NAME",
+	[OSMO_CC_IE_CALLING_INTERFACE] = "IE_CALLING_INTERFACE",
+	[OSMO_CC_IE_CALLING_NETWORK] = "IE_CALLING_NETWORK",
+	[OSMO_CC_IE_REDIR] = "IE_REDIR",
+	[OSMO_CC_IE_PROGRESS] = "IE_PROGRESS",
+	[OSMO_CC_IE_NOTIFY] = "IE_NOTIFY",
+	[OSMO_CC_IE_DISPLAY] = "IE_DISPLAY",
+	[OSMO_CC_IE_CAUSE] = "IE_CAUSE",
+	[OSMO_CC_IE_BEARER] = "IE_BEARER",
+	[OSMO_CC_IE_SDP] = "IE_SDP",
+	[OSMO_CC_IE_SOCKET_ADDRESS] = "IE_SOCKET_ADDRESS",
+	[OSMO_CC_IE_PRIVATE] = "IE_PRIVATE",
+};
+
+const char *osmo_cc_ie_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_ie_name)
+int osmo_cc_ie_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_ie_name)
+
+static const char *osmo_cc_type_name[OSMO_CC_TYPE_NUM] = {
+	[OSMO_CC_TYPE_UNKNOWN] = "unknown",
+	[OSMO_CC_TYPE_INTERNATIONAL] = "international",
+	[OSMO_CC_TYPE_NATIONAL] = "national",
+	[OSMO_CC_TYPE_NETWORK] = "network",
+	[OSMO_CC_TYPE_SUBSCRIBER] = "subscriber",
+	[OSMO_CC_TYPE_ABBREVIATED] = "abbreviated",
+	[OSMO_CC_TYPE_RESERVED] = "reserved",
+};
+
+const char *osmo_cc_type_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_type_name)
+int osmo_cc_type_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_type_name)
+
+static const char *osmo_cc_plan_name[OSMO_CC_PLAN_NUM] = {
+	[OSMO_CC_PLAN_UNKNOWN] = "unknown",
+	[OSMO_CC_PLAN_TELEPHONY] = "telephony",
+	[OSMO_CC_PLAN_DATA] = "data",
+	[OSMO_CC_PLAN_TTY] = "tty",
+	[OSMO_CC_PLAN_NATIONAL_STANDARD] = "national standard",
+	[OSMO_CC_PLAN_PRIVATE] = "private",
+	[OSMO_CC_PLAN_RESERVED] = "reserved",
+};
+
+const char *osmo_cc_plan_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_plan_name)
+int osmo_cc_plan_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_plan_name)
+
+static const char *osmo_cc_present_name[OSMO_CC_PRESENT_NUM] = {
+	[OSMO_CC_PRESENT_ALLOWED] = "allowed",
+	[OSMO_CC_PRESENT_RESTRICTED] = "restricted",
+	[OSMO_CC_PRESENT_NOT_AVAIL] = "not available",
+	[OSMO_CC_PRESENT_RESERVED] = "reserved",
+};
+
+const char *osmo_cc_present_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_present_name)
+int osmo_cc_present_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_present_name)
+
+static const char *osmo_cc_screen_name[OSMO_CC_SCREEN_NUM] = {
+	[OSMO_CC_SCREEN_USER_UNSCREENED] = "unscreened",
+	[OSMO_CC_SCREEN_USER_VERIFIED_PASSED] = "user provided and passed",
+	[OSMO_CC_SCREEN_USER_VERIFIED_FAILED] = "user provided an failed",
+	[OSMO_CC_SCREEN_NETWORK] = "network provided",
+};
+
+const char *osmo_cc_screen_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_screen_name)
+int osmo_cc_screen_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_screen_name)
+
+static const char *osmo_cc_redir_reason_name[OSMO_CC_REDIR_REASON_NUM] = {
+	[OSMO_CC_REDIR_REASON_UNKNOWN] = "unknown",
+	[OSMO_CC_REDIR_REASON_CFB] = "call forward busy",
+	[OSMO_CC_REDIR_REASON_CFNR] = "call forward no response",
+	[OSMO_CC_REDIR_REASON_CD] = "call deflect",
+	[OSMO_CC_REDIR_REASON_CF_OUTOFORDER] = "call forward out of order",
+	[OSMO_CC_REDIR_REASON_CF_BY_DTE] = "call froward by dte",
+	[OSMO_CC_REDIR_REASON_CFU] = "call forward unconditional",
+};
+
+const char *osmo_cc_redir_reason_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_redir_reason_name)
+int osmo_cc_redir_reason_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_redir_reason_name)
+
+static const char *osmo_cc_notify_name[OSMO_CC_NOTIFY_NUM] = {
+	[OSMO_CC_NOTIFY_USER_SUSPENDED] = "user suspended",
+	[OSMO_CC_NOTIFY_USER_RESUMED] = "user resumed",
+	[OSMO_CC_NOTIFY_BEARER_SERVICE_CHANGE] = "bearer service change",
+	[OSMO_CC_NOTIFY_CALL_COMPLETION_DELAY] = "call completion delay",
+	[OSMO_CC_NOTIFY_CONFERENCE_ESTABLISHED] = "conference established",
+	[OSMO_CC_NOTIFY_CONFERENCE_DISCONNECTED] = "conference disconnected",
+	[OSMO_CC_NOTIFY_OTHER_PARTY_ADDED] = "ohter party added",
+	[OSMO_CC_NOTIFY_ISOLATED] = "isolated",
+	[OSMO_CC_NOTIFY_REATTACHED] = "reattached",
+	[OSMO_CC_NOTIFY_OTHER_PARTY_ISOLATED] = "ohter party isolated",
+	[OSMO_CC_NOTIFY_OTHER_PARTY_REATTACHED] = "ohter party reattached",
+	[OSMO_CC_NOTIFY_OTHER_PARTY_SPLIT] = "other party split",
+	[OSMO_CC_NOTIFY_OTHER_PARTY_DISCONNECTED] = "other party disconnected",
+	[OSMO_CC_NOTIFY_CONFERENCE_FLOATING] = "confernce floating",
+	[OSMO_CC_NOTIFY_CONFERENCE_DISC_PREEMPT] = "confernce disconnect preemption",
+	[OSMO_CC_NOTIFY_CONFERENCE_FLOATING_SUP] = "conference floating sup",
+	[OSMO_CC_NOTIFY_CALL_IS_A_WAITING_CALL] = "call is a waiting call",
+	[OSMO_CC_NOTIFY_DIVERSION_ACTIVATED] = "diversion activated",
+	[OSMO_CC_NOTIFY_RESERVED_CT_1] = "reserved CT 1",
+	[OSMO_CC_NOTIFY_RESERVED_CT_2] = "reserved CT 2",
+	[OSMO_CC_NOTIFY_REVERSE_CHARGING] = "reverse charging",
+	[OSMO_CC_NOTIFY_REMOTE_HOLD] = "remote hold",
+	[OSMO_CC_NOTIFY_REMOTE_RETRIEVAL] = "remote retrieval",
+	[OSMO_CC_NOTIFY_CALL_IS_DIVERTING] = "call is diverting",
+};
+
+const char *osmo_cc_notify_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_notify_name)
+int osmo_cc_notify_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_notify_name)
+
+static const char *osmo_cc_coding_name[OSMO_CC_CODING_NUM] = {
+	[OSMO_CC_CODING_ITU_T] = "ITU-T",
+	[OSMO_CC_CODING_ISO_IEC] = "ISO/IEC",
+	[OSMO_CC_CODING_NATIONAL] = "national",
+	[OSMO_CC_CODING_STANDARD_SPECIFIC] = "standard specific",
+};
+
+const char *osmo_cc_coding_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_coding_name)
+int osmo_cc_coding_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_coding_name)
+
+static const char *osmo_cc_isdn_cause_name[OSMO_CC_ISDN_CAUSE_NUM] = {
+	[0] = "unset",
+	[OSMO_CC_ISDN_CAUSE_UNASSIGNED_NR] = "unsassigned number",
+	[OSMO_CC_ISDN_CAUSE_NO_ROUTE_TRANSIT] = "no route to transit network",
+	[OSMO_CC_ISDN_CAUSE_NO_ROUTE] = "no route",
+	[OSMO_CC_ISDN_CAUSE_CHAN_UNACCEPT] = "channel unacceptable",
+	[OSMO_CC_ISDN_CAUSE_OP_DET_BARRING] = "detected barring",
+	[OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR] = "normal call clearing",
+	[OSMO_CC_ISDN_CAUSE_USER_BUSY] = "user busy",
+	[OSMO_CC_ISDN_CAUSE_USER_NOTRESPOND] = "user not responding",
+	[OSMO_CC_ISDN_CAUSE_USER_ALERTING_NA] = "user does not answer",
+	[OSMO_CC_ISDN_CAUSE_CALL_REJECTED] = "call rejected",
+	[OSMO_CC_ISDN_CAUSE_NUMBER_CHANGED] = "number changed",
+	[OSMO_CC_ISDN_CAUSE_PRE_EMPTION] = "pre-emption",
+	[OSMO_CC_ISDN_CAUSE_NONSE_USER_CLR] = "non-selected user clearing",
+	[OSMO_CC_ISDN_CAUSE_DEST_OOO] = "destination out-of-order",
+	[OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT] = "invalid number format",
+	[OSMO_CC_ISDN_CAUSE_FACILITY_REJ] = "facility rejected",
+	[OSMO_CC_ISDN_CAUSE_RESP_STATUS_INQ] = "response to status enquiery",
+	[OSMO_CC_ISDN_CAUSE_NORMAL_UNSPEC] = "normal, uspecified",
+	[OSMO_CC_ISDN_CAUSE_NO_CIRCUIT_CHAN] = "no circuit/channel available",
+	[OSMO_CC_ISDN_CAUSE_NETWORK_OOO] = "network out of order",
+	[OSMO_CC_ISDN_CAUSE_TEMP_FAILURE] = "temporary failure",
+	[OSMO_CC_ISDN_CAUSE_SWITCH_CONG] = "switching equipment congested",
+	[OSMO_CC_ISDN_CAUSE_ACC_INF_DISCARD] = "access information discarded",
+	[OSMO_CC_ISDN_CAUSE_REQ_CHAN_UNAVAIL] = "requested circuit/channel unavailable",
+	[OSMO_CC_ISDN_CAUSE_RESOURCE_UNAVAIL] = "resource unavailable",
+	[OSMO_CC_ISDN_CAUSE_QOS_UNAVAIL] = "quality of service unavailable",
+	[OSMO_CC_ISDN_CAUSE_REQ_FAC_NOT_SUBSC] = "requested facility not subscribed",
+	[OSMO_CC_ISDN_CAUSE_INC_BARRED_CUG] = "inc barred in closed user group",
+	[OSMO_CC_ISDN_CAUSE_BEARER_CAP_UNAUTH] = "bearer capability unauthorized",
+	[OSMO_CC_ISDN_CAUSE_BEARER_CA_UNAVAIL] = "bearer capability not available",
+	[OSMO_CC_ISDN_CAUSE_SERV_OPT_UNAVAIL] = "service or option not available",
+	[OSMO_CC_ISDN_CAUSE_BEARERSERV_UNIMPL] = "bearer service unimplemented",
+	[OSMO_CC_ISDN_CAUSE_ACM_GE_ACM_MAX] = "acm ge ach max",
+	[OSMO_CC_ISDN_CAUSE_REQ_FAC_NOTIMPL] = "requrested facility not implemented",
+	[OSMO_CC_ISDN_CAUSE_RESTR_BCAP_AVAIL] = "restricted bearer capabilitey available",
+	[OSMO_CC_ISDN_CAUSE_SERV_OPT_UNIMPL] = "service or option unimplemented",
+	[OSMO_CC_ISDN_CAUSE_INVAL_CALLREF] = "invalid call reference",
+	[OSMO_CC_ISDN_CAUSE_USER_NOT_IN_CUG] = "user not in closed user group",
+	[OSMO_CC_ISDN_CAUSE_INCOMPAT_DEST] = "incompatible destination",
+	[OSMO_CC_ISDN_CAUSE_INVAL_TRANS_NET] = "invalid transit network",
+	[OSMO_CC_ISDN_CAUSE_SEMANTIC_INCORR] = "semantically incorrect",
+	[OSMO_CC_ISDN_CAUSE_INVAL_MAND_INF] = "invalid mandatory information",
+	[OSMO_CC_ISDN_CAUSE_MSGTYPE_NOTEXIST] = "message type does not exist",
+	[OSMO_CC_ISDN_CAUSE_MSGTYPE_INCOMPAT] = "message type incompatible",
+	[OSMO_CC_ISDN_CAUSE_IE_NOTEXIST] = "informaton element does not exits",
+	[OSMO_CC_ISDN_CAUSE_COND_IE_ERR] = "conditional information element error",
+	[OSMO_CC_ISDN_CAUSE_MSG_INCOMP_STATE] = "message at incompatlible state",
+	[OSMO_CC_ISDN_CAUSE_RECOVERY_TIMER] = "recovery on time expiery",
+	[OSMO_CC_ISDN_CAUSE_PROTO_ERR] = "protocol error",
+	[OSMO_CC_ISDN_CAUSE_INTERWORKING] = "interworking, unspecified",
+};
+
+const char *osmo_cc_isdn_cause_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_isdn_cause_name)
+int osmo_cc_isdn_cause_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_isdn_cause_name)
+
+static const char *osmo_cc_location_name[OSMO_CC_LOCATION_NUM] = {
+	[OSMO_CC_LOCATION_USER] = "user",
+	[OSMO_CC_LOCATION_PRIV_SERV_LOC_USER] = "private network serving local user",
+	[OSMO_CC_LOCATION_PUB_SERV_LOC_USER] = "public network serving local user",
+	[OSMO_CC_LOCATION_TRANSIT] = "transit network",
+	[OSMO_CC_LOCATION_PUB_SERV_REM_USER] = "public network serving remote user",
+	[OSMO_CC_LOCATION_PRIV_SERV_REM_USER] = "private network serving remote user",
+	[OSMO_CC_LOCATION_BEYOND_INTERWORKING] = "beyond interworking",
+};
+
+const char *osmo_cc_location_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_location_name)
+int osmo_cc_location_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_location_name)
+
+static const char *osmo_cc_progress_name[OSMO_CC_PROGRESS_NUM] = {
+	[OSMO_CC_PROGRESS_NOT_END_TO_END_ISDN] = "not end-to-end ISDN",
+	[OSMO_CC_PROGRESS_DEST_NOT_ISDN] = "destination not ISDN",
+	[OSMO_CC_PROGRESS_ORIG_NOT_ISDN] = "originator not ISDN",
+	[OSMO_CC_PROGRESS_RETURN_TO_ISDN] = "return to ISDN",
+	[OSMO_CC_PROGRESS_INTERWORKING] = "interworking",
+	[OSMO_CC_PROGRESS_INBAND_INFO_AVAILABLE] = "inmand information available (audio)",
+};
+
+const char *osmo_cc_progress_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_progress_name)
+int osmo_cc_progress_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_progress_name)
+
+static const char *osmo_cc_capability_name[OSMO_CC_CAPABILITY_NUM] = {
+	[OSMO_CC_CAPABILITY_SPEECH] = "speech",
+	[OSMO_CC_CAPABILITY_DATA] = "data",
+	[OSMO_CC_CAPABILITY_DATA_RESTRICTED] = "data restricted",
+	[OSMO_CC_CAPABILITY_AUDIO] = "audio",
+	[OSMO_CC_CAPABILITY_DATA_WITH_TONES] = "data with tones",
+	[OSMO_CC_CAPABILITY_VIDEO] = "video",
+};
+
+const char *osmo_cc_capability_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_capability_name)
+int osmo_cc_capability_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_capability_name)
+
+static const char *osmo_cc_mode_name[OSMO_CC_MODE_NUM] = {
+	[OSMO_CC_MODE_CIRCUIT] = "circuit",
+	[OSMO_CC_MODE_PACKET] = "packet",
+};
+
+const char *osmo_cc_mode_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_mode_name)
+int osmo_cc_mode_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_mode_name)
+
+static const char *osmo_cc_dtmf_mode_name[OSMO_CC_DTMF_MODE_NUM] = {
+	[OSMO_CC_DTMF_MODE_OFF] = "off",
+	[OSMO_CC_DTMF_MODE_ON] = "on",
+	[OSMO_CC_DTMF_MODE_DIGITS] = "digit",
+};
+
+const char *osmo_cc_dtmf_mode_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_dtmf_mode_name)
+int osmo_cc_dtmf_mode_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_dtmf_mode_name)
+
+static const char *osmo_cc_socket_cause_name[OSMO_CC_SOCKET_CAUSE_NUM] = {
+	[0] = "unset",
+	[OSMO_CC_SOCKET_CAUSE_VERSION_MISMATCH] = "version mismatch",
+	[OSMO_CC_SOCKET_CAUSE_FAILED] = "socket failed",
+	[OSMO_CC_SOCKET_CAUSE_BROKEN_PIPE] = "broken pipe",
+	[OSMO_CC_SOCKET_CAUSE_TIMEOUT] = "keepalive timeout",
+};
+
+const char *osmo_cc_socket_cause_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_socket_cause_name)
+int osmo_cc_socket_cause_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_socket_cause_name)
+
+static const char *osmo_cc_network_name[OSMO_CC_NETWORK_NUM] = {
+	[OSMO_CC_NETWORK_UNDEFINED] = "undefined",
+	[OSMO_CC_NETWORK_ALSA_NONE] = "alsa",
+	[OSMO_CC_NETWORK_POTS_NONE] = "pots",
+	[OSMO_CC_NETWORK_ISDN_NONE] = "isdn",
+	[OSMO_CC_NETWORK_SIP_NONE] = "sip",
+	[OSMO_CC_NETWORK_GSM_IMSI] = "gsm-imsi",
+	[OSMO_CC_NETWORK_GSM_IMEI] = "gsm-imei",
+	[OSMO_CC_NETWORK_WEB_NONE] = "web",
+	[OSMO_CC_NETWORK_DECT_NONE] = "decs",
+	[OSMO_CC_NETWORK_BLUETOOTH_NONE] = "bluetooth",
+	[OSMO_CC_NETWORK_SS5_NONE] = "ss5",
+	[OSMO_CC_NETWORK_ANETZ_NONE] = "anetz",
+	[OSMO_CC_NETWORK_BNETZ_MUENZ] = "bnetz",
+	[OSMO_CC_NETWORK_CNETZ_NONE] = "cnetz",
+	[OSMO_CC_NETWORK_NMT_NONE] = "nmt",
+	[OSMO_CC_NETWORK_R2000_NONE] = "radiocom2000",
+	[OSMO_CC_NETWORK_AMPS_ESN] = "amps",
+	[OSMO_CC_NETWORK_MTS_NONE] = "mts",
+	[OSMO_CC_NETWORK_IMTS_NONE] = "imts",
+	[OSMO_CC_NETWORK_EUROSIGNAL_NONE] = "eurosignal",
+	[OSMO_CC_NETWORK_JOLLYCOM_NONE] = "jollycom",
+	[OSMO_CC_NETWORK_MPT1327_PSTN] = "mpt1327-pstn",
+	[OSMO_CC_NETWORK_MPT1327_PBX] = "mpt1327-pbx",
+};
+
+const char *osmo_cc_network_value2name(int value) _OSMO_CC_VALUE2NAME(osmo_cc_network_name)
+int osmo_cc_network_name2value(const char *name) _OSMO_CC_NAME2VALUE(osmo_cc_network_name)
+
+/*
+ *
+ */
+
 static uint32_t new_callref = 0;
 
 uint32_t osmo_cc_new_callref(void)
 {
 	return (++new_callref);
-}
-
-const char *osmo_cc_msg_name(uint8_t msg_type)
-{
-	switch (msg_type) {
-	case OSMO_CC_MSG_SETUP_REQ:
-		return "CC-SETUP-REQ";
-	case OSMO_CC_MSG_SETUP_IND:
-		return "CC-SETUP-IND";
-	case OSMO_CC_MSG_REJ_REQ:
-		return "CC-REJ-REQ";
-	case OSMO_CC_MSG_REJ_IND:
-		return "CC-REJ-IND";
-	case OSMO_CC_MSG_SETUP_ACK_REQ:
-		return "CC-SETUP-ACK-REQ";
-	case OSMO_CC_MSG_SETUP_ACK_IND:
-		return "CC-SETUP-ACK-IND";
-	case OSMO_CC_MSG_PROC_REQ:
-		return "CC-PROC-REQ";
-	case OSMO_CC_MSG_PROC_IND:
-		return "CC-PROC-IND";
-	case OSMO_CC_MSG_ALERT_REQ:
-		return "CC-ALERT-REQ";
-	case OSMO_CC_MSG_ALERT_IND:
-		return "CC-ALERT-IND";
-	case OSMO_CC_MSG_SETUP_RSP:
-		return "CC-SETUP-RSP";
-	case OSMO_CC_MSG_SETUP_CNF:
-		return "CC-SETUP-CNF";
-	case OSMO_CC_MSG_SETUP_COMP_REQ:
-		return "CC-SETUP-COMP-REQ";
-	case OSMO_CC_MSG_SETUP_COMP_IND:
-		return "CC-SETUP-COMP-IND";
-	case OSMO_CC_MSG_DISC_REQ:
-		return "CC-DISC-REQ";
-	case OSMO_CC_MSG_DISC_IND:
-		return "CC-DISC-IND";
-	case OSMO_CC_MSG_REL_REQ:
-		return "CC-REL-REQ";
-	case OSMO_CC_MSG_REL_CNF:
-		return "CC-REL-CNF";
-	case OSMO_CC_MSG_REL_IND:
-		return "CC-REL-IND";
-	case OSMO_CC_MSG_PROGRESS_REQ:
-		return "CC-PROGRESS-REQ";
-	case OSMO_CC_MSG_PROGRESS_IND:
-		return "CC-PROGRESS-IND";
-	case OSMO_CC_MSG_NOTIFY_REQ:
-		return "CC-NOTIFY-REQ";
-	case OSMO_CC_MSG_NOTIFY_IND:
-		return "CC-NOTIFY-IND";
-	case OSMO_CC_MSG_INFO_REQ:
-		return "CC-INFO-REQ";
-	case OSMO_CC_MSG_INFO_IND:
-		return "CC-INFO-IND";
-	case OSMO_CC_MSG_ATTACH_REQ:
-		return "CC-ATTACH-REQ";
-	case OSMO_CC_MSG_ATTACH_IND:
-		return "CC-ATTACH-IND";
-	case OSMO_CC_MSG_ATTACH_RSP:
-		return "CC-ATTACH-RSP";
-	case OSMO_CC_MSG_ATTACH_CNF:
-		return "CC-ATTACH-CNF";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_ie_name(uint8_t ie_type)
-{
-	switch (ie_type) {
-	case OSMO_CC_IE_CALLED:
-		return "IE_CALLED";
-	case OSMO_CC_IE_CALLED_SUB:
-		return "IE_CALLED_SUB";
-	case OSMO_CC_IE_CALLED_NAME:
-		return "IE_CALLED_NAME";
-	case OSMO_CC_IE_CALLED_INTERFACE:
-		return "IE_CALLED_INTERFACE";
-	case OSMO_CC_IE_DTMF:
-		return "IE_DTMF";
-	case OSMO_CC_IE_KEYPAD:
-		return "IE_KEYPAD";
-	case OSMO_CC_IE_COMPLETE:
-		return "IE_COMPLETE";
-	case OSMO_CC_IE_CALLING:
-		return "IE_CALLING";
-	case OSMO_CC_IE_CALLING_SUB:
-		return "IE_CALLING_SUB";
-	case OSMO_CC_IE_CALLING_NAME:
-		return "IE_CALLING_NAME";
-	case OSMO_CC_IE_CALLING_INTERFACE:
-		return "IE_CALLING_INTERFACE";
-	case OSMO_CC_IE_CALLING_NETWORK:
-		return "IE_CALLING_NETWORK";
-	case OSMO_CC_IE_REDIR:
-		return "IE_REDIR";
-	case OSMO_CC_IE_PROGRESS:
-		return "IE_PROGRESS";
-	case OSMO_CC_IE_NOTIFY:
-		return "IE_NOTIFY";
-	case OSMO_CC_IE_DISPLAY:
-		return "IE_DISPLAY";
-	case OSMO_CC_IE_CAUSE:
-		return "IE_CAUSE";
-	case OSMO_CC_IE_BEARER:
-		return "IE_BEARER";
-	case OSMO_CC_IE_SDP:
-		return "IE_SDP";
-	case OSMO_CC_IE_SOCKET_ADDRESS:
-		return "IE_SOCKET_ADDRESS";
-	case OSMO_CC_IE_PRIVATE:
-		return "IE_PRIVATE";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_number_type_name(uint8_t type)
-{
-	switch (type) {
-	case OSMO_CC_TYPE_UNKNOWN:
-		return "unknown";
-	case OSMO_CC_TYPE_INTERNATIONAL:
-		return "international";
-	case OSMO_CC_TYPE_NATIONAL:
-		return "national";
-	case OSMO_CC_TYPE_NETWORK:
-		return "network";
-	case OSMO_CC_TYPE_SUBSCRIBER:
-		return "subscriber";
-	case OSMO_CC_TYPE_ABBREVIATED:
-		return "abbreviated";
-	case OSMO_CC_TYPE_RESERVED:
-		return "reserved";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_number_plan_name(uint8_t plan)
-{
-	switch (plan) {
-	case OSMO_CC_PLAN_UNKNOWN:
-		return "unknown";
-	case OSMO_CC_PLAN_TELEPHONY:
-		return "telephony";
-	case OSMO_CC_PLAN_DATA:
-		return "data";
-	case OSMO_CC_PLAN_TTY:
-		return "tty";
-	case OSMO_CC_PLAN_NATIONAL_STANDARD:
-		return "national standard";
-	case OSMO_CC_PLAN_PRIVATE:
-		return "private";
-	case OSMO_CC_PLAN_RESERVED:
-		return "reserved";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_number_present_name(uint8_t present)
-{
-	switch (present) {
-	case OSMO_CC_PRESENT_ALLOWED:
-		return "allowed";
-	case OSMO_CC_PRESENT_RESTRICTED:
-		return "restricted";
-	case OSMO_CC_PRESENT_NOT_AVAIL:
-		return "not available";
-	case OSMO_CC_PRESENT_RESERVED:
-		return "reserved";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_number_screen_name(uint8_t screen)
-{
-	switch (screen) {
-	case OSMO_CC_SCREEN_USER_UNSCREENED:
-		return "unscreened";
-	case OSMO_CC_SCREEN_USER_VERIFIED_PASSED:
-		return "user provided and passed";
-	case OSMO_CC_SCREEN_USER_VERIFIED_FAILED:
-		return "user provided an failed";
-	case OSMO_CC_SCREEN_NETWORK:
-		return "network provided";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_redir_reason_name(uint8_t reason)
-{
-	switch (reason) {
-	case OSMO_CC_REDIR_REASON_UNKNOWN:
-		return "unknown";
-	case OSMO_CC_REDIR_REASON_CFB:
-		return "call forward busy";
-	case OSMO_CC_REDIR_REASON_CFNR:
-		return "call forward no response";
-	case OSMO_CC_REDIR_REASON_CD:
-		return "call deflect";
-	case OSMO_CC_REDIR_REASON_CF_OUTOFORDER:
-		return "call forward out of order";
-	case OSMO_CC_REDIR_REASON_CF_BY_DTE:
-		return "call froward by dte";
-	case OSMO_CC_REDIR_REASON_CFU:
-		return "call forward unconditional";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_notify_name(uint8_t notify)
-{
-	switch (notify) {
-	case OSMO_CC_NOTIFY_USER_SUSPENDED:
-		return "user suspended";
-	case OSMO_CC_NOTIFY_USER_RESUMED:
-		return "user resumed";
-	case OSMO_CC_NOTIFY_BEARER_SERVICE_CHANGE:
-		return "bearer service change";
-	case OSMO_CC_NOTIFY_CALL_COMPLETION_DELAY:
-		return "call completion delay";
-	case OSMO_CC_NOTIFY_CONFERENCE_ESTABLISHED:
-		return "conference established";
-	case OSMO_CC_NOTIFY_CONFERENCE_DISCONNECTED:
-		return "conference disconnected";
-	case OSMO_CC_NOTIFY_OTHER_PARTY_ADDED:
-		return "ohter party added";
-	case OSMO_CC_NOTIFY_ISOLATED:
-		return "isolated";
-	case OSMO_CC_NOTIFY_REATTACHED:
-		return "reattached";
-	case OSMO_CC_NOTIFY_OTHER_PARTY_ISOLATED:
-		return "ohter party isolated";
-	case OSMO_CC_NOTIFY_OTHER_PARTY_REATTACHED:
-		return "ohter party reattached";
-	case OSMO_CC_NOTIFY_OTHER_PARTY_SPLIT:
-		return "other party split";
-	case OSMO_CC_NOTIFY_OTHER_PARTY_DISCONNECTED:
-		return "other party disconnected";
-	case OSMO_CC_NOTIFY_CONFERENCE_FLOATING:
-		return "confernce floating";
-	case OSMO_CC_NOTIFY_CONFERENCE_DISC_PREEMPT:
-		return "confernce disconnect preemption";
-	case OSMO_CC_NOTIFY_CONFERENCE_FLOATING_SUP:
-		return "conference floating sup";
-	case OSMO_CC_NOTIFY_CALL_IS_A_WAITING_CALL:
-		return "call is a waiting call";
-	case OSMO_CC_NOTIFY_DIVERSION_ACTIVATED:
-		return "diversion activated";
-	case OSMO_CC_NOTIFY_RESERVED_CT_1:
-		return "reserved CT 1";
-	case OSMO_CC_NOTIFY_RESERVED_CT_2:
-		return "reserved CT 2";
-	case OSMO_CC_NOTIFY_REVERSE_CHARGING:
-		return "reverse charging";
-	case OSMO_CC_NOTIFY_REMOTE_HOLD:
-		return "remote hold";
-	case OSMO_CC_NOTIFY_REMOTE_RETRIEVAL:
-		return "remote retrieval";
-	case OSMO_CC_NOTIFY_CALL_IS_DIVERTING:
-		return "call is diverting";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_coding_name(uint8_t coding)
-{
-	switch (coding) {
-	case OSMO_CC_CODING_ITU_T:
-		return "ITU-T";
-	case OSMO_CC_CODING_ISO_IEC:
-		return "ISO/IEC";
-	case OSMO_CC_CODING_NATIONAL:
-		return "national";
-	case OSMO_CC_CODING_STANDARD_SPECIFIC:
-		return "standard specific";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_isdn_cause_name(uint8_t cause)
-{
-	switch (cause) {
-	case 0:
-		return "unset";
-	case OSMO_CC_ISDN_CAUSE_UNASSIGNED_NR:
-		return "unsassigned number";
-	case OSMO_CC_ISDN_CAUSE_NO_ROUTE_TRANSIT:
-		return "no route to transit network";
-	case OSMO_CC_ISDN_CAUSE_NO_ROUTE:
-		return "no route";
-	case OSMO_CC_ISDN_CAUSE_CHAN_UNACCEPT:
-		return "channel unacceptable";
-	case OSMO_CC_ISDN_CAUSE_OP_DET_BARRING:
-		return "detected barring";
-	case OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR:
-		return "normal call clearing";
-	case OSMO_CC_ISDN_CAUSE_USER_BUSY:
-		return "user busy";
-	case OSMO_CC_ISDN_CAUSE_USER_NOTRESPOND:
-		return "user not responding";
-	case OSMO_CC_ISDN_CAUSE_USER_ALERTING_NA:
-		return "user does not answer";
-	case OSMO_CC_ISDN_CAUSE_CALL_REJECTED:
-		return "call rejected";
-	case OSMO_CC_ISDN_CAUSE_NUMBER_CHANGED:
-		return "number changed";
-	case OSMO_CC_ISDN_CAUSE_PRE_EMPTION:
-		return "pre-emption";
-	case OSMO_CC_ISDN_CAUSE_NONSE_USER_CLR:
-		return "non-selected user clearing";
-	case OSMO_CC_ISDN_CAUSE_DEST_OOO:
-		return "destination out-of-order";
-	case OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT:
-		return "invalid number format";
-	case OSMO_CC_ISDN_CAUSE_FACILITY_REJ:
-		return "facility rejected";
-	case OSMO_CC_ISDN_CAUSE_RESP_STATUS_INQ:
-		return "response to status enquiery";
-	case OSMO_CC_ISDN_CAUSE_NORMAL_UNSPEC:
-		return "normal, uspecified";
-	case OSMO_CC_ISDN_CAUSE_NO_CIRCUIT_CHAN:
-		return "no circuit/channel available";
-	case OSMO_CC_ISDN_CAUSE_NETWORK_OOO:
-		return "network out of order";
-	case OSMO_CC_ISDN_CAUSE_TEMP_FAILURE:
-		return "temporary failure";
-	case OSMO_CC_ISDN_CAUSE_SWITCH_CONG:
-		return "switching equipment congested";
-	case OSMO_CC_ISDN_CAUSE_ACC_INF_DISCARD:
-		return "access information discarded";
-	case OSMO_CC_ISDN_CAUSE_REQ_CHAN_UNAVAIL:
-		return "requested circuit/channel unavailable";
-	case OSMO_CC_ISDN_CAUSE_RESOURCE_UNAVAIL:
-		return "resource unavailable";
-	case OSMO_CC_ISDN_CAUSE_QOS_UNAVAIL:
-		return "quality of service unavailable";
-	case OSMO_CC_ISDN_CAUSE_REQ_FAC_NOT_SUBSC:
-		return "requested facility not subscribed";
-	case OSMO_CC_ISDN_CAUSE_INC_BARRED_CUG:
-		return "inc barred in closed user group";
-	case OSMO_CC_ISDN_CAUSE_BEARER_CAP_UNAUTH:
-		return "bearer capability unauthorized";
-	case OSMO_CC_ISDN_CAUSE_BEARER_CA_UNAVAIL:
-		return "bearer capability not available";
-	case OSMO_CC_ISDN_CAUSE_SERV_OPT_UNAVAIL:
-		return "service or option not available";
-	case OSMO_CC_ISDN_CAUSE_BEARERSERV_UNIMPL:
-		return "bearer service unimplemented";
-	case OSMO_CC_ISDN_CAUSE_ACM_GE_ACM_MAX:
-		return "acm ge ach max";
-	case OSMO_CC_ISDN_CAUSE_REQ_FAC_NOTIMPL:
-		return "requrested facility not implemented";
-	case OSMO_CC_ISDN_CAUSE_RESTR_BCAP_AVAIL:
-		return "restricted bearer capabilitey available";
-	case OSMO_CC_ISDN_CAUSE_SERV_OPT_UNIMPL:
-		return "service or option unimplemented";
-	case OSMO_CC_ISDN_CAUSE_INVAL_CALLREF:
-		return "invalid call reference";
-	case OSMO_CC_ISDN_CAUSE_USER_NOT_IN_CUG:
-		return "user not in closed user group";
-	case OSMO_CC_ISDN_CAUSE_INCOMPAT_DEST:
-		return "incompatible destination";
-	case OSMO_CC_ISDN_CAUSE_INVAL_TRANS_NET:
-		return "invalid transit network";
-	case OSMO_CC_ISDN_CAUSE_SEMANTIC_INCORR:
-		return "semantically incorrect";
-	case OSMO_CC_ISDN_CAUSE_INVAL_MAND_INF:
-		return "invalid mandatory information";
-	case OSMO_CC_ISDN_CAUSE_MSGTYPE_NOTEXIST:
-		return "message type does not exist";
-	case OSMO_CC_ISDN_CAUSE_MSGTYPE_INCOMPAT:
-		return "message type incompatible";
-	case OSMO_CC_ISDN_CAUSE_IE_NOTEXIST:
-		return "informaton element does not exits";
-	case OSMO_CC_ISDN_CAUSE_COND_IE_ERR:
-		return "conditional information element error";
-	case OSMO_CC_ISDN_CAUSE_MSG_INCOMP_STATE:
-		return "message at incompatlible state";
-	case OSMO_CC_ISDN_CAUSE_RECOVERY_TIMER:
-		return "recovery on time expiery";
-	case OSMO_CC_ISDN_CAUSE_PROTO_ERR:
-		return "protocol error";
-	case OSMO_CC_ISDN_CAUSE_INTERWORKING:
-		return "interworking, unspecified";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_location_name(uint8_t location)
-{
-	switch (location) {
-	case OSMO_CC_LOCATION_USER:
-		return "user";
-	case OSMO_CC_LOCATION_PRIV_SERV_LOC_USER:
-		return "private network serving local user";
-	case OSMO_CC_LOCATION_PUB_SERV_LOC_USER:
-		return "public network serving local user";
-	case OSMO_CC_LOCATION_TRANSIT:
-		return "transit network";
-	case OSMO_CC_LOCATION_PUB_SERV_REM_USER:
-		return "public network serving remote user";
-	case OSMO_CC_LOCATION_PRIV_SERV_REM_USER:
-		return "private network serving remote user";
-	case OSMO_CC_LOCATION_BEYOND_INTERWORKING:
-		return "beyond interworking";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_progress_name(uint8_t progress)
-{
-	switch (progress) {
-	case OSMO_CC_PROGRESS_NOT_END_TO_END_ISDN:
-		return "not end-to-end ISDN";
-	case OSMO_CC_PROGRESS_DEST_NOT_ISDN:
-		return "destination not ISDN";
-	case OSMO_CC_PROGRESS_ORIG_NOT_ISDN:
-		return "originator not ISDN";
-	case OSMO_CC_PROGRESS_RETURN_TO_ISDN:
-		return "return to ISDN";
-	case OSMO_CC_PROGRESS_INTERWORKING:
-		return "interworking";
-	case OSMO_CC_PROGRESS_INBAND_INFO_AVAILABLE:
-		return "inmand information available (audio)";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_bearer_capability_name(uint8_t capability)
-{
-	switch (capability) {
-	case OSMO_CC_CAPABILITY_SPEECH:
-		return "speech";
-	case OSMO_CC_CAPABILITY_DATA:
-		return "data";
-	case OSMO_CC_CAPABILITY_DATA_RESTRICTED:
-		return "data restricted";
-	case OSMO_CC_CAPABILITY_AUDIO:
-		return "audio";
-	case OSMO_CC_CAPABILITY_DATA_WITH_TONES:
-		return "data with tones";
-	case OSMO_CC_CAPABILITY_VIDEO:
-		return "video";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_bearer_mode_name(uint8_t mode)
-{
-	switch (mode) {
-	case OSMO_CC_MODE_CIRCUIT:
-		return "circuit";
-	case OSMO_CC_MODE_PACKET:
-		return "packet";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_dtmf_mode_name(uint8_t mode)
-{
-	switch (mode) {
-	case OSMO_CC_DTMF_MODE_OFF:
-		return "off";
-	case OSMO_CC_DTMF_MODE_ON:
-		return "on";
-	case OSMO_CC_DTMF_MODE_DIGITS:
-		return "digit";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_socket_cause_name(uint8_t cause)
-{
-	switch (cause) {
-	case 0:
-		return "unset";
-	case OSMO_CC_SOCKET_CAUSE_VERSION_MISMATCH:
-		return "version mismatch";
-	case OSMO_CC_SOCKET_CAUSE_FAILED:
-		return "socket failed";
-	case OSMO_CC_SOCKET_CAUSE_BROKEN_PIPE:
-		return "broken pipe";
-	case OSMO_CC_SOCKET_CAUSE_TIMEOUT:
-		return "keepalive timeout";
-	default:
-		return "<unknown>";
-	}
-}
-
-const char *osmo_cc_network_type_name(uint8_t type)
-{
-	switch (type) {
-	case OSMO_CC_NETWORK_UNDEFINED:
-		return "";
-	case OSMO_CC_NETWORK_ALSA_NONE:
-		return "alsa";
-	case OSMO_CC_NETWORK_POTS_NONE:
-		return "pots";
-	case OSMO_CC_NETWORK_ISDN_NONE:
-		return "isdn";
-	case OSMO_CC_NETWORK_SIP_NONE:
-		return "sip";
-	case OSMO_CC_NETWORK_GSM_IMSI:
-		return "gsm-imsi";
-	case OSMO_CC_NETWORK_GSM_IMEI:
-		return "gsm-imei";
-	case OSMO_CC_NETWORK_WEB_NONE:
-		return "web";
-	case OSMO_CC_NETWORK_DECT_NONE:
-		return "decs";
-	case OSMO_CC_NETWORK_BLUETOOTH_NONE:
-		return "bluetooth";
-	case OSMO_CC_NETWORK_SS5_NONE:
-		return "ss5";
-	case OSMO_CC_NETWORK_ANETZ_NONE:
-		return "anetz";
-	case OSMO_CC_NETWORK_BNETZ_MUENZ:
-		return "bnetz";
-	case OSMO_CC_NETWORK_CNETZ_NONE:
-		return "cnetz";
-	case OSMO_CC_NETWORK_NMT_NONE:
-		return "nmt";
-	case OSMO_CC_NETWORK_R2000_NONE:
-		return "radiocom2000";
-	case OSMO_CC_NETWORK_AMPS_ESN:
-		return "amps";
-	case OSMO_CC_NETWORK_MTS_NONE:
-		return "mts";
-	case OSMO_CC_NETWORK_IMTS_NONE:
-		return "imts";
-	case OSMO_CC_NETWORK_EUROSIGNAL_NONE:
-		return "eurosignal";
-	case OSMO_CC_NETWORK_JOLLYCOM_NONE:
-		return "jollycom";
-	case OSMO_CC_NETWORK_MPT1327_PSTN:
-		return "mpt1327-pstn";
-	case OSMO_CC_NETWORK_MPT1327_PBX:
-		return "mpt1327-pbx";
-	default:
-		return "<unknown>";
-	}
 }
 
 /* create message with maximum size */
@@ -690,109 +465,109 @@ void osmo_cc_debug_ie(osmo_cc_msg_t *msg, int level)
 			rc = osmo_cc_get_ie_called(msg, ie_repeat[ie->type], &type, &plan, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s) number='%s'\n", osmo_cc_ie_name(ie->type), type, osmo_cc_number_type_name(type), plan, osmo_cc_number_plan_name(plan), string);
+			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), string);
 			break;
 		case OSMO_CC_IE_CALLED_SUB:
 			rc = osmo_cc_get_ie_called_sub(msg, ie_repeat[ie->type], &type, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_name(ie->type), type, osmo_cc_number_type_name(type), string);
+			PDEBUG(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), string);
 			break;
 		case OSMO_CC_IE_CALLED_NAME:
 			rc = osmo_cc_get_ie_called_name(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_CALLED_INTERFACE:
 			rc = osmo_cc_get_ie_called_interface(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_COMPLETE:
 			rc = osmo_cc_get_ie_complete(msg, ie_repeat[ie->type]);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s\n", osmo_cc_ie_name(ie->type));
+			PDEBUG(DCC, level, "  %s\n", osmo_cc_ie_value2name(ie->type));
 			break;
 		case OSMO_CC_IE_CALLING:
 			rc = osmo_cc_get_ie_calling(msg, ie_repeat[ie->type], &type, &plan, &present, &screen, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s), presentation=%d(%s), screening=%d(%s), number='%s'\n", osmo_cc_ie_name(ie->type), type, osmo_cc_number_type_name(type), plan, osmo_cc_number_plan_name(plan), present, osmo_cc_number_present_name(present), screen, osmo_cc_number_screen_name(screen), string);
+			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s), presentation=%d(%s), screening=%d(%s), number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), present, osmo_cc_present_value2name(present), screen, osmo_cc_screen_value2name(screen), string);
 			break;
 		case OSMO_CC_IE_CALLING_SUB:
 			rc = osmo_cc_get_ie_calling_sub(msg, ie_repeat[ie->type], &type, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_name(ie->type), type, osmo_cc_number_type_name(type), string);
+			PDEBUG(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), string);
 			break;
 		case OSMO_CC_IE_CALLING_NAME:
 			rc = osmo_cc_get_ie_calling_name(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_CALLING_INTERFACE:
 			rc = osmo_cc_get_ie_calling_interface(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_CALLING_NETWORK:
 			rc = osmo_cc_get_ie_calling_network(msg, ie_repeat[ie->type], &type, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) id='%s'\n", osmo_cc_ie_name(ie->type), type, osmo_cc_network_type_name(type), string);
+			PDEBUG(DCC, level, "  %s type=%d(%s) id='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_network_value2name(type), string);
 			break;
 		case OSMO_CC_IE_BEARER:
 			rc = osmo_cc_get_ie_bearer(msg, ie_repeat[ie->type], &coding, &capability, &mode);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s coding=%d(%s) capability=%d(%s) mode=%d(%s)\n", osmo_cc_ie_name(ie->type), coding, osmo_cc_coding_name(coding), capability, osmo_cc_bearer_capability_name(capability), mode, osmo_cc_bearer_mode_name(mode));
+			PDEBUG(DCC, level, "  %s coding=%d(%s) capability=%d(%s) mode=%d(%s)\n", osmo_cc_ie_value2name(ie->type), coding, osmo_cc_coding_value2name(coding), capability, osmo_cc_capability_value2name(capability), mode, osmo_cc_mode_value2name(mode));
 			break;
 		case OSMO_CC_IE_REDIR:
 			rc = osmo_cc_get_ie_redir(msg, ie_repeat[ie->type], &type, &plan, &present, &screen, &reason, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s) presentation=%d(%s) screening=%d(%s) reason=%d(%s) number='%s'\n", osmo_cc_ie_name(ie->type), type, osmo_cc_number_type_name(type), plan, osmo_cc_number_plan_name(plan), present, osmo_cc_number_present_name(present), screen, osmo_cc_number_screen_name(screen), reason, osmo_cc_redir_reason_name(reason), string);
+			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s) presentation=%d(%s) screening=%d(%s) reason=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), present, osmo_cc_present_value2name(present), screen, osmo_cc_screen_value2name(screen), reason, osmo_cc_redir_reason_value2name(reason), string);
 			break;
 		case OSMO_CC_IE_DTMF:
 			rc = osmo_cc_get_ie_dtmf(msg, ie_repeat[ie->type], &duration_ms, &pause_ms, &dtmf_mode, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s duration=%dms pause=%dms mode=%d(%s)\n", osmo_cc_ie_name(ie->type), duration_ms, pause_ms, dtmf_mode, osmo_cc_dtmf_mode_name(dtmf_mode));
+			PDEBUG(DCC, level, "  %s duration=%dms pause=%dms mode=%d(%s)\n", osmo_cc_ie_value2name(ie->type), duration_ms, pause_ms, dtmf_mode, osmo_cc_dtmf_mode_value2name(dtmf_mode));
 			break;
 		case OSMO_CC_IE_KEYPAD:
 			rc = osmo_cc_get_ie_keypad(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s digits='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s digits='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_PROGRESS:
 			rc = osmo_cc_get_ie_progress(msg, ie_repeat[ie->type], &coding, &location, &progress);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s coding=%d(%s) location=%d(%s) progress=%d(%s)\n", osmo_cc_ie_name(ie->type), coding, osmo_cc_coding_name(coding), location, osmo_cc_location_name(location), progress, osmo_cc_progress_name(progress));
+			PDEBUG(DCC, level, "  %s coding=%d(%s) location=%d(%s) progress=%d(%s)\n", osmo_cc_ie_value2name(ie->type), coding, osmo_cc_coding_value2name(coding), location, osmo_cc_location_value2name(location), progress, osmo_cc_progress_value2name(progress));
 			break;
 		case OSMO_CC_IE_NOTIFY:
 			rc = osmo_cc_get_ie_notify(msg, ie_repeat[ie->type], &notify);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s indicator=%d(%s)\n", osmo_cc_ie_name(ie->type), notify, osmo_cc_notify_name(notify));
+			PDEBUG(DCC, level, "  %s indicator=%d(%s)\n", osmo_cc_ie_value2name(ie->type), notify, osmo_cc_notify_value2name(notify));
 			break;
 		case OSMO_CC_IE_CAUSE:
 			rc = osmo_cc_get_ie_cause(msg, ie_repeat[ie->type], &location, &isdn_cause, &sip_cause, &socket_cause);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s location=%d(%s) isdn_cause=%d(%s) sip_cause=%d socket_cause=%d(%s)\n", osmo_cc_ie_name(ie->type), location, osmo_cc_location_name(location), isdn_cause, osmo_cc_isdn_cause_name(isdn_cause), sip_cause, socket_cause, osmo_cc_socket_cause_name(socket_cause));
+			PDEBUG(DCC, level, "  %s location=%d(%s) isdn_cause=%d(%s) sip_cause=%d socket_cause=%d(%s)\n", osmo_cc_ie_value2name(ie->type), location, osmo_cc_location_value2name(location), isdn_cause, osmo_cc_isdn_cause_value2name(isdn_cause), sip_cause, socket_cause, osmo_cc_socket_cause_value2name(socket_cause));
 			break;
 		case OSMO_CC_IE_DISPLAY:
 			rc = osmo_cc_get_ie_display(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s info='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s info='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_SDP:
 			rc = osmo_cc_get_ie_sdp(msg, ie_repeat[ie->type], string, sizeof(string));
@@ -804,22 +579,22 @@ void osmo_cc_debug_ie(osmo_cc_msg_t *msg, int level)
 				if (string[i] == '\n')
 					string[i] = 'n';
 			}
-			PDEBUG(DCC, level, "  %s payload=%s\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s payload=%s\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_SOCKET_ADDRESS:
 			rc = osmo_cc_get_ie_socket_address(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s address='%s'\n", osmo_cc_ie_name(ie->type), string);
+			PDEBUG(DCC, level, "  %s address='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_PRIVATE:
 			rc = osmo_cc_get_ie_private(msg, ie_repeat[ie->type], &unique, (uint8_t *)string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s unique=%u=0x%08x private=%s\n", osmo_cc_ie_name(ie->type), unique, unique, debug_hex((uint8_t *)string, rc));
+			PDEBUG(DCC, level, "  %s unique=%u=0x%08x private=%s\n", osmo_cc_ie_value2name(ie->type), unique, unique, debug_hex((uint8_t *)string, rc));
 			break;
 		default:
-			PDEBUG(DCC, level, "  %s type=0x%02x length=%d value=%s\n", osmo_cc_ie_name(ie->type), ie->type, len, debug_hex(ie->data, len));
+			PDEBUG(DCC, level, "  %s type=0x%02x length=%d value=%s\n", osmo_cc_ie_value2name(ie->type), ie->type, len, debug_hex(ie->data, len));
 		}
 		ie_repeat[ie->type]++;
 		p += sizeof(*ie) + len;
