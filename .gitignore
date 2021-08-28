@@ -75,6 +75,7 @@ src/radio/osmoradio
 src/datenklo/datenklo
 src/zeitansage/zeitansage
 src/sim/cnetz_sim
+src/magnetic/cnetz_magnetic
 src/fuvst/fuvst
 src/fuvst/fuvst_sniffer
 extra/cnetz_memory_card_generator

@@ -59,6 +59,7 @@ SUBDIRS += \
 	radio \
 	zeitansage \
 	sim \
+	magnetic \
 	fuvst
 
 if HAVE_ALSA
