@@ -101,11 +101,7 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
-	printf(" -v --verbose <level> | <level>,<category>[,<category>[,...]] | list\n");
-	printf("        Use 'list' to get a list of all levels and categories\n");
-	printf("        Verbose level: digit of debug level (default = '%d')\n", debuglevel);
-	printf("        Verbose level+category: level digit followed by one or more categories\n");
-	printf("        -> If no category is specified, all categories are selected\n");
+	debug_print_help();
 	printf(" -k --kanal <channel>\n");
 	printf(" -k --channel <channel>\n");
 	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");

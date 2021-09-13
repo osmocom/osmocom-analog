@@ -60,6 +60,7 @@ void _printdebug(const char *file, const char *function, int line, int cat, int 
 const char *debug_amplitude(double level);
 const char *debug_db(double level_db);
 
+void debug_print_help(void);
 void debug_list_cat(void);
 int parse_debug_opt(const char *opt);
 

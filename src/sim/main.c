@@ -72,11 +72,7 @@ void print_help(const char *arg0)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
-	printf(" -v --verbose <level> | <level>,<category>[,<category>[,...]] | list\n");
-	printf("        Use 'list' to get a list of all levels and categories\n");
-	printf("        Verbose level: digit of debug level (default = '%d')\n", debuglevel);
-	printf("        Verbose level+category: level digit followed by one or more categories\n");
-	printf("        -> If no category is specified, all categories are selected\n");
+	debug_print_help();
 	printf(" -s --serial-device <device>\n");
 	printf("        Serial device (default = '%s')\n", serialdev);
 	printf(" -b --baud-rate <baud>\n");

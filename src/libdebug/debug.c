@@ -24,7 +24,9 @@
 #include <stdint.h>
 #include <errno.h>
 #include <math.h>
+#include <time.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include "debug.h"
 
 const char *debug_level[] = {
@@ -89,6 +91,7 @@ struct debug_cat {
 };
 
 int debuglevel = DEBUG_INFO;
+int debug_date = 0;
 uint64_t debug_mask = ~0;
 extern int num_kanal;
 
@@ -148,6 +151,15 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 		get_win_size(&w, &h);
 		printf("\0337\033[%d;%dr\0338", debug_limit_scroll + 1, h);
 	}
+	if (debug_date) {
+		struct timeval tv;
+		struct tm *tm;
+
+		gettimeofday(&tv, NULL);
+		tm = localtime(&tv.tv_sec);
+
+		printf("%04d-%02d-%02d %02d:%02d:%02d.%03d ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, (int)(tv.tv_usec / 10000.0));
+	}
 	printf("%s%s:%4d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
 	if (debug_limit_scroll)
 		printf("\0337\033[%d;%dr\0338", 1, h);
@@ -190,6 +202,17 @@ const char *debug_db(double level_db)
 	return text;
 }
 
+void debug_print_help(void)
+{
+	printf(" -v --verbose <level> | <level>,<category>[,<category>[,...]] | list\n");
+	printf("        Use 'list' to get a list of all levels and categories\n");
+	printf("        Verbose level: digit of debug level (default = '%d')\n", debuglevel);
+	printf("        Verbose level+category: level digit followed by one or more categories\n");
+	printf("        -> If no category is specified, all categories are selected\n");
+	printf(" -v --verbose date\n");
+	printf("        Show date with debug output\n");
+}
+
 void debug_list_cat(void)
 {
 	int i;
@@ -209,6 +232,11 @@ int parse_debug_opt(const char *optarg)
 {
 	int i, max_level = 0;
 	char *dup, *dstring, *p;
+
+	if (!strcasecmp(optarg, "date")) {
+		debug_date = 1;
+		return 0;
+	}
 
 	for (i = 0; debug_level[i]; i++)
 		max_level = i;
