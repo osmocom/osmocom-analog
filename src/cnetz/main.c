@@ -510,8 +510,6 @@ int main(int argc, char *argv[])
 			return -EINVAL;
 		}
 	}
-	/* set or complete name (in case of prefix was given) */
-	fuz_name = get_station_name(fuz_nat, fuz_fuvst, fuz_rest);
 
 	if (!num_kanal) {
 		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", CNETZ_OGK_KANAL);
