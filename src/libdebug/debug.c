@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include "debug.h"
@@ -100,6 +101,9 @@ void (*print_console_text)(void) = NULL;
 
 int debug_limit_scroll = 0;
 
+static int lock_initialized = 0;
+static pthread_mutex_t debug_mutex;
+
 void get_win_size(int *w, int *h)
 {
 	struct winsize win;
@@ -123,9 +127,21 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	const char *p;
 	va_list args;
 	int w, h;
+	int rc;
 
 	if (debuglevel > level)
 		return;
+
+	if (!(debug_mask & ((uint64_t)1 << cat)))
+		return;
+
+	if (!lock_initialized) {
+		rc = pthread_mutex_init(&debug_mutex, NULL);
+		if (rc == 0)
+			lock_initialized = 1;
+	}
+	if (lock_initialized)
+		pthread_mutex_lock(&debug_mutex);
 
 	buffer[sizeof(buffer) - 1] = '\0';
 
@@ -135,9 +151,6 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 		b = strchr(buffer, '\0');
 		s -= strlen(buffer);
 	}
-
-	if (!(debug_mask & ((uint64_t)1 << cat)))
-		return;
 
 	va_start(args, fmt);
 	vsnprintf(b, s, fmt, args);
@@ -166,6 +179,9 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	if (print_console_text)
 		print_console_text();
 	fflush(stdout);
+
+	if (lock_initialized)
+		pthread_mutex_unlock(&debug_mutex);
 }
 
 const char *debug_amplitude(double level)

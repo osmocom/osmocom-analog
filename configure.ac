@@ -24,8 +24,8 @@ dnl Checks for typedefs, structures and compiler characteristics
 
 AC_CANONICAL_HOST
 
-AC_CHECK_LIB([m], [main])
-AC_CHECK_LIB([pthread], [main])
+AC_CHECK_LIB([m], [main], [], [echo "Failed to find lib!" ; exit -1])
+AC_CHECK_LIB([pthread], [main], [], [echo "Failed to find lib!" ; exit -1])
 
 with_sdr=no
 soapy_0_7_1_or_higher=
