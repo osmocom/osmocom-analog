@@ -17,12 +17,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* how time stamp process works:
+ *
+ * TX and RX time stamps are not valid in the beginning.
+ *
+ * If a first chunk is received from SDR, RX time becomes valid. The duration
+ * of the received chunk is added to the RX time stamp, so it becomes the time
+ * of the next expected chunk.
+ *
+ * If a RX time stamp is valid and first chunk is to be transmitted (tosend()
+ * is called), TX time stamp becomes valid and is set to RX time stamp, but
+ * advanced by the duration of the latency (latspl). tosend() always returns
+ * the number of samples that are needed, to make TX time stamp advance RX time
+ * stamp by given latency.
+ *
+ * If chunk is transmitted to SDR, the TX time stamp is advanced by the
+ * duration of the transmitted chunk.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <pthread.h>
 #include <SoapySDR/Device.h>
 #include <SoapySDR/Formats.h>
 #include "soapy.h"
@@ -36,8 +55,13 @@ SoapySDRStream *rxStream = NULL;
 SoapySDRStream *txStream = NULL;
 static int			tx_samps_per_buff, rx_samps_per_buff;
 static double			samplerate;
-static uint64_t			rx_count = 0;
-static uint64_t			tx_count = 0;
+static pthread_mutex_t		timestamp_mutex;
+static int			use_time_stamps;
+static int			rx_valid = 0;
+static long long		rx_timeNs = 0;
+static int			tx_valid = 0;
+static long long		tx_timeNs = 0;
+static long long		Ns_per_sample;
 
 static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 {
@@ -63,7 +87,7 @@ static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 	return 0;
 }
 
-int soapy_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, const char *clock_source, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth)
+int soapy_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, const char *clock_source, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth, int timestamps)
 {
 	double got_frequency, got_rate, got_gain, got_bandwidth;
 	const char *got_antenna, *got_clock;
@@ -73,6 +97,12 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	SoapySDRKwargs tune_args;
 	int rc;
 
+	use_time_stamps = timestamps;
+	if (use_time_stamps && (1000000000LL % (long long)rate)) {
+		PDEBUG(DSOAPY, DEBUG_ERROR, "The given sample duration is not a multiple of a nano second. I.e. we can't divide 1000,000,000 by sample rate of %.0f. Please choose a different sample rate for time stamp support!\n", rate);
+		use_time_stamps = 0;
+	}
+	Ns_per_sample = 1000000000LL / (long long)rate;
 	samplerate = rate;
 
 	/* parsing ARGS */
@@ -394,6 +424,13 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		}
 	}
 
+	/* create mutex for time stamp protection */
+	rc = pthread_mutex_init(&timestamp_mutex, NULL);
+	if (rc < 0) {
+		PDEBUG(DSOAPY, DEBUG_ERROR, "Mutex init failed!\n");
+		return rc;
+	}
+
 	return 0;
 }
 
@@ -430,6 +467,7 @@ void soapy_close(void)
 	if (sdr) {
 		SoapySDRDevice_unmake(sdr);
 		sdr = NULL;
+		pthread_mutex_destroy(&timestamp_mutex);
 	}
 }
 
@@ -444,20 +482,28 @@ int soapy_send(float *buff, int num)
 		chunk = num;
 		if (chunk > tx_samps_per_buff)
 			chunk = tx_samps_per_buff;
-		/* create tx metadata */
+		/* write TX stream */
 		buffs_ptr[0] = buff;
-		count = SoapySDRDevice_writeStream(sdr, txStream, buffs_ptr, chunk, &flags, 0, 1000000);
+		if (use_time_stamps)
+			flags |= SOAPY_SDR_HAS_TIME;
+		count = SoapySDRDevice_writeStream(sdr, txStream, buffs_ptr, chunk, &flags, tx_timeNs, 1000000);
 		if (count <= 0) {
 			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamer (error=%d)\n", count);
 			break;
 		}
-
+		/* process TX time stamp */
+		if (!tx_valid)
+			PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX: tosend() was not called before, prease fix!\n");
+		else {
+			pthread_mutex_lock(&timestamp_mutex);
+			tx_timeNs += count * Ns_per_sample;
+			pthread_mutex_unlock(&timestamp_mutex);
+		}
+		/* increment transmit counters */
 		sent += count;
 		buff += count * 2;
 		num -= count;
 	}
-	/* increment tx counter */
-	tx_count += sent;
 
 	return sent;
 }
@@ -480,6 +526,23 @@ int soapy_receive(float *buff, int max)
 		buffs_ptr[0] = buff;
 		count = SoapySDRDevice_readStream(sdr, rxStream, buffs_ptr, rx_samps_per_buff, &flags, &timeNs, 0);
 		if (count > 0) {
+			if (!use_time_stamps || !(flags & SOAPY_SDR_HAS_TIME)) {
+				if (use_time_stamps) {
+					PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX: No time stamps available. This may cuse little gaps and problems with time slot based networks, like C-Netz.\n");
+					use_time_stamps = 0;
+				}
+				timeNs = rx_timeNs;
+			}
+			/* process RX time stamp */
+			if (!rx_valid) {
+				rx_timeNs = timeNs;
+				rx_valid = 1;
+			}
+			pthread_mutex_lock(&timestamp_mutex);
+			if (rx_timeNs != timeNs)
+				PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX overflow, seems we are too slow. Use lower SDR sample rate.\n");
+			rx_timeNs = timeNs + count * Ns_per_sample;
+			pthread_mutex_unlock(&timestamp_mutex);
 			/* commit received data to buffer */
 			got += count;
 			buff += count * 2;
@@ -489,8 +552,6 @@ int soapy_receive(float *buff, int max)
 			break;
 		}
 	}
-	/* update current rx time */
-	rx_count += got;
 
 	return got;
 }
@@ -500,24 +561,29 @@ int soapy_get_tosend(int latspl)
 {
 	int tosend;
 
-	/* we need the rx time stamp to determine how much data is already sent in advance */
-	if (rx_count == 0)
+	/* if no RX time stamp is set, we must wait until we receive a valid time stamp */
+	if (!rx_valid)
 		return 0;
 
-	/* if we have not yet sent any data, we set initial tx time stamp */
-	if (tx_count == 0)
-		tx_count = rx_count;
+	/* RX time stamp is valid the first time, set the TX time stamp in advance */
+	if (!tx_valid) {
+		tx_timeNs = rx_timeNs + latspl * Ns_per_sample;
+		tx_valid = 1;
+		return 0;
+	}
 
 	/* we check how advance our transmitted time stamp is */
-	tosend = latspl - (tx_count - rx_count);
-	/* in case of underrun: */
+	pthread_mutex_lock(&timestamp_mutex);
+	tosend = latspl - (tx_timeNs - rx_timeNs) / Ns_per_sample;
+	pthread_mutex_unlock(&timestamp_mutex);
+
+	/* in case of underrun */
 	if (tosend > latspl) {
-// It is normal that we have underruns, prior initial filling of buffer.
-// FIXME: better solution to detect underrun
-//		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun!\n");
-		tosend = 0;
-		tx_count = rx_count;
+		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
+		tosend = latspl;
 	}
+
+	/* race condition and routing errors may cause TX time stamps to be in advance of slightly more than latspl */
 	if (tosend < 0)
 		tosend = 0;
 

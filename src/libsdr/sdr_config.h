@@ -19,7 +19,7 @@ typedef struct sdr_config {
 	const char	*read_iq_tx_wave;
 	const char	*read_iq_rx_wave;
 	int		swap_links;		/* swap DL and UL frequency */
-	int		uhd_tx_timestamps;	/* use UHD time stamps */
+	int		timestamps;		/* use time stamps when transmitting */
 } sdr_config_t;
 
 extern sdr_config_t *sdr_config;

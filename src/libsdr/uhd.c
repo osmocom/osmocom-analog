@@ -28,9 +28,6 @@
 #include "../libdebug/debug.h"
 #include "../liboptions/options.h"
 
-/* use to TX time stamp */
-//#define TX_TIMESTAMP
-
 extern int sdr_rx_overflow;
 
 static uhd_usrp_handle		usrp = NULL;
@@ -50,14 +47,14 @@ static time_t			tx_time_secs = 0;
 static double			tx_time_fract_sec = 0.0;
 static int			tx_timestamps;
 
-int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, const char *clock_source, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth, int _tx_timestamps)
+int uhd_open(size_t channel, const char *_device_args, const char *_stream_args, const char *_tune_args, const char *tx_antenna, const char *rx_antenna, const char *clock_source, double tx_frequency, double rx_frequency, double lo_offset, double rate, double tx_gain, double rx_gain, double bandwidth, int timestamps)
 {
 	uhd_error error;
 	double got_frequency, got_rate, got_gain, got_bandwidth;
 	char got_antenna[64], got_clock[64];
 
 	samplerate = rate;
-	tx_timestamps = _tx_timestamps;
+	tx_timestamps = timestamps;
 
 	PDEBUG(DUHD, DEBUG_INFO, "Using device args \"%s\"\n", _device_args);
 	PDEBUG(DUHD, DEBUG_INFO, "Using stream args \"%s\"\n", _stream_args);
@@ -564,7 +561,7 @@ int uhd_send(float *buff, int num)
 
 		/* increment time stamp */
 		tx_time_fract_sec += (double)count / samplerate;
-		while (tx_time_fract_sec >= 1.0) {
+		if (tx_time_fract_sec >= 1.0) {
 			tx_time_secs++;
 			tx_time_fract_sec -= 1.0;
 		}
@@ -584,6 +581,8 @@ int uhd_receive(float *buff, int max)
     	void *buffs_ptr[1];
 	size_t got = 0, count;
 	uhd_error error;
+	bool has_time_spec;
+	int rc;
 
 	while (1) {
 		if (max < (int)rx_samps_per_buff) {
@@ -600,8 +599,24 @@ int uhd_receive(float *buff, int max)
 			break;
 		}
 		if (count) {
-			/* get time stamp of received RX packet */
-			uhd_rx_metadata_time_spec(rx_metadata, &rx_time_secs, &rx_time_fract_sec);
+			if (tx_timestamps) {
+				/* get time stamp of received RX packet */
+				rc = uhd_rx_metadata_has_time_spec(rx_metadata, &has_time_spec);
+				if (rc == 0 && has_time_spec)
+					rc = uhd_rx_metadata_time_spec(rx_metadata, &rx_time_secs, &rx_time_fract_sec);
+				if (rc < 0 || !has_time_spec) {
+					PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX: No time stamps available. This may cuse little gaps and problems with time slot based networks, like C-Netz.\n");
+					tx_timestamps = 0;
+				}
+			}
+			if (!tx_timestamps) {
+				/* increment time stamp */
+				rx_time_fract_sec += (double)count / samplerate;
+				if (rx_time_fract_sec >= 1.0) {
+					rx_time_secs++;
+					rx_time_fract_sec -= 1.0;
+				}
+			}
 			/* commit received data to buffer */
 			got += count;
 			buff += count * 2;
@@ -641,8 +656,10 @@ int uhd_get_tosend(int latspl)
 	/* we check how advance our transmitted time stamp is */
 	advance = ((double)tx_time_secs + tx_time_fract_sec) - ((double)rx_time_secs + rx_time_fract_sec);
 	/* in case of underrun: */
-	if (advance < 0)
+	if (advance < 0) {
+		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
 		advance = 0;
+	}
 	tosend = latspl - (int)(advance * samplerate);
 	if (tosend < 0)
 		tosend = 0;

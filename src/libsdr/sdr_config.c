@@ -41,6 +41,7 @@ void sdr_config_init(double lo_offset)
 	sdr_config->stream_args = "";
 	sdr_config->tune_args = "";
 	sdr_config->lo_offset = lo_offset;
+	sdr_config->timestamps = 1;
 
 	got_init = 1;
 }
@@ -92,10 +93,8 @@ void sdr_config_print_help(void)
 	printf("        Replace transmitted IQ data by given wave file.\n");
 	printf("    --sdr-swap-links\n");
 	printf("        Swap RX and TX frequencies for loopback tests over the air.\n");
-#ifdef HAVE_UHD
-	printf("    --sdr-uhd-tx-timestamps\n");
-	printf("        Use TX timestamps on UHD device. (May not work with some devices!)\n");
-#endif
+	printf("    --sdr-timestamps 1 | 0\n");
+	printf("        Use TX timestamps on UHD device. (default = %d)\n", sdr_config->timestamps);
 }
 
 void sdr_config_print_hotkeys(void)
@@ -124,7 +123,7 @@ void sdr_config_print_hotkeys(void)
 #define	OPT_READ_IQ_RX_WAVE	1516
 #define	OPT_READ_IQ_TX_WAVE	1517
 #define	OPT_SDR_SWAP_LINKS	1518
-#define	OPT_SDR_UHD_TX_TS	1519
+#define	OPT_SDR_TIMESTAMPS	1519
 
 void sdr_config_add_options(void)
 {
@@ -147,7 +146,7 @@ void sdr_config_add_options(void)
 	option_add(OPT_READ_IQ_RX_WAVE, "read-iq-rx-wave", 1);
 	option_add(OPT_READ_IQ_TX_WAVE, "read-iq-tx-wave", 1);
 	option_add(OPT_SDR_SWAP_LINKS, "sdr-swap-links", 0);
-	option_add(OPT_SDR_UHD_TX_TS, "sdr-uhd-tx-timestamps", 0);
+	option_add(OPT_SDR_TIMESTAMPS, "sdr-timestamps", 1);
 }
 
 int sdr_config_handle_options(int short_option, int argi, char **argv)
@@ -222,8 +221,8 @@ int sdr_config_handle_options(int short_option, int argi, char **argv)
 	case OPT_SDR_SWAP_LINKS:
 		sdr_config->swap_links = 1;
 		break;
-	case OPT_SDR_UHD_TX_TS:
-		sdr_config->uhd_tx_timestamps = 1;
+	case OPT_SDR_TIMESTAMPS:
+		sdr_config->timestamps = atoi(argv[argi]);
 		break;
 	default:
 		return -EINVAL;
@@ -256,5 +255,4 @@ int sdr_configure(int samplerate)
 	/* sdr selected -> return 1 */
 	return 1;
 }
-
 
