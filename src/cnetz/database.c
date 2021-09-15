@@ -63,7 +63,7 @@ static void remove_db(cnetz_db_t *db)
 	}
 	*dbp = db->next;
 
-	PDEBUG(DDB, DEBUG_INFO, "Removing subscriber '%d,%d,%d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	PDEBUG(DDB, DEBUG_INFO, "Removing subscriber '%d,%d,%05d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 
 	timer_exit(&db->timer);
 
@@ -76,7 +76,7 @@ static void db_timeout(struct timer *timer)
 	cnetz_db_t *db = (cnetz_db_t *)timer->priv;
 	int rc;
 
-	PDEBUG(DDB, DEBUG_INFO, "Check, if subscriber '%d,%d,%d' is still available.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	PDEBUG(DDB, DEBUG_INFO, "Check, if subscriber '%d,%d,%05d' is still available.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	
 	rc = cnetz_meldeaufruf(db->futln_nat, db->futln_fuvst, db->futln_rest);
 	if (rc < 0) {
@@ -121,7 +121,7 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 			dbp = &((*dbp)->next);
 		*dbp = db;
 
-		PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%05d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	}
 
 	if (futelg_bit && *futelg_bit >= 0)
@@ -131,15 +131,15 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 		db->extended = *extended;
 
 	if (busy) {
-		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%d' busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		timer_stop(&db->timer);
 	} else if (!failed) {
-		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%d' idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		timer_start(&db->timer, MELDE_INTERVAL); /* when to check avaiability (again) */
 		db->retry = 0;
 	} else {
 		db->retry++;
-		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%d' failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->retry, MELDE_MAXIMAL);
+		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->retry, MELDE_MAXIMAL);
 		if (db->retry == MELDE_MAXIMAL) {
 			remove_db(db);
 			return db->extended;
@@ -190,7 +190,7 @@ void dump_db(void)
 	}
 
 	while (db) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - Subscriber '%d,%d,%d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		PDEBUG(DDB, DEBUG_NOTICE, " - Subscriber '%d,%d,%05d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		db = db->next;
 	}
 }

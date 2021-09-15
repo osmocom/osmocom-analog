@@ -646,7 +646,7 @@ inval:
 	PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
-	trans = create_transaction(cnetz, (spk) ? TRANS_VAK : TRANS_WSK, dialing[0] - '0', dialing[1] - '0', atoi(dialing + 2), -1, -1);
+	trans = create_transaction(cnetz, (spk) ? TRANS_VAK : TRANS_WSK, futln_nat, futln_fuvst, futln_rest, -1, -1);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
