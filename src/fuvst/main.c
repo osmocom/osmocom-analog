@@ -40,6 +40,7 @@ static uint8_t sio = 0xcd;
 static uint16_t uele_pc = 1400;
 static uint16_t fuko_pc = 1466;
 static int ignore_link_monitor = 0;
+static const char *config_name;
 static int config_loaded = 0;
 double gebuehren = 12.0;
 int authentication = 0;
@@ -141,7 +142,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		ignore_link_monitor = 1;
 		break;
 	case 'C':
-		rc = config_file(argv[argi]);
+		rc = config_file(config_name = argv[argi]);
 		if (rc < 0)
 			return rc;
 		config_loaded = 1;
@@ -258,12 +259,16 @@ int main(int argc, char *argv[])
 #endif
 
 	printf("\n");
+	printf("FUVST ready.\n");
 	for (i = 0; i < num_kanal; i++) {
 		if (chan_type[i] == CHAN_TYPE_ZZK)
 			printf("Using Signaling Channel: ZZK-%s\n", kanal[i]);
 		if (chan_type[i] == CHAN_TYPE_SPK)
 			printf("Using Speech Channel:    SPK-%s\n", kanal[i]);
 	}
+	printf("Point codes: BS=%d (FUKO/FUFST) MSC=%d (FUVST)\n", fuko_pc, uele_pc);
+	if (config_loaded)
+		printf("BS-Config: %s\n", config_name);
 
 	main_mobile("fuvst", &quit, latency, interval, NULL, station_id, 7);
 fail:
