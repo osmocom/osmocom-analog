@@ -50,7 +50,7 @@ static double detector_test_length_3 = 0.0;
 
 void print_help(const char *arg0)
 {
-	main_mobile_print_help(arg0, "-b 5 ");
+	main_mobile_print_help(arg0, "-b 5 -i 0.1 ");
 	/*      -                                                                             - */
 	printf(" -S --squelch <dB> | auto\n");
 	printf("        Use given RF level to detect loss of signal. When the signal gets lost\n");
@@ -199,14 +199,14 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -226,10 +226,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "*******************************************************************************\n");
 	}
 
-	if (mode == MODE_IMTS && !fast_seize && latency > 5 && loopback == 0) {
+	if (mode == MODE_IMTS && !fast_seize && dsp_buffer > 5 && loopback == 0) {
 		fprintf(stderr, "*******************************************************************************\n");
 		fprintf(stderr, "It is required to have a low latency in order to respond to phone's seizure\n");
-		fprintf(stderr, "fast enough! Please reduce buffer size to 5 ms via option: '-b 5'\n");
+		fprintf(stderr, "fast enough! Please reduce buffer size to 5 ms via option: '-b 5 -i 0.1'\n");
 		fprintf(stderr, "If this causes buffer underruns, use the 'Fast Seize' mode, see help.\n");
 		fprintf(stderr, "*******************************************************************************\n");
 		exit(0);
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = imts_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, ptt, station_length, fast_seize, mode, operator, detector_test_length_1, detector_test_length_2, detector_test_length_3);
+		rc = imts_create(kanal[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, ptt, station_length, fast_seize, mode, operator, detector_test_length_1, detector_test_length_2, detector_test_length_3);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], imts_channel2freq(kanal[i], 0) / 1e6, imts_channel2freq(kanal[i], 1) / 1e6, imts_channel2freq(kanal[i], 2) / 1e6);
 	}
 
-	main_mobile((mode == MODE_IMTS) ? "imts" : "mts", &quit, latency, interval, NULL, station_id, station_length);
+	main_mobile((mode == MODE_IMTS) ? "imts" : "mts", &quit, NULL, station_id, station_length);
 
 fail:
 	/* destroy transceiver instance */

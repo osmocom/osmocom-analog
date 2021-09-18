@@ -71,7 +71,7 @@ typedef struct console {
 	char audiodev[64];	/* headphone interface, if used */
 	int samplerate;		/* sample rate of headphone interface */
 	void *sound;		/* headphone interface */
-	int latspl;		/* sample latency at headphone interface */
+	int buffer_size;	/* sample buffer size at headphone interface */
 	samplerate_t srstate;	/* patterns/announcement upsampling */
 	jitter_t dejitter;	/* headphone audio dejittering */
 	int test_audio_pos;	/* position for test tone toward mobile */
@@ -358,7 +358,7 @@ static void _print_console_text(void)
 	printf("\033[0;39m");
 }
 
-int console_init(const char *station_id, const char *audiodev, int samplerate, int latency, int num_digits, int loopback, int echo_test, const char *digits)
+int console_init(const char *station_id, const char *audiodev, int samplerate, int buffer, int num_digits, int loopback, int echo_test, const char *digits)
 {
 	int rc = 0;
 
@@ -372,7 +372,7 @@ int console_init(const char *station_id, const char *audiodev, int samplerate, i
 		strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
 	strncpy(console.audiodev, audiodev, sizeof(console.audiodev) - 1);
 	console.samplerate = samplerate;
-	console.latspl = latency * samplerate / 1000;
+	console.buffer_size = buffer * samplerate / 1000;
 	console.num_digits = num_digits;
 	console.loopback = loopback;
 	console.echo_test = echo_test;
@@ -400,7 +400,7 @@ error:
 	return rc;
 }
 
-int console_open_audio(int __attribute__((unused)) latspl)
+int console_open_audio(int __attribute__((unused)) buffer_size, double __attribute__((unused)) interval)
 {
 	if (!console.audiodev[0])
 		return 0;
@@ -408,7 +408,7 @@ int console_open_audio(int __attribute__((unused)) latspl)
 #ifdef HAVE_ALSA
 	/* open sound device for call control */
 	/* use factor 1.4 of speech level for complete range of sound card */
-	console.sound = sound_open(console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, latspl, 1.4, 4000.0, 2.0);
+	console.sound = sound_open(console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, buffer_size, interval, 1.4, 4000.0, 2.0);
 	if (!console.sound) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
 		return -EIO;
@@ -547,12 +547,12 @@ void process_console(int c)
 
 #ifdef HAVE_ALSA
 	/* handle audio, if sound device is used */
-	sample_t samples[console.latspl + 10], *samples_list[1];
+	sample_t samples[console.buffer_size + 10], *samples_list[1];
 	uint8_t *power_list[1];
 	int count;
 	int rc;
 
-	count = sound_get_tosend(console.sound, console.latspl);
+	count = sound_get_tosend(console.sound, console.buffer_size);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE)
@@ -572,7 +572,7 @@ void process_console(int c)
 		}
 	}
 	samples_list[0] = samples;
-	count = sound_read(console.sound, samples_list, console.latspl, 1, NULL);
+	count = sound_read(console.sound, samples_list, console.buffer_size, 1, NULL);
 	if (count < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)

@@ -146,7 +146,7 @@ void mpt1327_channel_list(void);
 int mpt1327_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum mpt1327_chan_type chan_type);
 const char *chan_type_long_name(enum mpt1327_chan_type chan_type);
-int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db);
+int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db);
 void mpt1327_check_channels(void);
 void mpt1327_destroy(sender_t *sender);
 void mpt1327_receive_codeword(mpt1327_t *mpt1327, uint64_t bits, double quality, double level);

@@ -264,7 +264,7 @@ int cnetz_init(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *audiodev, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, double tx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double speech_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
+int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *device, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, double tx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double speech_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -304,7 +304,7 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		cnetz = (cnetz_t *)sender;
-		if (!!strcmp(sender->audiodev, audiodev)) {
+		if (!!strcmp(sender->device, device)) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "To be able to sync multiple channels, all channels must be on the same sound device!\n");
 			return -EINVAL;
 		}
@@ -320,7 +320,7 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by cnetz code, not by common sender code */
-	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(atoi(kanal), 0), cnetz_kanal2freq(atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(atoi(kanal), 0), cnetz_kanal2freq(atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

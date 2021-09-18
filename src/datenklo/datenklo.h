@@ -19,7 +19,7 @@ typedef struct datenklo {
 	double		force_tx_baud, force_rx_baud; /* override IOCTL */
 	int		tx_back, rx_back;	/* set if back channel is used for path */
 	int		samplerate;		/* audio sample rate */
-	int		latspl;			/* latenc */
+	int		buffer_size;		/* audio buffer size */
 	int		loopback;		/* loopback mode */
 
 	/* states */
@@ -86,7 +86,7 @@ typedef struct datenklo {
 
 void datenklo_main(datenklo_t *datenklo, int loopback);
 int datenklo_init(datenklo_t *datenklo, const char *dev_name, enum am791x_type am791x_type, uint8_t mc, int auto_rts, double force_tx_baud, double force_rx_baud, int samplerate, int loopback);
-int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int latency, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave);
+int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int buffer, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave);
 void datenklo_exit(datenklo_t *datenklo);
 void datenklo_init_global(void);
 

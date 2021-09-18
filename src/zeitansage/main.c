@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	fm_init(fast_math);
 	zeit_init(audio_level_dBm, alerting);
 
-	main_mobile("zeitansage", &quit, latency, interval, NULL, "1191", 4);
+	main_mobile("zeitansage", &quit, NULL, "1191", 4);
 
 //fail:
 	/* exits */

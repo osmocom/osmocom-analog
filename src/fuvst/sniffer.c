@@ -198,17 +198,17 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
-	if (num_audiodev <= 1)
-		audiodev[1] = audiodev[0];
+	if (num_device <= 1)
+		dsp_device[1] = dsp_device[0];
 	for (i = 0; i < num_kanal; i++) {
-		PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'Sniffer' instance for 'Kanal' = %s (sample rate %d).\n", kanal[i], samplerate);
+		PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'Sniffer' instance for 'Kanal' = %s (sample rate %d).\n", kanal[i], dsp_samplerate);
 
 		sniffer = calloc(1, sizeof(sniffer_t));
 		if (!sniffer) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "No memory!\n");
 			goto fail;
 		}
-		rc = sender_create(&sniffer->sender, kanal[i], 131, 131, audiodev[i], 0, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+		rc = sender_create(&sniffer->sender, kanal[i], 131, 131, dsp_device[i], 0, dsp_samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sniffer\" instance. Quitting!\n");
 			goto fail;
@@ -220,12 +220,12 @@ int main(int argc, char *argv[])
 
 		sender_set_fm(&sniffer->sender, 1.0, 4000.0, 1.0, 1.0);
 
-		rc = v27_modem_init(&sniffer->modem, sniffer, send_bit, receive_bit, samplerate, 1);
+		rc = v27_modem_init(&sniffer->modem, sniffer, send_bit, receive_bit, dsp_samplerate, 1);
 		if (rc < 0)
 			goto fail;
 	}
 
-	main_mobile(NULL, &quit, latency, interval, NULL, NULL, 0);
+	main_mobile(NULL, &quit, NULL, NULL, 0);
 
 fail:
 	/* destroy transceiver instance */

@@ -154,7 +154,7 @@ static void bnetz_timeout(struct timer *timer);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
-int bnetz_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering)
+int bnetz_create(const char *kanal, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering)
 {
 	bnetz_t *bnetz;
 	enum paging_signal paging_signal = PAGING_SIGNAL_NONE;
@@ -220,7 +220,7 @@ error_paging:
 	PDEBUG(DBNETZ, DEBUG_DEBUG, "Creating 'B-Netz' instance for 'Kanal' = %s 'Gruppenfreisignal' = %d (sample rate %d).\n", kanal, gfs, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(atoi(kanal), 0), bnetz_kanal2freq(atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, paging_signal);
+	rc = sender_create(&bnetz->sender, kanal, bnetz_kanal2freq(atoi(kanal), 0), bnetz_kanal2freq(atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, paging_signal);
 	if (rc < 0) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

@@ -580,7 +580,7 @@ static void mpt1327_new_state(mpt1327_t *mpt1327, enum mpt1327_state new_state, 
 static void mpt1327_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db)
+int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db)
 {
 	sender_t *sender;
 	mpt1327_t *mpt1327;
@@ -607,7 +607,7 @@ int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_
 	PDEBUG(DMPT1327, DEBUG_DEBUG, "Creating 'MPT1327' instance for Channel %s on Band %s (sample rate %d).\n", kanal, mpt1327_band_def[band].name, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&mpt1327->sender, kanal, mpt1327_channel2freq(band, atoi(kanal), 0), mpt1327_channel2freq(band, atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&mpt1327->sender, kanal, mpt1327_channel2freq(band, atoi(kanal), 0), mpt1327_channel2freq(band, atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DMPT1327, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

@@ -161,14 +161,14 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = anetz_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, operator);
+		rc = anetz_create(kanal[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, page_gain, page_sequence, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, operator);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], anetz_kanal2freq(atoi(kanal[i]), 0) / 1e6, anetz_kanal2freq(atoi(kanal[i]), 1) / 1e6, anetz_kanal2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
-	main_mobile("anetz", &quit, latency, interval, NULL, station_id, 5);
+	main_mobile("anetz", &quit, NULL, station_id, 5);
 
 fail:
 	/* destroy transceiver instance */

@@ -38,7 +38,7 @@ int cant_recover = 0;
 int check_channel = 1;
 
 /* Init transceiver instance and link to list of transceivers. */
-int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal)
+int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal)
 {
 	sender_t *master, *slave;
 	int rc = 0;
@@ -46,7 +46,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 	sender->kanal = kanal;
 	sender->sendefrequenz = sendefrequenz;
 	sender->empfangsfrequenz = (loopback) ? sendefrequenz : empfangsfrequenz;
-	strncpy(sender->audiodev, audiodev, sizeof(sender->audiodev) - 1);
+	strncpy(sender->device, device, sizeof(sender->device) - 1);
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
 	sender->tx_gain = tx_gain;
@@ -90,7 +90,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 			PDEBUG(DSENDER, DEBUG_NOTICE, "Please use at least one channel distance to avoid that.\n");
 			PDEBUG(DSENDER, DEBUG_NOTICE, "------------------------------------------------------------------------\n");
 		}
-		if (!strcmp(master->audiodev, audiodev))
+		if (!strcmp(master->device, device))
 			break;
 	}
 	if (master) {
@@ -169,7 +169,7 @@ error:
 	return rc;
 }
 
-int sender_open_audio(int latspl)
+int sender_open_audio(int buffer_size, double interval)
 {
 	sender_t *master, *inst;
 	int channels;
@@ -226,7 +226,7 @@ int sender_open_audio(int latspl)
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->audiodev, tx_f, rx_f, am, channels, paging_frequency, master->samplerate, latspl, (master->max_deviation) ?: 1.0, master->max_modulation, master->modulation_index);
+		master->audio = master->audio_open(master->device, tx_f, rx_f, am, channels, paging_frequency, master->samplerate, buffer_size, interval, (master->max_deviation) ?: 1.0, master->max_modulation, master->modulation_index);
 		if (!master->audio) {
 			PDEBUG(DSENDER, DEBUG_ERROR, "No device for transceiver!\n");
 			return -EIO;
@@ -321,7 +321,7 @@ static void gain_samples(sample_t *samples, int length, double gain)
 }
 
 /* Handle audio streaming of one transceiver. */
-void process_sender_audio(sender_t *sender, int *quit, int latspl)
+void process_sender_audio(sender_t *sender, int *quit, int buffer_size)
 {
 	sender_t *inst;
 	int rc, count;
@@ -332,8 +332,8 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
-	sample_t buff[num_chan][latspl], *samples[num_chan];
-	uint8_t pbuff[num_chan][latspl], *power[num_chan];
+	sample_t buff[num_chan][buffer_size], *samples[num_chan];
+	uint8_t pbuff[num_chan][buffer_size], *power[num_chan];
 	enum paging_signal paging_signal[num_chan];
 	int on[num_chan];
 	double rf_level_db[num_chan];
@@ -345,7 +345,7 @@ void process_sender_audio(sender_t *sender, int *quit, int latspl)
 #ifdef DEBUG_TIME_CONSUMPTION
 	t1 = get_time();
 #endif
-	count = sender->audio_get_tosend(sender->audio, latspl);
+	count = sender->audio_get_tosend(sender->audio, buffer_size);
 	if (count < 0) {
 		PDEBUG_CHAN(DSENDER, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE) {
@@ -364,8 +364,8 @@ cant_recover:
 #endif
 	if (count > 0) {
 		/* limit to our buffer */
-		if (count > latspl)
-			count = latspl;
+		if (count > buffer_size)
+			count = buffer_size;
 		/* loop through all channels */
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
 			/* load TX data from audio loop or from sender instance */
@@ -414,7 +414,7 @@ cant_recover:
 	t3 = get_time();
 #endif
 
-	count = sender->audio_read(sender->audio, samples, latspl, num_chan, rf_level_db);
+	count = sender->audio_read(sender->audio, samples, buffer_size, num_chan, rf_level_db);
 	if (count < 0) {
 		/* special case when audio_read wants us to quit */
 		if (count == -EPERM) {

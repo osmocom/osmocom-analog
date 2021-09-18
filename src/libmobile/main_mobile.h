@@ -2,13 +2,13 @@
 extern int num_kanal;
 extern const char *kanal[];
 extern int swap_links;
-extern int num_audiodev;
-extern const char *audiodev[];
+extern int num_device;
 extern int allow_sdr;
 extern int use_sdr;
-extern int samplerate;
-extern int interval;
-extern int latency;
+extern const char *dsp_device[];
+extern int dsp_samplerate;
+extern double dsp_interval;
+extern int dsp_buffer;
 extern int uses_emphasis;
 extern int do_pre_emphasis;
 extern int do_de_emphasis;
@@ -42,7 +42,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv);
 extern int quit;
 void sighandler(int sigset);
 
-void main_mobile(const char *name, int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits);
+void main_mobile(const char *name, int *quit, void (*myhandler)(void), const char *station_id, int station_id_digits);
 
 void dump_info(void);
 

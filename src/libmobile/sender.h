@@ -43,8 +43,8 @@ typedef struct sender {
 
 	/* audio */
 	void			*audio;
-	char			audiodev[64];		/* audio device name (alsa or sdr) */
-	void			*(*audio_open)(const char *, double *, double *, int *, int, double, int, int, double, double, double);
+	char			device[64];		/* audio device name (alsa or sdr) */
+	void			*(*audio_open)(const char *, double *, double *, int *, int, double, int, int, double, double, double, double);
 	int 			(*audio_start)(void *);
 	void 			(*audio_close)(void *);
 	int			(*audio_write)(void *, sample_t **, uint8_t **, int, enum paging_signal *, int *, int);
@@ -93,13 +93,13 @@ extern sender_t *sender_head;
 extern int cant_recover;
 extern int check_channel;
 
-int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal);
+int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, double empfangsfrequenz, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, enum paging_signal paging_signal);
 void sender_destroy(sender_t *sender);
 void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation, double speech_deviation, double max_display);
 void sender_set_am(sender_t *sender, double max_modulation, double speech_deviation, double max_display, double modulation_index);
-int sender_open_audio(int latspl);
+int sender_open_audio(int buffer_size, double interval);
 int sender_start_audio(void);
-void process_sender_audio(sender_t *sender, int *quit, int latspl);
+void process_sender_audio(sender_t *sender, int *quit, int buffer_size);
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int count);
 void sender_receive(sender_t *sender, sample_t *samples, int count, double rf_level_db);
 void sender_paging(sender_t *sender, int on);

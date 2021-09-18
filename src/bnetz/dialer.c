@@ -42,10 +42,10 @@
 char start_digit = 's';
 const char *station_id = "50993";
 const char *dialing;
-const char *audiodev = "hw:0,0";
-int samplerate = 48000;
+const char *dsp_audiodev = "hw:0,0";
+int dsp_samplerate = 48000;
 const char *write_tx_wave = NULL;
-int latency = 50;
+int dsp_buffer = 50;
 
 /* states */
 enum tx_mode {
@@ -58,7 +58,6 @@ char funkwahl[128];
 int digit_pos = 0;
 const char *tx_telegramm = NULL;
 int tx_telegramm_pos = 0;
-int latspl;
 
 /* instances */
 fsk_mod_t fsk_mod;
@@ -90,10 +89,10 @@ static void print_help(const char *arg0)
 	printf("        5 Digits of ID of mobile station (default = '%s')\n", station_id);
 #ifdef HAVE_ALSA
 	printf(" -a --audio-device hw:<card>,<device>\n");
-	printf("        Sound card and device number (default = '%s')\n", audiodev);
+	printf("        Sound card and device number (default = '%s')\n", dsp_audiodev);
 #endif
 	printf(" -s --samplerate <rate>\n");
-	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
+	printf("        Sample rate of sound device (default = '%d')\n", dsp_samplerate);
 	printf(" -w --write-tx-wave <file>\n");
 	printf("        Write audio to given wave file also.\n");
 	printf(" -g --gebuehenimpuls\n");
@@ -128,10 +127,10 @@ static int handle_options(int short_option, int __attribute__((unused)) argi, ch
 		station_id = options_strdup(argv[argi]);
 		break;
 	case 'a':
-		audiodev = options_strdup(argv[argi]);
+		dsp_audiodev = options_strdup(argv[argi]);
 		break;
 	case 's':
-		samplerate = atoi(argv[argi]);
+		dsp_samplerate = atoi(argv[argi]);
 		break;
 	case 'w':
 		write_tx_wave = options_strdup(argv[argi]);
@@ -216,7 +215,7 @@ again:
 	case TX_MODE_SILENCE:
 		memset(samples, 0, length * sizeof(*samples));
 		tx_silence_count += length;
-		if (tx_silence_count >= (int)((double)samplerate * MAX_PAUSE)) {
+		if (tx_silence_count >= (int)((double)dsp_samplerate * MAX_PAUSE)) {
 			if (funkwahl[digit_pos])
 				tx_mode = TX_MODE_FSK;
 			else
@@ -239,18 +238,18 @@ again:
 /* loop that gets audio from encoder and forwards it to sound card.
  * alternatively a sound file is written.
  */
-static void process_signal(void)
+static void process_signal(int buffer_size)
 {
-	sample_t buff[latspl], *samples[1] = { buff };
-        uint8_t pbuff[latspl], *power[1] = { pbuff };
+	sample_t buff[buffer_size], *samples[1] = { buff };
+        uint8_t pbuff[buffer_size], *power[1] = { pbuff };
 	int count;
 	int __attribute__((unused)) rc;
 
 	while (tx_mode != TX_MODE_DONE) {
 #ifdef HAVE_ALSA
-		count = sound_get_tosend(audio, latspl);
+		count = sound_get_tosend(audio, buffer_size);
 #else
-		count = samplerate / 1000;
+		count = dsp_samplerate / 1000;
 #endif
 		if (count < 0) {
 			PDEBUG(DDSP, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
@@ -282,13 +281,14 @@ int main(int argc, char *argv[])
 {
 	int i;
 	int rc, argi;
+	int buffer_size;
 
 	/* init */
 	bnetz_init_telegramm();
 	memset(&fsk_mod, 0, sizeof(fsk_mod));
 
-	/* latency of send buffer in samples */
-	latspl = samplerate * latency / 1000;
+	/* size of send buffer in samples */
+	buffer_size = dsp_samplerate * dsp_buffer / 1000;
 
 	/* handle options / config file */
 	add_options();
@@ -339,14 +339,14 @@ int main(int argc, char *argv[])
 	sprintf(funkwahl, "wwww%c%s%se%c%s%se", start_digit, station_id, dialing + 1, start_digit, station_id, dialing + 1);
 
 	/* init fsk */
-	if (fsk_mod_init(&fsk_mod, NULL, fsk_send_bit, samplerate, BIT_RATE, F0, F1, 1.0, 0, 0) < 0) {
+	if (fsk_mod_init(&fsk_mod, NULL, fsk_send_bit, dsp_samplerate, BIT_RATE, F0, F1, 1.0, 0, 0) < 0) {
 		PDEBUG(DDSP, DEBUG_ERROR, "FSK init failed!\n");
 		goto exit;
 	}
 
 #ifdef HAVE_ALSA
 	/* init sound */
-	audio = sound_open(audiodev, NULL, NULL, NULL, 1, 0.0, samplerate, latspl, 1.0, 4000.0, 2.0);
+	audio = sound_open(dsp_audiodev, NULL, NULL, NULL, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 1.0, 4000.0, 2.0);
 	if (!audio) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "No sound device!\n");
 		goto exit;
@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
 
 	/* open wave */
 	if (write_tx_wave) {
-		rc = wave_create_record(&wave_tx_rec, write_tx_wave, samplerate, 1, 1.0);
+		rc = wave_create_record(&wave_tx_rec, write_tx_wave, dsp_samplerate, 1, 1.0);
 		if (rc < 0) {
 			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto exit;
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
 
 	PDEBUG(DBNETZ, DEBUG_ERROR, "Start audio after pause...\n");
 
-	process_signal();
+	process_signal(buffer_size);
 
 exit:
 	/* close wave */

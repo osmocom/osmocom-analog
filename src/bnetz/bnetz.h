@@ -113,7 +113,7 @@ typedef struct bnetz {
 
 double bnetz_kanal2freq(int kanal, int unterband);
 int bnetz_init(void);
-int bnetz_create(const char *kanal, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering);
+int bnetz_create(const char *kanal, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int gfs, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, const char *paging, int metering);
 void bnetz_destroy(sender_t *sender);
 void bnetz_loss_indication(bnetz_t *bnetz, double loss_time);
 void bnetz_receive_tone(bnetz_t *bnetz, int bit);

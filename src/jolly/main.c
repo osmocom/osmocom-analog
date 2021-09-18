@@ -154,14 +154,14 @@ int main(int argc, char *argv[])
 		mandatory = 1;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -185,12 +185,12 @@ int main(int argc, char *argv[])
 
 	/* inits */
 	fm_init(fast_math);
-	init_voice(samplerate);
+	init_voice(dsp_samplerate);
 	dsp_init();
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = jolly_create(kanal[i], dl_freq, ul_freq, step, audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, nbfm, repeater);
+		rc = jolly_create(kanal[i], dl_freq, ul_freq, step, dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, nbfm, repeater);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 		printf("base station on channel %s ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.4f MHz offset)\n", kanal[i], dl_freq + step / 1e3 * (double)atoi(kanal[i]), ul_freq + step / 1e3 * (double)atoi(kanal[i]), ul_freq - dl_freq);
 	}
 
-	main_mobile("jollycom", &quit, latency, interval, NULL, station_id, 4);
+	main_mobile("jollycom", &quit, NULL, station_id, 4);
 
 fail:
 	/* destroy transceiver instance */

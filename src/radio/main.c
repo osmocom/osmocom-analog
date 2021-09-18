@@ -48,8 +48,8 @@ int fast_math = 0;
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
 static double frequency = 0.0;
-static int samplerate = 100000;
-static int latency = 30;
+static int dsp_samplerate = 100000;
+static int dsp_buffer = 30;
 static const char *tx_wave_file = NULL;
 static const char *rx_wave_file = NULL;
 static const char *tx_audiodev = NULL;
@@ -114,7 +114,7 @@ void print_help(const char *arg0)
 	printf(" -f --frequency <frequency>\n");
 	printf("        Give frequency in Hertz.\n");
 	printf(" -s --samplerate <sample rate>\n");
-	printf("        Give signal processing sample rate in Hz. (default = %d)\n", samplerate);
+	printf("        Give signal processing sample rate in Hz. (default = %d)\n", dsp_samplerate);
 	printf("        This sample rate must be high enough for the signal's spectrum to fit.\n");
 	printf("        I will inform you, if this bandwidth is too low.\n");
 	printf(" -r --tx-wave-file <filename>\n");
@@ -194,7 +194,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		frequency = atof(argv[argi]);
 		break;
 	case 's':
-		samplerate = atof(argv[argi]);
+		dsp_samplerate = atof(argv[argi]);
 		break;
 	case 'r':
 		tx_wave_file = options_strdup(argv[argi]);
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 	radio_t radio;
 	struct termios term, term_orig;
 	int c;
-	int latspl;
+	int buffer_size;
 
 	debuglevel = 0;
 
@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 	fm_init(fast_math);
 	am_init(fast_math);
 
-	rc = sdr_configure(samplerate);
+	rc = sdr_configure(dsp_samplerate);
 	if (rc < 0)
 		return rc;
 	if (rc == 0) {
@@ -358,10 +358,10 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	/* now we have latency and sample rate */
-	latspl = samplerate * latency / 1000;
+	/* now we have buffer size and sample rate */
+	buffer_size = dsp_samplerate * dsp_buffer / 1000;
 
-	rc = radio_init(&radio, latspl, samplerate, frequency, tx_wave_file, rx_wave_file, (tx) ? tx_audiodev : NULL, (rx) ? rx_audiodev : NULL, modulation, bandwidth, deviation, modulation_index, time_constant_us, volume, stereo, rds, rds2);
+	rc = radio_init(&radio, buffer_size, dsp_samplerate, frequency, tx_wave_file, rx_wave_file, (tx) ? tx_audiodev : NULL, (rx) ? rx_audiodev : NULL, modulation, bandwidth, deviation, modulation_index, time_constant_us, volume, stereo, rds, rds2);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialize radio with given options, exitting!\n");
 		exit(0);
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 	void *sdr = NULL;
 	float *sendbuff = NULL;
 
-	sendbuff = calloc(latspl * 2, sizeof(*sendbuff));
+	sendbuff = calloc(buffer_size * 2, sizeof(*sendbuff));
 	if (!sendbuff) {
 		fprintf(stderr, "No mem!\n");
 		goto error;
@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 	tx_frequencies[0] = frequency;
 	rx_frequencies[0] = frequency;
 	am[0] = 0;
-	sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, samplerate, latspl, 0.0, 0.0, 0.0);
+	sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
 	if (!sdr)
 		goto error;
 	sdr_start(sdr);
@@ -422,15 +422,15 @@ int main(int argc, char *argv[])
 	int tosend, got;
 	while (!quit) {
 		usleep(1000);
-		got = sdr_read(sdr, (void *)sendbuff, latspl, 0, NULL);
+		got = sdr_read(sdr, (void *)sendbuff, buffer_size, 0, NULL);
 		if (rx) {
 			got = radio_rx(&radio, sendbuff, got);
 			if (got < 0)
 				break;
 		}
-		tosend = sdr_get_tosend(sdr, latspl);
-		if (tosend > latspl / 10)
-			tosend = latspl / 10;
+		tosend = sdr_get_tosend(sdr, buffer_size);
+		if (tosend > buffer_size / 10)
+			tosend = buffer_size / 10;
 		if (tosend == 0) {
 			continue;
 		}

@@ -27,9 +27,9 @@
  *
  * If a RX time stamp is valid and first chunk is to be transmitted (tosend()
  * is called), TX time stamp becomes valid and is set to RX time stamp, but
- * advanced by the duration of the latency (latspl). tosend() always returns
+ * advanced by the duration of the buffer size. tosend() always returns
  * the number of samples that are needed, to make TX time stamp advance RX time
- * stamp by given latency.
+ * stamp by given buffer size.
  *
  * If chunk is transmitted to SDR, the TX time stamp is advanced by the
  * duration of the transmitted chunk.
@@ -557,7 +557,7 @@ int soapy_receive(float *buff, int max)
 }
 
 /* estimate number of samples that can be sent */
-int soapy_get_tosend(int latspl)
+int soapy_get_tosend(int buffer_size)
 {
 	int tosend;
 
@@ -567,23 +567,23 @@ int soapy_get_tosend(int latspl)
 
 	/* RX time stamp is valid the first time, set the TX time stamp in advance */
 	if (!tx_valid) {
-		tx_timeNs = rx_timeNs + latspl * Ns_per_sample;
+		tx_timeNs = rx_timeNs + buffer_size * Ns_per_sample;
 		tx_valid = 1;
 		return 0;
 	}
 
 	/* we check how advance our transmitted time stamp is */
 	pthread_mutex_lock(&timestamp_mutex);
-	tosend = latspl - (tx_timeNs - rx_timeNs) / Ns_per_sample;
+	tosend = buffer_size - (tx_timeNs - rx_timeNs) / Ns_per_sample;
 	pthread_mutex_unlock(&timestamp_mutex);
 
 	/* in case of underrun */
-	if (tosend > latspl) {
+	if (tosend > buffer_size) {
 		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
-		tosend = latspl;
+		tosend = buffer_size;
 	}
 
-	/* race condition and routing errors may cause TX time stamps to be in advance of slightly more than latspl */
+	/* race condition and routing errors may cause TX time stamps to be in advance of slightly more than buffer_size */
 	if (tosend < 0)
 		tosend = 0;
 

@@ -24,7 +24,7 @@ enum audio_mode {
 
 typedef struct radio {
 	/* modes */
-	int		latspl;			/* maximum number of samples */
+	int		buffer_size;		/* maximum number of samples */
 	enum modulation	modulation;		/* modulation type */
 	enum audio_mode	tx_audio_mode;		/* mode for audio source */
 	enum audio_mode	rx_audio_mode;		/* mode for audio sink */
@@ -81,7 +81,7 @@ typedef struct radio {
 	sample_t	*carrier_buffer;
 } radio_t;
 
-int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant, double volume, int stereo, int rds, int rds2);
+int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant, double volume, int stereo, int rds, int rds2);
 void radio_exit(radio_t *radio);
 int radio_start(radio_t *radio);
 int radio_tx(radio_t *radio, float *baseband, int num);

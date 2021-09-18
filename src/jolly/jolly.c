@@ -209,7 +209,7 @@ static void jolly_speech_timeout(struct timer *timer);
 static void jolly_go_idle(jolly_t *jolly);
 
 /* Create transceiver instance and link to a list. */
-int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int nbfm, int repeater)
+int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int nbfm, int repeater)
 {
 	jolly_t *jolly;
 	int rc;
@@ -226,7 +226,7 @@ int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step,
 	ul_freq = ul_freq * 1e6 + step * 1e3 * (double)atoi(kanal);
 
 	/* init general part of transceiver */
-	rc = sender_create(&jolly->sender, kanal, dl_freq, ul_freq, audiodev, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&jolly->sender, kanal, dl_freq, ul_freq, device, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DJOLLY, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

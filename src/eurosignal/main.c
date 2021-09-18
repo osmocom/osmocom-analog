@@ -208,21 +208,21 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
 
 	/* inits */
 	fm_init(fast_math);
-	dsp_init(samplerate);
+	dsp_init(dsp_samplerate);
 	euro_init();
 
 	/* TX is default */
@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = euro_create(kanal[i], audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, fm, tx, rx, repeat, degraded, random_id, scan_from, scan_to, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
+		rc = euro_create(kanal[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, fm, tx, rx, repeat, degraded, random_id, scan_from, scan_to, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 		printf("Base station for channel %s ready, please tune transmitter and/or receiver to %.4f MHz\n", kanal[i], euro_kanal2freq(kanal[i], fm) / 1e6);
 	}
 
-	main_mobile("eurosignal", &quit, latency, interval, NULL, station_id, 6);
+	main_mobile("eurosignal", &quit, NULL, station_id, 6);
 
 fail:
 	/* destroy transceiver instance */

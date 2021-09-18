@@ -293,10 +293,10 @@ int main(int argc, char *argv[])
 		mandatory = 1;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 		/* set channel types for more than 1 channel */
 		if (num_kanal > 1 && num_chan_type == 0) {
 			if (loopback)
@@ -318,9 +318,9 @@ int main(int argc, char *argv[])
 			num_supervisory = num_kanal;
 		}
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		return -EINVAL;
 	}
@@ -397,7 +397,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, traffic_area, area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
+		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, traffic_area, area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 
 	nmt_check_channels(nmt_system);
 
-	main_mobile("nmt", &quit, latency, interval, myhandler, station_id, 7);
+	main_mobile("nmt", &quit, myhandler, station_id, 7);
 
 fail:
 	/* fifo */

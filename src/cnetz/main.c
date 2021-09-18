@@ -516,10 +516,10 @@ int main(int argc, char *argv[])
 		mandatory = 1;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 		/* set channel types for more than 1 channel */
 		if (num_kanal > 1 && num_chan_type == 0) {
 			chan_type[0] = CHAN_TYPE_OGK;
@@ -528,9 +528,9 @@ int main(int argc, char *argv[])
 			num_chan_type = num_kanal;
 		}
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -633,7 +633,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = cnetz_create(kanal[i], chan_type[i], audiodev[i], use_sdr, demod, samplerate, rx_gain, tx_gain, challenge_valid, challenge, response_valid, response, warteschlange, metering, speech_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
+		rc = cnetz_create(kanal[i], chan_type[i], dsp_device[i], use_sdr, demod, dsp_samplerate, rx_gain, tx_gain, challenge_valid, challenge, response_valid, response, warteschlange, metering, speech_deviation, ms_power, (i == 0) ? measure_speed : 0, clock_speed, polarity, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	main_mobile("cnetz", &quit, latency, interval, NULL, station_id, 7);
+	main_mobile("cnetz", &quit, NULL, station_id, 7);
 
 fail:
 	flush_db();

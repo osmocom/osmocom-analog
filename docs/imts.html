@@ -348,7 +348,7 @@ Find out what band and channels your phone supports. Then get a list of all avai
 
 <p>
 Assume the phone supports VHF Low band, so we select channel 'YK' with the command line option '-k YK', or select any other channel your phone supports.
-In order to have a low latency, you must add '-b 5' to the command line option.
+In order to have a low latency, you must add '-b 5 -i 0.1' to the command line option.
 Then tune the transmitter to the indicated channel and receiver to the other indicated channel.
 Transmit with a normal loud speech volume, but not too loud.
 The actual level is not yet relevant.
@@ -356,7 +356,7 @@ The actual level is not yet relevant.
 
 <pre>
 
-# src/imts/imts -k YK -b 5
+# src/imts/imts -k YK -b 5 -i 0.1
 ...
 imts.c:381 info   : Entering IDLE state on channel YK, sending 2000 Hz tone.
 imts.c:336 notice : Created channel #YK
@@ -382,7 +382,7 @@ If the phone transmits, your base station should respond to the seize sequence b
 
 <pre>
 
-# src/imts/imts -k YK -b 5
+# src/imts/imts -k YK -b 5 -i 0.1
 ...
 imts.c:381 info   : Entering IDLE state on channel YK, sending 2000 Hz tone.
 imts.c:336 notice : Created channel #YK

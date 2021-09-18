@@ -631,7 +631,7 @@ int uhd_receive(float *buff, int max)
 }
 
 /* estimate number of samples that can be sent */
-int uhd_get_tosend(int latspl)
+int uhd_get_tosend(int buffer_size)
 {
 	double advance;
 	int tosend;
@@ -645,7 +645,7 @@ int uhd_get_tosend(int latspl)
 		tx_time_secs = rx_time_secs;
 		tx_time_fract_sec = rx_time_fract_sec;
 		if (tx_timestamps) {
-			tx_time_fract_sec += (double)latspl / samplerate;
+			tx_time_fract_sec += (double)buffer_size / samplerate;
 			if (tx_time_fract_sec >= 1.0) {
 				tx_time_fract_sec -= 1.0;
 				tx_time_secs++;
@@ -660,7 +660,7 @@ int uhd_get_tosend(int latspl)
 		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
 		advance = 0;
 	}
-	tosend = latspl - (int)(advance * samplerate);
+	tosend = buffer_size - (int)(advance * samplerate);
 	if (tosend < 0)
 		tosend = 0;
 

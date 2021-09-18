@@ -61,8 +61,8 @@ static int color_bar = 0;
 static int grid_only = 0;
 static const char *station_id = "Jolly  Roger";
 static int grid_width = 0;
-static int __attribute__((__unused__)) latency = 200;
-static double samplerate = 10e6;
+static int __attribute__((__unused__)) dsp_buffer = 200;
+static double dsp_samplerate = 10e6;
 static const char *wave_file = NULL;
 
 /* global variable to quit main loop */
@@ -186,7 +186,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		printf("Given channel is '%s' (video = %.2f MHz, audio = %.2f MHz)\n", argv[argi], frequency / 1e6, (frequency + audio_offset) / 1e6);
 		break;
 	case 's':
-		samplerate = atof(argv[argi]);
+		dsp_samplerate = atof(argv[argi]);
 		break;
 	case 'w':
 		wave_file = options_strdup(argv[argi]);
@@ -272,7 +272,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		int rc;
 		sample_t *buffers[1];
 
-		rc = wave_create_record(&rec, wave_file, samplerate, 1, 1.0);
+		rc = wave_create_record(&rec, wave_file, dsp_samplerate, 1, 1.0);
 		if (rc < 0) {
 			// FIXME cleanup
 			exit(0);
@@ -286,7 +286,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 #ifdef HAVE_SDR
 		float *buff = NULL;
 		void *sdr = NULL;
-		int latspl = samplerate * latency / 1000;
+		int buffer_size = dsp_samplerate * dsp_buffer / 1000;
 		float *sendbuff = NULL;
 
 		if ((sdr_config->uhd == 0 && sdr_config->soapy == 0)) {
@@ -294,7 +294,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 			goto error;
 		}
 
-		sendbuff = calloc(latspl * 2, sizeof(*sendbuff));
+		sendbuff = calloc(buffer_size * 2, sizeof(*sendbuff));
 		if (!sendbuff) {
 			fprintf(stderr, "No mem!\n");
 			goto error;
@@ -311,7 +311,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		if (sample_tone) {
 			/* bandwidth is 2*(deviation + 2*f(sig)) = 2 * (50 + 2*15) = 160khz */
 			fm_mod_t mod;
-			fm_mod_init(&mod, samplerate, audio_offset, modulation * 0.1);
+			fm_mod_init(&mod, dsp_samplerate, audio_offset, modulation * 0.1);
 			mod.state = MOD_STATE_ON; /* do not ramp up */
 			fm_modulate_complex(&mod, sample_tone, power_tone, samples, buff);
 		}
@@ -333,7 +333,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		tx_frequencies[0] = frequency;
 		rx_frequencies[0] = frequency;
 		am[0] = 0;
-		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, samplerate, latspl, 0.0, 0.0, 0.0);
+		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
 		if (!sdr)
 			goto error;
 		sdr_start(sdr);
@@ -342,10 +342,10 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		int s, ss, tosend;
 		while (!quit) {
 			usleep(1000);
-			sdr_read(sdr, (void *)sendbuff, latspl, 0, NULL);
-			tosend = sdr_get_tosend(sdr, latspl);
-			if (tosend > latspl / 10)
-				tosend = latspl / 10;
+			sdr_read(sdr, (void *)sendbuff, buffer_size, 0, NULL);
+			tosend = sdr_get_tosend(sdr, buffer_size);
+			if (tosend > buffer_size / 10)
+				tosend = buffer_size / 10;
 			if (tosend == 0) {
 				continue;
 			}
@@ -395,12 +395,12 @@ static int tx_test_picture(enum bas_type type)
 	int count;
 
 	/* test image, add some samples in case of overflow due to rounding errors */
-	test_bas = calloc(samplerate / 25.0 * 4.0 + 10.0, sizeof(sample_t));
+	test_bas = calloc(dsp_samplerate / 25.0 * 4.0 + 10.0, sizeof(sample_t));
 	if (!test_bas) {
 		fprintf(stderr, "No mem!\n");
 		goto error;
 	}
-	bas_init(&bas, samplerate, type, fbas, circle_radius, color_bar, grid_only, station_id, grid_width, NULL, 0, 0);
+	bas_init(&bas, dsp_samplerate, type, fbas, circle_radius, color_bar, grid_only, station_id, grid_width, NULL, 0, 0);
 	count = bas_generate(&bas, test_bas);
 	count += bas_generate(&bas, test_bas + count);
 	count += bas_generate(&bas, test_bas + count);
@@ -420,7 +420,7 @@ static int tx_test_picture(enum bas_type type)
 		}
 		/* emphasis 50us, but 1000Hz does not change level */
 		for (i = 0; i < count; i++)
-			test_tone[i] = sin((double)i * 2.0 * M_PI * 1000.0 / samplerate) * 50000;
+			test_tone[i] = sin((double)i * 2.0 * M_PI * 1000.0 / dsp_samplerate) * 50000;
 		memset(test_power, 1, count);
 	}
 
@@ -463,12 +463,12 @@ static int tx_img(const char *filename)
 	}
 
 	/* test image, add some samples in case of overflow due to rounding errors */
-	img_bas = calloc(samplerate / 25.0 * 4.0 + 10.0, sizeof(sample_t));
+	img_bas = calloc(dsp_samplerate / 25.0 * 4.0 + 10.0, sizeof(sample_t));
 	if (!img_bas) {
 		fprintf(stderr, "No mem!\n");
 		goto error;
 	}
-	bas_init(&bas, samplerate, BAS_IMAGE, fbas, circle_radius, color_bar, grid_only, NULL, grid_width, img, width, height);
+	bas_init(&bas, dsp_samplerate, BAS_IMAGE, fbas, circle_radius, color_bar, grid_only, NULL, grid_width, img, width, height);
 	count = bas_generate(&bas, img_bas);
 	count += bas_generate(&bas, img_bas + count);
 	count += bas_generate(&bas, img_bas + count);
@@ -513,7 +513,7 @@ int main(int argc, char *argv[])
 
 	if (!wave_file) {
 #ifdef HAVE_SDR
-		rc = sdr_configure(samplerate);
+		rc = sdr_configure(dsp_samplerate);
 		if (rc < 0)
 			return rc;
 #endif

@@ -409,7 +409,7 @@ uint8_t r2000_encode_super(r2000_t *r2000)
 static void r2000_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback)
+int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback)
 {
 	sender_t *sender;
 	r2000_t *r2000 = NULL;
@@ -437,7 +437,7 @@ int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, co
 	PDEBUG(DR2000, DEBUG_DEBUG, "Creating 'Radiocom 2000' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&r2000->sender, kanal, r2000_channel2freq(band, atoi(kanal), 0), r2000_channel2freq(band, atoi(kanal), 1), audiodev, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&r2000->sender, kanal, r2000_channel2freq(band, atoi(kanal), 0), r2000_channel2freq(band, atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DR2000, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

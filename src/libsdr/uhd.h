@@ -4,5 +4,5 @@ int uhd_start(void);
 void uhd_close(void);
 int uhd_send(float *buff, int num);
 int uhd_receive(float *buff, int max);
-int uhd_get_tosend(int latspl);
+int uhd_get_tosend(int buffer_size);
 

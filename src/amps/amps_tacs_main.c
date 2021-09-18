@@ -235,7 +235,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 	int i;
 
 	/* override default */
-	samplerate = 96000;
+	dsp_samplerate = 96000;
 
 	main_mobile_init();
 
@@ -269,10 +269,10 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 		return 0;
 	}
 	if (use_sdr) {
-		/* set audiodev */
+		/* set device */
 		for (i = 0; i < num_kanal; i++)
-			audiodev[i] = "sdr";
-		num_audiodev = num_kanal;
+			dsp_device[i] = "sdr";
+		num_device = num_kanal;
 		/* set channel types for more than 1 channel */
 		if (num_kanal > 1 && num_chan_type == 0) {
 			chan_type[0] = CHAN_TYPE_CC_PC;
@@ -281,9 +281,9 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 			num_chan_type = num_kanal;
 		}
 	}
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		exit(0);
 	}
@@ -320,8 +320,8 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 
 	}
 
-	if (bis && latency > 5) {
-		fprintf(stderr, "If you use BUSY/IDLE bit, you need to lower the round-trip delay to 5 ms (--latency 5).\n");
+	if (bis && dsp_buffer > 5) {
+		fprintf(stderr, "If you use BUSY/IDLE bit, you need to lower the round-trip delay to 5 ms (--buffer 5).\n");
 		exit(0);
 	}
 
@@ -381,7 +381,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 		amps_si si;
 
 		init_sysinfo(&si, ms_power, ms_power, dtx, dcc, sid >> 1, regh, regr, pureg, pdreg, locaid, regincr, bis);
-		rc = amps_create(kanal[i], chan_type[i], audiodev[i], use_sdr, samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, &si, sid, scc, polarity, tolerant, loopback);
+		rc = amps_create(kanal[i], chan_type[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, &si, sid, scc, polarity, tolerant, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
@@ -392,7 +392,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 			printf("Base station on channel %s ready (%s), please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(atoi(kanal[i]), 0) / 1e6, amps_channel2freq(atoi(kanal[i]), 1) / 1e6, amps_channel2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
-	main_mobile(name, &quit, latency, interval, NULL, station_id, 10);
+	main_mobile(name, &quit, NULL, station_id, 10);
 
 fail:
 	/* destroy transceiver instance */

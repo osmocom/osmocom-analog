@@ -61,8 +61,8 @@ static int tx_baudrate[MAX_DEVICES] = { 0 }, rx_baudrate[MAX_DEVICES] = { 0 };
 static int num_ttydev = 0;
 static const char *ttydev[MAX_DEVICES] = { "/dev/ttyDATENKLO0" };
 static const char *audiodev = "hw:0,0";
-static int samplerate = 48000;
-static int latency = 50;
+static int dsp_samplerate = 48000;
+static int dsp_buffer = 50;
 static int stereo = 0;
 static int loopback = 0;
 static int fast_math = 0;
@@ -102,9 +102,9 @@ void print_help(const char *arg0)
 	printf(" -a --audio-device hw:<card>,<device>\n");
 	printf("        Sound card and device number (default = '%s')\n", audiodev);
 	printf(" -s --samplerate <rate>\n");
-	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
+	printf("        Sample rate of sound device (default = '%d')\n", dsp_samplerate);
 	printf(" -b --buffer <ms>\n");
-	printf("        How many milliseconds are processed in advance (default = '%d')\n", latency);
+	printf("        How many milliseconds are processed in advance (default = '%d')\n", dsp_buffer);
 	printf(" -l --loopback <type>\n");
 	printf("        Perform audio loopback to test modem.\n");
 	printf("        type 1: Audio from transmitter is fed into receiver (analog loopback)\n");
@@ -208,10 +208,10 @@ static int handle_options(int short_option, int argi, char **argv)
 		audiodev = options_strdup(argv[argi]);
 		break;
 	case 's':
-		samplerate = atoi(argv[argi]);
+		dsp_samplerate = atoi(argv[argi]);
 		break;
 	case 'b':
-		latency = atoi(argv[argi]);
+		dsp_buffer = atoi(argv[argi]);
 		break;
 	case 'l':
 		loopback = atoi(argv[argi]);
@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
 		/* increment last name */
 		if (i && ttydev[i] == NULL)
 			ttydev[i] = inc_dev_name(ttydev[i - 1]);
-		rc = datenklo_init(&datenklo[i], ttydev[i], am791x_type, mc[i], auto_rts, tx_baudrate[i], rx_baudrate[i], samplerate, loopback);
+		rc = datenklo_init(&datenklo[i], ttydev[i], am791x_type, mc[i], auto_rts, tx_baudrate[i], rx_baudrate[i], dsp_samplerate, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Datenklo\" instance. Quitting!\n");
 			goto fail;
@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
 		printf("Datenklo on device '/dev/%s' ready. (using sound device '%s')\n", ttydev[i], audiodev);
 	}
 
-	rc = datenklo_open_audio(&datenklo[0], audiodev, latency, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave);
+	rc = datenklo_open_audio(&datenklo[0], audiodev, dsp_buffer, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialize audio. Quitting!\n");
 		goto fail;

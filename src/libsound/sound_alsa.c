@@ -187,7 +187,7 @@ static void dev_close(sound_t *sound)
 		snd_pcm_close(sound->chandle);
 }
 
-void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int __attribute__((unused)) *am, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) latspl, double max_deviation, double __attribute__((unused)) max_modulation, double __attribute__((unused)) modulation_index)
+void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int __attribute__((unused)) *am, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) buffer_size, double __attribute__((unused)) interval, double max_deviation, double __attribute__((unused)) max_modulation, double __attribute__((unused)) modulation_index)
 {
 	sound_t *sound;
 	int rc;
@@ -487,7 +487,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double __a
  * get playback buffer space
  *
  * return number of samples to be sent */
-int sound_get_tosend(void *inst, int latspl)
+int sound_get_tosend(void *inst, int buffer_size)
 {
 	sound_t *sound = (sound_t *)inst;
 	int rc;
@@ -497,7 +497,7 @@ int sound_get_tosend(void *inst, int latspl)
 	rc = snd_pcm_delay(sound->phandle, &delay);
 	if (rc < 0) {
 		if (rc == -32)
-			PDEBUG(DSOUND, DEBUG_ERROR, "Buffer underrun: Please use higher latency and enable real time scheduling\n");
+			PDEBUG(DSOUND, DEBUG_ERROR, "Buffer underrun: Please use higher buffer and enable real time scheduling\n");
 		else
 			PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE) {
@@ -511,7 +511,7 @@ int sound_get_tosend(void *inst, int latspl)
 		return rc;
 	}
 
-	tosend = latspl - delay;
+	tosend = buffer_size - delay;
 	return tosend;
 }
 

@@ -261,7 +261,7 @@ static inline int is_chan_class_tc(enum nmt_chan_type chan_type)
 static void nmt_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *audiodev, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
+int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -300,7 +300,7 @@ int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_
 	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
-	rc = sender_create(&nmt->sender, kanal, nmt_channel2freq(nmt_system, country, atoi(kanal), 0, NULL, NULL, NULL), nmt_channel2freq(nmt_system, country, atoi(kanal), 1, NULL, NULL, NULL), audiodev, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&nmt->sender, kanal, nmt_channel2freq(nmt_system, country, atoi(kanal), 0, NULL, NULL, NULL), nmt_channel2freq(nmt_system, country, atoi(kanal), 1, NULL, NULL, NULL), device, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;

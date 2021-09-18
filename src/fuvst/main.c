@@ -195,9 +195,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (num_kanal == 1 && num_audiodev == 0)
-		num_audiodev = 1; /* use default */
-	if (num_kanal != num_audiodev) {
+	if (num_kanal == 1 && num_device == 0)
+		num_device = 1; /* use default */
+	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
 		return -EINVAL;
 	}
@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
 	fm_init(fast_math);
 
 	for (i = 0; i < num_kanal; i++) {
-		rc = fuvst_create(kanal[i], chan_type[i], audiodev[i], samplerate, rx_gain, tx_gain, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, ignore_link_monitor, sio, uele_pc, fuko_pc);
+		rc = fuvst_create(kanal[i], chan_type[i], dsp_device[i], dsp_samplerate, rx_gain, tx_gain, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, ignore_link_monitor, sio, uele_pc, fuko_pc);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Kanal\" instance. Quitting!\n");
 			goto fail;
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 	if (config_loaded)
 		printf("BS-Config: %s\n", config_name);
 
-	main_mobile("fuvst", &quit, latency, interval, NULL, station_id, 7);
+	main_mobile("fuvst", &quit, NULL, station_id, 7);
 fail:
 
 	/* destroy transceiver instance */

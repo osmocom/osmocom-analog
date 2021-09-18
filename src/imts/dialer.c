@@ -35,10 +35,10 @@
 /* presets */
 const char *station_id = "6681739";
 const char *dialing;
-const char *audiodev = "hw:0,0";
-int samplerate = 48000;
+const char *dsp_audiodev = "hw:0,0";
+int dsp_samplerate = 48000;
 const char *write_tx_wave = NULL;
-int latency = 50;
+int dsp_buffer = 50;
 
 #define TONE_DONE	-1
 #define TONE_SILENCE	0
@@ -53,7 +53,6 @@ static struct dial_string {
 	int length;
 } dial_string[2048];
 static int dial_pos = 0;
-static int latspl;
 
 /* instances */
 #ifdef HAVE_ALSA
@@ -82,10 +81,10 @@ static void print_help(const char *arg0)
 	printf("        7 Digits of ID of mobile station (default = '%s')\n", station_id);
 #ifdef HAVE_ALSA
 	printf(" -a --audio-device hw:<card>,<device>\n");
-	printf("        Sound card and device number (default = '%s')\n", audiodev);
+	printf("        Sound card and device number (default = '%s')\n", dsp_audiodev);
 #endif
 	printf(" -s --samplerate <rate>\n");
-	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
+	printf("        Sample rate of sound device (default = '%d')\n", dsp_samplerate);
 	printf(" -w --write-tx-wave <file>\n");
 	printf("        Write audio to given wave file also.\n");
 }
@@ -109,10 +108,10 @@ static int handle_options(int short_option, int __attribute__((unused)) argi, ch
 		station_id = options_strdup(argv[argi]);
 		break;
 	case 'a':
-		audiodev = options_strdup(argv[argi]);
+		dsp_audiodev = options_strdup(argv[argi]);
 		break;
 	case 's':
-		samplerate = atoi(argv[argi]);
+		dsp_samplerate = atoi(argv[argi]);
 		break;
 	case 'w':
 		write_tx_wave = options_strdup(argv[argi]);
@@ -148,7 +147,7 @@ again:
 	default:
 		for (i = 0; i < count; i++) {
 			samples[i] = cos(2.0 * M_PI * (double)dial_string[dial_pos].tone * phase);
-			phase += 1.0 / samplerate;
+			phase += 1.0 / dsp_samplerate;
 		}
 	}
 
@@ -173,18 +172,18 @@ again:
 /* loop that gets audio from encoder and forwards it to sound card.
  * alternatively a sound file is written.
  */
-static void process_signal(void)
+static void process_signal(int buffer_size)
 {
-	sample_t buff[latspl], *samples[1] = { buff };
-        uint8_t pbuff[latspl], *power[1] = { pbuff };
+	sample_t buff[buffer_size], *samples[1] = { buff };
+        uint8_t pbuff[buffer_size], *power[1] = { pbuff };
 	int count;
 	int __attribute__((unused)) rc;
 
 	while (dial_string[dial_pos].tone != TONE_DONE) {
 #ifdef HAVE_ALSA
-		count = sound_get_tosend(audio, latspl);
+		count = sound_get_tosend(audio, buffer_size);
 #else
-		count = samplerate / 1000;
+		count = dsp_samplerate / 1000;
 #endif
 		if (count < 0) {
 			PDEBUG(DDSP, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
@@ -215,12 +214,13 @@ static void process_signal(void)
 int main(int argc, char *argv[])
 {
 	int i, d, p, pulses, tone = 0;
+	int buffer_size;
 	int rc, argi;
 
 	memset(dial_string, 0, sizeof(dial_string));
 
-	/* latency of send buffer in samples */
-	latspl = samplerate * latency / 1000;
+	/* size of send buffer in samples */
+	buffer_size = dsp_samplerate * dsp_buffer / 1000;
 
 	/* handle options / config file */
 	add_options();
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 
 	dialing = argv[argi];
 	d = 0;
-	dial_string[d].tone = TONE_SILENCE; dial_string[d++].length = 0.600 * (double)samplerate; /* pause */
+	dial_string[d].tone = TONE_SILENCE; dial_string[d++].length = 0.600 * (double)dsp_samplerate; /* pause */
 	if (!!strcasecmp(dialing, "disconnect")) {
 		/* check for valid phone number */
 		if (strlen(dialing) > 64) {
@@ -262,11 +262,11 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.350 * (double)samplerate; /* off-hook */
+		dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.350 * (double)dsp_samplerate; /* off-hook */
 		dial_string[d].console = 's';
-		dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.050 * (double)samplerate; /* seize */
+		dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.050 * (double)dsp_samplerate; /* seize */
 		dial_string[d].console = '-';
-		dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 1.000 * (double)samplerate; /* pause */
+		dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 1.000 * (double)dsp_samplerate; /* pause */
 		for (i = 0; station_id[i]; i++) {
 			pulses = station_id[i] - '0';
 			if (pulses == 0)
@@ -277,37 +277,37 @@ int main(int argc, char *argv[])
 					tone = TONE_SILENCE;
 				else
 					tone = TONE_GUARD;
-				dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.025 * (double)samplerate; /* mark */
-				dial_string[d].tone = tone; dial_string[d++].length = 0.025 * (double)samplerate; /* space */
+				dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.025 * (double)dsp_samplerate; /* mark */
+				dial_string[d].tone = tone; dial_string[d++].length = 0.025 * (double)dsp_samplerate; /* space */
 			}
-			dial_string[d].tone = tone; dial_string[d++].length = 0.190 * (double)samplerate; /* after digit */
+			dial_string[d].tone = tone; dial_string[d++].length = 0.190 * (double)dsp_samplerate; /* after digit */
 		}
 		dial_string[d].console = '-';
-		dial_string[d].tone = TONE_SILENCE; dial_string[d++].length = 2.000 * (double)samplerate; /* pause */
+		dial_string[d].tone = TONE_SILENCE; dial_string[d++].length = 2.000 * (double)dsp_samplerate; /* pause */
 		for (i = 0; dialing[i]; i++) {
 			pulses = dialing[i] - '0';
 			if (pulses == 0)
 				pulses = 10;
 			dial_string[d].console = dialing[i];
 			for (p = 1; p <= pulses; p++) {
-				dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.060 * (double)samplerate; /* mark */
-				dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.040 * (double)samplerate; /* space */
+				dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.060 * (double)dsp_samplerate; /* mark */
+				dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.040 * (double)dsp_samplerate; /* space */
 			}
-			dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.400 * (double)samplerate; /* after digit */
+			dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.400 * (double)dsp_samplerate; /* after digit */
 		}
 		dial_string[d].console = '\n';
 	} else {
 		for (i = 0; i < 750; i += 50) {
-			dial_string[d].tone = TONE_DISCONNECT; dial_string[d++].length = 0.025 * (double)samplerate; /* mark */
-			dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.025 * (double)samplerate; /* space */
+			dial_string[d].tone = TONE_DISCONNECT; dial_string[d++].length = 0.025 * (double)dsp_samplerate; /* mark */
+			dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 0.025 * (double)dsp_samplerate; /* space */
 		}
 	}
-	dial_string[d].tone = TONE_SILENCE; dial_string[d++].length = 0.600 * (double)samplerate; /* pause */
+	dial_string[d].tone = TONE_SILENCE; dial_string[d++].length = 0.600 * (double)dsp_samplerate; /* pause */
 	dial_string[d].tone = TONE_DONE; dial_string[d++].length = 0; /* end */
 
 #ifdef HAVE_ALSA
 	/* init sound */
-	audio = sound_open(audiodev, NULL, NULL, NULL, 1, 0.0, samplerate, latspl, 1.0, 4000.0, 2.0);
+	audio = sound_open(dsp_audiodev, NULL, NULL, NULL, 1, 0.0, dsp_samplerate, dsp_buffer, 1.0, 1.0, 4000.0, 2.0);
 	if (!audio) {
 		PDEBUG(DBNETZ, DEBUG_ERROR, "No sound device!\n");
 		goto exit;
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
 
 	/* open wave */
 	if (write_tx_wave) {
-		rc = wave_create_record(&wave_tx_rec, write_tx_wave, samplerate, 1, 1.0);
+		rc = wave_create_record(&wave_tx_rec, write_tx_wave, dsp_samplerate, 1, 1.0);
 		if (rc < 0) {
 			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto exit;
@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
 
 	PDEBUG(DBNETZ, DEBUG_ERROR, "Start audio after pause...\n");
 
-	process_signal();
+	process_signal(buffer_size);
 
 exit:
 	/* close wave */

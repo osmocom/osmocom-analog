@@ -1381,7 +1381,7 @@ error:
 }
 
 /* open audio device of one or two datenlo_t instance */
-int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int latency, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave)
+int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int buffer, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave)
 {
 	int channels = 1;
 	int rc;
@@ -1390,12 +1390,12 @@ int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int latency,
 	if (datenklo->slave)
 		channels = 2;
 
-	/* latency of send buffer in samples */
-	datenklo->latspl = datenklo->samplerate * latency / 1000;
+	/* size of send buffer in samples */
+	datenklo->buffer_size = datenklo->samplerate * buffer / 1000;
 
 #ifdef HAVE_ALSA
 	/* init sound */
-	datenklo->audio = sound_open(audiodev, NULL, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->latspl, 1.0, 4000.0, 2.0);
+	datenklo->audio = sound_open(audiodev, NULL, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->buffer_size, 1.0, 1.0, 4000.0, 2.0);
 	if (!datenklo->audio) {
 		PDEBUG(DDATENKLO, DEBUG_ERROR, "No sound device!\n");
 		return -EIO;
@@ -1484,8 +1484,8 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 	if (datenklo->slave)
 		num_chan = 2;
 
-	sample_t buff[num_chan][datenklo->latspl], *samples[num_chan];
-	uint8_t pbuff[num_chan][datenklo->latspl], *power[num_chan];
+	sample_t buff[num_chan][datenklo->buffer_size], *samples[num_chan];
+	uint8_t pbuff[num_chan][datenklo->buffer_size], *power[num_chan];
 	for (i = 0; i < num_chan; i++) {
 		samples[i] = buff[i];
 		power[i] = pbuff[i];
@@ -1524,7 +1524,7 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 		process_timer();
 
 #ifdef HAVE_ALSA
-		count = sound_read(datenklo->audio, samples, datenklo->latspl, num_chan, rf_level_db);
+		count = sound_read(datenklo->audio, samples, datenklo->buffer_size, num_chan, rf_level_db);
 		if (count < 0) {
 			PDEBUG(DDSP, DEBUG_ERROR, "Failed to read RX data from audio device (rc = %d)\n", count);
 			if (count == -EPIPE) {
@@ -1556,7 +1556,7 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 		}
 
 #ifdef HAVE_ALSA
-		count = sound_get_tosend(datenklo->audio, datenklo->latspl);
+		count = sound_get_tosend(datenklo->audio, datenklo->buffer_size);
 #else
 		count = samplerate / 1000;
 #endif
@@ -1576,7 +1576,7 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 		}
 		if (loopback) {
 			/* copy buffer to preserve original audio for later use */
-			sample_t lbuff[num_chan][datenklo->latspl];
+			sample_t lbuff[num_chan][datenklo->buffer_size];
 			memcpy(lbuff, buff, sizeof(lbuff));
 			if (loopback == 2 && num_chan == 2) {
 				/* swap */

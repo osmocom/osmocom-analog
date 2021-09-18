@@ -38,14 +38,14 @@
 
 static char freq_name[2][64];
 
-int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant_us, double volume, int stereo, int rds, int rds2)
+int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency, const char *tx_wave_file, const char *rx_wave_file, const char *tx_audiodev, const char *rx_audiodev, enum modulation modulation, double bandwidth, double deviation, double modulation_index, double time_constant_us, double volume, int stereo, int rds, int rds2)
 {
 	int rc = -EINVAL;
 
 	clipper_init(CLIP_POINT);
 
 	memset(radio, 0, sizeof(*radio));
-	radio->latspl = latspl;
+	radio->buffer_size = buffer_size;
 	radio->volume = volume;
 	radio->stereo = stereo;
 	radio->rds = rds;
@@ -100,7 +100,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 		/* open audio device */
 		radio->tx_audio_samplerate = 48000;
 		radio->tx_audio_channels = (stereo) ? 2 : 1;
-		radio->tx_sound = sound_open(tx_audiodev, NULL, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->latspl, 1.0, 0.0, 2.0);
+		radio->tx_sound = sound_open(tx_audiodev, NULL, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
 		if (!radio->tx_sound) {
 			rc = -EIO;
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
@@ -167,7 +167,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 		if (radio->tx_sound && !strcmp(tx_audiodev, rx_audiodev))
 			radio->rx_sound = radio->tx_sound;
 		else
-			radio->rx_sound = sound_open(rx_audiodev, NULL, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->latspl, 1.0, 0.0, 2.0);
+			radio->rx_sound = sound_open(rx_audiodev, NULL, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
 		if (!radio->rx_sound) {
 			rc = -EIO;
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
@@ -310,8 +310,8 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 	}
 
 	/* audio buffers: how many sample for audio (rounded down) */
-	int tx_size = (int)((double)latspl / radio->tx_resampler[0].factor);
-	int rx_size = (int)((double)latspl / radio->rx_resampler[0].factor);
+	int tx_size = (int)((double)buffer_size / radio->tx_resampler[0].factor);
+	int rx_size = (int)((double)buffer_size / radio->rx_resampler[0].factor);
 	if (tx_size > rx_size)
 		radio->audio_buffer_size = tx_size;
 	else
@@ -324,7 +324,7 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 	}
 
 	/* signal buffers */
-	radio->signal_buffer_size = latspl;
+	radio->signal_buffer_size = buffer_size;
 	radio->signal_buffer = calloc(radio->signal_buffer_size * 3, sizeof(*radio->signal_buffer));
 	radio->signal_power_buffer = calloc(radio->signal_buffer_size, sizeof(*radio->signal_power_buffer));
 	if (!radio->signal_buffer || !radio->signal_power_buffer) {
@@ -334,9 +334,9 @@ int radio_init(radio_t *radio, int latspl, int samplerate, double frequency, con
 	}
 
 	/* temporary I/Q/carrier buffers, used while demodulating */
-	radio->I_buffer = calloc(latspl, sizeof(*radio->I_buffer));
-	radio->Q_buffer = calloc(latspl, sizeof(*radio->Q_buffer));
-	radio->carrier_buffer = calloc(latspl, sizeof(*radio->carrier_buffer));
+	radio->I_buffer = calloc(buffer_size, sizeof(*radio->I_buffer));
+	radio->Q_buffer = calloc(buffer_size, sizeof(*radio->Q_buffer));
+	radio->carrier_buffer = calloc(buffer_size, sizeof(*radio->carrier_buffer));
 	if (!radio->I_buffer || !radio->Q_buffer || !radio->carrier_buffer) {
 		PDEBUG(DRADIO, DEBUG_ERROR, "No memory!!\n");
 		rc = -ENOMEM;
@@ -438,8 +438,8 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	sample_t *signal_samples[3];
 	uint8_t *signal_power;
 
-	if (signal_num > radio->latspl) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > latspl, please fix!.\n");
+	if (signal_num > radio->buffer_size) {
+		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > buffer_size, please fix!.\n");
 		abort();
 	}
 
@@ -611,8 +611,8 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 	sample_t *samples[3];
 	double p;
 
-	if (signal_num > radio->latspl) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > latspl, please fix!.\n");
+	if (signal_num > radio->buffer_size) {
+		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > buffer_size, please fix!.\n");
 		abort();
 	}
 

@@ -50,15 +50,16 @@ static int got_init = 0;
 /* common mobile settings */
 int num_kanal = 0;
 const char *kanal[MAX_SENDER];
-int num_audiodev = 0;
-const char *audiodev[MAX_SENDER] = { "hw:0,0" };
+int num_device = 0;
+const char *dsp_device[MAX_SENDER] = { "hw:0,0" };
 int allow_sdr = 1;
 int use_sdr = 0;
-static const char *call_audiodev = "";
-int samplerate = 48000;
+int dsp_samplerate = 48000;
+double dsp_interval = 1.0;
+int dsp_buffer = 50;
+static const char *call_device = "";
 static int call_samplerate = 48000;
-int interval = 1;
-int latency = 50;
+static int call_buffer = 50;
 int uses_emphasis = 1;
 int do_pre_emphasis = 0;
 int do_de_emphasis = 0;
@@ -106,16 +107,17 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" -k --channel <channel>\n");
 	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");
 	printf(" -a --audio-device hw:<card>,<device>\n");
-	printf("        Sound card and device number (default = '%s')\n", audiodev[0]);
+	printf("        Sound card and device number (default = '%s')\n", dsp_device[0]);
 	printf("        Don't set it for SDR!\n");
 	printf(" -s --samplerate <rate>\n");
-	printf("        Sample rate of sound device (default = '%d')\n", samplerate);
-	printf(" -i --interval 1..25\n");
-	printf("        Interval of processing loop in ms (default = '%d' ms)\n", interval);
-	printf("        Use 25 to drastically reduce CPU usage. In case of buffer underrun,\n");
-	printf("        increase latency accordingly.\n");
+	printf("        Sample rate of sound device (default = '%d')\n", dsp_samplerate);
+	printf(" -i --interval 0.1..25\n");
+	printf("        Interval of processing loop in ms (default = '%.1f' ms)\n", dsp_interval);
+	printf("        Use 10 to drastically reduce CPU usage. In case of buffer underrun,\n");
+	printf("        increase buffer accordingly.\n");
 	printf(" -b --buffer <ms>\n");
-	printf("        How many milliseconds are processed in advance (default = '%d')\n", latency);
+	printf("        How many milliseconds are processed in advance (default = '%d')\n", dsp_buffer);
+	printf("        A buffer below 10 ms requires low interval like 0.1 ms.\n");
     if (uses_emphasis) {
 	printf(" -p --pre-emphasis\n");
 	printf("        Enable pre-emphasis, if you directly connect to the oscillator of the\n");
@@ -134,9 +136,11 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Use echo test, to send back audio from mobile phone's microphone to\n");
 	printf("        the speaker. (German: 'Blasprobe').\n");
 	printf(" -c --call-device hw:<card>,<device>\n");
-	printf("        Sound card and device number for headset (default = '%s')\n", call_audiodev);
+	printf("        Sound card and device number for headset (default = '%s')\n", call_device);
 	printf("    --call-samplerate <rate>\n");
 	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
+	printf("    --call-buffer <ms>\n");
+	printf("        How many milliseconds are processed in advance (default = '%d')\n", call_buffer);
 	printf(" -x --osmocc-cross\n");
 	printf("        Enable built-in call forwarding between mobiles. Be sure to have\n");
 	printf("        at least one control channel and two voice channels. Alternatively\n");
@@ -198,7 +202,8 @@ void main_mobile_print_hotkeys(void)
 #define	OPT_READ_RX_WAVE	1006
 #define	OPT_READ_TX_WAVE	1007
 #define	OPT_CALL_SAMPLERATE	1008
-#define	OPT_FAST_MATH		1009
+#define	OPT_CALL_BUFFER		1009
+#define	OPT_FAST_MATH		1010
 #define	OPT_LIMESDR		1100
 #define	OPT_LIMESDR_MINI	1101
 
@@ -222,6 +227,7 @@ void main_mobile_add_options(void)
 	option_add(OPT_OSMO_CC, "cc", 1);
 	option_add('c', "call-device", 1);
 	option_add(OPT_CALL_SAMPLERATE, "call-samplerate", 1);
+	option_add(OPT_CALL_BUFFER, "call-buffer", 1);
 	option_add('t', "tones", 1);
 	option_add('l', "loopback", 1);
 	option_add('r', "realtime", 1);
@@ -264,20 +270,20 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		OPT_ARRAY(num_kanal, kanal, argv[argi])
 		break;
 	case 'a':
-		OPT_ARRAY(num_audiodev, audiodev, options_strdup(argv[argi]))
+		OPT_ARRAY(num_device, dsp_device, options_strdup(argv[argi]))
 		break;
 	case 's':
-		samplerate = atoi(argv[argi]);
+		dsp_samplerate = atoi(argv[argi]);
 		break;
 	case 'i':
-		interval = atoi(argv[argi]);
-		if (interval < 1)
-			interval = 1;
-		if (interval > 25)
-			interval = 25;
+		dsp_interval = atof(argv[argi]);
+		if (dsp_interval < 0.1)
+			dsp_interval = 0.1;
+		if (dsp_interval > 10)
+			dsp_interval = 10;
 		break;
 	case 'b':
-		latency = atoi(argv[argi]);
+		dsp_buffer = atoi(argv[argi]);
 		break;
 	case 'p':
 		if (!uses_emphasis) {
@@ -321,10 +327,13 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		cc_argv[cc_argc++] = options_strdup(argv[argi]);
 		break;
 	case 'c':
-		call_audiodev = options_strdup(argv[argi]);
+		call_device = options_strdup(argv[argi]);
 		break;
 	case OPT_CALL_SAMPLERATE:
 		call_samplerate = atoi(argv[argi]);
+		break;
+	case OPT_CALL_BUFFER:
+		call_buffer = atoi(argv[argi]);
 		break;
 	case 't':
 		send_patterns = atoi(argv[argi]);
@@ -431,9 +440,9 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_mobile(const char *name, int *quit, int latency, int interval, void (*myhandler)(void), const char *station_id, int station_id_digits)
+void main_mobile(const char *name, int *quit, void (*myhandler)(void), const char *station_id, int station_id_digits)
 {
-	int latspl;
+	int buffer_size;
 	sender_t *sender;
 	double last_time_call = 0, begin_time, now, sleep;
 	struct termios term, term_orig;
@@ -445,8 +454,8 @@ void main_mobile(const char *name, int *quit, int latency, int interval, void (*
 		abort();
 	}
 
-	/* latency of send buffer in samples */
-	latspl = samplerate * latency / 1000;
+	/* size of dsp buffer in samples */
+	buffer_size = dsp_samplerate * dsp_buffer / 1000;
 
 	/* check OSMO-CC support */
 	if (use_osmocc_cross && num_kanal == 1) {
@@ -457,15 +466,15 @@ void main_mobile(const char *name, int *quit, int latency, int interval, void (*
 		fprintf(stderr, "You selected OSMO-CC socket interface and built-in call forwarding, but only one can be selected.\n");
 		return;
 	}
-	if (echo_test && call_audiodev[0]) {
+	if (echo_test && call_device[0]) {
 		fprintf(stderr, "You selected call device (headset) and echo test, but only one can be selected.\n");
 		return;
 	}
-	if (use_osmocc_sock && call_audiodev[0]) {
+	if (use_osmocc_sock && call_device[0]) {
 		fprintf(stderr, "You selected OSMO-CC socket interface, but it cannot be used with call device (headset).\n");
 		return;
 	}
-	if (use_osmocc_cross && call_audiodev[0]) {
+	if (use_osmocc_cross && call_device[0]) {
 		fprintf(stderr, "You selected built-in call forwarding, but it cannot be used with call device (headset).\n");
 		return;
 	}
@@ -488,7 +497,7 @@ void main_mobile(const char *name, int *quit, int latency, int interval, void (*
 
 	/* init OSMO-CC */
 	if (!use_osmocc_sock)
-		console_init(station_id, call_audiodev, call_samplerate, latency, station_id_digits, loopback, echo_test, console_digits);
+		console_init(station_id, call_device, call_samplerate, call_buffer, station_id_digits, loopback, echo_test, console_digits);
 
 	/* init call control instance */
 	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv);
@@ -498,15 +507,15 @@ void main_mobile(const char *name, int *quit, int latency, int interval, void (*
 	}
 
 #ifdef HAVE_SDR
-	rc = sdr_configure(samplerate);
+	rc = sdr_configure(dsp_samplerate);
 	if (rc < 0)
 		return;
 #endif
 
 	/* open audio */
-	if (sender_open_audio(latspl))
+	if (sender_open_audio(buffer_size, dsp_interval))
 		return;
-	if (console_open_audio(latspl))
+	if (console_open_audio(buffer_size, dsp_interval))
 		return;
 
 	if (!loopback)
@@ -552,7 +561,7 @@ void main_mobile(const char *name, int *quit, int latency, int interval, void (*
 			/* do not process audio for an audio slave, since it is done by audio master */
 			if (sender->master) /* if master is set, we are an audio slave */
 				continue;
-			process_sender_audio(sender, quit, latspl);
+			process_sender_audio(sender, quit, buffer_size);
 		}
 
 		/* process timers */
@@ -646,12 +655,12 @@ next_char:
 		if (myhandler)
 			myhandler();
 
-		display_measurements((double)interval / 1000.0);
+		display_measurements(dsp_interval / 1000.0);
 
 		now = get_time();
 
 		/* sleep interval */
-		sleep = ((double)interval / 1000.0) - (now - begin_time);
+		sleep = (dsp_interval / 1000.0) - (now - begin_time);
 		if (sleep > 0)
 			usleep(sleep * 1000000.0);
 
