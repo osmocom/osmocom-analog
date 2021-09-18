@@ -21,7 +21,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
+//#include <sys/time.h>
+#include <time.h>
+#include <errno.h>
 #include "timer.h"
 
 static struct timer *timer_head = NULL;
@@ -29,11 +31,11 @@ static struct timer **timer_tail_p = &timer_head;
 
 double get_time(void)
 {
-	struct timeval tv;
+	static struct timespec tv;
 
-	gettimeofday(&tv, NULL);
+	clock_gettime(CLOCK_REALTIME, &tv);
 
-	return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
+	return (double)tv.tv_sec + (double)tv.tv_nsec / 1000000000.0;
 }
 
 void timer_init(struct timer *timer, void (*fn)(struct timer *timer), void *priv)
@@ -66,14 +68,10 @@ void timer_exit(struct timer *timer)
 
 void timer_start(struct timer *timer, double duration)
 {
-	struct timeval tv;
-
 	if (!timer->linked) {
 		fprintf(stderr, "Timer is not initialized, aborting!\n");
 		abort();
 	}
-
-	gettimeofday(&tv, NULL);
 
 	timer->duration = duration;
 	timer->timeout = get_time() + duration;
