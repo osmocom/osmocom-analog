@@ -50,6 +50,7 @@ src/libv27/libv27.a
 src/libmtp/libmtp.a
 src/libosmocc/libosmocc.a
 src/libg711/libg711.a
+src/libaaimage/libaaimage.a
 src/anetz/libgermanton.a
 src/anetz/anetz
 src/bnetz/bnetz

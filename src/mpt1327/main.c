@@ -50,7 +50,7 @@ static int per = 5;
 static int pon = 1;
 static int timeout = 30;
 
-void print_image(void) {}
+const char *aaimage[] = { NULL };
 
 void print_help(const char *arg0)
 {

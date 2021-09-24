@@ -266,7 +266,7 @@ void call_down_disconnect(int __attribute__((unused)) callref, int __attribute__
 
 void call_down_release(int __attribute__((unused)) callref, int __attribute__((unused)) cause) { }
 
-void print_image(void) {}
+const char *aaimage[] = { NULL };
 
 void dump_info(void) {}
 

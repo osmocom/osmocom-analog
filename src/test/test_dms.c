@@ -255,5 +255,5 @@ int main(void)
 
 void call_down_clock(void) {}
 
-void print_image(void) {}
+const char *aaimage[] = { NULL };
 

@@ -27,6 +27,7 @@ jollycom_LDADD = \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libg711/libg711.a \
+	$(top_builddir)/src/libaaimage/libaaimage.a \
 	-lm
 
 if HAVE_ALSA

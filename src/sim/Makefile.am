@@ -14,5 +14,6 @@ cnetz_sim_LDADD = \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libserial/libserial.a \
+	$(top_builddir)/src/libaaimage/libaaimage.a \
 	-lm
 

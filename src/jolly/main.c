@@ -47,7 +47,7 @@ static double squelch_db = -INFINITY;
 int nbfm = 0;
 int repeater = 0;
 
-void print_image(void) {}
+const char *aaimage[] = { NULL };
 
 void print_help(const char *arg0)
 {

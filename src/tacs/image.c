@@ -1,15 +1,13 @@
 #include <stdio.h>
-#include <string.h>
-#include "../libmobile/image.h"
 
-const char *image[] = {
+const char *aaimage[] = {
 	"",
-	"               @B(@g#@B)",
-	"                @g#",
+	"               @B(@w#@B)",
+	"                @w#",
 	"                #",
 	"                #",
 	"                #   @R_____",
-	"               _@g#@R--- _._ ---__",
+	"               _@w#@R--- _._ ---__",
 	"              |_____(_|_)_____|",
 	"               |  @WTELEPHONE@R  |",
 	"              |###############|",
@@ -30,38 +28,8 @@ const char *image[] = {
 	"              |##+---------+##|",
 	"              |##+---------+##|",
 	"              |###############|",
-	"              @g+++++++++++++++++",
+	"              @w+++++++++++++++++",
 	"@W",
 	NULL
 };
-
-void print_image(void)
-{
-	int i, j;
-
-	for (i = 0; image[i]; i++) {
-		for (j = 0; j < (int)strlen(image[i]); j++) {
-			if (image[i][j] == '@') {
-				j++;
-				switch(image[i][j]) {
-				case 'R': /* red */
-					printf("\033[1;31m");
-					break;
-				case 'g': /* gray */
-					printf("\033[0;37m");
-					break;
-				case 'W': /* white */
-					printf("\033[1;37m");
-					break;
-				case 'B': /* blue */
-					printf("\033[1;34m");
-					break;
-				}
-			} else
-				printf("%c", image[i][j]);
-		}
-		printf("\n");
-	}
-	printf("\033[0;39m");
-}
 

@@ -29,7 +29,8 @@ SUBDIRS = \
 	libv27 \
 	libmtp \
 	libosmocc \
-	libg711
+	libg711 \
+	libaaimage
 
 if HAVE_ALSA
 SUBDIRS += \

@@ -33,7 +33,7 @@
 #include "../libdebug/debug.h"
 #include "../liboptions/options.h"
 #include "../libserial/serial.h"
-#include "../libmobile/image.h"
+#include "../libaaimage/aaimage.h"
 #include "sim.h"
 #include "sniffer.h"
 #include "eeprom.h"
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
 		printf("SIM analyzer ready, please start the phone!\n");
 	else {
 		char temp[5][16];
-		print_image();
+		print_aaimage();
 		decode_ebdt(ebdt_data, temp[0], temp[1], temp[2], temp[3], temp[4]);
 		printf("FUTLN=%s, Sicherungscode=%s, Kartekennung=%s, Sonderheitenschluessel=%s, Wartungsschluessel=%s\n", temp[0], temp[1], temp[2], temp[3], temp[4]);
 		for (i = 0; i < 8; i++)

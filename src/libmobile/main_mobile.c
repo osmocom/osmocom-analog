@@ -41,7 +41,7 @@
 #endif
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
-#include "image.h"
+#include "../libaaimage/aaimage.h"
 
 #define DEFAULT_LO_OFFSET -1000000.0
 
@@ -519,7 +519,7 @@ void main_mobile(const char *name, int *quit, void (*myhandler)(void), const cha
 		return;
 
 	if (!loopback)
-		print_image();
+		print_aaimage();
 
 	/* real time priority */
 	if (rt_prio > 0) {
