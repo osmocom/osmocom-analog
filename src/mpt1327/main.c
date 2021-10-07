@@ -98,9 +98,7 @@ void print_help(const char *arg0)
 	printf("        and stays below this level, the connection is released.\n");
 	printf("        Use 'auto' to do automatic noise floor calibration to detect loss.\n");
 	printf("        Only works with SDR! (disabled by default)\n");
-
-	printf("\nstation-id: Give 7 digits of Radio Unit's prefix/ident, you don't need to\n");
-	printf("        enter it for every start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 	printf("Press 'i' key to dump list of seen Radio Units.\n");
 }
@@ -252,6 +250,11 @@ sysdef_oor:
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 7, "number 'pppiiii' (prefix, ident)" },
+	{ 0, NULL },
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -264,8 +267,8 @@ int main(int argc, char *argv[])
 	init_besetzton();
 //	init_ansage();
 
-	console_digits = "0123456789*#";
-	main_mobile_init();
+	/* init mobile interface */
+	main_mobile_init("0123456789", number_lengths, NULL, mpt1327_number_valid);
 
 	/* handle options / config file */
 	add_options();
@@ -278,10 +281,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 7) {
-			printf("Given station ID '%s' does not have 4 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -380,7 +382,7 @@ int main(int argc, char *argv[])
 
 	mpt1327_check_channels();
 
-	main_mobile("mpt1327", &quit, NULL, station_id, 7);
+	main_mobile_loop("mpt1327", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

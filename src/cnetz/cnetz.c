@@ -178,6 +178,28 @@ double cnetz_kanal2freq(int kanal, int unterband)
 	return freq * 1e6;
 }
 
+/* check if number is a valid station ID */
+const char *cnetz_number_valid(const char *number)
+{
+	/* assume that the number has valid length(s) and digits */
+
+	if (number[0] > '7')
+		return "Digit 1 (mobile country code) exceeds 7.";
+	if (number[7]) {
+		if ((number[1] - '0') == 0)
+			return "Digit 2 and 3 (mobile network code) of 8-digit number must be at least 10.";
+		if ((number[1] - '0') * 10 + (number[2] - '0') > 31)
+			return "Digit 2 and 3 (mobile network code) of 8-digit number exceed 31.";
+		if (atoi(number + 3) > 65535)
+			return "Digit 4 to 8 (mobile subscriber suffix) of 8-digit number exceed 65535.";
+	} else {
+		if (atoi(number + 2) > 65535)
+			return "Digit 3 to 7 (mobile subscriber suffix) of 7-digit number exceed 65535.";
+	}
+
+	return NULL;
+}
+
 /* convert power level to P-bits by selecting next higher level */
 static uint8_t cnetz_power2bits(int power)
 {
@@ -571,39 +593,15 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	uint8_t futln_nat;
 	uint8_t futln_fuvst;
 	int futln_rest; /* use int for checking size > 65535 */
-	int len;
-	int i;
 
-	/* 1. check if number is invalid, return INVALNUMBER */
-	len = strlen(dialing);
-	if (len >= 11 && !strncmp(dialing, "0161", 4)) {
-		dialing += 4;
-		len -= 4;
-	}
-	if (len < 7 || len > 8) {
-inval:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < len; i++) {
-		if (dialing[i] < '0' || dialing[i] > '9')
-			goto inval;
-	}
-
+	/* 1. split number into elements */
 	futln_nat = dialing[0] - '0';
-	if (len == 7)
-		futln_fuvst = dialing[1] - '0';
-	else {
+	if (dialing[7]) {
 		futln_fuvst = (dialing[1] - '0') * 10 + (dialing[2] - '0');
-		if (futln_fuvst > 31) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Digit 2 and 3 '%02d' must not exceed '31', but they do!\n", futln_fuvst);
-			goto inval;
-		}
-	}
-	futln_rest = atoi(dialing + len - 5);
-	if (futln_rest > 65535) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Last 5 digits '%05d' must not exceed '65535', but they do!\n", futln_rest);
-		goto inval;
+		futln_rest = atoi(dialing + 3);
+	} else {
+		futln_fuvst = dialing[1] - '0';
+		futln_rest = atoi(dialing + 2);
 	}
 
 	/* 2. check if the subscriber is attached */

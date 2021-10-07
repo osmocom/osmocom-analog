@@ -98,7 +98,7 @@ void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
 	printf("(got deliver report from SMS layer)\n");
 }
 
-extern void main_mobile();
+extern void main_mobile_loop();
 
 int main(void)
 {
@@ -107,7 +107,7 @@ int main(void)
 	int rc;
 
 	/* this is never called, it forces the linker to add mobile functions */
-	if (debuglevel == -1000) main_mobile();
+	if (debuglevel == -1000) main_mobile_loop();
 
 	debuglevel = DEBUG_DEBUG;
 

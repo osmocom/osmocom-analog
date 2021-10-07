@@ -93,8 +93,7 @@ void print_help(const char *arg0)
 	printf("        Message Service Center). (default = '%s')\n", smsc_number);
 	printf(" -I --caller-id 1 | 0\n");
 	printf("        If set, the caller ID is sent while ringing the phone. (default = '%d')\n", send_callerid);
-	printf("\nstation-id: Give 7 digits of station-id, you don't need to enter it\n");
-	printf("        for every start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -258,6 +257,11 @@ int submit_sms(const char *sms)
 	return 0;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 7, "NMT number (1st digit country code)" },
+	{ 0, NULL }
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -269,7 +273,8 @@ int main(int argc, char *argv[])
 	init_nmt_tones();
 	init_announcement();
 
-	main_mobile_init();
+	/* init mobile interface */
+	main_mobile_init("0123456789", number_lengths, NULL, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -282,10 +287,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 7) {
-			printf("Given station ID '%s' does not have 7 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -407,7 +411,7 @@ int main(int argc, char *argv[])
 
 	nmt_check_channels(nmt_system);
 
-	main_mobile("nmt", &quit, myhandler, station_id, 7);
+	main_mobile_loop("nmt", &quit, myhandler, station_id);
 
 fail:
 	/* fifo */

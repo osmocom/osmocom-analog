@@ -1712,21 +1712,15 @@ int _out_setup(int callref, const char *caller_id, enum number_type caller_type,
 {
 	sender_t *sender;
 	nmt_t *nmt;
-	int i;
 	nmt_subscriber_t subscr;
 	transaction_t *trans;
 
 	memset(&subscr, 0, sizeof(subscr));
 
-	/* 1. check if number is invalid, return INVALNUMBER */
+	/* 1. split number into country and subscriber parts */
 	if (dialstring2number(dialing, &subscr.country, subscr.number)) {
-inval:
 		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < 6; i++) {
-		if (subscr.number[i] < '0' || subscr.number[i] > '9')
-			goto inval;
 	}
 
 	/* 2. check if given number is already in a call, return BUSY */

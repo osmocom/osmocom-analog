@@ -893,30 +893,8 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	transaction_t *trans;
 	uint32_t min1;
 	uint16_t min2;
-	int i;
 
-	/* 1. check if number is invalid, return INVALNUMBER */
-	if (!tacs) {
-		if (strlen(dialing) == 12 && !strncmp(dialing, "+1", 2))
-		dialing += 2;
-		if (strlen(dialing) == 11 && !strncmp(dialing, "1", 1))
-			dialing += 1;
-	} else if (!jtacs) {
-		if (strlen(dialing) == 14 && !strncmp(dialing, "+44", 3))
-			dialing += 3;
-		if (strlen(dialing) == 11 && !strncmp(dialing, "0", 1))
-			dialing += 1;
-	}
-	if (strlen(dialing) != 10) {
-inval:
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < 10; i++) {
-		if (dialing[i] < '0' || dialing[i] > '9')
-			goto inval;
-	}
-
+	/* 1. split number into area code and number */
 	amps_number2min(dialing, &min1, &min2);
 
 	/* 2. check if the subscriber is attached */

@@ -120,6 +120,21 @@ double r2000_channel2freq(int band, int channel, int uplink)
 	return freq * 1e6;
 }
 
+/* check if number is a valid station ID */
+const char *r2000_number_valid(const char *number)
+{
+	/* assume that the number has valid length(s) and digits */
+
+	if ((number[0] - '0') > 7)
+		return "Digit 1 (station mobile type) exceeds 7.";
+	if ((number[1] - '0') * 100 + (number[2] - '0') * 10 + (number[3] - '0') > 511)
+		return "Digit 2 to 5 (relais number) exceeds 511.";
+	if (atoi(number + 4) > 65535)
+		return "Digit 6 to 9 (mobile number) exceeds 65535.";
+
+	return NULL;
+}
+
 const char *r2000_state_name(enum r2000_state state)
 {
 	static char invalid[16];
@@ -289,49 +304,10 @@ static const char *subscriber2string(r2000_subscriber_t *subscr)
 /* convert 9-digits dial string to station mobile data */
 static int string2subscriber(const char *dialstring, r2000_subscriber_t *subscr)
 {
-	char check[6];
-	int type, relais, mor;
-	int i;
+	subscr->type = dialstring[0] - '0';
+	subscr->relais = (dialstring[1] - '0') * 100 + (dialstring[2] - '0') * 10 + (dialstring[3] - '0');
+	subscr->mor = atoi(dialstring + 4);
 
-	if (strlen(dialstring) != 9) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Wrong number of digits, use 9 digits: TRRRXXXXX (T=type, R=relais, X=mobile number)\n");
-		return -1;
-	}
-
-	for (i = 0; i < (int)strlen(dialstring); i++) {
-		if (dialstring[i] < '0' || dialstring[i] > '9') {
-			PDEBUG(DR2000, DEBUG_NOTICE, "Invalid digit in dial string, use only 0..9.\n");
-			return -1;
-		}
-	}
-
-	memcpy(check, dialstring, 1);
-	check[1] = '\0';
-	type = atoi(check);
-	if (type < 1 || type > 511) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Invalid station type in dial string, use 0..7 as station mobile type.\n");
-		return -1;
-	}
-
-	memcpy(check, dialstring + 1, 3);
-	check[3] = '\0';
-	relais = atoi(check);
-	if (relais < 1 || relais > 511) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Invalid relais number in dial string, use 000..511 as relais number.\n");
-		return -1;
-	}
-
-	memcpy(check, dialstring + 4, 5);
-	check[5] = '\0';
-	mor = atoi(check);
-	if (mor > 65535) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Invalid mobile number in dial string, use 00000..65535 as mobile number.\n");
-		return -1;
-	}
-
-	subscr->type = type;
-	subscr->relais = relais;
-	subscr->mor = mor;
 	return 0;
 }
 

@@ -480,13 +480,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	sender_t *sender;
 	jolly_t *jolly;
 
-	/* 1. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) == 0) {
-		PDEBUG(DJOLLY, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-
-	/* 2. check if given number is already in a call, return BUSY */
+	/* 1. check if given number is already in a call, return BUSY */
 	for (sender = sender_head; sender; sender = sender->next) {
 		jolly = (jolly_t *) sender;
 		if (!strcmp(jolly->station_id, dialing))
@@ -497,7 +491,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 		return -CAUSE_BUSY;
 	}
 
-	/* 3. check if all senders are busy, return NOCHANNEL */
+	/* 2. check if all senders are busy, return NOCHANNEL */
 	for (sender = sender_head; sender; sender = sender->next) {
 		jolly = (jolly_t *) sender;
 		if (jolly->state == STATE_IDLE)
@@ -510,7 +504,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 
 	PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Call to mobile station.\n");
 
-	/* 4. trying to page mobile station */
+	/* 3. trying to page mobile station */
 	jolly->callref = callref;
 	jolly_page(jolly, dialing);
 

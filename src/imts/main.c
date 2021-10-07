@@ -40,7 +40,6 @@
 /* settings */
 static double squelch_db = -INFINITY;
 static int ptt = 0;
-static int station_length = 0; /* defined by mode */
 static double fast_seize = 0.0;
 static enum mode mode = MODE_IMTS;
 static char operator[32] = "010";
@@ -62,9 +61,6 @@ void print_help(const char *arg0)
 	printf("        This adds extra delay to received audio, to eliminate noise when the\n");
 	printf("        transmitter of the phone is turned off. Also this disables release on\n");
 	printf("        loss of RF signal. (Squelch is required for this to operate.)\n");
-	printf(" -5 --five\n");
-	printf(" -7 --seven\n");
-	printf("        Force station ID length (default is 7 for IMTS, 5 for MTS)\n");
 	printf(" -F --fast-seize <delay in ms>\n");
 	printf("        To compensate audio processing latency, give delay when to respond,\n");
 	printf("        after detection of Guard tone from mobile phone.\n");
@@ -89,8 +85,7 @@ void print_help(const char *arg0)
 	printf("        Give length of 600/1500 Hz and silence in seconds. Listen to it with\n");
 	printf("        a radio receiver. To exclude an element, set its length to '0'.\n");
 	printf("        Example: '-D 0.5 0.5 0' plays alternating 600/1500 Hz tone.\n");
-	printf("\nstation-id: Give %d digits of station-id, you don't need to enter it after\n", station_length);
-	printf("        every start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -99,8 +94,6 @@ static void add_options(void)
 	main_mobile_add_options();
 	option_add('S', "squelch", 1);
 	option_add('P', "push-to-talk", 0);
-	option_add('5', "five", 0);
-	option_add('7', "seven", 0);
 	option_add('F', "fast-seize", 1);
 	option_add('D', "decoder-test", 3);
 	option_add('M', "mts", 0);
@@ -118,12 +111,6 @@ static int handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'P':
 		ptt = 1;
-		break;
-	case '5':
-		station_length = 5;
-		break;
-	case '7':
-		station_length = 7;
 		break;
 	case 'F':
 		fast_seize = atof(argv[argi]) / 1000.0;
@@ -150,6 +137,19 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 5, "MTS number format" },
+	{ 7, "IMTS number format" },
+	{ 10, "IMTS number (digits 4..6 will br removed)" },
+	{ 0, NULL }
+};
+
+static const char *number_prefixes[] = {
+	"1xxxxxxxxxx",
+	"+1xxxxxxxxxx",
+	NULL
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -163,7 +163,8 @@ int main(int argc, char *argv[])
 	init_invalidnumber();
 	init_congestion();
 
-	main_mobile_init();
+	/* init mobile interface */
+	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -174,19 +175,15 @@ int main(int argc, char *argv[])
 	if (argi <= 0)
 		return argi;
 
-	if (!station_length) {
-		if (mode == MODE_IMTS)
-			station_length = 7;
-		else
-			station_length = 5;
-	}
+	/* set check for MTS mode */
+	if (mode == MODE_MTS)
+		main_mobile_set_number_check_valid(mts_number_valid);
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if ((int)strlen(station_id) != station_length) {
-			printf("Given station ID '%s' does not have %d digits\n", station_id, station_length);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -266,7 +263,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = imts_create(kanal[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, ptt, station_length, fast_seize, mode, operator, detector_test_length_1, detector_test_length_2, detector_test_length_3);
+		rc = imts_create(kanal[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, squelch_db, ptt, fast_seize, mode, operator, detector_test_length_1, detector_test_length_2, detector_test_length_3);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
@@ -274,7 +271,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], imts_channel2freq(kanal[i], 0) / 1e6, imts_channel2freq(kanal[i], 1) / 1e6, imts_channel2freq(kanal[i], 2) / 1e6);
 	}
 
-	main_mobile((mode == MODE_IMTS) ? "imts" : "mts", &quit, NULL, station_id, station_length);
+	main_mobile_loop((mode == MODE_IMTS) ? "imts" : "mts", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

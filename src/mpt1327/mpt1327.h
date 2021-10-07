@@ -139,6 +139,7 @@ typedef struct mpt1327 {
 void init_sysdef (uint16_t sys, int wt, int per, int pon, int timeout);
 void flush_units(void);
 double mpt1327_channel2freq(enum mpt1327_band band, int channel, int uplink);
+const char *mpt1327_number_valid(const char *number);
 const char *mpt1327_band_name(enum mpt1327_band band);
 void mpt1327_band_list(void);
 int mpt1327_band_by_short_name(const char *short_name);

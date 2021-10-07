@@ -34,6 +34,7 @@
 #include "cause.h"
 #include "sender.h"
 #include "call.h"
+#include "main_mobile.h"
 #include "console.h"
 
 #define DISC_TIMEOUT	30
@@ -659,6 +660,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 	uint16_t sip_cause;
 	uint8_t type, plan, present, screen, caller_type;
 	char caller_id[33], number[33];
+	const char *suffix, *invalid;
 	int rc;
 
 	process = get_process(callref);
@@ -708,6 +710,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		sdp = osmo_cc_helper_audio_accept(&ep->session_config, process, codecs, down_audio, msg, &process->session, &process->codec, 0);
 		if (!sdp) {
 			disconnect_process(callref, 47);
+			indicate_disconnect_release(callref, 47, OSMO_CC_MSG_REJ_IND);
 			break;
 		}
 
@@ -733,6 +736,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 			if (present == OSMO_CC_PRESENT_RESTRICTED)
 				caller_type = TYPE_ANONYMOUS;
 		}
+
 		/* dialing */
 		rc = osmo_cc_get_ie_called(msg, 0, &type, &plan, number, sizeof(number));
 		if (rc < 0)
@@ -746,7 +750,55 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		}
 		PDEBUG(DCALL, DEBUG_INFO, "Outgoing call from '%s' to '%s'\n", caller_id, number);
 
-		rc = call_down_setup(callref, caller_id, caller_type, number);
+		/* insert '+' for international dialing */
+		if (type == OSMO_CC_TYPE_INTERNATIONAL && number[0] != '+') {
+			memmove(number + 1, number, sizeof(number) - 2);
+			number[0] = '+';
+		}
+
+		/* remove prefix, if any */
+		suffix = mobile_number_remove_prefix(number);
+
+		/* check suffix length */
+		invalid = mobile_number_check_length(suffix);
+		if (invalid) {
+			PDEBUG(DCALL, DEBUG_NOTICE, "Mobile number '%s' has invalid length: %s\n", suffix, invalid);
+			disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+			if (!connect_on_setup) {
+				PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+				indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
+			}
+			break;
+		}
+
+		/* check suffix digits */
+		invalid = mobile_number_check_digits(suffix);
+		if (invalid) {
+			PDEBUG(DCALL, DEBUG_NOTICE, "Mobile number '%s' has invalid digit: %s.\n", suffix, invalid);
+			disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+			if (!connect_on_setup) {
+				PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+				indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
+			}
+			break;
+		}
+
+		/* check if suffix is valid */
+		if (mobile_number_check_valid) {
+			invalid = mobile_number_check_valid(suffix);
+			if (invalid) {
+				PDEBUG(DCALL, DEBUG_NOTICE, "Mobile number '%s' is invalid for this network: %s\n", suffix, invalid);
+				disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+				if (!connect_on_setup) {
+					PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+					indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
+				}
+				break;
+			}
+		}
+
+		/* setup call */
+		rc = call_down_setup(callref, caller_id, caller_type, suffix);
 		if (rc < 0) {
 			PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
 			if (!connect_on_setup) {

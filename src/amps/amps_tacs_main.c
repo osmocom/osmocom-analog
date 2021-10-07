@@ -99,8 +99,7 @@ void print_help(const char *arg0)
 	printf("        If 1, be sure to have a round-trip delay (latency) not more than 5 ms\n");
 	printf(" -O --tolerant\n");
 	printf("        Be more tolerant when hunting for sync sequence\n");
-	printf("\nstation-id: Give 10 digit station-id, you don't need to enter it for every\n");
-	printf("        start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -227,6 +226,11 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 10, "AMPS number" },
+	{ 0, NULL }
+};
+
 int main_amps_tacs(const char *name, int argc, char *argv[])
 {
 	int rc, argi;
@@ -237,7 +241,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 	/* override default */
 	dsp_samplerate = 96000;
 
-	main_mobile_init();
+	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -257,10 +261,9 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 10) {
-			printf("Given station ID '%s' does not have 10 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -392,7 +395,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 			printf("Base station on channel %s ready (%s), please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.3f MHz offset)\n", kanal[i], chan_type_long_name(chan_type[i]), amps_channel2freq(atoi(kanal[i]), 0) / 1e6, amps_channel2freq(atoi(kanal[i]), 1) / 1e6, amps_channel2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
-	main_mobile(name, &quit, NULL, station_id, 10);
+	main_mobile_loop(name, &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

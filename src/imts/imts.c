@@ -262,6 +262,21 @@ double imts_is_canada_only(const char *kanal)
 	return 0;
 }
 
+/* check if number is a valid station ID */
+const char *mts_number_valid(const char *number)
+{
+	int i;
+
+	/* assume that the number has valid length(s) and digits */
+
+	for (i = 0; number[i]; i++) {
+		if (number[i] == '1')
+			return "Digits value '1' is not allowed within MTS number.";
+	}
+
+	return NULL;
+}
+
 /* global init */
 int imts_init(void)
 {
@@ -274,7 +289,7 @@ static void imts_paging(imts_t *imts, const char *dial_string, int loopback);
 static void imts_detector_test(imts_t *imts, double length_1, double length_2, double length_3);
 
 /* Create transceiver instance and link to a list. */
-int imts_create(const char *kanal, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int ptt, int station_length, double fast_seize, enum mode mode, const char *operator, double length_1, double length_2, double length_3)
+int imts_create(const char *kanal, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int ptt, double fast_seize, enum mode mode, const char *operator, double length_1, double length_2, double length_3)
 {
 	imts_t *imts;
 	int rc;
@@ -309,7 +324,6 @@ int imts_create(const char *kanal, const char *device, int use_sdr, int samplera
 
 	PDEBUG(DIMTS, DEBUG_DEBUG, "Creating 'IMTS' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
-	imts->station_length = station_length;
 	imts->fast_seize = fast_seize;
 	imts->mode = mode;
 	imts->operator = operator;
@@ -809,8 +823,9 @@ static void ani_after_digit(imts_t *imts)
 		/* update status while receiving station ID */
 		imts_display_status();
 		/* if all digits have been received */
-		if (imts->rx_ani_index == imts->station_length) {
+		if (imts->rx_ani_index == 7) {
 			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "ANI '%s' complete, sending dial tone.\n", imts->station_id);
+dt:
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_DIALTONE, 0.0, 0);
 			timer_start(&imts->timer, DIALTONE_TO);
 			imts->dial_number[0] = '\0';
@@ -821,6 +836,11 @@ static void ani_after_digit(imts_t *imts)
 		}
 		timer_start(&imts->timer, ANI_TO);
 	} else {
+		/* if only 5 digits have been received */
+		if (imts->rx_ani_index == 5) {
+			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "ANI '%s' (5 digits) complete, sending dial tone.\n", imts->station_id);
+			goto dt;
+		}
 		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Timeout receiving ANI from mobile phone, releasing!\n");
 		imts_release(imts);
 	}
@@ -1144,7 +1164,6 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	char number[8];
 	sender_t *sender;
 	imts_t *imts;
-	int i;
 
 	/* 1. check if given number is already in a call, return BUSY */
 	for (sender = sender_head; sender; sender = sender->next) {
@@ -1168,31 +1187,15 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 		return -CAUSE_NOCHANNEL;
 	}
 
-	/* 3. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) == 12 && !strncmp(dialing, "+1", 2))
-		dialing += 2;
-	if (strlen(dialing) == 11 && !strncmp(dialing, "1", 1))
-		dialing += 1;
-	if (strlen(dialing) == 10 && imts->station_length == 7) {
+	/* 3. convert 10 digit numbers to 7 digit station ID */
+	if (strlen(dialing) == 10) {
 		strncpy(number, dialing, 3);
 		strcpy(number + 3, dialing + 6);
 		dialing = number;
 	}
-	if (strlen(dialing) == 10 && imts->station_length == 5)
-		dialing += 5;
-	if ((int)strlen(dialing) != imts->station_length) {
-inval:
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < (int)strlen(dialing); i++) {
-		if (dialing[i] < '0' || dialing[i] > '9')
-			goto inval;
-	}
-
-	PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Call to mobile station, paging number: %s\n", dialing);
 
 	/* 4. trying to page mobile station */
+	PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Call to mobile station, paging number: %s\n", dialing);
 	imts->callref = callref;
 	imts_paging(imts, dialing, 0);
 

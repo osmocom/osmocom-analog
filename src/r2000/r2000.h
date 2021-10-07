@@ -129,6 +129,7 @@ void r2000_destroy(sender_t *sender);
 void r2000_go_idle(r2000_t *r2000);
 void r2000_band_list(void);
 double r2000_channel2freq(int band, int channel, int uplink);
+const char *r2000_number_valid(const char *number);
 const char *r2000_get_frame(r2000_t *r2000);
 void r2000_receive_frame(r2000_t *r2000, const char *bits, double quality, double level);
 void r2000_receive_super(r2000_t *r2000, uint8_t super, double quality, double level);

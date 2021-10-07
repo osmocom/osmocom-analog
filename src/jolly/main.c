@@ -67,8 +67,7 @@ void print_help(const char *arg0)
 	printf("        Use transceiver as repeater, so multiple radios can communicate with\n");
 	printf("        each other. It is still possible to make and receive calls. Multiple\n");
 	printf("        radios can talk then to the calling/called party.\n");
-	printf("\nstation-id: Give 4 digits of station-id, you don't need to enter it\n");
-	printf("        for every start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -118,6 +117,11 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 4, "number" },
+	{ 0, NULL }
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -130,7 +134,8 @@ int main(int argc, char *argv[])
 	init_besetzton();
 //	init_ansage();
 
-	main_mobile_init();
+	/* init mobile interface */
+	main_mobile_init("0123456789", number_lengths, NULL, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -143,10 +148,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 4) {
-			printf("Given station ID '%s' does not have 4 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -198,7 +202,7 @@ int main(int argc, char *argv[])
 		printf("base station on channel %s ready, please tune transmitter to %.4f MHz and receiver to %.4f MHz. (%.4f MHz offset)\n", kanal[i], dl_freq + step / 1e3 * (double)atoi(kanal[i]), ul_freq + step / 1e3 * (double)atoi(kanal[i]), ul_freq - dl_freq);
 	}
 
-	main_mobile("jollycom", &quit, NULL, station_id, 4);
+	main_mobile_loop("jollycom", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

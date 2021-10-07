@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "main.h"
 #include "tones.h"
 #include "noanswer.h"
@@ -7,6 +8,12 @@
 
 const int tacs = 0;
 const int jtacs = 0;
+
+const char *number_prefixes[] = {
+	"1xxxxxxxxxx",
+	"+1xxxxxxxxxx",
+	NULL
+};
 
 int main(int argc, char *argv[])
 {

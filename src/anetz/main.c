@@ -65,8 +65,7 @@ void print_help(const char *arg0)
 	printf("        and stays below this level, the connection is released.\n");
 	printf("        Use 'auto' to do automatic noise floor calibration to detect loss.\n");
 	printf("        Only works with SDR! (disabled by default)\n");
-	printf("\nstation-id: Give (last) 5 digits of station-id, you don't need to enter it\n");
-	printf("        for every start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -121,6 +120,12 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths  number_lengths[] = {
+	{ 5, "number without channel prefix" },
+	{ 7, "number with channel prefix" },
+	{ 0, NULL }
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -134,7 +139,7 @@ int main(int argc, char *argv[])
 	init_freiton();
 	init_besetzton();
 
-	main_mobile_init();
+	main_mobile_init("0123456789", number_lengths, NULL, anetz_number_valid);
 
 	/* handle options / config file */
 	add_options();
@@ -147,12 +152,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 5 && strlen(station_id) != 7) {
-			printf("Given station ID '%s' does not have 7 or (the last) 5 digits\n", station_id);
-			return 0;
-		}
-		if (strlen(station_id) > 5)
-			station_id += strlen(station_id) - 5;
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -188,7 +190,7 @@ int main(int argc, char *argv[])
 		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], anetz_kanal2freq(atoi(kanal[i]), 0) / 1e6, anetz_kanal2freq(atoi(kanal[i]), 1) / 1e6, anetz_kanal2freq(atoi(kanal[i]), 2) / 1e6);
 	}
 
-	main_mobile("anetz", &quit, NULL, station_id, 5);
+	main_mobile_loop("anetz", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

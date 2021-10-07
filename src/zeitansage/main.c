@@ -69,6 +69,12 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 0, "no number" },
+	{ 4, "number '1191'" },
+	{ 0, NULL },
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -78,7 +84,8 @@ int main(int argc, char *argv[])
 	/* init system specific tones */
 	init_samples();
 
-	main_mobile_init();
+	/* init mobile interface */
+	main_mobile_init("0123456789", number_lengths, NULL, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -93,7 +100,7 @@ int main(int argc, char *argv[])
 	fm_init(fast_math);
 	zeit_init(audio_level_dBm, alerting);
 
-	main_mobile("zeitansage", &quit, NULL, "1191", 4);
+	main_mobile_loop("zeitansage", &quit, NULL, "1191");
 
 //fail:
 	/* exits */

@@ -660,35 +660,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	sender_t *sender;
 	euro_t *euro;
 	euro_call_t *call;
-	int i;
 
-	/* check prefix to choose correct channel */
-	if (strlen(dialing) == 10) {
-		if (!strncmp(dialing, "0279", 4)) {
-			dialing += 4;
-			channel = 'A';
-		}
-		if (!strncmp(dialing, "0509", 4)) {
-			dialing += 4;
-			channel = 'B';
-		}
-		if (!strncmp(dialing, "0709", 4)) {
-			dialing += 4;
-			channel = 'B';
-		}
-	}
-	/* number invalid */
-	if (strlen(dialing) != 6) {
-inval:
-		PDEBUG(DEURO, DEBUG_NOTICE, "Call to invalid ID '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < 6; i++) {
-		if (!(dialing[i] >= '0' && dialing[i] <= '9')
-		 && !(dialing[i] >= 'a' && dialing[i] <= 'e')
-		 && !(dialing[i] >= 'A' && dialing[i] <= 'E'))
-			goto inval;
-	}
 
 	/* find transmitter */
 	for (sender = sender_head; sender; sender = sender->next) {

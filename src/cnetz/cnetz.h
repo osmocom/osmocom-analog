@@ -133,6 +133,7 @@ struct cnetz {
 	transaction_t		*trans_list;		/* list of transactions */
 };
 
+const char *cnetz_number_valid(const char *number);
 double cnetz_kanal2freq(int kanal, int unterband);
 void cnetz_channel_list(void);
 int cnetz_channel_by_short_name(const char *short_name);

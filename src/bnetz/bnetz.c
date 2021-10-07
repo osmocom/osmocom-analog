@@ -693,22 +693,8 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 {
 	sender_t *sender;
 	bnetz_t *bnetz;
-	int i;
 
-	/* 1. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) == 7 && dialing[0] == '0' && dialing[1] == '5')
-		dialing += 2;
-	else if (strlen(dialing) != 5) {
-inval:
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < 5; i++) {
-		if (dialing[i] < '0' || dialing[i] > '9')
-			goto inval;
-	}
-
-	/* 2. check if given number is already in a call, return BUSY */
+	/* 1. check if given number is already in a call, return BUSY */
 	for (sender = sender_head; sender; sender = sender->next) {
 		bnetz = (bnetz_t *) sender;
 		if (!strcmp(bnetz->station_id, dialing))
@@ -719,7 +705,7 @@ inval:
 		return -CAUSE_BUSY;
 	}
 
-	/* 3. check if all senders are busy, return NOCHANNEL */
+	/* 2. check if all senders are busy, return NOCHANNEL */
 	for (sender = sender_head; sender; sender = sender->next) {
 		bnetz = (bnetz_t *) sender;
 		if (bnetz->state == BNETZ_FREI)
@@ -732,7 +718,7 @@ inval:
 
 	PDEBUG_CHAN(DBNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
-	/* 4. trying to page mobile station */
+	/* 3. trying to page mobile station */
 	bnetz->callref = callref;
 	bnetz_page(bnetz, dialing, 1);
 

@@ -125,29 +125,19 @@ static struct anetz_dekaden {
 	{ { 1, 2, 2, 2 } }, /* 9 */
 };
 
-/* Takes the last 5 digits of a number and returns 4 paging tones.
+/* Takes the 5 digits of a number and returns 4 paging tones.
    If number is invalid, NULL is returned.  */
+static char anetz_nummer2freq_error[256];
 static double *anetz_nummer2freq(const char *nummer)
 {
 	int f[4];
 	static double freq[4];
 	int *dekade;
-	int i, j, digit;
+	int i, digit;
 
-	/* get last 5 digits */
-	if (strlen(nummer) < 5) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Number must have at least 5 digits!\n");
-		return NULL;
-	}
-	nummer = nummer + strlen(nummer) - 5;
-
-	/* check for digits */
-	for (i = 0; i < 4; i++) {
-		if (nummer[i] < '0' || nummer[i] > '9') {
-			PDEBUG(DANETZ, DEBUG_ERROR, "Number must have digits 0..9!\n");
-			return NULL;
-		}
-	}
+	/* skip prefix */
+	if (strlen(nummer) == 7)
+		nummer += 2;
 
 	/* get decade */
 	dekade =  anetz_gruppenkennziffer[*nummer - '0'].dekade;
@@ -161,16 +151,33 @@ static double *anetz_nummer2freq(const char *nummer)
 			digit = 10;
 		f[i] = (dekade[i] - 1) * 10 + digit;
 		freq[i] = anetz_dauerruf_frq(f[i]);
-		for (j = 0; j < i; j++) {
-			if (dekade[i] == dekade[j] && nummer[i] == nummer[j]) {
-				PDEBUG(DANETZ, DEBUG_NOTICE, "Number invalid, digit #%d and #%d of '%s' use same frequency F%d=%.1f of same decade %d!\n", i+1, j+1, nummer, f[i], freq[i], dekade[i]);
-				return NULL;
-			}
+	}
+
+	/* check if any frequency is used twice */
+	for (i = 0; i < 3; i++) {
+		if (dekade[i] == dekade[i + 1] && nummer[i] == nummer[i + 1]) {
+			sprintf(anetz_nummer2freq_error, "Digit #%d and #%d of '%s' use same frequency F%d=%.1f of same decade %d.", i + 1, i + 2, nummer, f[i], freq[i], dekade[i]);
+			return NULL;
 		}
 	}
+
 	PDEBUG(DANETZ, DEBUG_DEBUG, "Frequencies: F%d=%.1f F%d=%.1f F%d=%.1f F%d=%.1f\n", f[0], freq[0], f[1], freq[1], f[2], freq[2], f[3], freq[3]);
 
 	return freq;
+}
+
+/* check if number is a valid station ID */
+const char *anetz_number_valid(const char *number)
+{
+	double *freq;
+
+	/* assume that the number has valid length(s) and digits */
+
+	freq = anetz_nummer2freq(number);
+	if (!freq)
+		return anetz_nummer2freq_error;
+
+	return NULL;
 }
 
 /* global init */
@@ -381,15 +388,13 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	anetz_t *anetz;
 	double *freq;
 
-	/* 1. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) > 7) {
-inval:
+	/* 1. determine paging frequencies */
+	freq = anetz_nummer2freq(dialing);
+	if (!freq) {
+		PDEBUG(DANETZ, DEBUG_NOTICE, "Number invalid: %s\n", anetz_nummer2freq_error);
 		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
 	}
-	freq = anetz_nummer2freq(dialing);
-	if (!freq)
-		goto inval;
 
 	/* 2. check if given number is already in a call, return BUSY */
 	for (sender = sender_head; sender; sender = sender->next) {

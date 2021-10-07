@@ -74,8 +74,7 @@ void print_help(const char *arg0)
 	printf("        and stays below this level, the connection is released.\n");
 	printf("        Use 'auto' to do automatic noise floor calibration to detect loss.\n");
 	printf("        Only works with SDR! (disabled by default)\n");
-	printf("\nstation-id: Give 5 digit station-id, you don't need to enter it for every\n");
-	printf("        start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -124,6 +123,16 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 5, "B-Netz number" },
+	{ 0, NULL }
+};
+
+static const char *number_prefixes[] = {
+	"05xxxxx",
+	NULL
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -135,7 +144,7 @@ int main(int argc, char *argv[])
 	init_besetzton();
 	init_ansage();
 
-	main_mobile_init();
+	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -148,10 +157,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 5) {
-			printf("Given station ID '%s' does not have 5 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -202,7 +210,7 @@ int main(int argc, char *argv[])
 		printf("To call phone, switch transmitter (using paging signal) to %.3f MHz.\n", bnetz_kanal2freq(19, 0) / 1e6);
 	}
 
-	main_mobile("bnetz", &quit, NULL, station_id, 5);
+	main_mobile_loop("bnetz", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

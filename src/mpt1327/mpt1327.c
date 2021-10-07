@@ -80,6 +80,7 @@
 #include "dsp.h"
 #include "message.h"
 
+
 /* Timers and counters */
 #define RESPONSE_TIMEOUT	1.0
 #define REPEAT_GTC		1
@@ -88,8 +89,30 @@
 #define REPEAT_AHYX		3
 #define REPEAT_CLEAR		3
 
-/* Sysdef
- *
+/* check if number is a valid station ID */
+const char *mpt1327_number_valid(const char *number)
+{
+	int value;
+	static char error[256];
+
+	/* assume that the number has valid length(s) and digits */
+
+	value = (number[0] - '0') * 100 + (number[1] - '0') * 10 + (number[2] - '0');
+	if (value > 127) {
+		sprintf(error, "Prefix '%03d' is not in range 000..127.", value);
+		return error;
+	}
+	value = atoi(number + 3);
+	if (value > 8100 || value < 1) {
+		sprintf(error, "Ident '%04d' is not in range 0001..8100.", value);
+		return error;
+	}
+
+	return NULL;
+}
+
+/*
+ * Sysdef
  */
 
 static mpt1327_sysdef_t sysdef;
@@ -1536,28 +1559,10 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	mpt1327_t *tc;
 	uint8_t prefix;
 	uint16_t ident;
-	int i;
 
-	/* 1. check if number is invalid, return INVALNUMBER */
-	if (strlen(dialing) != 7) {
-inval:
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
-		return -CAUSE_INVALNUMBER;
-	}
-	for (i = 0; i < 7; i++) {
-		if (dialing[i] < '0' || dialing[i] > '9')
-			goto inval;
-	}
+	/* 1. split number into prefix and ident */
 	prefix = (dialing[0] - '0') * 100 + (dialing[1] - '0') * 10 + (dialing[2] - '0');
-	if (prefix > 127) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing call to invalid Prefix '%03d' in number '%s', rejecting! (Prefix must be 000..127)\n", prefix, dialing);
-		return -CAUSE_INVALNUMBER;
-	}
 	ident = atoi(dialing + 3);
-	if (ident > 8100 || ident < 1) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing call to invalid Ident '%04d' in number '%s', rejecting! (Ident must be 0001..8100)\n", ident, dialing);
-		return -CAUSE_INVALNUMBER;
-	}
 
 	/* 2. check if given number is already in a call, return BUSY */
 	unit = get_unit(prefix, ident);

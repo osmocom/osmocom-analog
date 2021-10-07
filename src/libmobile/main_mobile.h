@@ -22,11 +22,23 @@ extern const char *write_rx_wave;
 extern const char *write_tx_wave;
 extern const char *read_rx_wave;
 extern const char *read_tx_wave;
-extern const char *console_digits;
 
-void main_mobile_init(void);
+struct number_lengths {
+	int digits;
+	const char *usage;
+};
+
+const char *mobile_number_remove_prefix(const char *number);
+const char *mobile_number_check_length(const char *number);
+const char *mobile_number_check_digits(const char *number);
+extern const char *(*mobile_number_check_valid)(const char *);
+int main_mobile_number_ask(const char *number, const char *what);
+
+void main_mobile_init(const char *digits, const struct number_lengths lengths[], const char *prefixes[], const char *(*check_valid)(const char *));
+void main_mobile_set_number_check_valid(const char *(*check_valid)(const char *));
 void main_mobile_print_help(const char *arg0, const char *ext_usage);
 void main_mobile_print_hotkeys(void);
+void main_mobile_print_station_id(void);
 void main_mobile_add_options(void);
 int main_mobile_handle_options(int short_option, int argi, char **argv);
 
@@ -42,7 +54,7 @@ int main_mobile_handle_options(int short_option, int argi, char **argv);
 extern int quit;
 void sighandler(int sigset);
 
-void main_mobile(const char *name, int *quit, void (*myhandler)(void), const char *station_id, int station_id_digits);
+void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), const char *station_id);
 
 void dump_info(void);
 

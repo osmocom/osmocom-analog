@@ -73,6 +73,7 @@ void print_help(const char *arg0)
 	printf("        Don't do any link error checking at MTP.\n");
 	printf(" -C --bs-config <filename>\n");
 	printf("       Give DKO config file (6 KBytes tape file) to be loaded at boot time.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -154,6 +155,20 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 7, "regular number format" },
+	{ 8, "extended number format" },
+	{ 0, NULL }
+};
+
+static const char *number_prefixes[] = {
+	"0161xxxxxxx",
+	"0161xxxxxxxx",
+	"+49161xxxxxxx",
+	"+49161xxxxxxxx",
+	NULL
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -166,10 +181,11 @@ int main(int argc, char *argv[])
         init_besetzton();
         init_ansage();
 
+	/* init mobile interface */
 	allow_sdr = 0;
 	uses_emphasis = 0;
 	check_channel = 0;
-	main_mobile_init();
+	main_mobile_init("0123456789", number_lengths, number_prefixes, cnetz_number_valid);
 
 	config_init();
 
@@ -189,10 +205,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 7) {
-			printf("Given station ID '%s' does not have 7 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (num_kanal == 1 && num_device == 0)
@@ -270,7 +285,7 @@ int main(int argc, char *argv[])
 	if (config_loaded)
 		printf("BS-Config: %s\n", config_name);
 
-	main_mobile("fuvst", &quit, NULL, station_id, 7);
+	main_mobile_loop("fuvst", &quit, NULL, station_id);
 fail:
 
 	/* destroy transceiver instance */

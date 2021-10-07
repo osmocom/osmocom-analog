@@ -226,8 +226,7 @@ void print_help(const char *arg0)
 	printf("        requires a DC coupled signal, which is produced by SDR.\n");
 	printf("        Use 'auto' to select 'slope' for sound card input and 'level' for SDR\n");
 	printf("        input. (default = '%s')\n", (demod == FSK_DEMOD_LEVEL) ? "level" : (demod == FSK_DEMOD_SLOPE) ? "slope" : "auto");
-	printf("\nstation-id: Give 7 digit station-id, you don't need to enter it for every\n");
-	printf("        start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 	printf("Press 'i' key to dump list of currently attached subscribers.\n");
 }
@@ -458,10 +457,24 @@ error_fuz:
 	return 1;
 }
 
+static const struct number_lengths number_lengths[] = {
+	{ 7, "regular number format" },
+	{ 8, "extended number format" },
+	{ 0, NULL }
+};
+
+static const char *number_prefixes[] = {
+	"0161xxxxxxx",
+	"0161xxxxxxxx",
+	"+49161xxxxxxx",
+	"+49161xxxxxxxx",
+	NULL
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
-	const char *station_id = "";
+	const char *station_id = NULL;
 	int mandatory = 0;
 	int polarity;
 	int teilnehmergruppensperre = 0;
@@ -475,7 +488,7 @@ int main(int argc, char *argv[])
 
 	init_station();
 
-	main_mobile_init();
+	main_mobile_init("0123456789", number_lengths, number_prefixes, cnetz_number_valid);
 
 	/* handle options / config file */
 	add_options();
@@ -488,10 +501,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 7) {
-			printf("Given station ID '%s' does not have 7 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	/* resolve name of base station */
@@ -645,7 +657,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	main_mobile("cnetz", &quit, NULL, station_id, 7);
+	main_mobile_loop("cnetz", &quit, NULL, station_id);
 
 fail:
 	flush_db();

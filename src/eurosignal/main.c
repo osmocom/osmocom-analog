@@ -81,8 +81,7 @@ void print_help(const char *arg0)
 	printf("        to page a recevier.\n");
 	printf("    --repeat <num>\n");
 	printf("        Repead paging ID <num> times when transmitting. (default = %d)\n", repeat);
-	printf("\nstation-id: Give 6 digit station-id, you don't need to enter it for every\n");
-	printf("        start of this program.\n");
+	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
 
@@ -102,25 +101,6 @@ static void add_options(void)
 	option_add(OPT_REPEAT, "repeat", 1);
 }
 
-static int check_id(const char *id)
-{
-	int i;
-
-	if (strlen(id) != 6) {
-		fprintf(stderr, "Given paging ID must have exactly 6 digits!\n");
-		return -EINVAL;
-	}
-
-	for (i = 0; i < 6; i++) {
-		if (id[i] < '0' || id[i] > '9') {
-			fprintf(stderr, "Given paging ID must have digits (0..9) only!\n");
-			return -EINVAL;
-		}
-	}
-
-	return 0;
-}
-
 static int handle_options(int short_option, int argi, char **argv)
 {
 	switch (short_option) {
@@ -134,20 +114,20 @@ static int handle_options(int short_option, int argi, char **argv)
 		rx = 1;
 		break;
 	case 'I':
-		if (check_id(argv[argi]))
+		if (main_mobile_number_ask(argv[argi], "ID (--id)"))
 			return -EINVAL;
-		euro_add_id(argv[argi]);
+		euro_add_id(mobile_number_remove_prefix(argv[argi]));
 		break;
 	case 'D':
 		degraded = 1;
 		break;
 	case 'S':
-		if (check_id(argv[argi]))
+		if (main_mobile_number_ask(argv[argi], "ID to scan from"))
 			return -EINVAL;
-		scan_from = atoi(argv[argi++]);
-		if (check_id(argv[argi]))
+		scan_from = atoi(mobile_number_remove_prefix((argv[argi++])));
+		if (main_mobile_number_ask(argv[argi], "ID to scan to"))
 			return -EINVAL;
-		scan_to = atoi(argv[argi++]) + 1;
+		scan_to = atoi(mobile_number_remove_prefix(argv[argi++])) + 1;
 		break;
 	case OPT_RANDOM:
 		random_id = 1;
@@ -161,6 +141,21 @@ static int handle_options(int short_option, int argi, char **argv)
 
 	return 1;
 }
+
+static const struct number_lengths number_lengths[] = {
+	{ 6, "number" },
+	{ 0, NULL }
+};
+
+static const char *number_prefixes[] = {
+	"0279xxxxxx",
+	"+49279xxxxxx",
+	"0509xxxxxx",
+	"+49509xxxxxx",
+	"0709xxxxxx",
+	"+49709xxxxxx",
+	NULL
+};
 
 int main(int argc, char *argv[])
 {
@@ -178,8 +173,7 @@ int main(int argc, char *argv[])
 	init_es_kaudn();
 
 	/* init mobile interface */
-	console_digits = "0123456789ABCDE";
-	main_mobile_init();
+	main_mobile_init("0123456789ABCDEabcde", number_lengths, number_prefixes, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -192,10 +186,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 6) {
-			printf("Given receiver ID '%s' does not have 6 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -239,7 +232,7 @@ int main(int argc, char *argv[])
 		printf("Base station for channel %s ready, please tune transmitter and/or receiver to %.4f MHz\n", kanal[i], euro_kanal2freq(kanal[i], fm) / 1e6);
 	}
 
-	main_mobile("eurosignal", &quit, NULL, station_id, 6);
+	main_mobile_loop("eurosignal", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

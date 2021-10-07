@@ -22,6 +22,7 @@ typedef struct fuvst {
 	struct SysMeld		SM; /* collects alarm messages */
 } fuvst_t;
 
+const char *cnetz_number_valid(const char *number);
 int fuvst_create(const char *kanal, enum fuvst_chan_type chan_type, const char *audiodev, int samplerate, double rx_gain, double tx_gain, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, int ignore_link_failure, uint8_t sio, uint16_t local_pc, uint16_t remove_pc);
 void fuvst_destroy(sender_t *sender);
 void add_emergency(const char *number);

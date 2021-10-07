@@ -247,6 +247,11 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
+static const struct number_lengths  number_lengths[] = {
+	{ 9, "number 'trrrnnnnn' (type, relais, number)" },
+	{ 0, NULL }
+};
+
 int main(int argc, char *argv[])
 {
 	int rc, argi;
@@ -257,7 +262,8 @@ int main(int argc, char *argv[])
 	/* init tones */
 	init_radiocom_tones();
 
-	main_mobile_init();
+	/* init mobile interface */
+	main_mobile_init("0123456789", number_lengths, NULL, r2000_number_valid);
 
 	/* handle options / config file */
 	add_options();
@@ -270,10 +276,9 @@ int main(int argc, char *argv[])
 
 	if (argi < argc) {
 		station_id = argv[argi];
-		if (strlen(station_id) != 9) {
-			printf("Given station ID '%s' does not have 9 digits\n", station_id);
-			return 0;
-		}
+		rc = main_mobile_number_ask(station_id, "station ID");
+		if (rc)
+			return rc;
 	}
 
 	if (!num_kanal) {
@@ -363,7 +368,7 @@ int main(int argc, char *argv[])
 
 	r2000_check_channels();
 
-	main_mobile("radiocom2000", &quit, NULL, station_id, 9);
+	main_mobile_loop("radiocom2000", &quit, NULL, station_id);
 
 fail:
 	/* destroy transceiver instance */

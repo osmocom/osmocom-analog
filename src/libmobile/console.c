@@ -32,6 +32,7 @@
 #include "../libosmocc/endpoint.h"
 #include "../libosmocc/helper.h"
 #include "testton.h"
+#include "../libmobile/main_mobile.h"
 #include "console.h"
 #include "cause.h"
 #include "../libmobile/call.h"
@@ -77,7 +78,8 @@ typedef struct console {
 	int test_audio_pos;	/* position for test tone toward mobile */
 	sample_t tx_buffer[160];/* transmit audio buffer */
 	int tx_buffer_pos;	/* current position in transmit audio buffer */
-	int num_digits;		/* number of digits to be dialed */
+	const struct number_lengths *number_lengths;/* number of digits to be dialed */
+	int number_max_length;	/* number of digits of the longest number to be dialed */
 	int loopback;		/* loopback test for echo */
 	int echo_test;		/* send echo back to mobile phone */
 	const char *digits;	/* list of dialable digits */
@@ -268,10 +270,8 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 			osmo_cc_free_msg(msg);
 			return;
 		}
-		if (caller_id[0]) {
-			strncpy(console.station_id, caller_id, console.num_digits);
-			console.station_id[console.num_digits] = '\0';
-		}
+		if (caller_id[0])
+			strncpy(console.station_id, caller_id, sizeof(console.station_id) - 1);
 		strncpy(console.dialing, number, sizeof(console.dialing) - 1);
 		console.dialing[sizeof(console.dialing) - 1] = '\0';
 		console_new_state(CONSOLE_CONNECT);
@@ -297,8 +297,8 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		PDEBUG(DCC, DEBUG_INFO, "Call connected to '%s'\n", caller_id);
 		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		console_new_state(CONSOLE_CONNECT);
-		strncpy(console.station_id, caller_id, console.num_digits);
-		console.station_id[console.num_digits] = '\0';
+		if (caller_id[0])
+			strncpy(console.station_id, caller_id, sizeof(console.station_id) - 1);
 		request_answer_ack(console.callref);
 		break;
 	    }
@@ -358,9 +358,10 @@ static void _print_console_text(void)
 	printf("\033[0;39m");
 }
 
-int console_init(const char *station_id, const char *audiodev, int samplerate, int buffer, int num_digits, int loopback, int echo_test, const char *digits)
+int console_init(const char *audiodev, int samplerate, int buffer, int loopback, int echo_test, const char *digits, const struct number_lengths *lengths, const char *station_id)
 {
 	int rc = 0;
+	int i;
 
 	init_testton();
 
@@ -368,15 +369,21 @@ int console_init(const char *station_id, const char *audiodev, int samplerate, i
 	print_console_text = _print_console_text;
 
 	memset(&console, 0, sizeof(console));
-	if (station_id)
-		strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
 	strncpy(console.audiodev, audiodev, sizeof(console.audiodev) - 1);
 	console.samplerate = samplerate;
 	console.buffer_size = buffer * samplerate / 1000;
-	console.num_digits = num_digits;
 	console.loopback = loopback;
 	console.echo_test = echo_test;
 	console.digits = digits;
+	console.number_lengths = lengths;
+	if (lengths) {
+		for (i = 0; lengths[i].usage; i++) {
+			if (lengths[i].digits > console.number_max_length)
+				console.number_max_length = lengths[i].digits;
+		}
+	}
+	if (station_id)
+		strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
 
 	if (!audiodev[0])
 		return 0;
@@ -451,6 +458,10 @@ void console_cleanup(void)
 	}
 }
 
+/* process input from console
+ * it is not called at loopback mode
+ * calling this implies that the console.number_lengths is set
+ */
 static void process_ui(int c)
 {
 	char text[256] = "";
@@ -460,7 +471,7 @@ static void process_ui(int c)
 	switch (console.state) {
 	case CONSOLE_IDLE:
 		if (c > 0) {
-			if ((int)strlen(console.station_id) < console.num_digits) {
+			if ((int)strlen(console.station_id) < console.number_max_length) {
 				for (i = 0; i < (int)strlen(console.digits); i++) {
 					if (c == console.digits[i]) {
 						console.station_id[strlen(console.station_id) + 1] = '\0';
@@ -471,7 +482,12 @@ static void process_ui(int c)
 			if ((c == 8 || c == 127) && strlen(console.station_id))
 				console.station_id[strlen(console.station_id) - 1] = '\0';
 dial_after_hangup:
-			if (c == 'd' && (int)strlen(console.station_id) == console.num_digits) {
+			len = strlen(console.station_id);
+			for (i = 0; console.number_lengths[i].usage; i++) {
+				if (len == console.number_lengths[i].digits)
+					break;
+			}
+			if (c == 'd' && console.number_lengths[i].usage) {
 				PDEBUG(DCC, DEBUG_INFO, "Outgoing call to '%s'\n", console.station_id);
 				console.dialing[0] = '\0';
 				console_new_state(CONSOLE_SETUP_RT);
@@ -479,10 +495,19 @@ dial_after_hangup:
 				request_setup(console.callref, console.station_id);
 			}
 		}
-		if (console.num_digits != (int)strlen(console.station_id))
-			sprintf(text, "on-hook: %s%s (enter digits 0..9)\r", console.station_id, "..............." + 15 - console.num_digits + strlen(console.station_id));
-		else
-			sprintf(text, "on-hook: %s (press d=dial)\r", console.station_id);
+		sprintf(text, "on-hook: %s%s ", console.station_id, "................................" + 32 - console.number_max_length + strlen(console.station_id));
+		len = strlen(console.station_id);
+		for (i = 0; console.number_lengths[i].usage; i++) {
+			if (len == console.number_lengths[i].digits)
+				break;
+		}
+		if (console.number_lengths[i].usage) {
+			if (console.number_lengths[i + 1].usage)
+				sprintf(strchr(text, '\0'), "(enter digits %s or press d=dial)\r", console.digits);
+			else
+				sprintf(strchr(text, '\0'), "(press d=dial)\r");
+		} else
+			sprintf(strchr(text, '\0'), "(enter digits %s)\r", console.digits);
 		break;
 	case CONSOLE_SETUP_RO:
 	case CONSOLE_SETUP_RT:
@@ -538,7 +563,7 @@ dial_after_hangup:
  * returns 1 on exit (ctrl+c) */
 void process_console(int c)
 {
-	if (!console.loopback && console.num_digits)
+	if (!console.loopback && console.number_max_length)
 		process_ui(c);
 
 	if (console.session)

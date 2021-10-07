@@ -80,21 +80,147 @@ const char *write_tx_wave = NULL;
 const char *write_rx_wave = NULL;
 const char *read_tx_wave = NULL;
 const char *read_rx_wave = NULL;
-const char *console_digits = "0123456789";
 
-void main_mobile_init(void)
+static const char *number_digits;
+static const struct number_lengths *number_lengths;
+static const char **number_prefixes;
+
+const char *mobile_number_remove_prefix(const char *number)
+{
+	size_t len;
+	int i, j;
+
+	if (!number_prefixes)
+		return number;
+
+	len = strlen(number);
+	for (i = 0; number_prefixes[i]; i++) {
+		/* skip different lengths */
+		if (len != strlen(number_prefixes[i]))
+			continue;
+		/* match prefix, stop at 'x' */
+		for (j = 0; number_prefixes[i][j]; j++) {
+			if (number_prefixes[i][j] == 'x')
+				break;
+			if (number_prefixes[i][j] != number[j])
+				break;
+		}
+		/* if prefix matches, return suffix */ 
+		if (number_prefixes[i][j] == 'x')
+			return number + j;
+	}
+
+	/* return number, if there is no prefix matching */
+	return number;
+}
+
+const char *mobile_number_check_length(const char *number)
+{
+	size_t len;
+	int i;
+	static char invalid[256];
+
+	if (!number_lengths)
+		return NULL;
+
+	len = strlen(number);
+	for (i = 0; number_lengths[i].usage; i++) {
+		if ((int)len == number_lengths[i].digits)
+			break;
+	}
+	if (!number_lengths[i].usage) {
+		sprintf(invalid, "Number does not have");
+		for (i = 0; number_lengths[i].usage; i++) {
+			sprintf(strchr(invalid, '\0'), " %d", number_lengths[i].digits);
+			if (number_lengths[i + 1].usage) {
+				if (number_lengths[i + 2].usage)
+					strcat(invalid, ",");
+				else
+					strcat(invalid, " or");
+			}
+		}
+		sprintf(strchr(invalid, '\0'), " digits.");
+		return invalid;
+	}
+
+	return NULL;
+}
+
+const char *mobile_number_check_digits(const char *number)
+{
+	int i;
+	static char invalid[256];
+
+	for (i = 0; number[i]; i++) {
+		if (!strchr(number_digits, number[i])) {
+			sprintf(invalid, "Digit #%d of number has digit '%c' which is not in the set of allowed digits. ('%s')\n", i + 1, number[i], number_digits);
+			return invalid;
+		}
+	}
+
+	return NULL;
+}
+
+const char *(*mobile_number_check_valid)(const char *);
+
+void main_mobile_init(const char *digits, const struct number_lengths lengths[], const char *prefixes[], const char *(*check_valid)(const char *))
 {
 	cc_argv[cc_argc++] = options_strdup("remote auto");
-	
+
+	number_digits = digits;
+	number_lengths = lengths;
+	number_prefixes = prefixes;
+	mobile_number_check_valid = check_valid;
+
 	got_init = 1;
 #ifdef HAVE_SDR
 	sdr_config_init(DEFAULT_LO_OFFSET);
 #endif
 }
 
+void main_mobile_set_number_check_valid(const char *(*check_valid)(const char *))
+{
+	mobile_number_check_valid = check_valid;
+}
+
+/* ask if number is connect */
+int main_mobile_number_ask(const char *number, const char *what)
+{
+	const char *invalid;
+
+	if (!got_init) {
+		fprintf(stderr, "main_mobile_init was not called, please fix!\n");
+		abort();
+	}
+
+	number = mobile_number_remove_prefix(number);
+
+	invalid = mobile_number_check_length(number);
+	if (invalid) {
+		printf("Given %s '%s' has invalid length: %s\n", what, number, invalid);
+		return -EINVAL;
+	}
+
+	invalid = mobile_number_check_digits(number);
+	if (invalid) {
+		printf("Given %s '%s' has invalid digit: %s\n", what, number, invalid);
+		return -EINVAL;
+	}
+
+	if (mobile_number_check_valid) {
+		invalid = mobile_number_check_valid(number);
+		if (invalid) {
+			printf("Given %s '%s' is invalid for this network: %s\n", what, number, invalid);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 void main_mobile_print_help(const char *arg0, const char *ext_usage)
 {
-	printf("Usage: %s -k <kanal/channel> %s[options] [station-id]\n", arg0, ext_usage);
+	printf("Usage: %s -k <kanal/channel> %s[options] [station_id]\n", arg0, ext_usage);
 	printf("\nGlobal options:\n");
 	/*      -                                                                             - */
 	printf(" -h --help\n");
@@ -176,6 +302,33 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
     }
 #endif
 	printf("\nNetwork specific options:\n");
+}
+
+void main_mobile_print_station_id(void)
+{
+	int i;
+
+	if (!number_lengths)
+		return;
+
+	printf("\nstation_id: Give");
+	for (i = 0; number_lengths[i].usage; i++) {
+		printf(" %d", number_lengths[i].digits);
+		if (number_lengths[i + 1].usage) {
+			if (number_lengths[i + 2].usage)
+				printf(",");
+			else
+				printf(" or");
+		}
+	}
+	printf(" digits of station ID,\n");
+	printf("        so you don't need to enter it for every start of this application.\n");
+	for (i = 0; number_lengths[i].usage; i++)
+		printf("        Give %d digits for %s.\n", number_lengths[i].digits, number_lengths[i].usage);
+	if (number_prefixes) {
+		for (i = 0; number_prefixes[i]; i++)
+			printf("        You may use '%s' as prefix.\n", number_prefixes[i]);
+	}
 }
 
 void main_mobile_print_hotkeys(void)
@@ -440,7 +593,7 @@ static int get_char()
 }
 
 /* Loop through all transceiver instances of one network. */
-void main_mobile(const char *name, int *quit, void (*myhandler)(void), const char *station_id, int station_id_digits)
+void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), const char *station_id)
 {
 	int buffer_size;
 	sender_t *sender;
@@ -453,6 +606,10 @@ void main_mobile(const char *name, int *quit, void (*myhandler)(void), const cha
 		fprintf(stderr, "main_mobile_init was not called, please fix!\n");
 		abort();
 	}
+
+	/* station id preset */
+	if (station_id)
+		station_id = mobile_number_remove_prefix(station_id);
 
 	/* size of dsp buffer in samples */
 	buffer_size = dsp_samplerate * dsp_buffer / 1000;
@@ -497,7 +654,7 @@ void main_mobile(const char *name, int *quit, void (*myhandler)(void), const cha
 
 	/* init OSMO-CC */
 	if (!use_osmocc_sock)
-		console_init(station_id, call_device, call_samplerate, call_buffer, station_id_digits, loopback, echo_test, console_digits);
+		console_init(call_device, call_samplerate, call_buffer, loopback, echo_test, number_digits, number_lengths, station_id);
 
 	/* init call control instance */
 	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv);

@@ -179,10 +179,11 @@ int main(int argc, char *argv[])
 	func_mtp_receive_lssu = receive_lssu;
 	func_mtp_receive_msu = receive_msu;
 
+	/* init mobile interface */
 	allow_sdr = 0;
 	uses_emphasis = 0;
 	check_channel = 0;
-	main_mobile_init();
+	main_mobile_init(NULL, NULL, NULL, NULL);
 
 	/* handle options / config file */
 	add_options();
@@ -225,7 +226,7 @@ int main(int argc, char *argv[])
 			goto fail;
 	}
 
-	main_mobile(NULL, &quit, NULL, NULL, 0);
+	main_mobile_loop(NULL, &quit, NULL, NULL);
 
 fail:
 	/* destroy transceiver instance */
