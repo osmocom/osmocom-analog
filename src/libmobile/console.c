@@ -526,8 +526,10 @@ dial_after_hangup:
 	clear_console_text();
 	console_len = len;
 	memcpy(console_text, text, len);
-	memset(console_clear, ' ', len - 1);
-	console_clear[len - 1] = '\r';
+	if (len) {
+		memset(console_clear, ' ', len - 1);
+		console_clear[len - 1] = '\r';
+	}
 	print_console_text();
 	fflush(stdout);
 }
