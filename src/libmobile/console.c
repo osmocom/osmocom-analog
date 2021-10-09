@@ -270,8 +270,10 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 			osmo_cc_free_msg(msg);
 			return;
 		}
-		if (caller_id[0])
-			strncpy(console.station_id, caller_id, sizeof(console.station_id) - 1);
+		if (caller_id[0]) {
+			strncpy(console.station_id, caller_id, sizeof(console.station_id));
+			console.station_id[sizeof(console.station_id) - 1] = '\0';
+		}
 		strncpy(console.dialing, number, sizeof(console.dialing) - 1);
 		console.dialing[sizeof(console.dialing) - 1] = '\0';
 		console_new_state(CONSOLE_CONNECT);
@@ -297,8 +299,10 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		PDEBUG(DCC, DEBUG_INFO, "Call connected to '%s'\n", caller_id);
 		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		console_new_state(CONSOLE_CONNECT);
-		if (caller_id[0])
-			strncpy(console.station_id, caller_id, sizeof(console.station_id) - 1);
+		if (caller_id[0]) {
+			strncpy(console.station_id, caller_id, sizeof(console.station_id));
+			console.station_id[sizeof(console.station_id) - 1] = '\0';
+		}
 		request_answer_ack(console.callref);
 		break;
 	    }
