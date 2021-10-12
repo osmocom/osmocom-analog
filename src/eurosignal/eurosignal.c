@@ -247,11 +247,6 @@ int euro_create(const char *kanal, const char *device, int use_sdr, int samplera
 		return -EINVAL;
 	}
 
-	if (atoi(kanal) == 19) {
-		PDEBUG(DEURO, DEBUG_ERROR, "Selected calling channel ('Rufkanal') number %s can't be used as traffic channel.\n", kanal);
-		return -EINVAL;
-	}
-
 	euro = calloc(1, sizeof(*euro));
 	if (!euro) {
 		PDEBUG(DEURO, DEBUG_ERROR, "No memory!\n");
