@@ -75,8 +75,6 @@ const char *cnetz_dsp_mode_name(enum dsp_mode mode)
 	return invalid;
 }
 
-static sample_t ramp_up[256], ramp_down[256];
-
 void dsp_init(void)
 {
 }
@@ -88,15 +86,15 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 
 	PDEBUG(DDSP, DEBUG_DEBUG, "Generating smooth ramp table.\n");
 	for (i = 0; i < 256; i++) {
-		c = cos((double)i / 256.0 * PI);
 		/* use square-root of cosine ramp. tests showed that phones are more
-		 * happy with that. */
+		 * happy with that. (This is not correct pulse shaping!) */
+		c = cos((double)i / 256.0 * PI);
 		if (c < 0)
 			c = -sqrt(-c);
 		else
 			c = sqrt(c);
-		ramp_down[i] = c * (double)cnetz->fsk_deviation;
-		ramp_up[i] = -ramp_down[i];
+		cnetz->fsk_ramp_down[i] = c * (double)cnetz->fsk_deviation;
+		cnetz->fsk_ramp_up[i] = -cnetz->fsk_ramp_down[i];
 	}
 }
 
@@ -331,14 +329,14 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits, int ogk)
 			if (bits[i] == '1') {
 				/* ramp up from 0 */
 				do {
-					*spl++ = ramp_up[(uint8_t)phase] / 2 + deviation / 2;
+					*spl++ = cnetz->fsk_ramp_up[(uint8_t)phase] / 2 + deviation / 2;
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
 			} else {
 				/* ramp down from 0 */
 				do {
-					*spl++ = ramp_down[(uint8_t)phase] / 2 - deviation / 2;
+					*spl++ = cnetz->fsk_ramp_down[(uint8_t)phase] / 2 - deviation / 2;
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
@@ -355,7 +353,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits, int ogk)
 			} else {
 				/* ramp down */
 				do {
-					*spl++ = ramp_down[(uint8_t)phase];
+					*spl++ = cnetz->fsk_ramp_down[(uint8_t)phase];
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
@@ -365,7 +363,7 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits, int ogk)
 			if (bits[i] == '1') {
 				/* ramp up */
 				do {
-					*spl++ = ramp_up[(uint8_t)phase];
+					*spl++ = cnetz->fsk_ramp_up[(uint8_t)phase];
 					phase += bitstep;
 				} while (phase < 256.0);
 				phase -= 256.0;
@@ -385,14 +383,14 @@ static int fsk_block_encode(cnetz_t *cnetz, const char *bits, int ogk)
 	if (last == '0') {
 		/* ramp up to 0 */
 		do {
-			*spl++ = ramp_up[(uint8_t)phase] / 2 - deviation / 2;
+			*spl++ = cnetz->fsk_ramp_up[(uint8_t)phase] / 2 - deviation / 2;
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
 	} else {
 		/* ramp down to 0 */
 		do {
-			*spl++ = ramp_down[(uint8_t)phase] / 2 + deviation / 2;
+			*spl++ = cnetz->fsk_ramp_down[(uint8_t)phase] / 2 + deviation / 2;
 			phase += bitstep;
 		} while (phase < 256.0);
 		phase -= 256.0;
@@ -481,14 +479,14 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 				if (bits[i * 4 + j] == '1') {
 					/* ramp up from 0 */
 					do {
-						*spl++ = ramp_up[(uint8_t)phase] / 2 + deviation / 2;
+						*spl++ = cnetz->fsk_ramp_up[(uint8_t)phase] / 2 + deviation / 2;
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
 				} else {
 					/* ramp down from 0 */
 					do {
-						*spl++ = ramp_down[(uint8_t)phase] / 2 - deviation / 2;
+						*spl++ = cnetz->fsk_ramp_down[(uint8_t)phase] / 2 - deviation / 2;
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
@@ -505,7 +503,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 				} else {
 					/* ramp down */
 					do {
-						*spl++ = ramp_down[(uint8_t)phase];
+						*spl++ = cnetz->fsk_ramp_down[(uint8_t)phase];
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
@@ -515,7 +513,7 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 				if (bits[i * 4 + j] == '1') {
 					/* ramp up */
 					do {
-						*spl++ = ramp_up[(uint8_t)phase];
+						*spl++ = cnetz->fsk_ramp_up[(uint8_t)phase];
 						phase += bitstep;
 					} while (phase < 256.0);
 					phase -= 256.0;
@@ -535,14 +533,14 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 		if (last == '0') {
 			/* ramp up to 0 */
 			do {
-				*spl++ = ramp_up[(uint8_t)phase] / 2 - deviation / 2;
+				*spl++ = cnetz->fsk_ramp_up[(uint8_t)phase] / 2 - deviation / 2;
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
 		} else {
 			/* ramp down to 0 */
 			do {
-				*spl++ = ramp_down[(uint8_t)phase] / 2 + deviation / 2;
+				*spl++ = cnetz->fsk_ramp_down[(uint8_t)phase] / 2 + deviation / 2;
 				phase += bitstep;
 			} while (phase < 256.0);
 			phase -= 256.0;
@@ -755,7 +753,7 @@ again:
 			/* ramp before speech */
 			for (j = 0; j < begin; j++) {
 				/* ramp up from 0 to speech level */
-				speech_buffer[j] = speech_buffer[begin] * (ramp_up[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
+				speech_buffer[j] = speech_buffer[begin] * (cnetz->fsk_ramp_up[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
 			}
 			speech_length += begin; /* add one bit duration before speech*/
 			/* ramp after speech */
@@ -766,7 +764,7 @@ again:
 			speech_length = end; /* shorten 'speech_length', if greater than 'end' */
 			for (j = 0; j < begin; j++) {
 				/* ramp down from speech level to 0 */
-				speech_buffer[end + j] = speech_buffer[end - 1] * (ramp_down[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
+				speech_buffer[end + j] = speech_buffer[end - 1] * (cnetz->fsk_ramp_down[j * 256 / begin] / cnetz->fsk_deviation / 2.0 + 0.5);
 			}
 			speech_length += begin; /* add one bit duration after speech */
 			speech_pos = 0;
