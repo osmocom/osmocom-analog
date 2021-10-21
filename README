@@ -25,6 +25,7 @@ Additionally the following communication services are implemented:
  * Radio transmitter / receiver
  * Analog Modem Emulation (AM7911)
  * German classic 'Zeitansage' (talking clock)
+ * POCSAG transmitter / receiver
 
 
 USE AT YOUR OWN RISK!

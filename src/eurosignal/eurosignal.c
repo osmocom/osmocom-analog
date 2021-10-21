@@ -656,7 +656,6 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	euro_t *euro;
 	euro_call_t *call;
 
-
 	/* find transmitter */
 	for (sender = sender_head; sender; sender = sender->next) {
 		/* skip channels that are different than requested */

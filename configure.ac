@@ -105,6 +105,7 @@ AC_OUTPUT(
     src/mpt1327/Makefile
     src/jolly/Makefile
     src/eurosignal/Makefile
+    src/pocsag/Makefile
     src/tv/Makefile
     src/radio/Makefile
     src/datenklo/Makefile

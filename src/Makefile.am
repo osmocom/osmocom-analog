@@ -55,6 +55,7 @@ SUBDIRS += \
 	mpt1327 \
 	jolly \
 	eurosignal \
+	pocsag \
 	tv \
 	radio \
 	zeitansage \
