@@ -42,6 +42,9 @@ typedef struct cnetz_database {
 	uint16_t		futln_rest;
 	int			futelg_bit;	/* chip card inside */
 	int			extended;	/* mobile supports extended frequencies */
+	int			eingebucht;	/* set if still available */
+	double			last_seen;
+	int			busy;		/* set if currently in a call */
 	struct timer		timer;		/* timer for next availability check */
 	int			retry;		/* counts number of retries */
 } cnetz_db_t;
@@ -111,6 +114,7 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 		}
 		timer_init(&db->timer, db_timeout, db);
 
+		db->eingebucht = 1;
 		db->futln_nat = futln_nat;
 		db->futln_fuvst = futln_fuvst;
 		db->futln_rest = futln_rest;
@@ -130,6 +134,7 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 	if (extended && *extended >= 0)
 		db->extended = *extended;
 
+	db->busy = busy;
 	if (busy) {
 		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		timer_stop(&db->timer);
@@ -137,11 +142,14 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		timer_start(&db->timer, MELDE_INTERVAL); /* when to check avaiability (again) */
 		db->retry = 0;
+		db->eingebucht = 1;
+		db->last_seen = get_time();
 	} else {
 		db->retry++;
 		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->retry, MELDE_MAXIMAL);
 		if (db->retry == MELDE_MAXIMAL) {
-			remove_db(db);
+			PDEBUG(DDB, DEBUG_INFO, "Marking subscriber as gone.\n");
+			db->eingebucht = 0;
 			return db->extended;
 		}
 		timer_start(&db->timer, MELDE_WIEDERHOLUNG); /* when to do retry */
@@ -159,7 +167,8 @@ int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *fu
 	cnetz_db_t *db = cnetz_db_head;
 
 	while (db) {
-		if (db->futln_nat == futln_nat
+		if (db->eingebucht
+		 && db->futln_nat == futln_nat
 		 && db->futln_fuvst == futln_fuvst
 		 && db->futln_rest == futln_rest) {
 			if (futelg_bit)
@@ -182,6 +191,8 @@ void flush_db(void)
 void dump_db(void)
 {
 	cnetz_db_t *db = cnetz_db_head;
+	double now = get_time();
+	int last;
 
 	PDEBUG(DDB, DEBUG_NOTICE, "Dump of subscriber database:\n");
 	if (!db) {
@@ -189,8 +200,11 @@ void dump_db(void)
 		return;
 	}
 
+	PDEBUG(DDB, DEBUG_NOTICE, "Subscriber\tAttached\tBusy\t\tLast seen\tMeldeaufrufe\n");
+	PDEBUG(DDB, DEBUG_NOTICE, "-------------------------------------------------------------------------------\n");
 	while (db) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - Subscriber '%d,%d,%05d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		last = (db->busy) ? 0 : (uint32_t)(now - db->last_seen);
+		PDEBUG(DDB, DEBUG_NOTICE, "%d,%d,%05d\t%s\t\t%s\t\t%02d:%02d:%02d \t%d/%d\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? "YES" : "-no-", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, MELDE_MAXIMAL);
 		db = db->next;
 	}
 }
