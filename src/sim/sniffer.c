@@ -740,7 +740,7 @@ static void rx_char(sim_sniffer_t *sim, uint8_t c)
 		else if ((sim->block_control & 0x1f) == 0x09)
 			PDEBUG(DSIM2, DEBUG_INFO, " control REJ: N(R)=%d\n", sim->block_control >> 5);
 		else if (sim->block_control == 0xef)
-			PDEBUG(DSIM2, DEBUG_INFO, " control RES");
+			PDEBUG(DSIM2, DEBUG_INFO, " control RES\n");
 		else
 			PDEBUG(DSIM2, DEBUG_INFO, " control unknown 0x%02x\n", sim->block_control);
 		PDEBUG(DSIM2, DEBUG_INFO, " length %d\n", sim->block_length);
