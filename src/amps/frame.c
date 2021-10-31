@@ -1717,7 +1717,7 @@ static const char *ie_bspc(uint64_t value)
 
 static const char *ie_chan(uint64_t value)
 {
-	static char string[32];
+	static char string[64];
 	
 	if (value == 0)
 		return "No channel";
