@@ -279,7 +279,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		}
 
 		/* set up streamer */
-#ifdef SOAPY_0_7_1_OR_HIGHER
+#ifdef SOAPY_0_8_0_OR_HIGHER
 		if (!(rxStream = SoapySDRDevice_setupStream(sdr, SOAPY_SDR_RX, SOAPY_SDR_CF32, &channel, 1, &stream_args)))
 #else
 		if (SoapySDRDevice_setupStream(sdr, &rxStream, SOAPY_SDR_RX, SOAPY_SDR_CF32, &channel, 1, &stream_args) != 0)
@@ -404,7 +404,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		}
 
 		/* set up streamer */
-#ifdef SOAPY_0_7_1_OR_HIGHER
+#ifdef SOAPY_0_8_0_OR_HIGHER
 		if (!(txStream = SoapySDRDevice_setupStream(sdr, SOAPY_SDR_TX, SOAPY_SDR_CF32, &channel, 1, &stream_args)))
 #else
 		if (SoapySDRDevice_setupStream(sdr, &txStream, SOAPY_SDR_TX, SOAPY_SDR_CF32, &channel, 1, &stream_args) != 0)
