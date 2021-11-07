@@ -267,6 +267,15 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		goto error;
 	}
 
+	/* swap links, if required */
+	if (sdr_config->swap_links) {
+		double *temp;
+		PDEBUG(DSDR, DEBUG_NOTICE, "Sapping RX and TX frequencies!\n");
+		temp = rx_frequency;
+		rx_frequency = tx_frequency;
+		tx_frequency = temp;
+	}
+
 	if (tx_frequency) {
 		/* calculate required bandwidth (IQ rate) */
 
@@ -456,14 +465,6 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 				sdr->chan[c].dmp_deviation = display_measurements_add(&sender->dispmeas, "Deviation", "%.2f KHz", DISPLAY_MEAS_PEAK2PEAK, DISPLAY_MEAS_LEFT, 0.0, max_deviation / 1000.0 * 1.5, max_deviation / 1000.0);
 			}
 		}
-	}
-
-	if (sdr_config->swap_links) {
-		double temp;
-		PDEBUG(DSDR, DEBUG_NOTICE, "Sapping RX and TX frequencies!\n");
-		temp = rx_center_frequency;
-		rx_center_frequency = tx_center_frequency;
-		tx_center_frequency = temp;
 	}
 
 	display_iq_init(samplerate);

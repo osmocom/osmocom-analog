@@ -28,6 +28,9 @@
 #include "../libdebug/debug.h"
 #include "sender.h"
 #include "../libtimer/timer.h"
+#ifdef HAVE_SDR
+#include "../libsdr/sdr_config.h"
+#endif
 
 /* debug time consumption of audio processing */
 //#define DEBUG_TIME_CONSUMPTION
@@ -237,7 +240,7 @@ int sender_open_audio(int buffer_size, double interval)
 	/* in case of initialized spectrum display (SDR), we add all channels.
 	 * if spectrum display was not initialized (sound card), function call is ignored */
 	for (inst = sender_head; inst; inst = inst->next)
-		display_spectrum_add_mark(inst->kanal, inst->empfangsfrequenz);
+		display_spectrum_add_mark(inst->kanal, (sdr_config->swap_links) ? inst->sendefrequenz : inst->empfangsfrequenz);
 #endif
 
 	return 0;
