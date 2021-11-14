@@ -16,6 +16,7 @@ generated simultaniously using SDR. Currently supported networks:
  * IMTS / MTS ((Improved) Mobile Telephone Service)
  * MPT1327 (Trunked Radio) aka known as 'Buendelfunk'
  * Eurosignal (ERuRD paging service)
+ * 5-Ton-Folge (ZVEI 5 tone paging code for pager and siren trigger)
  * JollyCom (Unofficial network, invented by the author)
  * C-Netz BSC (Connecting to a C-Netz Base Station)
 
@@ -26,6 +27,7 @@ Additionally the following communication services are implemented:
  * Analog Modem Emulation (AM7911)
  * German classic 'Zeitansage' (talking clock)
  * POCSAG transmitter / receiver
+ * 5-Ton-Folge + Sirenensteuerung
 
 
 USE AT YOUR OWN RISK!

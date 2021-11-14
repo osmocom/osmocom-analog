@@ -56,6 +56,7 @@ SUBDIRS += \
 	jolly \
 	eurosignal \
 	pocsag \
+	fuenf \
 	tv \
 	radio \
 	zeitansage \
