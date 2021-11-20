@@ -182,6 +182,11 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		goto error;
 #endif
 	}
+	/* if no sink was selected, we use dummy settings */
+	if (!rx_wave_file && !rx_audiodev) {
+		radio->rx_audio_samplerate = 48000;
+		radio->rx_audio_channels = (stereo) ? 2 : 1;
+	}
 
 	/* check if sample rate is too low */
 	if (radio->tx_audio_samplerate > radio->signal_samplerate) {
@@ -739,10 +744,6 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 		}
 	}
 #endif
-	if (!radio->rx_audio_mode) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, please fix!\n");
-		return -EINVAL;
-	}
 
 	return signal_num;
 }
