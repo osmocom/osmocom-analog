@@ -163,6 +163,9 @@ int main(int argc, char *argv[])
 	const char *station_id = "";
 	int i;
 
+	/* eurosignal does not use emphasis, so disable it */
+	uses_emphasis = 0;
+
 	/* init common tones */
 	init_besetzton();
 
@@ -221,6 +224,10 @@ int main(int argc, char *argv[])
 	/* TX is default */
 	if (!tx && !rx)
 		tx = 1;
+
+	/* TX & RX if loopback */
+	if (loopback)
+		tx = rx = 1;
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {

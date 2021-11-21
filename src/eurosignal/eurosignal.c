@@ -362,15 +362,15 @@ void euro_get_id(euro_t *euro, char *id)
 	euro_call_t *call;
 	int i;
 
-	if (euro->sender.loopback) {
-		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Transmitting test ID '123456'.\n");
-		memcpy(id, "123456", 6);
-		goto encode;
-	}
-
 	if (euro->scan_from < euro->scan_to) {
 		sprintf(id, "%06d", euro->scan_from++);
 		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Transmitting ID '%s'.\n", id);
+		goto encode;
+	}
+
+	if (euro->sender.loopback) {
+		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Transmitting test ID '123456'.\n");
+		memcpy(id, "123456", 6);
 		goto encode;
 	}
 

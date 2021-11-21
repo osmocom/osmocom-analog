@@ -46,7 +46,7 @@
 #define FREQUENCY_MAX	1153.1
 #define FREQUENCY_TOL	15.0	/* tolerance of frequency */
 #define DIGIT_DETECT	200	/* time for a tone to sustain (in samples) */
-#define TIMEOUT_DETECT	4000	/* time for a tone to sustain (in samples) */
+#define TIMEOUT_DETECT	4000	/* time for timeout detection (in samples) */
 
 static struct dsp_digits {
 	char	digit;
@@ -256,15 +256,17 @@ static void tone_decode(euro_t *euro, sample_t *samples, int length)
 void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
 {
 	euro_t *euro = (euro_t *) sender;
-	sample_t down[length];
-	int count;
 
-	/* downsample and decode */
-	memcpy(down, samples, sizeof(down)); // copy, so audio will not be corrupted at loopback
-	count = samplerate_downsample(&euro->sender.srstate, down, length);
+	if (euro->rx) {
+		sample_t down[length];
+		int count;
 
-	if (euro->rx)
+		/* downsample and decode */
+		memcpy(down, samples, sizeof(down)); // copy, so audio will not be corrupted at loopback
+		count = samplerate_downsample(&euro->sender.srstate, down, length);
+
 		tone_decode(euro, down, count);
+	}
 }
 
 /* Generate tone of paging digits. */
