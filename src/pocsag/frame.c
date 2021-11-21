@@ -343,10 +343,12 @@ int64_t get_codeword(pocsag_t *pocsag)
 			if (msg->data_index == msg->data_length) {
 				pocsag->current_msg = NULL;
 				msg->data_index = 0;
-				if (msg->repeat || pocsag->sender.loopback)
+				if (msg->repeat)
 					msg->repeat--;
-				else
+				else {
 					pocsag_msg_destroy(msg);
+					pocsag_msg_done(pocsag);
+				}
 			}
 			/* prevent 'use-after-free' from this point on */
 			msg = NULL;
@@ -379,10 +381,12 @@ int64_t get_codeword(pocsag_t *pocsag)
 				msg->bit_index = 0;
 			} else {
 				/* if message is not to be repeated, remove message */
-				if (msg->repeat || pocsag->sender.loopback)
+				if (msg->repeat)
 					msg->repeat--;
-				else
+				else {
 					pocsag_msg_destroy(msg);
+					pocsag_msg_done(pocsag);
+				}
 				/* prevent 'use-after-free' from this point on */
 				msg = NULL;
 			}
@@ -437,7 +441,8 @@ static void done_rx_msg(pocsag_t *pocsag)
 				text[j++] = pocsag->rx_msg_data[i];
 		}
 		text[j] = '\0';
-		PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, " -> Message text is \"%s\".\n", text);
+		if ((pocsag->rx_msg_function == POCSAG_FUNCTION_NUMERIC || pocsag->rx_msg_function == POCSAG_FUNCTION_ALPHA) && text[0])
+			PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, " -> Message text is \"%s\".\n", text);
 		pocsag_msg_receive(pocsag->language, pocsag->sender.kanal, pocsag->rx_msg_ric, pocsag->rx_msg_function, text);
 	}
 }

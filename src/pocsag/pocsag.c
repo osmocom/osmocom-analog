@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define CHAN procsag->sender.kanal
+#define CHAN pocsag->sender.kanal
 
 #include <stdio.h>
 #include <stdint.h>
@@ -265,6 +265,36 @@ void pocsag_msg_destroy(pocsag_msg_t *msg)
 	pocsag_display_status();
 }
 
+static int pocsag_scan_or_loopback(pocsag_t *pocsag)
+{
+	if (pocsag->scan_from < pocsag->scan_to) {
+		char message[16];
+
+		switch (pocsag->default_function) {
+		case POCSAG_FUNCTION_NUMERIC:
+			sprintf(message, "%05d", pocsag->scan_from / 100);
+			break;
+		case POCSAG_FUNCTION_ALPHA:
+			sprintf(message, "%02x", pocsag->scan_from / 10000);
+			break;
+		default:
+			message[0] = '\0';
+		}
+		PDEBUG_CHAN(DPOCSAG, DEBUG_NOTICE, "Transmitting %s message '%s' with RIC '%d'.\n", pocsag_function_name[pocsag->default_function], message, pocsag->scan_from);
+		pocsag_msg_create(pocsag, 0, pocsag->scan_from, pocsag->default_function, message);
+		pocsag->scan_from++;
+		return 1;
+	}
+
+	if (pocsag->sender.loopback) {
+		PDEBUG(DPOCSAG, DEBUG_INFO, "Sending message for loopback test.\n");
+		pocsag_msg_create(pocsag, 0, 1234567, POCSAG_FUNCTION_NUMERIC, "1234");
+		return 1;
+	}
+
+	return 0;
+}
+
 void pocsag_msg_receive(enum pocsag_language language, const char *channel, uint32_t ric, enum pocsag_function function, const char *message)
 {
 	char text[256 + strlen(message) * 4], *p;
@@ -346,8 +376,7 @@ int pocsag_create(const char *kanal, double frequency, const char *device, int u
 
 	PDEBUG(DPOCSAG, DEBUG_NOTICE, "Created 'Kanal' %s\n", kanal);
 
-	if (pocsag->sender.loopback)
-		pocsag_msg_create(pocsag, 0, 1234567, POCSAG_FUNCTION_NUMERIC, "1234");
+	pocsag_scan_or_loopback(pocsag);
 
 	return 0;
 
@@ -371,7 +400,7 @@ void pocsag_destroy(sender_t *sender)
 	free(pocsag);
 }
 
-/* application sends ud a message, we need to deliver */
+/* application sends us a message, we need to deliver */
 void pocsag_msg_send(enum pocsag_language language, const char *text)
 {
 	char buffer[strlen(text) + 1], *p = buffer, *ric_string, *function_string, *message;
@@ -503,6 +532,13 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	return -CAUSE_NORMAL;
 
 	return 0;
+}
+
+/* message was transmitted */
+void pocsag_msg_done(pocsag_t *pocsag)
+{
+	/* start scanning, if enabled, otherwise send loopback sequence, if enabled */
+	pocsag_scan_or_loopback(pocsag);
 }
 
 void call_down_answer(int __attribute__((unused)) callref)

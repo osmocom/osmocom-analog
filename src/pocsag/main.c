@@ -80,9 +80,13 @@ void print_help(const char *arg0)
 	printf("        Translate German spcial characters from/to UTF-8.\n");
 	printf(" -S --scan <from> <to>\n");
 	printf("        Scan through given IDs once (no repetition). This can be useful to find\n");
-	printf("        the RIC of a vintage receiver. Note that scanning all RICs from 0\n");
-	printf("        through 2097151 would take about 16.5 Hours at 1200 Baud and known sub\n");
-	printf("        RIC.\n");
+	printf("        the RIC of a vintage pager. Note that scanning all RICs from 0 through\n");
+	printf("        2097151 would take about 16.5 Hours at 1200 Baud and known sub RIC.\n");
+	printf("        Use -F to select function of the pager. Short messages with 5 numeric\n");
+	printf("        or 2 alphanumeric characters are sent without increase in scanning\n");
+	printf("        time. The upper 5 digits of the RIC are sent as message, if numeric\n");
+	printf("        function was selected. The upper 3 digits of the RIC are sent as\n");
+	printf("        message (2 digits hexadecimal), if alphanumeric function was selected.\n");
 	printf("\n");
 	printf("File: %s\n", MSG_SEND);
 	printf("        Write \"<ric>,0,message\" to it to send a numerical message.\n");
@@ -179,7 +183,7 @@ static int handle_options(int short_option, int argi, char **argv)
 			return -EINVAL;
 		}
 		scan_to = atoi(argv[argi++]) + 1;
-		if (scan_to > 2097151) {
+		if (scan_to > 2097151 + 1) {
 			fprintf(stderr, "Given RIC to scan to is out of range!\n");
 			return -EINVAL;
 		}
@@ -251,6 +255,9 @@ int main(int argc, char *argv[])
 	int i;
 	double frequency;
 
+	/* pocsag does not use emphasis, so disable it */
+	uses_emphasis = 0;
+
 	/* init common tones */
 	init_besetzton();
 
@@ -292,12 +299,22 @@ int main(int argc, char *argv[])
 		num_device = 1; /* use default */
 	if (num_kanal != num_device) {
 		fprintf(stderr, "You need to specify as many sound devices as you have channels.\n");
-		exit(0);
+		goto fail;
 	}
 
 	/* TX is default */
 	if (!tx && !rx)
 		tx = 1;
+
+	/* TX & RX if loopback */
+	if (loopback)
+		tx = rx = 1;
+
+	/* no TX, no scanning */
+	if (!tx && scan_to > scan_from) {
+		fprintf(stderr, "You need to enable TX, in order to scan.\n");
+		goto fail;
+	}
 
 	/* create pipe for message sendy */
 	unlink(MSG_SEND);

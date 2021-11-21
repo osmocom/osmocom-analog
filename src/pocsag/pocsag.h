@@ -65,10 +65,6 @@ typedef struct pocsag {
 	/* calls */
 	pocsag_msg_t		*msg_list;		/* linked list of all calls */
 
-	/* display measurements */
-	dispmeasparam_t		*dmp_tone_level;
-	dispmeasparam_t		*dmp_tone_quality;
-
 	/* dsp states */
 	double			fsk_deviation;		/* deviation of FSK signal on sound card */
 	double			fsk_polarity;		/* polarity of FSK signal (-1.0 = bit '1' is down) */
@@ -108,4 +104,4 @@ void pocsag_msg_send(enum pocsag_language language, const char *text);
 void pocsag_msg_destroy(pocsag_msg_t *msg);
 void pocsag_get_id(pocsag_t *euro, char *id);
 void pocsag_receive_id(pocsag_t *euro, char *id);
-
+void pocsag_msg_done(pocsag_t *pocsag);
