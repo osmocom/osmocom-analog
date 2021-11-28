@@ -41,7 +41,7 @@
 #define TX_PEAK_TONE		(10500.0 / SPEECH_DEVIATION)	/* 10.5 kHz, no emphasis */
 #define TX_PEAK_PAGE		(15000.0 / SPEECH_DEVIATION)	/* 15 kHz, no emphasis */
 #define MAX_DISPLAY		(15000.0 / SPEECH_DEVIATION)	/* 15 kHz, no emphasis */
-#define CHUNK_DURATION		0.010	/* 10 ms */
+#define CHUNK_DURATION		0.010	/* 10 m = 100 Hz bandwidth (-7.6 DB @ +-100 Hz) */
 #define TONE_THRESHOLD		0.05
 #define QUAL_THRESHOLD		0.5
 
@@ -158,15 +158,15 @@ static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 {
 	double level, result[2], quality[2];
 
-	level = audio_level(spl, max);
+	level = audio_mean_level(spl, max);
+	/* convert mean (if level comes from a sine curve) to peak value */
+	level = level * M_PI / 2.0 / TX_PEAK_TONE;
 
 	audio_goertzel(anetz->fsk_tone_goertzel, spl, max, 0, result, 2);
 
-	/* normalize quality of tones and level */
+	/* calculate quality of tones */
 	quality[0] = result[0] / level;
 	quality[1] = result[1] / level;
-	/* adjust level, so we get peak of sine curve */
-	level = level / 0.63662 / TX_PEAK_TONE;
 	/* show tones */
 	display_measurements_update(anetz->dmp_tone_level, level * 100.0, 0.0);
 	display_measurements_update(anetz->dmp_tone_quality, quality[1] * 100.0, 0.0);

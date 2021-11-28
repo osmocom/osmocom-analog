@@ -64,7 +64,7 @@
 #define MAX_DISPLAY		1.4	/* something above speech level */
 #define DIALTONE_HZ		425.0	/* dial tone frequency */
 #define TX_PEAK_DIALTONE	1.0	/* dial tone peak FIXME: Not found in the specs! */
-#define SUPER_DURATION		0.25	/* duration of supervisory signal measurement */
+#define SUPER_BANDWIDTH		30.0	/* distance between two SAT tones, also bandwidth for goertzel filter */
 #define SUPER_PRINT		2	/* print supervisory signal measurement every 0.5 seconds */
 #define SUPER_LOST_COUNT	4	/* number of measures to loose supervisory signal */
 #define SUPER_DETECT_COUNT	6	/* number of measures to detect supervisory signal */
@@ -76,7 +76,7 @@ static double super_freq[5] = {
 	3985.0, /* 0-Signal 2 */
 	4015.0, /* 0-Signal 3 */
 	4045.0, /* 0-Signal 4 */
-	3900.0, /* noise level to check against */
+	3895.0, /* noise level to check against */
 };
 
 /* table for fast sine generation */
@@ -129,8 +129,11 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 		return -EINVAL;
 	}
 
-	/* allocate ring buffer for supervisory signal detection */
-	nmt->super_samples = (int)((double)nmt->sender.samplerate * SUPER_DURATION + 0.5);
+	/* allocate ring buffer for SAT signal detection
+	 * the bandwidth of the Goertzel filter is the reciprocal of the duration
+	 * we half our bandwidth, so that other supervisory signals will be canceled out completely by goertzel filter
+	 */
+	nmt->super_samples = (int)((double)nmt->sender.samplerate * (1.0 / (SUPER_BANDWIDTH / 2)) + 0.5);
 	spl = calloc(1, nmt->super_samples * sizeof(*spl));
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
@@ -260,7 +263,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	nmt_receive_frame(nmt, nmt->rx_frame, quality, level, frames_elapsed);
 }
 
-/* compare supervisory signal against noise floor on 3900 Hz */
+/* compare supervisory signal against noise floor around 3895 Hz */
 static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 {
 	double result[2], level, quality;
@@ -269,7 +272,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 	audio_goertzel(&nmt->super_goertzel[4], samples, length, 0, &result[1], 1); /* noise floor detection */
 
 	/* normalize supervisory level */
-	level = result[0] / 0.63662 / TX_PEAK_SUPER;
+	level = result[0] / TX_PEAK_SUPER;
 
 	quality = (result[0] - result[1]) / result[0];
 	if (quality < 0)

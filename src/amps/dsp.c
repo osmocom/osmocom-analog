@@ -114,7 +114,7 @@
 #define TACS_SAT_DEVIATION	(1700.0 / TACS_SPEECH_DEVIATION)	/* no emphasis (panasonic / TI) */
 #define TACS_MAX_DISPLAY	(8000.0 / TACS_SPEECH_DEVIATION)	/* no emphasis */
 #define TACS_BITRATE		8000
-#define SAT_DURATION		0.05	/* duration of SAT signal measurement */
+#define SAT_BANDWIDTH		30.0	/* distance between two SAT tones, also bandwidth for goertzel filter */
 #define SAT_QUALITY		0.85	/* quality needed to detect SAT signal */
 #define SAT_PRINT		10	/* print sat measurement every 0.5 seconds */
 #define DTX_LEVEL		0.50	/* SAT level needed to mute/unmute */
@@ -133,7 +133,7 @@ static double sat_freq[4] = {
 	5970.0,
 	6000.0,
 	6030.0,
-	5800.0, /* noise level to check against */
+	5790.0, /* noise level to check against */
 };
 
 static sample_t dsp_sine_sat[65536];
@@ -243,8 +243,11 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->fsk_deviation = (!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION;
 	dsp_init_ramp(amps);
 
-	/* allocate ring buffer for SAT signal detection */
-	amps->sat_samples = (int)((double)amps->sender.samplerate * SAT_DURATION + 0.5);
+	/* allocate ring buffer for SAT signal detection
+	 * the bandwidth of the Goertzel filter is the reciprocal of the duration
+	 * we half our bandwidth, so that other supervisory signals will be canceled out completely by goertzel filter
+	 */
+	amps->sat_samples = (int)((double)amps->sender.samplerate * (1.0 / (SAT_BANDWIDTH / 2.0)) + 0.5);
 	spl = calloc(sizeof(*spl), amps->sat_samples);
 	if (!spl) {
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
@@ -732,7 +735,7 @@ static void sender_receive_frame(amps_t *amps, sample_t *samples, int length)
 
 
 /* decode SAT and signaling tone */
-/* compare supervisory signal against noise floor on 5800 Hz */
+/* compare supervisory signal against noise floor at 5790 Hz */
 static void sat_decode(amps_t *amps, sample_t *samples, int length)
 {
 	double result[3], sat_quality, sig_quality, sat_level, sig_level;
@@ -742,8 +745,8 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 	audio_goertzel(&amps->sat_goertzel[4], samples, length, 0, &result[2], 1);
 
 	/* normalize sat level and signaling tone level */
-	sat_level = result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION) / 0.63662;
-	sig_level = result[2] / ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION) / 0.63662;
+	sat_level = result[0] / ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION);
+	sig_level = result[2] / ((!tacs) ? AMPS_FSK_DEVIATION : TACS_FSK_DEVIATION);
 
 	/* get normalized quality of SAT and signaling tone */
 	sat_quality = (result[0] - result[1]) / result[0];

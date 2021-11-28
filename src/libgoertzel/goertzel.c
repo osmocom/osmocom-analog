@@ -35,7 +35,7 @@
  * For a perfect rectangualr wave, the result would equal the peak level.
  * For a sine wave the result would be factor (2 / PI) below peak level.
  */
-double audio_level(sample_t *samples, int length)
+double audio_mean_level(sample_t *samples, int length)
 {
 	double level, sk;
 	int n;
@@ -54,8 +54,23 @@ double audio_level(sample_t *samples, int length)
 	return level;
 }
 
+/* use hamming window */
+double window[256];
+int window_generated = 0;
+
+static void gen_window(void)
+{
+	int i;
+
+	for (i = 0; i < 256; i++)
+		window[i] = 0.54 - 0.46 * cos(2.0 * M_PI * (double)i / 256.0);
+	window_generated = 1;
+}
+
 void audio_goertzel_init(goertzel_t *goertzel, double freq, int samplerate)
 {
+	if (!window_generated)
+		gen_window();
 	memset(goertzel, 0, sizeof(*goertzel));
 	goertzel->coeff = 2.0 * cos(2.0 * M_PI * freq / (double)samplerate);
 }
@@ -67,10 +82,11 @@ void audio_goertzel_init(goertzel_t *goertzel, double freq, int samplerate)
 /* filter frequencies and return their levels
  *
  * samples: pointer to sample buffer
- * length: length of buffer
+ * length: length of buffer: -7.4 dB @ +-(1 / duration) Hz and -INF @ +-(1 / duration * 2) Hz
+ *  -> if duration is 10 ms, we got -7.4 dB @ +-100 Hz and -INF at +-200 Hz
  * offset: for ring buffer, start here and wrap around to 0 when length has been hit
  * coeff: array of coefficients (coeff << 15)
- * result: array of result levels (average value of the sine, that is 1 / (PI/2) of the sine's peak)
+ * result: array of result levels (peak value of the target frequency)
  * k: number of frequencies to check
  */
 void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int offset, double *result, int k)
@@ -87,7 +103,7 @@ void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int off
 		cos2pik = goertzel[i].coeff;
 		/* note: after 'length' cycles, offset is restored to its initial value */
 		for (n = 0; n < length; n++) {
-			sk = (cos2pik * sk1) - sk2 + samples[offset++];
+			sk = (cos2pik * sk1) - sk2 + samples[offset++] * window[n * 256 / length];
 			sk2 = sk1;
 			sk1 = sk;
 			if (offset == length)
@@ -98,7 +114,7 @@ void audio_goertzel(goertzel_t *goertzel, sample_t *samples, int length, int off
 			(sk * sk) -
 			(cos2pik * sk * sk2) +
 			(sk2 * sk2)
-				) / (double)length * 2.0 * 0.63662; /* 1 / (PI/2) */
+				) / (double)length * 4 / 1.08;
 	}
 }
 

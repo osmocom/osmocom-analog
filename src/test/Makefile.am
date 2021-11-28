@@ -5,6 +5,7 @@ noinst_PROGRAMS = \
 	test_sendevolumenregler \
 	test_compandor \
 	test_emphasis \
+	test_goertzel \
 	test_dtmf \
 	test_dms \
 	test_sms \
@@ -148,5 +149,14 @@ test_v27scrambler_SOURCES = dummy.c test_v27scrambler.c
 test_v27scrambler_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libv27/libv27.a \
+	-lm
+
+test_goertzel_SOURCES = test_goertzel.c dummy.c
+
+test_goertzel_LDADD = \
+	$(COMMON_LA) \
+	$(top_builddir)/src/libdebug/libdebug.a \
+	$(top_builddir)/src/libgoertzel/libgoertzel.a \
+	$(top_builddir)/src/liboptions/liboptions.a \
 	-lm
 

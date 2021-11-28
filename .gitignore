@@ -84,6 +84,7 @@ src/test/test_filter
 src/test/test_sendevolumenregler
 src/test/test_compandor
 src/test/test_emphasis
+src/test/test_goertzel
 src/test/test_dtmf
 src/test/test_dms
 src/test/test_sms

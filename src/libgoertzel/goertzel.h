@@ -1,5 +1,5 @@
 
-double audio_level(sample_t *samples, int length);
+double audio_mean_level(sample_t *samples, int length);
 
 typedef struct goertzel {
 	double coeff;
