@@ -29,7 +29,7 @@ Kathoden 1-4:
 -------------
 
 Die Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
-Z.B.: A9 mit K3 und A9 mit K2 ergibt den Wert 6 für die 5. Ziffer.
+Z.B.: A9 mit K3 und A9 mit K2 ergibt den Wert 6 fuer die 5. Ziffer.
 
 K 1 : Bit 0 (Wertigkeit 1)
 K 2 : Bit 1 (Wertigkeit 2)
@@ -39,7 +39,7 @@ K 4 : Bit 3 (Wertigkeit 8)
 Ziffer 3: Verbunden mit A 8
 Ziffer 5: Verbunden mit A 9
 Ziffer 6: Verbunden mit A 16
-Weitere Ziffern nicht geprüft
+Weitere Ziffern nicht geprueft
 
 
 Kathoden 13-10:
@@ -55,7 +55,7 @@ K 10: Bit 3 (Wertigkeit 8)
 Ziffer 1: Verbunden mit A 6
 Ziffer 2: Verbunden mit A 8
 Ziffer 4: Verbunden mit A 9
-Weitere Ziffern nicht geprüft
+Weitere Ziffern nicht geprueft
 
 
 Kathode K14:
@@ -119,6 +119,6 @@ Beispiel: (mit nur 4 Dioden)
 A8 ->|- K13 (Ziffer 1)
 A9 ->|- K12 (Ziffer 2)
 A16 ->|- K1 (Ziffer 1)
-A8 ->|- K14 (Checksumme 4)
+A8 ->|- K14 (Checksumme 0+1+0+2+0+1 = 4)
 
 

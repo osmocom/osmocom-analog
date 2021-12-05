@@ -40,10 +40,10 @@ Kathode 11	Ziffer 6(1)	Ziffer 6(2)
 Kathode 10	Ziffer 6(3)	Ziffer 6(4)
 
 
-Kathode 3 ist nicht belegt, sowie die Annoden 6-9 an Kathode 4.
+Kathode 3 ist nicht belegt, sowie die Annoden 15-18 an Kathode 4.
 
 
-Die Ziffern sind wie folgt kodiert. Immer wenn ein Stern in der Tabelle steht, muss die jeweilige Kathode mit der Anode verbunden werden.
+Die Ziffern sind wie folgt kodiert: Immer wenn ein Stern in der Tabelle steht, muss die jeweilige Kathode mit der Anode mit einer Diode verbunden werden.
 Da immer 2 Ziffern pro Kathode kodiert werden, sind beide Anoden angegeben.
 
 		Anoden:
@@ -61,7 +61,7 @@ Ziffer		16/6	15/7	18/8	17/9
 9			*	*	 
 W		*
 
-Die Ziffer 'W' ist die Widerholzuffer.
+Die Ziffer 'W' ist die Widerholziffer.
 
 
 Um eine Kennung nicht zu verwenden, kann man einfach die Dioden weglassen.
@@ -86,7 +86,7 @@ Kathode 10 mit	Anode 16, 15, 17, 7, 9
 (ungetestet)
 
 
-Beispiel mit so wenig Dioden, wie möglich:
+Beispiel mit so wenig Dioden, wie moeglich:
 
 777777
 
