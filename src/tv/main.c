@@ -228,7 +228,7 @@ static int handle_options(int short_option, int argi, char **argv)
 				"--sdr-tx-gain", "50",
 				"--sdr-lo-offset", "-3000000",
 				"--sdr-bandwidth", "60000000",
-				"-s", "13750000",
+				"-s", "12500000",
 			};
 			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
 			return options_command_line(argc_lime, argv_lime, handle_options);
@@ -242,7 +242,7 @@ static int handle_options(int short_option, int argi, char **argv)
 				"--sdr-tx-gain", "50",
 				"--sdr-lo-offset", "-3000000",
 				"--sdr-bandwidth", "60000000",
-				"-s", "13750000",
+				"-s", "12500000",
 			};
 			int argc_lime = sizeof(argv_lime) / sizeof (*argv_lime);
 			return options_command_line(argc_lime, argv_lime, handle_options);
@@ -333,7 +333,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		tx_frequencies[0] = frequency;
 		rx_frequencies[0] = frequency;
 		am[0] = 0;
-		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
+		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 0, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
 		if (!sdr)
 			goto error;
 		sdr_start(sdr);

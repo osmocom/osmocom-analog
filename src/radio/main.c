@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 	tx_frequencies[0] = frequency;
 	rx_frequencies[0] = frequency;
 	am[0] = 0;
-	sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
+	sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 0, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
 	if (!sdr)
 		goto error;
 	sdr_start(sdr);

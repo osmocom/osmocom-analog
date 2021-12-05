@@ -167,11 +167,6 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	if (bandwidth)
 		PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of each channel is 2 * (%.1f deviation + %.1f modulation) = %.1f KHz\n", max_deviation / 1e3, max_modulation / 1e3, bandwidth / 1e3);
 
-	if (channels < 1) {
-		PDEBUG(DSDR, DEBUG_ERROR, "No channel given, please fix!\n");
-		abort();
-	}
-
 	sdr = calloc(sizeof(*sdr), 1);
 	if (!sdr) {
 		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
@@ -261,10 +256,12 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	}
 
 	/* create list of channel states */
-	sdr->chan = calloc(sizeof(*sdr->chan), channels + (sdr->paging_channel != 0));
-	if (!sdr->chan) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
-		goto error;
+	if (channels) {
+		sdr->chan = calloc(sizeof(*sdr->chan), channels + (sdr->paging_channel != 0));
+		if (!sdr->chan) {
+			PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+			goto error;
+		}
 	}
 
 	/* swap links, if required */
@@ -276,7 +273,9 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		tx_frequency = temp;
 	}
 
-	if (tx_frequency) {
+	if (tx_frequency && !channels)
+		tx_center_frequency = tx_frequency[0];
+	if (tx_frequency && channels) {
 		/* calculate required bandwidth (IQ rate) */
 
 		double tx_low_frequency = 0.0, tx_high_frequency = 0.0;
@@ -357,7 +356,9 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		}
 	}
 
-	if (rx_frequency) {
+	if (rx_frequency && !channels)
+		rx_center_frequency = rx_frequency[0];
+	if (rx_frequency && channels) {
 		/* calculate required bandwidth (IQ rate) */
 		double rx_low_frequency = 0.0, rx_high_frequency = 0.0;
 		for (c = 0; c < channels; c++) {

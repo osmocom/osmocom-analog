@@ -99,7 +99,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 	use_time_stamps = timestamps;
 	if (use_time_stamps && (1000000000LL % (long long)rate)) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "The given sample duration is not a multiple of a nano second. I.e. we can't divide 1000,000,000 by sample rate of %.0f. Please choose a different sample rate for time stamp support!\n", rate);
+		PDEBUG(DSOAPY, DEBUG_ERROR, "The given sample duration is not a multiple of a nano second. I.e. we can't divide 10^9 by sample rate of %.0f. Please choose a different sample rate for time stamp support!\n", rate);
 		use_time_stamps = 0;
 	}
 	Ns_per_sample = 1000000000LL / (long long)rate;
