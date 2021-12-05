@@ -194,27 +194,11 @@ again:
 				mod->state = MOD_STATE_RAMP_UP;
 				break;
 			}
-			/* deviation is defined by the frequency value and the offset */
-			dev = offset + *frequency++;
+			/* just count, and add nothing */
+			frequency++;
 			power++;
 			length--;
-			if (fast_math) {
-				phase += 65536.0 * dev / rate;
-				if (phase < 0.0)
-					phase += 65536.0;
-				else if (phase >= 65536.0)
-					phase -= 65536.0;
-				*baseband++ += cos_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
-				*baseband++ += sin_tab[(uint16_t)phase] * amplitude * ramp_tab[ramp];
-			} else {
-				phase += 2.0 * M_PI * dev / rate;
-				if (phase < 0.0)
-					phase += 2.0 * M_PI;
-				else if (phase >= 2.0 * M_PI)
-					phase -= 2.0 * M_PI;
-				*baseband++ += cos(phase) * amplitude * ramp_tab[ramp];
-				*baseband++ += sin(phase) * amplitude * ramp_tab[ramp];
-			}
+			baseband += 2;
 		}
 		break;
 	case MOD_STATE_RAMP_UP:

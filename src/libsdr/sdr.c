@@ -295,6 +295,57 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		}
 		tx_center_frequency = (tx_high_frequency + tx_low_frequency) / 2.0;
 
+		/* prevent channel bandwidth from overlapping with the center frequency */
+		if (channels == 1 && !sdr->paging_channel) {
+			/* simple: just move off the center by two times half of the bandwidth */
+			tx_center_frequency -= 2.0 * bandwidth / 2.0;
+			/* Note: tx_low_frequency is kept at old center.
+			   Calculation of 'low_side' will become 0.
+			   This is correct, since there is no bandwidth
+			   below new center frequency.
+			 */
+			PDEBUG(DSDR, DEBUG_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
+		} else {
+			/* find two channels that are aside the center */
+			double low_dist, high_dist, dist;
+			int low_c = -1, high_c = -1;
+			for (c = 0; c < channels; c++) {
+				dist = fabs(tx_center_frequency - sdr->chan[c].tx_frequency);
+				if (round(sdr->chan[c].tx_frequency) >= round(tx_center_frequency)) {
+					if (high_c < 0 || dist < high_dist) {
+						high_dist = dist;
+						high_c = c;
+					}
+				} else {
+					if (low_c < 0 || dist < low_dist) {
+						low_dist = dist;
+						low_c = c;
+					}
+				}
+			}
+			if (sdr->paging_channel) {
+				dist = fabs(tx_center_frequency - sdr->chan[sdr->paging_channel].tx_frequency);
+				if (round(sdr->chan[sdr->paging_channel].tx_frequency) >= round(tx_center_frequency)) {
+					if (high_c < 0 || dist < high_dist) {
+						high_dist = dist;
+						high_c = sdr->paging_channel;
+					}
+				} else {
+					if (low_c < 0 || dist < low_dist) {
+						low_dist = dist;
+						low_c = sdr->paging_channel;
+					}
+				}
+			}
+			/* new center = center of the two frequencies aside old center */
+			if (low_c >= 0 && high_c >= 0) {
+				tx_center_frequency =
+					((sdr->chan[low_c].tx_frequency) +
+					 (sdr->chan[high_c].tx_frequency)) / 2.0;
+				PDEBUG(DSDR, DEBUG_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
+			}
+		}
+
 		/* show spectrum */
 		show_spectrum("TX", (double)samplerate / 2.0, tx_center_frequency, tx_frequency, paging_frequency, channels);
 
