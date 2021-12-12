@@ -528,7 +528,7 @@ int soapy_receive(float *buff, int max)
 		if (count > 0) {
 			if (!use_time_stamps || !(flags & SOAPY_SDR_HAS_TIME)) {
 				if (use_time_stamps) {
-					PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX: No time stamps available. This may cuse little gaps and problems with time slot based networks, like C-Netz.\n");
+					PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX: No time stamps available. This may cause little gaps and problems with time slot based networks, like C-Netz.\n");
 					use_time_stamps = 0;
 				}
 				timeNs = rx_timeNs;
@@ -540,7 +540,7 @@ int soapy_receive(float *buff, int max)
 			}
 			pthread_mutex_lock(&timestamp_mutex);
 			if (rx_timeNs != timeNs)
-				PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX overflow, seems we are too slow. Use lower SDR sample rate.\n");
+				PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX overflow, seems we are too slow. Use lower SDR sample rate, if this happens too often.\n");
 			rx_timeNs = timeNs + count * Ns_per_sample;
 			pthread_mutex_unlock(&timestamp_mutex);
 			/* commit received data to buffer */
