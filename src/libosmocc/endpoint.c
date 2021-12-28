@@ -1220,6 +1220,7 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 				return -EINVAL;
 			}
 			from = from * 10 + *text - '0';
+			text++;
 		}
 
 		/* remove spaces after keyword */
@@ -1235,7 +1236,8 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 				PDEBUG(DCC, DEBUG_ERROR, "Given 'to' port in '%s' is invalid.\n", text);
 				return -EINVAL;
 			}
-			from = from * 10 + *text - '0';
+			to = to * 10 + *text - '0';
+			text++;
 		}
 
 		osmo_cc_set_rtp_ports(&ep->session_config, from, to);
