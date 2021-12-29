@@ -182,7 +182,12 @@ int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 		memset(&sa, 0, sizeof(sa));
 		sa4 = (struct sockaddr_in *)&sa;
 		sa4->sin_family = domain;
-		sa4->sin_addr.s_addr = INADDR_ANY;
+		rc = inet_pton(AF_INET, media->connection_data_local.address, &sa4->sin_addr);
+		if (rc < 1) {
+pton_error:
+			PDEBUG(DCC, DEBUG_NOTICE, "Cannot bind to address '%s'.\n", media->connection_data_local.address);
+			return -EINVAL;
+		}
 		sport = &sa4->sin_port;
 		slen = sizeof(*sa4);
 		break;
@@ -191,7 +196,9 @@ int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 		memset(&sa, 0, sizeof(sa));
 		sa6 = (struct sockaddr_in6 *)&sa;
 		sa6->sin6_family = domain;
-		sa6->sin6_addr = in6addr_any;
+		rc = inet_pton(AF_INET6, media->connection_data_local.address, &sa6->sin6_addr);
+		if (rc < 1)
+			goto pton_error;
 		sport = &sa6->sin6_port;
 		slen = sizeof(*sa6);
 		break;
