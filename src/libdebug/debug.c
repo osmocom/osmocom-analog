@@ -106,6 +106,25 @@ int debug_limit_scroll = 0;
 static int lock_initialized = 0;
 static pthread_mutex_t debug_mutex;
 
+void lock_debug(void)
+{
+	int rc;
+
+	if (!lock_initialized) {
+		rc = pthread_mutex_init(&debug_mutex, NULL);
+		if (rc == 0)
+			lock_initialized = 1;
+	}
+	if (lock_initialized)
+		pthread_mutex_lock(&debug_mutex);
+}
+
+void unlock_debug(void)
+{
+	if (lock_initialized)
+		pthread_mutex_unlock(&debug_mutex);
+}
+
 void get_win_size(int *w, int *h)
 {
 	struct winsize win;
@@ -129,7 +148,6 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	const char *p;
 	va_list args;
 	int w, h;
-	int rc;
 
 	if (debuglevel > level)
 		return;
@@ -137,13 +155,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	if (!(debug_mask & ((uint64_t)1 << cat)))
 		return;
 
-	if (!lock_initialized) {
-		rc = pthread_mutex_init(&debug_mutex, NULL);
-		if (rc == 0)
-			lock_initialized = 1;
-	}
-	if (lock_initialized)
-		pthread_mutex_lock(&debug_mutex);
+	lock_debug();
 
 	buffer[sizeof(buffer) - 1] = '\0';
 
@@ -182,8 +194,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 		print_console_text();
 	fflush(stdout);
 
-	if (lock_initialized)
-		pthread_mutex_unlock(&debug_mutex);
+	unlock_debug();
 }
 
 const char *debug_amplitude(double level)

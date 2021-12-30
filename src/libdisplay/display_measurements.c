@@ -110,6 +110,8 @@ static void print_measurements(int on)
 	if (bar_width < 1)
 		return;
 
+	lock_debug();
+
 	lines_total = 0;
 	color = -1;
 	printf("\0337\033[H");
@@ -252,6 +254,8 @@ static void print_measurements(int on)
 	printf("\033[0;39m\0338"); fflush(stdout);
 
 	debug_limit_scroll = lines_total;
+
+	unlock_debug();
 }
 
 void display_measurements_on(int on)

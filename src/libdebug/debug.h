@@ -53,6 +53,9 @@
 #define DSIP		46
 #define DTEL		47
 
+void lock_debug(void);
+void unlock_debug(void);
+
 void get_win_size(int *w, int *h);
 
 #define PDEBUG(cat, level, fmt, arg...) _printdebug(__FILE__, __FUNCTION__, __LINE__, cat, level, NULL, fmt, ## arg)

@@ -46,6 +46,7 @@ static void print_status(int on)
 	if (h > lines_total)
 		h = lines_total;
 
+	lock_debug();
 	printf("\0337\033[H\033[1;37m");
 	for (i = 0; i < h; i++) {
 		j = 0;
@@ -59,6 +60,7 @@ static void print_status(int on)
 		putchar('\n');
 	}
 	printf("\0338"); fflush(stdout);
+	unlock_debug();
 }
 
 void display_status_on(int on)

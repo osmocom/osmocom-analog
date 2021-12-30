@@ -101,12 +101,14 @@ void display_spectrum_on(int on)
 	if (spectrum_on) {
 		memset(&screen, ' ', sizeof(screen));
 		memset(&buffer_hold, 0, sizeof(buffer_hold));
+		lock_debug();
 		printf("\0337\033[H");
 		for (j = 0; j < HEIGHT; j++) {
 			screen[j][w] = '\0';
 			puts(screen[j]);
 		}
 		printf("\0338"); fflush(stdout);
+		unlock_debug();
 	}
 
 	if (on < 0) {
@@ -139,6 +141,8 @@ void display_spectrum(float *samples, int length)
 
 	if (!spectrum_on)
 		return;
+
+	lock_debug();
 
 	get_win_size(&width, &h);
 	if (width > MAX_DISPLAY_WIDTH - 1)
@@ -403,6 +407,8 @@ void display_spectrum(float *samples, int length)
 	}
 
 	disp.interval_pos = pos;
+
+	unlock_debug();
 }
 
 

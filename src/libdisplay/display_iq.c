@@ -60,12 +60,14 @@ void display_iq_on(int on)
 	if (iq_on) {
 		memset(&screen, ' ', sizeof(screen));
 		memset(&screen_history, 0, sizeof(screen_history));
+		lock_debug();
 		printf("\0337\033[H");
 		for (j = 0; j < SIZE; j++) {
 			screen[j][w] = '\0';
 			puts(screen[j]);
 		}
 		printf("\0338"); fflush(stdout);
+		unlock_debug();
 	}
 
 	if (on < 0) {
@@ -113,6 +115,8 @@ void display_iq(float *samples, int length)
 
 	if (!iq_on)
 		return;
+
+	lock_debug();
 
 	get_win_size(&width, &h);
 	if (width > MAX_DISPLAY_WIDTH - 1)
@@ -271,6 +275,8 @@ cont:
 	}
 
 	disp.interval_pos = pos;
+
+	unlock_debug();
 }
 
 

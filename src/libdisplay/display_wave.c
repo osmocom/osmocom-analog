@@ -52,6 +52,7 @@ void display_wave_on(int on)
 
 	if (wave_on) {
 		memset(&screen, ' ', sizeof(screen));
+		lock_debug();
 		printf("\0337\033[H");
 		for (i = 0; i < num_sender; i++) {
 			for (j = 0; j < HEIGHT; j++) {
@@ -60,6 +61,7 @@ void display_wave_on(int on)
 			}
 		}
 		printf("\0338"); fflush(stdout);
+		unlock_debug();
 	}
 
 	if (on < 0)
@@ -101,6 +103,8 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 
 	if (!wave_on)
 		return;
+
+	lock_debug();
 
 	get_win_size(&width, &h);
 	if (width > MAX_DISPLAY_WIDTH - 1)
@@ -241,6 +245,8 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 	}
 
 	disp->interval_pos = pos;
+
+	unlock_debug();
 }
 
 
