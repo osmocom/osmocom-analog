@@ -10,6 +10,8 @@ static struct bnetz_stations {
 } bnetz_stations[] = {
 /*	  Standort			GFS 	Koorinaten */
 	/* Germany */
+	{ "@Germany",			0,	"" },
+	{ "Westerland",			3,	"54o54 08o19" },
 	{ "Flensburg",			8,	"54o47 09o26" },
 	{ "Bredstedt",			2,	"54o37 08o58" },
 	{ "Eckernfoerde",		5,	"54o28 09o50" },
@@ -68,13 +70,16 @@ static struct bnetz_stations {
 	{ "Eschwege",			9,	"51o11 10o03" },
 	{ "Schmallenberg-Dorlar",	5,	"51o08 08o18" },
 	{ "Bad Wildungen",		1,	"51o07 09o07" },
+	{ "Gummersbach",		9,	"51o02 07o34" },
 	{ "Koeln",			5,	"50o56 06o57" },
 	{ "Biedenkopf",			8,	"50o55 08o32" },
 	{ "Siegen",			7,	"50o53 08o01" },
 	{ "Bad Hersfeld",		2,	"50o52 09o42" },
 	{ "Dueren",			6,	"50o48 06o29" },
+	{ "Siegburg",			17,	"50o48 07o12" },
 	{ "Aachen",			4,	"50o47 06o05" },
 	{ "Bonn",			8,	"50o44 07o06" },
+	{ "Bad Marienberg",		15,	"50o39 07o57" },
 	{ "Lauterbach",			4,	"50o38 09o24" },
 	{ "Lahn-Giessen",		3,	"50o35 08o40" },
 	{ "Fulda",			6,	"50o33 09o41" },
@@ -100,6 +105,7 @@ static struct bnetz_stations {
 	{ "Wuerzburg",			9,	"49o47 09o56" },
 	{ "Trier",			5,	"49o45 06o38" },
 	{ "Pegnitz",			1,	"49o45 11o34" },
+	{ "Kitzingen",			4,	"49o44 10o10" },
 	{ "Idar-Oberstein",		8,	"49o43 07o19" },
 	{ "Mannheim",			3,	"49o29 08o28" },
 	{ "Kaiserslautern",		2,	"49o27 07o46" },
@@ -115,6 +121,7 @@ static struct bnetz_stations {
 	{ "Deggendorf",			1,	"48o50 12o58" },
 	{ "Schwaebisch Gmuend",		1,	"48o48 09o48" },
 	{ "Stuttgart",			8,	"48o47 09o11" },
+	{ "Rottenburg a.d.L.",		16,	"48o42 12o02" },
 	{ "Geislingen",			3,	"48o37 09o50" },
 	{ "Passau",			8,	"48o34 13o28" },
 	{ "Pfaffenhofen",		1,	"48o32 11o31" },
@@ -145,6 +152,7 @@ static struct bnetz_stations {
 	{ "Regen",			9,	"48o58 13o08" },
 	{ "Backnang",			9,	"48o57 09o26" },
 	{ "Baden-Baden",		1,	"48o46 08o14" },
+	{ "Ingolstadt",			17,	"48o46 11o25" },
 	{ "Wildbad",			2,	"48o45 08o33" },
 	{ "Donauwoerth",		5,	"48o42 10o48" },
 	{ "Heidenheim",			7,	"48o41 10o09" },
@@ -164,9 +172,10 @@ static struct bnetz_stations {
 	{ "Garmisch-Partenkirchen",	2,	"47o30 11o05" },
 
 	/* Austria */
+	{ "@Aaustria",			0,	"" },
 	{ "Linz",			1,	"48o18 14o17" },
 	{ "Amstetten",			2,	"48o07 14o52" },
-	{ "St. Poelten",		3,	"08o12 15o37" },
+	{ "St. Poelten",		3,	"48o12 15o37" },
 	{ "Wien-West",			1,	"48o11 16o21" },
 	{ "Wien-Ost",			2,	"48o13 16o23" },
 	{ "WR-Neustadt",		4,	"48o14 16o24" },
@@ -179,10 +188,12 @@ static struct bnetz_stations {
 	{ "Graz",			5,	"47o04 15o26" },
 
 	/* Luxemburg */
+	{ "@Luxemburg",			0,	"" },
 	{ "Neidhausen",			9,	"50o02 06o04" },
 	{ "Luxemburg",			9,	"49o37 06o08" },
 
 	/* Netherlands */
+	{ "@The Netherlands",		0,	"" },
 	{ "Groningen",			8,	"53o13 06o34" },
 	{ "Leeuwarden",			2,	"53o12 05o48" },
 	{ "Winschoten",			1,	"53o09 07o02" },
@@ -261,9 +272,17 @@ void station_list(void)
 {
 	int i;
 
-	printf("List of all base stations:\n");
+	printf("List of all base stations: (from north to south)\n");
 	for (i = 0; bnetz_stations[i].standort; i++) {
-		printf("%s (%.2f° N %.2f° E)\n", bnetz_stations[i].standort, lat_from_coordinates(bnetz_stations[i].coordinates), lon_from_coordinates(bnetz_stations[i].coordinates));
+		if (bnetz_stations[i].standort[0] == '@') {
+			printf("\nIn %s:\n", bnetz_stations[i].standort + 1);
+			continue;
+		}
+		printf("%s%s GFS %2d   (%5.2f deg N %5.2f deg E)\n",
+			bnetz_stations[i].standort, "                                " + strlen(bnetz_stations[i].standort),
+			bnetz_stations[i].gfs,
+			lat_from_coordinates(bnetz_stations[i].coordinates),
+			lon_from_coordinates(bnetz_stations[i].coordinates));
 	}
 }
 
@@ -288,7 +307,7 @@ static double distinspace(double x1, double y1, double z1, double x2, double y2,
 
 int get_station_by_coordinates(double lat, double lon)
 {
-	double dist, min = 0.0;
+	double dist, min = -1.0; /* -1 means: unset */
 	int i, min_i = 0;
 	double x, y, z;
 	double s_lat, s_lon;
@@ -297,11 +316,14 @@ int get_station_by_coordinates(double lat, double lon)
 	geo2space(&x, &y, &z, lat, lon);
 
 	for (i = 0; bnetz_stations[i].standort; i++) {
+		if (bnetz_stations[i].standort[0] == '@')
+			continue;
 		s_lat = lat_from_coordinates(bnetz_stations[i].coordinates);
 		s_lon = lon_from_coordinates(bnetz_stations[i].coordinates);
 		geo2space(&s_x, &s_y, &s_z, s_lat, s_lon);
 		dist = distinspace(x, y, z, s_x, s_y, s_z);
-		if (i == 0 || dist < min) {
+		/* if unset or if less than last distance */
+		if (min == -1.0 || dist < min) {
 			min = dist;
 			min_i = i;
 		}
@@ -313,7 +335,7 @@ int get_station_by_coordinates(double lat, double lon)
 		return 0;
 	}
 	printf("Closest base station: %s (distance = %.2f km)\n", bnetz_stations[min_i].standort, min / 1000.0);
-	printf("  Gruppenfreisignal = %d\n", bnetz_stations[min_i].gfs);
+	printf("  Gruppenfreisignal (GFS) = %d\n", bnetz_stations[min_i].gfs);
 
 	return bnetz_stations[min_i].gfs;
 }
