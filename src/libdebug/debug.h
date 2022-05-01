@@ -52,6 +52,8 @@
 #define DDSS1		45
 #define DSIP		46
 #define DTEL		47
+#define DUK0		48
+#define DPH		49
 
 void lock_debug(void);
 void unlock_debug(void);
