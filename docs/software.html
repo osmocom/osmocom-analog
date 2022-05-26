@@ -15,7 +15,7 @@ To get a list of all options, run the base station software (E.g bnetz) with no 
 </p>
 
 <p class="toppic">
-Sound interface
+Sound interface using ALSA
 </p>
 
 <p>
@@ -63,6 +63,69 @@ If you prefer card 2, device 0, add '-a hw:2,0' or '--audio-device hw:2,0' to th
 # src/bnetz/bnetz -k 1 -a hw:2,0
 
 </pre>
+
+<p class="toppic">
+Prevent Puleaudio from occupying a sound adapter
+</p>
+
+<p>
+In some cases, pulseaudio occupies the sound interface, so that it cannot be used via ALSA API.
+"Device or resource busy" will be reported by the application.
+One way would be to stop pulseaudio daemon, if there is only a single audio device available.
+If an extra sound device, like an USB stick shall be used, we can just block it for pulseaudio, using udev rule.
+</p>
+
+<p>
+First, we need to check the device ID using lsusb (USB) or lspci (PCI):
+</p>
+
+<pre>
+
+# lsusb
+...
+Bus 001 Device 030: ID 0bda:4937 Realtek Semiconductor Corp. Realtek Audio USB
+...
+
+</pre>
+
+<p>
+In this case there is an USB stick with vendor ID "0bda" and device ID "4937".
+If nano is our favorite editor, we add a new udev rule (sudo or be root):
+</p>
+
+<pre>
+
+# nano /etc/udev/rules.d/89-pulseaudio-ignore_0bda_4937.rules
+
+</pre>
+
+<p>
+Choose any index (like 89), but be sure that it must be lower than any other pulseaudio rule, if there is any at all. Add some name that explains exactly what device is blocked, but feel free to user any other name.
+</p>
+
+<p>
+Add this line to block the device shown above, but use the right IDs:
+</p>
+
+<pre>
+ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="4937", ENV{PULSE_IGNORE}="1"
+</pre>
+
+<p>
+When using PCI, you need to reboot.
+When using USB, unplug it and then load the new rules before replugging it:
+</p>
+
+<pre>
+
+udevadm control --reload-rules
+
+</pre>
+
+<p>
+To verify that the rule works, check if the device is available using "pavucontrol".
+Do that before and after, to see the effect.
+</p>
 
 <p class="toppic">
 Basic level adjustment
