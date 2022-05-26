@@ -29,6 +29,8 @@
 #include "sound.h"
 #endif
 
+static int KEEP_FRAMES=8;		/* minimum frames not to read, to prevent reading from buffer before data has been received (seems to be a bug in ALSA) */
+
 typedef struct sound {
 	snd_pcm_t *phandle, *chandle;
 	int pchannels, cchannels;
@@ -190,6 +192,7 @@ static void dev_close(sound_t *sound)
 void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int __attribute__((unused)) *am, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) buffer_size, double __attribute__((unused)) interval, double max_deviation, double __attribute__((unused)) max_modulation, double __attribute__((unused)) modulation_index)
 {
 	sound_t *sound;
+	const char *env;
 	int rc;
 
 	if (channels < 1 || channels > 2) {
@@ -228,6 +231,11 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 		}
 	}
 #endif
+
+	if ((env = getenv("KEEP_FRAMES"))) {
+		KEEP_FRAMES = atoi(env);
+		PDEBUG(DSOUND, DEBUG_NOTICE, "KEEP %d samples in RX buffer, to prevent corrupt read.\n", KEEP_FRAMES);
+	}
 
 	return sound;
 
@@ -387,8 +395,6 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 	return rc;
 }
 
-#define KEEP_FRAMES	8	/* minimum frames not to read, due to bug in ALSA */
-
 int sound_read(void *inst, sample_t **samples, int num, int channels, double __attribute__((unused)) *rf_level_db)
 {
 	sound_t *sound = (sound_t *)inst;
@@ -398,9 +404,6 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double __a
 	int32_t max[2], a;
 	int in, rc;
 	int i, ii;
-
-	/* make valgrind happy, because snd_pcm_readi() does not seem to initially fill buffer with values */
-	memset(buff, 0, sizeof(buff));
 
 	/* get samples in rx buffer */
 	in = snd_pcm_avail(sound->chandle);
@@ -413,8 +416,10 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double __a
 	if (in > num)
 		in = num;
 
-	rc = snd_pcm_readi(sound->chandle, buff, in);
+	/* make valgrind happy, because snd_pcm_readi() does not seem to initially fill buffer with values */
+	memset(buff, 0, sizeof(*buff) * sound->cchannels * in);
 
+	rc = snd_pcm_readi(sound->chandle, buff, in);
 	if (rc < 0) {
 		if (errno == EAGAIN)
 			return 0;
@@ -430,10 +435,8 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double __a
 		}
 		return rc;
 	}
-
 	if (rc == 0)
 		return rc;
-
 	if (sound->cchannels == 2) {
 		if (channels < 2) {
 			for (i = 0, ii = 0; i < rc; i++) {
