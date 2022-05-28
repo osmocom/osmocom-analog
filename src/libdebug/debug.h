@@ -54,6 +54,7 @@
 #define DTEL		47
 #define DUK0		48
 #define DPH		49
+#define DDCF77		50
 
 void lock_debug(void);
 void unlock_debug(void);

@@ -62,7 +62,8 @@ SUBDIRS += \
 	zeitansage \
 	sim \
 	magnetic \
-	fuvst
+	fuvst \
+	dcf77
 
 if HAVE_ALSA
 if HAVE_FUSE

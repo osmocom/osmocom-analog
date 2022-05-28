@@ -80,6 +80,7 @@ src/sim/cnetz_sim
 src/magnetic/cnetz_magnetic
 src/fuvst/fuvst
 src/fuvst/fuvst_sniffer
+src/dcf77/dcf77
 extra/cnetz_memory_card_generator
 src/test/test_filter
 src/test/test_sendevolumenregler

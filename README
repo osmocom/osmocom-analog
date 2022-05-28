@@ -27,8 +27,7 @@ Additionally the following communication services are implemented:
  * Analog Modem Emulation (AM7911)
  * German classic 'Zeitansage' (talking clock)
  * POCSAG transmitter / receiver
- * 5-Ton-Folge + Sirenensteuerung
-
+ * DCF77 time signal transmitter and receiver
 
 USE AT YOUR OWN RISK!
 

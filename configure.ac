@@ -114,6 +114,7 @@ AC_OUTPUT(
     src/sim/Makefile
     src/magnetic/Makefile
     src/fuvst/Makefile
+    src/dcf77/Makefile
     src/test/Makefile
     src/Makefile
     extra/Makefile
