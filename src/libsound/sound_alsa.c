@@ -515,6 +515,8 @@ int sound_get_tosend(void *inst, int buffer_size)
 	}
 
 	tosend = buffer_size - delay;
+	if (tosend < 0)
+		tosend = 0;
 	return tosend;
 }
 
