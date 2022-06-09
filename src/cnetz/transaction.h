@@ -29,11 +29,12 @@
 #define	TRANS_AF	(1 << 20)	/* release connection by base station (SpK) */
 #define	TRANS_AT	(1 << 21)	/* release connection by mobile station */
 #define	TRANS_ATQ	(1 << 22)	/* acknowledge release of MO call in queue */
+#define	TRANS_ATQ_IDLE	(1 << 23)	/* repeat, if call has been released already (mobile sends again) */
 	/* queue */
-#define	TRANS_MO_QUEUE	(1 << 23)	/* MO queue */
-#define	TRANS_MT_QUEUE	(1 << 24)	/* MT queue */
-#define	TRANS_MO_DELAY	(1 << 25)	/* delay to be sure the channel is free again */
-#define	TRANS_MT_DELAY	(1 << 26)
+#define	TRANS_MO_QUEUE	(1 << 24)	/* MO queue */
+#define	TRANS_MT_QUEUE	(1 << 25)	/* MT queue */
+#define	TRANS_MO_DELAY	(1 << 26)	/* delay to be sure the channel is free again */
+#define	TRANS_MT_DELAY	(1 << 27)
 
 typedef struct transaction {
 	struct transaction	*next;			/* pointer to next node in list */
@@ -54,16 +55,20 @@ typedef struct transaction {
 	int			mt_call;		/* flags a moile terminating call */
 	int			page_failed;		/* failed to get a response from MS */
 	double			call_start;		/* when did the call start? (used for metering) */
+	int			queue_position;		/* to find next transaction in queue */
+	double			rf_level_db;		/* level of first contact, so we can detect correct channel at multiple receptions */
 } transaction_t;
 
 const char *transaction2rufnummer(transaction_t *trans);
-transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int futelg_bit, int extended);
+transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int futelg_bit, int extended, double rf_level_db);
 void destroy_transaction(transaction_t *trans);
 void link_transaction(transaction_t *trans, cnetz_t *cnetz);
 void unlink_transaction(transaction_t *trans);
 transaction_t *search_transaction(cnetz_t *cnetz, uint64_t state_mask);
 transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
+transaction_t *search_transaction_number_global(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
 transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref);
+transaction_t *search_transaction_queue(void);
 void trans_new_state(transaction_t *trans, uint64_t state);
 void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans);
 void transaction_timeout(struct timer *timer);

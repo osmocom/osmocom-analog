@@ -159,6 +159,12 @@
 
 #define CUT_OFF_EMPHASIS_CNETZ	796.0 /* 200 uS time constant */
 
+/* OgK list of alternative channels, NOT including 131 */
+cnetz_t *ogk_list[16];
+int ogk_list_count = 0;
+int ogk_list_index = 0;
+
+
 /* Convert channel number to frequency number of base station.
    Set 'unterband' to 1 to get frequency of mobile station. */
 double cnetz_kanal2freq(int kanal, int unterband)
@@ -286,42 +292,38 @@ int cnetz_init(void)
 }
 
 /* Create transceiver instance and link to a list. */
-int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *device, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, double tx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double speech_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
+int cnetz_create(const char *kanal_name, enum cnetz_chan_type chan_type, const char *device, int use_sdr, enum demod_type demod, int samplerate, double rx_gain, double tx_gain, int challenge_valid, uint64_t challenge, int response_valid, uint64_t response, int warteschlange, int metering, double speech_deviation, int ms_power, int measure_speed, double clock_speed[2], int polarity, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
+	int kanal;
 	int rc;
 
-	if ((atoi(kanal) & 1) && (atoi(kanal) < 3 || atoi(kanal) > 1147)) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid. For odd channel numbers, use channel 3 ... 1147.\n", kanal);
+	kanal = atoi(kanal_name);
+	if ((kanal & 1) && (kanal < 3 || kanal > 1147)) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid. For odd channel numbers, use channel 3 ... 1147.\n", kanal);
 		return -EINVAL;
 	}
-	if ((atoi(kanal) & 1) && atoi(kanal) > 947) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency channel %s, only newer phones support this!\n", kanal);
+	if ((kanal & 1) && kanal > 947) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency channel %d, only newer phones support this!\n", kanal);
 	}
-	if (!(atoi(kanal) & 1) && (atoi(kanal) < 4 || atoi(kanal) > 918)) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid. For even channel numbers, use channel 4 ... 918.\n", kanal);
+	if (!(kanal & 1) && (kanal < 4 || kanal > 918)) {
+		PDEBUG(DCNETZ, DEBUG_ERROR, "Channel ('Kanal') number %d invalid. For even channel numbers, use channel 4 ... 918.\n", kanal);
 		return -EINVAL;
 	}
-	if (!(atoi(kanal) & 1) && atoi(kanal) > 758) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency %s, only newer phones support this!\n", kanal);
-	}
-
-	/* OgK must be on channel 131 */
-	if ((chan_type == CHAN_TYPE_OGK || chan_type == CHAN_TYPE_OGK_SPK) && atoi(kanal) != CNETZ_OGK_KANAL) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You must use channel %d for calling channel ('Orga-Kanal') or for combined calling + traffic channel!\n", CNETZ_OGK_KANAL);
-		return -EINVAL;
+	if (!(kanal & 1) && kanal > 758) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You defined an extended frequency channel %d, only newer phones support this!\n", kanal);
 	}
 
 	/* SpK must be on channel other than 131 */
-	if (chan_type == CHAN_TYPE_SPK && atoi(kanal) == CNETZ_OGK_KANAL) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You must not use channel %d for traffic channel!\n", CNETZ_OGK_KANAL);
+	if (chan_type == CHAN_TYPE_SPK && kanal == CNETZ_STD_OGK_KANAL) {
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You must not use channel %d for traffic channel!\n", CNETZ_STD_OGK_KANAL);
 		return -EINVAL;
 	}
 
 	/* warn if we combine SpK and OgK, this is not supported by standard */
 	if (chan_type == CHAN_TYPE_OGK_SPK) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "You selected channel %d ('Orga-Kanal') for combined calling + traffic channel. Some phones will reject this.\n", CNETZ_OGK_KANAL);
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "You selected channel %d ('Orga-Kanal') for combined control + traffic channel. Some phones will reject this.\n", kanal);
 	}
 
 	for (sender = sender_head; sender; sender = sender->next) {
@@ -338,11 +340,21 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 		return -ENOMEM;
 	}
 
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'C-Netz' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
+	PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'C-Netz' instance for 'Kanal' = %d (sample rate %d).\n", kanal, samplerate);
+
+	cnetz->kanal = kanal;
+	if ((chan_type == CHAN_TYPE_OGK || chan_type == CHAN_TYPE_OGK_SPK) && kanal != CNETZ_STD_OGK_KANAL) {
+		if (ogk_list_count == 16) {
+			PDEBUG(DCNETZ, DEBUG_ERROR, "No more than 16 non-standard OGK are allowed!\n");
+			rc = -EINVAL;
+			goto error;
+		}
+		ogk_list[ogk_list_count++] = cnetz;
+	}
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by cnetz code, not by common sender code */
-	rc = sender_create(&cnetz->sender, kanal, cnetz_kanal2freq(atoi(kanal), 0), cnetz_kanal2freq(atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&cnetz->sender, kanal_name, cnetz_kanal2freq(kanal, 0), cnetz_kanal2freq(kanal, 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
 		goto error;
@@ -403,13 +415,13 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 	cnetz_go_idle(cnetz);
 
 #ifdef DEBUG_SPK
-	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002, -1, -1);
+	transaction_t *trans = create_transaction(cnetz, TRANS_DS, 2, 2, 22002, -1, -1, NAN);
 	trans->mo_call = 1;
 	cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, (cnetz->sched_ts + 2) & 31);
 #else
 	/* create transaction for speech channel loopback */
 	if (loopback && chan_type == CHAN_TYPE_SPK) {
-		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ_K, 2, 2, 22002, -1, -1);
+		transaction_t *trans = create_transaction(cnetz, TRANS_VHQ_K, 2, 2, 22002, -1, -1, NAN);
 		trans->mo_call = 1;
 		cnetz_set_dsp_mode(cnetz, DSP_MODE_SPK_K);
 		cnetz_set_sched_dsp_mode(cnetz, DSP_MODE_SPK_K, (cnetz->sched_ts + 1) & 31);
@@ -419,20 +431,20 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 #if 0
 	/* debug flushing transactions */
 	transaction_t *trans1, *trans2;
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1, NAN);
 	destroy_transaction(trans1);
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1, NAN);
 	destroy_transaction(trans1);
-	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1);
-	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1, -1);
+	trans1 = create_transaction(cnetz, 99, 6, 2, 15784, -1, -1, NAN);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1, -1, NAN);
 	unlink_transaction(trans1);
 	link_transaction(trans1, cnetz);
 	cnetz_flush_other_transactions(cnetz, trans1);
-	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1, -1);
+	trans2 = create_transaction(cnetz, 99, 2, 2, 22002, -1, -1, NAN);
 	cnetz_flush_other_transactions(cnetz, trans2);
 #endif
 
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' #%d of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 	const char *name, *station;
 	name = get_station_name(si.fuz_nat, si.fuz_fuvst, si.fuz_rest, &station);
 	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using cell ID: Nat=%d FuVst=%d Rest=%d Name='%s' (%s)\n", si.fuz_nat, si.fuz_fuvst, si.fuz_rest, name, station);
@@ -473,9 +485,9 @@ static cnetz_t *search_free_spk(int extended)
 		cnetz = (cnetz_t *) sender;
 		/* ignore extended frequency, if not supported */
 		if (!extended) {
-			if ((atoi(sender->kanal) & 1) && atoi(sender->kanal) > 947)
+			if ((cnetz->kanal & 1) && cnetz->kanal > 947)
 				continue;
-			if (!(atoi(sender->kanal) & 1) && atoi(sender->kanal) > 758)
+			if (!(cnetz->kanal & 1) && cnetz->kanal > 758)
 				continue;
 		}
 		/* ignore busy channel */
@@ -492,7 +504,7 @@ static cnetz_t *search_free_spk(int extended)
 	return ogk_spk;
 }
 
-static cnetz_t *search_ogk(void)
+static cnetz_t *search_ogk(int kanal)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -501,6 +513,8 @@ static cnetz_t *search_ogk(void)
 		cnetz = (cnetz_t *) sender;
 		/* ignore busy channel */
 		if (cnetz->state != CNETZ_IDLE)
+			continue;
+		if (cnetz->kanal != kanal)
 			continue;
 		if (cnetz->chan_type == CHAN_TYPE_OGK)
 			return cnetz;
@@ -514,7 +528,6 @@ static cnetz_t *search_ogk(void)
 /* Abort connection, if any and send idle broadcast */
 void cnetz_go_idle(cnetz_t *cnetz)
 {
-	cnetz_t *ogk;
 	transaction_t *trans;
 
 	if (cnetz->state == CNETZ_IDLE)
@@ -533,18 +546,17 @@ void cnetz_go_idle(cnetz_t *cnetz)
 	/* set scheduler to OgK or turn off SpK */
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* switch next frame after distributed signaling boundary (multiple of 8 slots) */
-		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 8) & 24);
+		cnetz_set_sched_dsp_mode(cnetz, (cnetz->chan_type == CHAN_TYPE_OGK || cnetz->chan_type == CHAN_TYPE_OGK_SPK) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 8) & 24);
 	} else {
 		/* switch next frame */
-		cnetz_set_sched_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 1) & 31);
-		cnetz_set_dsp_mode(cnetz, (atoi(cnetz->sender.kanal) == CNETZ_OGK_KANAL) ? DSP_MODE_OGK : DSP_MODE_OFF);
+		cnetz_set_sched_dsp_mode(cnetz, (cnetz->chan_type == CHAN_TYPE_OGK || cnetz->chan_type == CHAN_TYPE_OGK_SPK) ? DSP_MODE_OGK : DSP_MODE_OFF, (cnetz->sched_ts + 1) & 31);
+		cnetz_set_dsp_mode(cnetz, (cnetz->chan_type == CHAN_TYPE_OGK || cnetz->chan_type == CHAN_TYPE_OGK_SPK) ? DSP_MODE_OGK : DSP_MODE_OFF);
 	}
 
 	/* check for first phone in queue and trigger completion of call (becoming idle means that SpK is now available)  */
-	ogk = search_ogk();
-	trans = search_transaction(ogk, TRANS_MT_QUEUE | TRANS_MO_QUEUE);
+	trans = search_transaction_queue();
 	if (trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Now channel available for queued subscriber '%s'.\n", transaction2rufnummer(trans));
+		PDEBUG(DCNETZ, DEBUG_NOTICE, "Now channel is available for queued subscriber '%s'.\n", transaction2rufnummer(trans));
 		trans_new_state(trans, (trans->state == TRANS_MT_QUEUE) ? TRANS_MT_DELAY : TRANS_MO_DELAY);
 		timer_stop(&trans->timer);
 		timer_start(&trans->timer, 2.0);
@@ -585,14 +597,14 @@ void call_down_clock(void) {}
 
 int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
-	sender_t *sender;
-	cnetz_t *cnetz, *spk;
+	cnetz_t *ogk, *spk;
 	int rc;
 	int extended;
 	transaction_t *trans;
 	uint8_t futln_nat;
 	uint8_t futln_fuvst;
 	int futln_rest; /* use int for checking size > 65535 */
+	int ogk_kanal;
 
 	/* 1. split number into elements */
 	futln_nat = dialing[0] - '0';
@@ -605,28 +617,22 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	}
 
 	/* 2. check if the subscriber is attached */
-	rc = find_db(futln_nat, futln_fuvst, futln_rest, NULL, &extended);
+	rc = find_db(futln_nat, futln_fuvst, futln_rest, &ogk_kanal, NULL, &extended);
 	if (rc < 0) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call to not attached subscriber, rejecting!\n");
 		return -CAUSE_OUTOFORDER;
 	}
 
 	/* 3. check if given number is already in a call, return BUSY */
-	for (sender = sender_head; sender; sender = sender->next) {
-		cnetz = (cnetz_t *) sender;
-		/* search transaction for this number */
-		trans = search_transaction_number(cnetz, futln_nat, futln_fuvst, futln_rest);
-		if (trans)
-			break;
-	}
-	if (sender) {
+	trans = search_transaction_number_global(futln_nat, futln_fuvst, futln_rest);
+	if (trans) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
 	/* 4. check if we have no OgK, return NOCHANNEL */
-	cnetz = search_ogk();
-	if (!cnetz) {
+	ogk = search_ogk(ogk_kanal);
+	if (!ogk) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call, but OgK is currently busy, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
@@ -634,17 +640,17 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	/* 5. check if all senders are busy, return NOCHANNEL */
 	spk = search_free_spk(extended);
 	if (!spk) {
-		if (!cnetz->warteschlange) {
+		if (!ogk->warteschlange) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 			return -CAUSE_NOCHANNEL;
 		} else
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call, but no free channel, queuing call!\n");
 	}
 
-	PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
+	PDEBUG(DCNETZ, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
-	trans = create_transaction(cnetz, (spk) ? TRANS_VAK : TRANS_WSK, futln_nat, futln_fuvst, futln_rest, -1, -1);
+	trans = create_transaction(ogk, (spk) ? TRANS_VAK : TRANS_WSK, futln_nat, futln_fuvst, futln_rest, -1, -1, NAN);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
@@ -750,17 +756,17 @@ void call_down_release(int callref, int cause)
 	}
 }
 
-int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int ogk_kanal)
 {
 	cnetz_t *cnetz;
 	transaction_t *trans;
 
-	cnetz = search_ogk();
+	cnetz = search_ogk(ogk_kanal);
 	if (!cnetz) {
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "'Meldeaufruf', but OgK is currently busy!\n");
 		return -CAUSE_NOCHANNEL;
 	}
-	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest, -1, -1);
+	trans = create_transaction(cnetz, TRANS_MA, futln_nat, futln_fuvst, futln_rest, -1, -1, NAN);
 	if (!trans) {
 		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
@@ -992,7 +998,7 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 	telegramm.grenzwert_fuer_umschalten = si.grenz_umschalten;
 	telegramm.grenze_fuer_ausloesen = si.grenz_ausloesen;
 	
-	trans = search_transaction(cnetz, TRANS_EM | TRANS_UM | TRANS_WBN | TRANS_WBP | TRANS_VAG | TRANS_VAK | TRANS_ATQ | TRANS_VA | TRANS_WSK);
+	trans = search_transaction(cnetz, TRANS_EM | TRANS_UM | TRANS_WBN | TRANS_WBP | TRANS_VAG | TRANS_VAK | TRANS_ATQ | TRANS_ATQ_IDLE | TRANS_VA | TRANS_WSK);
 	if (trans) {
 		telegramm.futln_nationalitaet = trans->futln_nat;
 		telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
@@ -1057,14 +1063,14 @@ vak:
 				break;
 			}
 			if (spk == cnetz) {
-				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined calling + traffic channel %s\n", spk->sender.kanal);
+				PDEBUG(DCNETZ, DEBUG_INFO, "Staying on combined control + traffic channel %s\n", spk->sender.kanal);
 			} else {
 				PDEBUG(DCNETZ, DEBUG_INFO, "Assigning phone to traffic channel %s\n", spk->sender.kanal);
 				/* sync RX time to current OgK time */
 				fsk_copy_sync(&spk->fsk_demod, &cnetz->fsk_demod);
 			}
 			/* set channel */
-			telegramm.frequenz_nr = atoi(spk->sender.kanal);
+			telegramm.frequenz_nr = spk->kanal;
 			/* change state to busy */
 			cnetz_new_state(spk, CNETZ_BUSY);
 			/* schedule switching two slots ahead */
@@ -1076,6 +1082,7 @@ vak:
 			cnetz_flush_other_transactions(spk, trans);
 			break;
 		case TRANS_ATQ:
+		case TRANS_ATQ_IDLE:
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Quittung fuer Ausloesen des FuTelG im OgK-Betrieb' to release request.\n");
 			telegramm.opcode = OPCODE_ATQ_R;
 			destroy_transaction(trans);
@@ -1117,7 +1124,13 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 	telegramm.ogk_verkehrsanteil = 0; /* must be 0 or phone might not respond to messages in different slot */
 	telegramm.teilnehmergruppensperre = si.teilnehmergruppensperre;
 	telegramm.anzahl_gesperrter_teilnehmergruppen = si.anzahl_gesperrter_teilnehmergruppen;
-	telegramm.ogk_vorschlag = CNETZ_OGK_KANAL;
+	if (ogk_list_count) {
+		/* if we have alternative OGKs, we cycle through the list and indicate their channels */
+		telegramm.ogk_vorschlag = ogk_list[ogk_list_index]->kanal;
+		if (++ogk_list_index == ogk_list_count)
+			ogk_list_index = 0;
+	} else
+		telegramm.ogk_vorschlag = CNETZ_STD_OGK_KANAL;
 	telegramm.fuz_rest_nr = si.fuz_rest;
 
 	trans = search_transaction(cnetz, TRANS_VWG | TRANS_MA);
@@ -1171,11 +1184,12 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Attachment from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit);
+		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit, cnetz->rf_level_db);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
 		}
+		cnetz = trans->cnetz; /* cnetz may change, due to stronger reception on different OgK */
 		valid_frame = 1;
 		break;
 	case OPCODE_UM_R:
@@ -1192,11 +1206,12 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Roaming from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit);
+		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit, cnetz->rf_level_db);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
 		}
+		cnetz = trans->cnetz; /* cnetz may change, due to stronger reception on different OgK */
 		valid_frame = 1;
 		break;
 	case OPCODE_UWG_R:
@@ -1208,29 +1223,33 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 		break;
 	case OPCODE_VWG_R:
 	case OPCODE_SRG_R:
+	case OPCODE_NUG_R:
 		if (!match_fuz(telegramm))
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		if (opcode == OPCODE_VWG_R)
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend' message from Subscriber '%s'\n", rufnummer);
-		else
+		else if (opcode == OPCODE_SRG_R)
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing emergency Call 'Sonderruf gehend' message from Subscriber '%s'\n", rufnummer);
+		else
+			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received outgoing Call 'Verbindungswunsch gehend bei Nachbarschaftsunterstuetzung' message from Subscriber '%s'\n", rufnummer);
 		if (cnetz->state != CNETZ_IDLE) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Ignoring Call from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
-		trans = create_transaction(cnetz, TRANS_VWG, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, telegramm->erweitertes_frequenzbandbit);
+		trans = create_transaction(cnetz, TRANS_VWG, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, telegramm->erweitertes_frequenzbandbit, cnetz->rf_level_db);
 		if (!trans) {
 			PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 			break;
 		}
+		cnetz = trans->cnetz; /* cnetz may change, due to stronger reception on different OgK */
 		trans->try = 1;
 		valid_frame = 1;
 		break;
 	case OPCODE_WUE_M:
 		trans = search_transaction(cnetz, TRANS_WAF | TRANS_WBP | TRANS_VAG | TRANS_MO_QUEUE);
 		if (!trans) {
-			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received dialing digits 'Wahluebertragung' message without transaction, ignoring!\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received dialing digits 'Wahluebertragung' message without transaction (on this OgK), ignoring!\n");
 			break;
 		}
 		rufnummer = transaction2rufnummer(trans);
@@ -1246,17 +1265,30 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			break;
 		rufnummer = telegramm2rufnummer(telegramm);
 		PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Received release 'Ausloesen des FuTelG im OgK-Betrieb bei WS' message from Subscriber '%s'\n", rufnummer);
-		trans = search_transaction_number(cnetz, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		trans = search_transaction_number_global(telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 		if (!trans) {
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "There is no transaction, so we assume that the phone did not receive previous release.\n");
 			/* create transaction, in case the phone repeats the release after we have acked it */
-			trans = create_transaction(cnetz, TRANS_ATQ, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, -1);
+			trans = create_transaction(cnetz, TRANS_ATQ_IDLE, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, -1, cnetz->rf_level_db);
 			if (!trans) {
 				PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
 				break;
 			}
+			cnetz = trans->cnetz; /* cnetz may change, due to stronger reception on different OgK */
 		} else {
-			timer_stop(&trans->timer);
-			trans_new_state(trans, TRANS_ATQ);
+			if (cnetz == trans->cnetz) {
+				timer_stop(&trans->timer);
+				trans_new_state(trans, TRANS_ATQ);
+			} else
+			if (trans->state == TRANS_ATQ_IDLE) {
+				trans = create_transaction(cnetz, TRANS_ATQ_IDLE, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, -1, -1, cnetz->rf_level_db);
+				if (!trans) {
+					PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to create transaction\n");
+					break;
+				}
+				cnetz = trans->cnetz; /* cnetz may change, due to stronger reception on different OgK */
+			} else
+				PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received release 'Ausloesen des FuTelG im OgK-Betrieb bei WS' message without transaction (on this OgK), ignoring!\n");
 		}
 		valid_frame = 1;
 		break;
@@ -1265,7 +1297,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			break;
 		trans = search_transaction_number(cnetz, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 		if (!trans) {
-			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldung Funktelefonteilnehmer' message without transaction, ignoring!\n");
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Received acknowledge 'Meldung Funktelefonteilnehmer' message without transaction (on this OgK), ignoring!\n");
 			break;
 		}
 		rufnummer = transaction2rufnummer(trans);
@@ -1295,7 +1327,9 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 {
 	static telegramm_t telegramm;
 	transaction_t *trans = cnetz->trans_list;
+	int ogk_kanal;
 	cnetz_t *ogk;
+	int rc;
 
 	if (!trans)
 		return NULL;
@@ -1311,7 +1345,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	telegramm.futln_nationalitaet = trans->futln_nat;
 	telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 	telegramm.futln_rest_nr = trans->futln_rest;
-	telegramm.frequenz_nr = atoi(cnetz->sender.kanal);
+	telegramm.frequenz_nr = cnetz->kanal;
 	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
 	telegramm.zufallszahl = cnetz->challenge;
 
@@ -1426,9 +1460,15 @@ no_auth:
 		/* idle channel */
 		cnetz_go_idle(cnetz);
 		/* alloc ogk again */
-		ogk = search_ogk();
+		rc = find_db(trans->futln_nat, trans->futln_fuvst, trans->futln_rest, &ogk_kanal, NULL, NULL);
+		if (rc < 0) {
+			PDEBUG(DCNETZ, DEBUG_NOTICE, "Cannot find subscriber in database anymore, releasing!\n");
+			goto no_ogk;
+		}
+		ogk = search_ogk(ogk_kanal);
 		if (!ogk) {
 			PDEBUG(DCNETZ, DEBUG_NOTICE, "Cannot retry, because currently no OgK available (busy)\n");
+no_ogk:
 			cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
 			if (trans->callref)
 				call_up_release(trans->callref, CAUSE_NOCHANNEL);
@@ -1634,7 +1674,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 	telegramm.futln_nationalitaet = trans->futln_nat;
 	telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 	telegramm.futln_rest_nr = trans->futln_rest;
-	telegramm.frequenz_nr = atoi(cnetz->sender.kanal);
+	telegramm.frequenz_nr = cnetz->kanal;
 	telegramm.entfernung = si.entfernung;
 	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
 	telegramm.gueltigkeit_des_gebuehrenstandes = 0;

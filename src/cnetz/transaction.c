@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <math.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
@@ -27,6 +28,8 @@
 #include "cnetz.h"
 #include "telegramm.h"
 #include "database.h"
+
+static int new_cueue_position = 0;
 
 const char *transaction2rufnummer(transaction_t *trans)
 {
@@ -38,24 +41,34 @@ const char *transaction2rufnummer(transaction_t *trans)
 }
 
 /* create transaction */
-transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int futelg_bit, int extended)
+transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int futelg_bit, int extended, double rf_level_db)
 {
-	sender_t *sender;
-	transaction_t *trans = NULL;
-	cnetz_t *search_cnetz;
+	transaction_t *trans;
 
-	/* search transaction for this subscriber */
-	for (sender = sender_head; sender; sender = sender->next) {
-		search_cnetz = (cnetz_t *) sender;
-		/* search transaction for this callref */
-		trans = search_transaction_number(search_cnetz, futln_nat, futln_fuvst, futln_rest);
-		if (trans)
-			break;
-	}
+	trans = search_transaction_number_global(futln_nat, futln_fuvst, futln_rest);
 	if (trans) {
 		const char *rufnummer = transaction2rufnummer(trans);
 		int old_callref = trans->callref;
 		cnetz_t *old_cnetz = trans->cnetz;
+		/* both states must be the same and one of the give selection */
+		if ((trans->state & state & (TRANS_EM | TRANS_UM | TRANS_VWG | TRANS_ATQ_IDLE))) {
+			if (!isnan(trans->rf_level_db) && !isnan(rf_level_db) && trans->cnetz->kanal != cnetz->kanal) {
+				if (rf_level_db > trans->rf_level_db) {
+					PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is stronger, so we move to that channel!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
+					trans->rf_level_db = rf_level_db;
+					unlink_transaction(trans);
+					link_transaction(trans, cnetz);
+					update_db(trans->futln_nat, trans->futln_fuvst, trans->futln_rest, cnetz->kanal, NULL, NULL, 1, 0);
+					return trans;
+				}
+				if (rf_level_db < trans->rf_level_db) {
+					PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is weaker, so we ignore that channel!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
+					return trans;
+				}
+			}
+			PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is also received. Try to avoid multiple OgK channels!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
+			return trans;
+		}
 		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", rufnummer);
 		destroy_transaction(trans);
 		if (old_cnetz) /* should be... */
@@ -88,9 +101,11 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 	link_transaction(trans, cnetz);
 
 	/* update database: now busy */
-	update_db(cnetz, futln_nat, futln_fuvst, futln_rest, &futelg_bit, &extended, 1, 0);
+	update_db(futln_nat, futln_fuvst, futln_rest, cnetz->kanal, &futelg_bit, &extended, 1, 0);
 	trans->futelg_bit = futelg_bit;
 	trans->extended = extended;
+
+	trans->rf_level_db = rf_level_db;
 
 	return trans;
 }
@@ -99,7 +114,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 void destroy_transaction(transaction_t *trans)
 {
 	/* update database: now idle */
-	update_db(trans->cnetz, trans->futln_nat, trans->futln_fuvst, trans->futln_rest, NULL, NULL, 0, trans->page_failed);
+	update_db(trans->futln_nat, trans->futln_fuvst, trans->futln_rest, 0, NULL, NULL, 0, trans->page_failed);
 
 	unlink_transaction(trans);
 	
@@ -182,6 +197,23 @@ transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint
 	return NULL;
 }
 
+transaction_t *search_transaction_number_global(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+{
+	sender_t *sender;
+	cnetz_t *cnetz;
+	transaction_t *trans = NULL;
+
+	/* search transaction for this subscriber */
+	for (sender = sender_head; sender; sender = sender->next) {
+		cnetz = (cnetz_t *) sender;
+		/* search transaction for this callref */
+		trans = search_transaction_number(cnetz, futln_nat, futln_fuvst, futln_rest);
+		if (trans)
+			break;
+	}
+
+	return trans;
+}
 transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref)
 {
 	transaction_t *trans = cnetz->trans_list;
@@ -196,6 +228,42 @@ transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref)
 			return trans;
 		}
 		trans = trans->next;
+	}
+
+	return NULL;
+}
+
+/* get oldest transaction in queue:
+ * 
+ * oldest means that the queue number is the smallest.
+ * all candidates (transactions) must be in queue state.
+ */
+transaction_t *search_transaction_queue(void)
+{
+	sender_t *sender;
+	transaction_t *trans, *found = NULL;
+	cnetz_t *cnetz;
+	int queue_max = 0;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		cnetz = (cnetz_t *) sender;
+		trans = cnetz->trans_list;
+		while (trans) {
+			if ((trans->state & (TRANS_MO_QUEUE | TRANS_MT_QUEUE))) {
+				/* select if first or lower number */
+				if (!found || trans->queue_position < queue_max) {
+					queue_max = trans->queue_position;
+					found = trans;
+				}
+			}
+			trans = trans->next;
+		}
+	}
+
+	if (found) {
+		const char *rufnummer = transaction2rufnummer(found);
+		PDEBUG(DTRANS, DEBUG_DEBUG, "Found oldest transaction in queue for subscriber '%s'\n", rufnummer);
+		return found;
 	}
 
 	return NULL;
@@ -252,6 +320,8 @@ static const char *trans_state_name(uint64_t state)
 		return "AT";
 	case TRANS_ATQ:
 		return "ATQ";
+	case TRANS_ATQ_IDLE:
+		return "ATQ_IDLE";
 	case TRANS_MO_QUEUE:
 		return "MO_QUEUE";
 	case TRANS_MT_QUEUE:
@@ -301,6 +371,7 @@ const char *trans_short_state_name(uint64_t state)
 	case TRANS_AF:
 	case TRANS_AT:
 	case TRANS_ATQ:
+	case TRANS_ATQ_IDLE:
 		return "RELEASE";
 	case TRANS_MO_QUEUE:
 	case TRANS_MO_DELAY:
@@ -317,6 +388,9 @@ void trans_new_state(transaction_t *trans, uint64_t state)
 {
 	PDEBUG(DTRANS, DEBUG_INFO, "Transaction (%s) state %s -> %s\n", transaction2rufnummer(trans), trans_state_name(trans->state), trans_state_name(state));
 	trans->state = state;
+	/* in case of a queue, set new positon */
+	if (!trans->queue_position && (state == TRANS_MO_QUEUE || state == TRANS_MT_QUEUE))
+		trans->queue_position = ++new_cueue_position;
 	cnetz_display_status();
 }
 

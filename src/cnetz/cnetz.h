@@ -6,7 +6,7 @@ typedef struct cnetz cnetz_t;
 #include "fsk_demod.h"
 #include "transaction.h"
 
-#define CNETZ_OGK_KANAL		131
+#define CNETZ_STD_OGK_KANAL	131
 
 /* dsp modes of transmission */
 enum dsp_mode {
@@ -66,6 +66,7 @@ struct clock_speed {
 /* instance of cnetz sender */
 struct cnetz {
 	sender_t		sender;
+	int			kanal;			/* channel number */
 	enum cnetz_chan_type	chan_type;		/* channel type */
 	scrambler_t		scrambler_tx;		/* mirror what we transmit to MS */
 	scrambler_t		scrambler_rx;		/* mirror what we receive from MS */
@@ -99,6 +100,7 @@ struct cnetz {
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, "Telegramm", .... */
+	double			rf_level_db;		/* current RF level or nan, if not applicable */
 	iir_filter_t		lp;			/* low pass filter to eliminate noise above 5280 Hz */
 	fsk_fm_demod_t		fsk_demod;		/* demod process */
 	double			fsk_deviation;		/* deviation of FSK signal on sound card */
@@ -144,7 +146,7 @@ int cnetz_create(const char *kanal, enum cnetz_chan_type chan_type, const char *
 void cnetz_destroy(sender_t *sender);
 void cnetz_go_idle(cnetz_t *cnetz);
 void cnetz_sync_frame(cnetz_t *cnetz, double sync, int ts);
-int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest);
+int cnetz_meldeaufruf(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int ogk_kanal);
 const struct telegramm *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz);
 const struct telegramm *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz);
 void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, struct telegramm *telegramm, int block);

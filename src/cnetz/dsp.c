@@ -568,9 +568,11 @@ static int fsk_distributed_encode(cnetz_t *cnetz, const char *bits)
 /* decode samples and hut for bit changes
  * use deviation to find greatest slope of the signal (bit change)
  */
-void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
+void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_level_db)
 {
 	cnetz_t *cnetz = (cnetz_t *) sender;
+
+	cnetz->rf_level_db = rf_level_db;
 
 	/* measure rx sample speed */
 	calc_clock_speed(cnetz, length, 0, 0);

@@ -1499,10 +1499,9 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 		return;
 	}
 
+	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF level: %.1f dB RX Level: %.0f%% Standard deviation: %.0f%% Sync Time: %.2f (TS %.2f) %s\n", cnetz->rf_level_db, fabs(level) / cnetz->fsk_deviation * 100.0, stddev / fabs(level) * 100.0, sync_time, sync_time / 396.0, (level < 0) ? "NEGATIVE (phone's mode)" : "POSITIVE (base station's mode)");
 	if (bit_errors)
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Standard deviation: %.0f%% Sync Time: %.2f (TS %.2f) Bit errors: %d %s\n", fabs(level) / cnetz->fsk_deviation * 100.0, stddev / fabs(level) * 100.0, sync_time, sync_time / 396.0, bit_errors, (level < 0) ? "NEGATIVE (phone's mode)" : "POSITIVE (base station's mode)");
-	else
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Standard deviation: %.0f%% Sync Time: %.2f (TS %.2f) %s\n", fabs(level) / cnetz->fsk_deviation * 100.0, stddev / fabs(level) * 100.0, sync_time, sync_time / 396.0, (level < 0) ? "NEGATIVE (phone's mode)" : "POSITIVE (base station's mode)");
+		PDEBUG_CHAN(DDSP, DEBUG_INFO, " -> Frame has %d bit errors.\n", bit_errors);
 
 	disassemble_telegramm(&telegramm, bits, si.authentifikationsbit);
 	opcode = telegramm.opcode;

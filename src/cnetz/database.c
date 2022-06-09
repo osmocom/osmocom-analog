@@ -37,6 +37,7 @@
 typedef struct cnetz_database {
 
 	struct cnetz_database	*next;
+	int			ogk_kanal;	/* available on which channel */
 	uint8_t			futln_nat;	/* who ... */
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
@@ -81,7 +82,7 @@ static void db_timeout(struct timer *timer)
 
 	PDEBUG(DDB, DEBUG_INFO, "Check, if subscriber '%d,%d,%05d' is still available.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	
-	rc = cnetz_meldeaufruf(db->futln_nat, db->futln_fuvst, db->futln_rest);
+	rc = cnetz_meldeaufruf(db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
 	if (rc < 0) {
 		/* OgK is used for speech, but this never happens in a real
 		 * network. We just assume that the phone has responded and
@@ -93,7 +94,7 @@ static void db_timeout(struct timer *timer)
 }
 
 /* create/update db entry */
-int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *futelg_bit, int *extended, int busy, int failed)
+int update_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int ogk_kanal, int *futelg_bit, int *extended, int busy, int failed)
 {
 	cnetz_db_t *db, **dbp;
 
@@ -128,6 +129,9 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 		PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%05d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	}
 
+	if (ogk_kanal)
+		db->ogk_kanal = ogk_kanal;
+
 	if (futelg_bit && *futelg_bit >= 0)
 		db->futelg_bit = *futelg_bit;
 
@@ -136,17 +140,17 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 
 	db->busy = busy;
 	if (busy) {
-		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
 		timer_stop(&db->timer);
 	} else if (!failed) {
-		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
 		timer_start(&db->timer, MELDE_INTERVAL); /* when to check avaiability (again) */
 		db->retry = 0;
 		db->eingebucht = 1;
 		db->last_seen = get_time();
 	} else {
 		db->retry++;
-		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->retry, MELDE_MAXIMAL);
+		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' on OGK channel #%d failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal, db->retry, MELDE_MAXIMAL);
 		if (db->retry == MELDE_MAXIMAL) {
 			PDEBUG(DDB, DEBUG_INFO, "Marking subscriber as gone.\n");
 			db->eingebucht = 0;
@@ -162,7 +166,7 @@ int update_db(cnetz_t __attribute__((unused)) *cnetz, uint8_t futln_nat, uint8_t
 	return 0;
 }
 
-int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *futelg_bit, int *extended)
+int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *ogk_kanal, int *futelg_bit, int *extended)
 {
 	cnetz_db_t *db = cnetz_db_head;
 
@@ -171,6 +175,8 @@ int find_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int *fu
 		 && db->futln_nat == futln_nat
 		 && db->futln_fuvst == futln_fuvst
 		 && db->futln_rest == futln_rest) {
+			if (ogk_kanal)
+				*ogk_kanal = db->ogk_kanal;
 			if (futelg_bit)
 				*futelg_bit = db->futelg_bit;
 			if (extended)
@@ -193,6 +199,7 @@ void dump_db(void)
 	cnetz_db_t *db = cnetz_db_head;
 	double now = get_time();
 	int last;
+	char attached[16];
 
 	PDEBUG(DDB, DEBUG_NOTICE, "Dump of subscriber database:\n");
 	if (!db) {
@@ -204,7 +211,8 @@ void dump_db(void)
 	PDEBUG(DDB, DEBUG_NOTICE, "-------------------------------------------------------------------------------\n");
 	while (db) {
 		last = (db->busy) ? 0 : (uint32_t)(now - db->last_seen);
-		PDEBUG(DDB, DEBUG_NOTICE, "%d,%d,%05d\t%s\t\t%s\t\t%02d:%02d:%02d \t%d/%d\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? "YES" : "-no-", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, MELDE_MAXIMAL);
+		sprintf(attached, "YES (OGK %d)", db->ogk_kanal);
+		PDEBUG(DDB, DEBUG_NOTICE, "%d,%d,%05d\t%s\t%s\t\t%02d:%02d:%02d \t%d/%d\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? attached : "-no-\t", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, MELDE_MAXIMAL);
 		db = db->next;
 	}
 }

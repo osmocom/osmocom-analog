@@ -82,6 +82,10 @@ void print_help(const char *arg0)
 	/*      -                                                                             - */
 	printf(" -T --channel-type <channel type> | list\n");
 	printf("        Give channel type, use 'list' to get a list. (default = '%s')\n", chan_type_short_name(chan_type[0]));
+	printf("        You must define at least one OgK at channel 131. This channel may be a\n");
+	printf("        a combined OgK+SpK channel, but this works with older phones only.\n");
+	printf("        You must define additionally one or more SpK, in order to make calls.\n");
+	printf("        You may define alternative OgK, the phones will attach to it then.\n");
 	printf(" -M --measure-speed\n");
 	printf("        Measures clock speed. THIS IS REQUIRED! See documentation!\n");
 	printf(" -C --clock-speed <rx ppm>,<tx ppm>\n");
@@ -524,7 +528,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!num_kanal) {
-		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", CNETZ_OGK_KANAL);
+		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", CNETZ_STD_OGK_KANAL);
 		mandatory = 1;
 	}
 	if (use_sdr) {
@@ -585,7 +589,7 @@ int main(int argc, char *argv[])
 	init_coding();
 	cnetz_init();
 
-	/* check for mandatory OgK */
+	/* check for mandatory standard OgK */
 	for (i = 0; i < num_kanal; i++) {
 		if (chan_type[i] == CHAN_TYPE_OGK || chan_type[i] == CHAN_TYPE_OGK_SPK)
 			break;
