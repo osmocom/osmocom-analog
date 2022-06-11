@@ -632,7 +632,8 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 		abort();
 	}
 
-	PDEBUG(DFRAME, DEBUG_DEBUG, "Coding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
+	if (debug)
+		PDEBUG(DFRAME, DEBUG_INFO, "Coding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
 
 	/* copy opcode */
 	for (i = 0; i < 6; i++)
@@ -847,7 +848,7 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 		value = (value << 1) | (bits[i] == '1');
 	telegramm->opcode = value;
 
-	PDEBUG(DFRAME, DEBUG_DEBUG, "Decoding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
+	PDEBUG(DFRAME, DEBUG_INFO, "Decoding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
 
 	/* copy parameters */
 	if (auth && bits[1]) /* auth flag and chip card flag */
@@ -1578,6 +1579,7 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 	const telegramm_t *telegramm = NULL;
 	uint8_t opcode;
 	char *bits;
+	int debug = 1;
 
 	switch (cnetz->dsp_mode) {
 	case DSP_MODE_OGK:
@@ -1600,7 +1602,11 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 		return NULL;
 
 	opcode = telegramm->opcode;
-	bits = assemble_telegramm(telegramm, (opcode != OPCODE_LR_R) && (opcode != OPCODE_MLR_M));
+	if (opcode == OPCODE_LR_R && cnetz->sched_lr_debugged)
+		debug = 0;
+	if (opcode == OPCODE_MLR_M && cnetz->sched_mlr_debugged)
+		debug = 0;
+	bits = assemble_telegramm(telegramm, debug);
 	bits = encode(bits);
 	bits = interleave(bits);
 
@@ -1610,6 +1616,13 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 
 		for (i = 0; i < 184; i++)
 			bits[i] ^= 1;
+	}
+
+	if (opcode == OPCODE_LR_R && !cnetz->sched_lr_debugged)
+		cnetz->sched_lr_debugged = 1;
+	if (opcode == OPCODE_MLR_M && !cnetz->sched_mlr_debugged) {
+		cnetz->sched_mlr_debugged = 1;
+		PDEBUG(DFRAME, DEBUG_INFO, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
 	}
 
 	return bits;

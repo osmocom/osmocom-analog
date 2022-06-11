@@ -97,6 +97,8 @@ struct cnetz {
 	int			sched_r_m;		/* Rufblock (0) / Meldeblock (1) */
 	enum dsp_mode		sched_dsp_mode;		/* what mode shall be switched to */
 	int			sched_dsp_mode_ts;	/* time slot when to switch mode (-1 = don't switch) */
+	int			sched_lr_debugged;	/* indicator to prevent debugging all idle frames */
+	int			sched_mlr_debugged;	/* indicator to prevent debugging all idle frames */
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, "Telegramm", .... */

@@ -542,6 +542,8 @@ void cnetz_go_idle(cnetz_t *cnetz)
 
 	PDEBUG(DCNETZ, DEBUG_INFO, "Entering IDLE state on channel %s.\n", cnetz->sender.kanal);
 	cnetz_new_state(cnetz, CNETZ_IDLE);
+	cnetz->sched_lr_debugged = 0;
+	cnetz->sched_mlr_debugged = 0;
 
 	/* set scheduler to OgK or turn off SpK */
 	if (cnetz->dsp_mode == DSP_MODE_SPK_K || cnetz->dsp_mode == DSP_MODE_SPK_V) {
