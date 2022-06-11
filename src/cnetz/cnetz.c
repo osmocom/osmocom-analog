@@ -559,7 +559,7 @@ void cnetz_go_idle(cnetz_t *cnetz)
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Now channel is available for queued subscriber '%s'.\n", transaction2rufnummer(trans));
 		trans_new_state(trans, (trans->state == TRANS_MT_QUEUE) ? TRANS_MT_DELAY : TRANS_MO_DELAY);
 		timer_stop(&trans->timer);
-		timer_start(&trans->timer, 2.0);
+		timer_start(&trans->timer, 3.0);
 	}
 }
 
@@ -1121,7 +1121,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 	memset(&telegramm, 0, sizeof(telegramm));
 	telegramm.opcode = OPCODE_MLR_M;
 	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);
-	telegramm.ogk_verkehrsanteil = 0; /* must be 0 or phone might not respond to messages in different slot */
+	telegramm.ogk_verkehrsanteil = 0; /* must be 0 or some phone might not respond to messages in different slots */
 	telegramm.teilnehmergruppensperre = si.teilnehmergruppensperre;
 	telegramm.anzahl_gesperrter_teilnehmergruppen = si.anzahl_gesperrter_teilnehmergruppen;
 	if (ogk_list_count) {
@@ -1143,7 +1143,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_WAF);
-			timer_start(&trans->timer, 1.0); /* Wait two slot cycles until resending */
+			timer_start(&trans->timer, 3.0); /* Wait at least two frame cycles until resending */
 			break;
 		case TRANS_MA:
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending keepalive request 'Meldeaufruf'\n");
@@ -1152,7 +1152,7 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_MFT);
-			timer_start(&trans->timer, 1.0); /* Wait two slot cycles until timeout */
+			timer_start(&trans->timer, 3.0); /* Wait at least two frame cycles until timeout */
 			break;
 		default:
 			; /* MLR */

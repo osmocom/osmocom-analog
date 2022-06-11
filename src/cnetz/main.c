@@ -44,14 +44,14 @@ enum cnetz_chan_type chan_type[MAX_SENDER] = { CHAN_TYPE_OGK_SPK };
 int measure_speed = 0;
 double clock_speed[2] = { 0.0, 0.0 };
 int set_clock_speed = 0;
-const char *flip_polarity = "auto";
+const char *flip_polarity = "";
 int ms_power = 6; /* 1..8 */
 int warteschlange = 1;
 int challenge_valid;
 uint64_t challenge;
 int response_valid;
 uint64_t response;
-uint8_t timeslot = 0;
+uint32_t timeslots = 4; /* 1 up to 8 */
 uint8_t fuz_nat = 1;
 uint8_t fuz_fuvst = 4;
 uint8_t fuz_rest = 66;
@@ -99,8 +99,8 @@ void print_help(const char *arg0)
 	printf("        generates a negative signal rather than a positive one. If auto, the\n");
 	printf("        base station uses double time slots with alternating polarity.\n");
 	printf("        Once a mobile registers, the correct polarity is selected and used.\n");
-	printf("        (default = %s)\n", flip_polarity);
-	printf("	Note: This has no effect with SDR.\n");
+	printf("        (default = %s)\n", (flip_polarity[0]) ? flip_polarity : "auto");
+	printf("	Note: Correct polarity is selected for SDR by default.\n");
 	printf(" -P --ms-power <power level>\n");
 	printf("        Give power level of the mobile station: 1, 2, 4, 6, 8 (default = '%d')\n", ms_power);
 	printf("	1 = 7.5-20 W; 2 = 4-8 W; 4 = 0.5-1 W; 6 = 50-125 mW; 8 = 2-10 mW\n");
@@ -125,11 +125,10 @@ void print_help(const char *arg0)
 	printf("        It is unclear what the actual voice deviation is. Please decrease, if\n");
 	printf("        mobile's microphone is too loud and speaker is too quiet.\n");
 	printf("        (default = %.0f)\n", speech_deviation);
-	printf(" -S --sysinfo timeslot=<0..31>\n");
-	printf("        Set time slot of OgK broadcast. There are 32 time slots, but every 8th\n");
-	printf("	slot is used. This means if you select time slot 0, also slots 8, 16\n");
-	printf("	and 24 will be used. If you select slot 14, also slots 6, 22 and 30\n");
-	printf("	will be used. (default = %d)\n", timeslot);
+	printf(" -S --sysinfo timeslots=1|2|4|8\n");
+	printf("        Set number of timeslots of OgK broadcast. There are 32 time slots per\n");
+	printf("        frame, but only up to 8 slots can be used, because of processing\n");
+	printf("        delay. (default = %d)\n", timeslots);
 	printf(" -S --sysinfo fuz-nat=<nat>\n");
 	printf("        Set country ID of base station. All IDs were used inside Germany only.\n");
 	printf("        (default = %d)\n", fuz_nat);
@@ -350,8 +349,8 @@ static int handle_options(int short_option, int argi, char **argv)
 			return -EINVAL;
 		}
 		p++;
-		if (!strncasecmp(argv[argi], "timeslot=", p - argv[argi])) {
-			timeslot = atoi_limit(p, 0, 31);
+		if (!strncasecmp(argv[argi], "timeslots=", p - argv[argi])) {
+			timeslots = atoi_limit(p, 1, 8);
 		} else
 		if (!strncasecmp(argv[argi], "fuz-nat=", p - argv[argi])) {
 			fuz_nat = atoi_limit(p, 0, 7);
@@ -579,7 +578,13 @@ int main(int argc, char *argv[])
 	}
     	if (anzahl_gesperrter_teilnehmergruppen)
 		printf("Blocked subscriber with number's last 4 bits from 0x%x to 0x%x\n", teilnehmergruppensperre, (teilnehmergruppensperre + anzahl_gesperrter_teilnehmergruppen - 1) & 0xf);
-	init_sysinfo(timeslot, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
+	switch(timeslots) {
+		case 1: timeslots=0x00000001; break;
+		case 2: timeslots=0x00010001; break;
+		case 4: timeslots=0x01010101; break;
+		default: timeslots=0x11111111;
+	}
+	init_sysinfo(timeslots, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
 	dsp_init();
 	rc = init_telegramm();
 	if (rc < 0) {
@@ -633,7 +638,7 @@ int main(int argc, char *argv[])
 		polarity = 1; /* positive */
 	if (!strcmp(flip_polarity, "yes"))
 		polarity = -1; /* negative */
-	if (use_sdr && polarity == 0)
+	if (use_sdr && !flip_polarity[0])
 		polarity = 1; /* SDR is always positive */
 
 	/* demodulation algorithm */

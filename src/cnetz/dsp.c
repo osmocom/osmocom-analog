@@ -670,19 +670,11 @@ again:
 
 		switch (cnetz->dsp_mode) {
 		case DSP_MODE_OGK:
-			/* if automatic polarity selection is used, toggle between
-			 * two polarities (every 4 slots) until a response is received
-			 * then continue to use the time slots of that polarity
-			 */
-			if (cnetz->auto_polarity)
-				cnetz->negative_polarity = (cnetz->sched_ts & 7) >> 2;
-			/* send on timeslots depending on the polarity:
-			 * positive polarity: ts, ts+8, ts+16, ts+24
-			 * negative polarity: ts+4, ts+12, ts+20, ts+28
-			 */
-			if (((cnetz->sched_ts & 7) == (si.timeslot & 7) && cnetz->negative_polarity == 0)
-			 || ((cnetz->sched_ts & 7) == ((si.timeslot + 4) & 7) && cnetz->negative_polarity == 1)) {
+			if (((si.timeslots >> cnetz->sched_ts) & 1)) {
 				if (cnetz->sched_r_m == 0) {
+					/* if automatic polarity selection is used, toggle between two polarities (every transmitted slot) until a response is received then continue to use the time slots of that polarity */
+					if (cnetz->auto_polarity)
+						cnetz->negative_polarity = (cnetz->sched_ts & 7) >> 2;
 					/* set last time slot, so we know to which time slot the message from mobile station belongs to */
 					cnetz->sched_last_ts = cnetz->sched_ts;
 					bits = cnetz_encode_telegramm(cnetz);
