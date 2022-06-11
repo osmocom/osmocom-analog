@@ -559,7 +559,7 @@ void cnetz_go_idle(cnetz_t *cnetz)
 		PDEBUG(DCNETZ, DEBUG_NOTICE, "Now channel is available for queued subscriber '%s'.\n", transaction2rufnummer(trans));
 		trans_new_state(trans, (trans->state == TRANS_MT_QUEUE) ? TRANS_MT_DELAY : TRANS_MO_DELAY);
 		timer_stop(&trans->timer);
-		timer_start(&trans->timer, 3.0);
+		timer_start(&trans->timer, 3.0); /* Wait at least one frame cycles until timeout */
 	}
 }
 
@@ -839,15 +839,6 @@ void transaction_timeout(struct timer *timer)
 	cnetz_t *cnetz = trans->cnetz;
 
 	switch (trans->state) {
-	case TRANS_WAF:
-		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
-		if (trans->try == N) {
-			trans_new_state(trans, TRANS_WBN);
-			break;
-		}
-		trans->try++;
-		trans_new_state(trans, TRANS_VWG);
-		break;
 	case TRANS_MT_QUEUE:
 		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "Phone in queue, but still no channel available, releasing call!\n");
 		call_up_release(trans->callref, CAUSE_NOCHANNEL);
@@ -914,12 +905,6 @@ void transaction_timeout(struct timer *timer)
 		call_up_release(trans->callref, CAUSE_TEMPFAIL);
 		trans->callref = 0;
 		cnetz_release(trans, CNETZ_CAUSE_FUNKTECHNISCH);
-		break;
-	case TRANS_MFT:
-		PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after keepalive order 'Meldeaufruf'\n");
-		/* no response to availability check */
-		trans->page_failed = 1;
-		destroy_transaction(trans);
 		break;
 	default:
 		PDEBUG_CHAN(DCNETZ, DEBUG_ERROR, "Timeout unhandled in state %" PRIu64 "\n", trans->state);
@@ -1134,9 +1119,20 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 		telegramm.ogk_vorschlag = CNETZ_STD_OGK_KANAL;
 	telegramm.fuz_rest_nr = si.fuz_rest;
 
-	trans = search_transaction(cnetz, TRANS_VWG | TRANS_MA);
+next_candidate:
+	trans = search_transaction(cnetz, TRANS_VWG | TRANS_WAF | TRANS_MA | TRANS_MFT);
 	if (trans) {
 		switch (trans->state) {
+		case TRANS_WAF:
+			/* no response to dial request (try again or drop connection) */
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after dialing request 'Wahlaufforderung'\n");
+			if (trans->try == N) {
+				trans_new_state(trans, TRANS_WBN);
+				goto next_candidate;
+			}
+			trans->try++;
+			trans_new_state(trans, TRANS_VWG);
+			/* FALLTHRU */
 		case TRANS_VWG:
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending acknowledgment 'Wahlaufforderung' to outging call\n");
 			telegramm.opcode = OPCODE_WAF_M;
@@ -1144,7 +1140,6 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_WAF);
-			timer_start(&trans->timer, 3.0); /* Wait at least two frame cycles until resending */
 			break;
 		case TRANS_MA:
 			PDEBUG_CHAN(DCNETZ, DEBUG_INFO, "Sending keepalive request 'Meldeaufruf'\n");
@@ -1153,8 +1148,13 @@ const telegramm_t *cnetz_transmit_telegramm_meldeblock(cnetz_t *cnetz)
 			telegramm.futln_heimat_fuvst_nr = trans->futln_fuvst;
 			telegramm.futln_rest_nr = trans->futln_rest;
 			trans_new_state(trans, TRANS_MFT);
-			timer_start(&trans->timer, 3.0); /* Wait at least two frame cycles until timeout */
 			break;
+		case TRANS_MFT:
+			/* no response to availability check */
+			PDEBUG_CHAN(DCNETZ, DEBUG_NOTICE, "No response after keepalive order 'Meldeaufruf'\n");
+			trans->page_failed = 1;
+			destroy_transaction(trans);
+			goto next_candidate;
 		default:
 			; /* MLR */
 		}

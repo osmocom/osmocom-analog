@@ -25,14 +25,13 @@
 #include "../libdebug/debug.h"
 #include "cnetz.h"
 #include "database.h"
+#include "sysinfo.h"
 
 /* the network specs say: check every 1 - 6.5 minutes for availability
  * remove from database after 3 subsequent failures
  * the phone will register 20 minutes after no call / no paging from network.
  */
-#define MELDE_INTERVAL		120.0
-#define MELDE_WIEDERHOLUNG	60.0
-#define MELDE_MAXIMAL		3
+#define MELDE_WIEDERHOLUNG	60.0 /* when busy */
 
 typedef struct cnetz_database {
 
@@ -51,6 +50,17 @@ typedef struct cnetz_database {
 } cnetz_db_t;
 
 cnetz_db_t *cnetz_db_head;
+
+static const char *print_meldeaufrufe(int versuche)
+{
+	static char text[32];
+
+	if (versuche <= 0)
+		return "infinite";
+
+	sprintf(text, "%d", versuche);
+	return text;
+}
 
 /* destroy transaction */
 static void remove_db(cnetz_db_t *db)
@@ -88,7 +98,7 @@ static void db_timeout(struct timer *timer)
 		 * network. We just assume that the phone has responded and
 		 * assume we had a response. */
 		PDEBUG(DDB, DEBUG_INFO, "OgK busy, so we assume a positive response.\n");
-		timer_start(&db->timer, MELDE_INTERVAL); /* when to check avaiability again */
+		timer_start(&db->timer, si.meldeinterval); /* when to check avaiability again */
 		db->retry = 0;
 	}
 }
@@ -144,19 +154,19 @@ int update_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int o
 		timer_stop(&db->timer);
 	} else if (!failed) {
 		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
-		timer_start(&db->timer, MELDE_INTERVAL); /* when to check avaiability (again) */
+		timer_start(&db->timer, si.meldeinterval); /* when to check avaiability (again) */
 		db->retry = 0;
 		db->eingebucht = 1;
 		db->last_seen = get_time();
 	} else {
 		db->retry++;
-		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' on OGK channel #%d failed (try %d of %d).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal, db->retry, MELDE_MAXIMAL);
-		if (db->retry == MELDE_MAXIMAL) {
+		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' on OGK channel #%d failed (try %d of %s).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal, db->retry, print_meldeaufrufe(si.meldeaufrufe));
+		if (si.meldeaufrufe && db->retry == si.meldeaufrufe) {
 			PDEBUG(DDB, DEBUG_INFO, "Marking subscriber as gone.\n");
 			db->eingebucht = 0;
 			return db->extended;
 		}
-		timer_start(&db->timer, MELDE_WIEDERHOLUNG); /* when to do retry */
+		timer_start(&db->timer, (si.meldeinterval < MELDE_WIEDERHOLUNG) ? si.meldeinterval : MELDE_WIEDERHOLUNG); /* when to do retry */
 	}
 
 	if (futelg_bit)
@@ -212,7 +222,7 @@ void dump_db(void)
 	while (db) {
 		last = (db->busy) ? 0 : (uint32_t)(now - db->last_seen);
 		sprintf(attached, "YES (OGK %d)", db->ogk_kanal);
-		PDEBUG(DDB, DEBUG_NOTICE, "%d,%d,%05d\t%s\t%s\t\t%02d:%02d:%02d \t%d/%d\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? attached : "-no-\t", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, MELDE_MAXIMAL);
+		PDEBUG(DDB, DEBUG_NOTICE, "%d,%d,%05d\t%s\t%s\t\t%02d:%02d:%02d \t%d/%s\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? attached : "-no-\t", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, print_meldeaufrufe(si.meldeaufrufe));
 		db = db->next;
 	}
 }

@@ -73,6 +73,8 @@ uint8_t reduzierung = 0; /* factor 4 */
 uint8_t nachbar_prio = 0;
 int8_t	futln_sperre_start = -1; /* no blocking */
 int8_t	futln_sperre_end = -1; /* no range */
+int meldeinterval = 120; /* when to ask the phone about beeing alive */
+int meldeaufrufe = 3; /* how many times to ask phone about beeing alive */
 enum demod_type demod = FSK_DEMOD_AUTO;
 int metering = 20;
 double speech_deviation = 4000.0; /* best results with all my equipment */
@@ -227,6 +229,12 @@ void print_help(const char *arg0)
     } else {
 	printf("        (default = %d-%d)\n", futln_sperre_start, futln_sperre_end);
     }
+	printf(" -S --sysinfo meldeinterval=<seconds>\n");
+	printf("        Time to wait until pinging the phone wether it is still available.\n");
+	printf("        (default = %d)\n", meldeinterval);
+	printf(" -S --sysinfo meldeaufrufe=<count>\n");
+	printf("        Number of times we try to ping mobile until we assume it is gone.\n");
+	printf("        Use '0' for infinite tries. (default = %d)\n", meldeaufrufe);
 	printf(" -D --demod auto | slope | level\n");
 	printf("        Adjust demodulation algorithm. Use 'slope' to detect a level change\n");
 	printf("        by finding the highest slope of a bit transition. It is useful, if\n");
@@ -446,6 +454,12 @@ error_fuz:
 				futln_sperre_end = atoi(q) & 0xf;
 			}
 		} else
+		if (!strncasecmp(argv[argi], "meldeinterval=", p - argv[argi])) {
+			meldeinterval = atoi_limit(p, 1, 20 * 60);
+		} else
+		if (!strncasecmp(argv[argi], "meldeaufrufe=", p - argv[argi])) {
+			meldeaufrufe = atoi_limit(p, 0, 1000000);
+		} else
 		{
 			fprintf(stderr, "Given sysinfo parameter '%s' unknown, use '-h' for help!\n", argv[argi]);
 			return -EINVAL;
@@ -594,7 +608,7 @@ int main(int argc, char *argv[])
 		case 4: timeslots=0x01010101; break;
 		default: timeslots=0x11111111;
 	}
-	init_sysinfo(timeslots, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, bahn_bs, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
+	init_sysinfo(timeslots, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, bahn_bs, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen, meldeinterval, meldeaufrufe);
 	dsp_init();
 	rc = init_telegramm();
 	if (rc < 0) {
