@@ -990,6 +990,7 @@ const telegramm_t *cnetz_transmit_telegramm_rufblock(cnetz_t *cnetz)
 	telegramm.fuz_fuvst_nr = si.fuz_fuvst;
 	telegramm.fuz_rest_nr = si.fuz_rest;
 	telegramm.kennung_fufst = si.kennung_fufst;
+	telegramm.bahn_bs = si.bahn_bs;
 	telegramm.nachbarschafts_prioritaets_bit = si.nachbar_prio;
 	telegramm.bewertung_nach_pegel_und_entfernung = si.bewertung;
 	telegramm.entfernungsangabe_der_fufst = si.entfernung;
@@ -1348,6 +1349,7 @@ const telegramm_t *cnetz_transmit_telegramm_spk_k(cnetz_t *cnetz)
 	telegramm.frequenz_nr = cnetz->kanal;
 	telegramm.bedingte_genauigkeit_der_fufst = si.genauigkeit;
 	telegramm.zufallszahl = cnetz->challenge;
+	telegramm.bahn_bs = si.bahn_bs;
 
 	switch (trans->state) {
 	case TRANS_BQ:

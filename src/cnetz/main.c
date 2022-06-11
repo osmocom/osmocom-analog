@@ -57,6 +57,7 @@ uint8_t fuz_fuvst = 4;
 uint8_t fuz_rest = 66;
 const char *fuz_name = NULL;
 uint8_t kennung_fufst = 1; /* normal prio */
+uint8_t bahn_bs = 0; /* normal */
 uint8_t authentifikationsbit = 0;
 uint8_t ws_kennung = 0; /* no queue */
 uint8_t fuvst_sperren = 0; /* no blocking registration/calls */
@@ -148,6 +149,12 @@ void print_help(const char *arg0)
 	printf("        2 = Higher priority base station.\n");
 	printf("        3 = Highest priority base station.\n");
 	printf("	Note: Priority has no effect, because there is only one base station.\n");
+	printf(" -S --sysinfo bahn-bs=<value>\n");
+	printf("        Set special tunnel base station mode for train mobile phones only.\n");
+	printf("        (default = %d)\n", kennung_fufst);
+	printf("        0 = Disable (every phone is allowed)\n");
+	printf("        1 = Enable (only train phones are allowed)\n");
+	printf("	Note: Enableing this will force priority to 0 (Test base station).\n");
 	printf(" -S --sysinfo auth=<auth>\n");
 	printf("        Enable authentication flag on the base station. Since we cannot\n");
 	printf("	authenticate, because we don't know the secret key and the algorithm,\n");
@@ -383,6 +390,9 @@ error_fuz:
 		if (!strncasecmp(argv[argi], "kennung-fufst=", p - argv[argi])) {
 			kennung_fufst = atoi_limit(p, 0, 3);
 		} else
+		if (!strncasecmp(argv[argi], "bahn-bs=", p - argv[argi])) {
+			bahn_bs = atoi_limit(p, 0, 1);
+		} else
 		if (!strncasecmp(argv[argi], "auth=", p - argv[argi])) {
 			authentifikationsbit = atoi_limit(p, 0, 1);
 		} else
@@ -584,7 +594,7 @@ int main(int argc, char *argv[])
 		case 4: timeslots=0x01010101; break;
 		default: timeslots=0x11111111;
 	}
-	init_sysinfo(timeslots, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
+	init_sysinfo(timeslots, fuz_nat, fuz_fuvst, fuz_rest, kennung_fufst, bahn_bs, authentifikationsbit, ws_kennung, fuvst_sperren, grenz_einbuchen, grenz_umschalten, grenz_ausloesen, mittel_umschalten, mittel_ausloesen, genauigkeit, bewertung, entfernung, reduzierung, nachbar_prio, teilnehmergruppensperre, anzahl_gesperrter_teilnehmergruppen);
 	dsp_init();
 	rc = init_telegramm();
 	if (rc < 0) {
