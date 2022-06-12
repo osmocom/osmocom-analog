@@ -2707,7 +2707,7 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 	int i, t4 = 0;
 
 #ifdef DEBUG_ALL_MESSAGES
-	debug=1;
+	debug = 1;
 #endif
 
 	memset(spaces, ' ', ie_desc_max_len);
@@ -2718,7 +2718,8 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 	for (i = 0; w->ie[i].name; i++)
 		sum_bits += w->ie[i].bits;
 
-	PDEBUG(DFRAME, (debug >= 0) ? DEBUG_INFO : DEBUG_DEBUG, "Transmit: %s\n", w->name);
+	if (debug)
+		PDEBUG(DFRAME, DEBUG_INFO, "Transmit: %s\n", w->name);
 	word = 0;
 	for (i = 0; w->ie[i].name; i++) {
 		bits = w->ie[i].bits;
@@ -2727,7 +2728,7 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 		else
 			value = frame->ie[w->ie[i].ie];
 		word = (word << bits) | (value & cut_bits[bits]);
-		if (debug >= 0) {
+		if (debug) {
 			if (amps_ie_desc[w->ie[i].ie].decoder)
 				PDEBUG(DFRAME, DEBUG_DEBUG, " %s%s: %" PRIu64 " = %s  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].decoder(value), amps_ie_desc[w->ie[i].ie].desc);
 			else
@@ -2738,7 +2739,7 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 			t4++;
 		if (t4 == 3) {
 			t4 = 0;
-			if (debug >= 0)
+			if (debug)
 				PDEBUG(DFRAME, DEBUG_DEBUG, " %s--> %s\n", spaces, amps_table4_name(frame->ie[AMPS_IE_LOCAL_MSG_TYPE], frame->ie[AMPS_IE_ORDQ], frame->ie[AMPS_IE_ORDER]));
 		}
 	}
@@ -2746,7 +2747,7 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 	return word;
 }
 
-static uint64_t amps_encode_control_filler(amps_t *amps, uint8_t dcc, uint8_t cmac, uint8_t sdcc1, uint8_t sdcc2, uint8_t wfom)
+static uint64_t amps_encode_control_filler(amps_t *amps, uint8_t dcc, uint8_t cmac, uint8_t sdcc1, uint8_t sdcc2, uint8_t wfom, int debug)
 {
 	frame_t frame;
 
@@ -2767,10 +2768,10 @@ static uint64_t amps_encode_control_filler(amps_t *amps, uint8_t dcc, uint8_t cm
 	} else
 		frame.ie[AMPS_IE_1111] = 15;
 	frame.ie[AMPS_IE_OHD] = 1;
-	return amps_encode_word(&frame, &control_filler, -1);
+	return amps_encode_word(&frame, &control_filler, debug);
 }
 
-uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc)
+uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc, int debug)
 {
 	frame_t frame;
 
@@ -2783,10 +2784,10 @@ uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_
 	frame.ie[AMPS_IE_PCI] = pci;
 	frame.ie[AMPS_IE_NAWC] = nawc;
 	frame.ie[AMPS_IE_OHD] = 6;
-	return amps_encode_word(&frame, &amps_word1_system_parameter_overhead, -1);
+	return amps_encode_word(&frame, &amps_word1_system_parameter_overhead, debug);
 }
 
-uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc)
+uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc, int debug)
 {
 	frame_t frame;
 
@@ -2799,10 +2800,10 @@ uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_
 	frame.ie[AMPS_IE_PCI] = pci;
 	frame.ie[AMPS_IE_NAWC] = nawc;
 	frame.ie[AMPS_IE_OHD] = 6;
-	return amps_encode_word(&frame, &tacs_word1_system_parameter_overhead, -1);
+	return amps_encode_word(&frame, &tacs_word1_system_parameter_overhead, debug);
 }
 
-uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end)
+uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2820,10 +2821,10 @@ uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t reg
 	frame.ie[AMPS_IE_CMAX_1] = cmax_1;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 7;
-	return amps_encode_word(&frame, &word2_system_parameter_overhead, -1);
+	return amps_encode_word(&frame, &word2_system_parameter_overhead, debug);
 }
 
-uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end)
+uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2833,10 +2834,10 @@ uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end)
 	frame.ie[AMPS_IE_REGID] = regid;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 0;
-	return amps_encode_word(&frame, &registration_id, -1);
+	return amps_encode_word(&frame, &registration_id, debug);
 }
 
-uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8_t end)
+uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2847,10 +2848,10 @@ uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8
 	frame.ie[AMPS_IE_REGINCR] = regincr;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 4;
-	return amps_encode_word(&frame, &registration_increment_global_action, -1);
+	return amps_encode_word(&frame, &registration_increment_global_action, debug);
 }
 
-uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, uint8_t lreg, uint16_t locaid, uint8_t end)
+uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, uint8_t lreg, uint16_t locaid, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2864,10 +2865,10 @@ uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, ui
 	frame.ie[AMPS_IE_LOCAID] = locaid;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 4;
-	return amps_encode_word(&frame, &location_area_global_action, -1);
+	return amps_encode_word(&frame, &location_area_global_action, debug);
 }
 
-uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_t end)
+uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2878,10 +2879,10 @@ uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_
 	frame.ie[AMPS_IE_NEWACC] = newacc;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 4;
-	return amps_encode_word(&frame, &new_access_channel_set_global_action, -1);
+	return amps_encode_word(&frame, &new_access_channel_set_global_action, debug);
 }
 
-uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end)
+uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2907,10 +2908,10 @@ uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end)
 	frame.ie[AMPS_IE_OLC_15] = olc[15];
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 4;
-	return amps_encode_word(&frame, &overload_control_global_action, -1);
+	return amps_encode_word(&frame, &overload_control_global_action, debug);
 }
 
-uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uint8_t pci_roam, uint8_t bspc, uint8_t bscap, uint8_t end)
+uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uint8_t pci_roam, uint8_t bspc, uint8_t bscap, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2925,10 +2926,10 @@ uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uin
 	frame.ie[AMPS_IE_BSCAP] = bscap;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 4;
-	return amps_encode_word(&frame, &access_type_parameters_global_action, -1);
+	return amps_encode_word(&frame, &access_type_parameters_global_action, debug);
 }
 
-uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t maxsztr_pgr, uint8_t maxbusy_other, uint8_t maxsztr_other, uint8_t end)
+uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t maxsztr_pgr, uint8_t maxbusy_other, uint8_t maxsztr_other, uint8_t end, int debug)
 {
 	frame_t frame;
 
@@ -2942,7 +2943,7 @@ uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t ma
 	frame.ie[AMPS_IE_MAXSZTR_OTHER] = maxsztr_other;
 	frame.ie[AMPS_IE_END] = end;
 	frame.ie[AMPS_IE_OHD] = 4;
-	return amps_encode_word(&frame, &access_attempt_parameters_global_action, -1);
+	return amps_encode_word(&frame, &access_attempt_parameters_global_action, debug);
 }
 
 static uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t min1, int multiple)
@@ -2956,7 +2957,7 @@ static uint64_t amps_encode_word1_abbreviated_address_word(uint8_t dcc, uint32_t
 		frame.ie[AMPS_IE_T1T2] = 0;
 	frame.ie[AMPS_IE_DCC] = dcc;
 	frame.ie[AMPS_IE_MIN1] = min1;
-	return amps_encode_word(&frame, &word1_abbreviated_address_word, DEBUG_INFO);
+	return amps_encode_word(&frame, &word1_abbreviated_address_word, 1);
 }
 
 static uint64_t amps_encode_word2_extended_address_word_a(uint16_t min2, uint8_t msg_type, uint8_t ordq, uint8_t order)
@@ -2971,7 +2972,7 @@ static uint64_t amps_encode_word2_extended_address_word_a(uint16_t min2, uint8_t
 	frame.ie[AMPS_IE_LOCAL_MSG_TYPE] = msg_type;
 	frame.ie[AMPS_IE_ORDQ] = ordq;
 	frame.ie[AMPS_IE_ORDER] = order;
-	return amps_encode_word(&frame, &word2_extended_address_word_a, DEBUG_INFO);
+	return amps_encode_word(&frame, &word2_extended_address_word_a, 1);
 }
 
 static uint64_t amps_encode_word2_extended_address_word_b(uint8_t scc, uint16_t min2, uint8_t vmac, uint16_t chan)
@@ -2984,7 +2985,7 @@ static uint64_t amps_encode_word2_extended_address_word_b(uint8_t scc, uint16_t 
 	frame.ie[AMPS_IE_MIN2] = min2;
 	frame.ie[AMPS_IE_VMAC] = vmac;
 	frame.ie[AMPS_IE_CHAN] = chan;
-	return amps_encode_word(&frame, &word2_extended_address_word_b, DEBUG_INFO);
+	return amps_encode_word(&frame, &word2_extended_address_word_b, 1);
 }
 
 static uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc, uint8_t msg_type, uint8_t ordq, uint8_t order)
@@ -2999,7 +3000,7 @@ static uint64_t amps_encode_mobile_station_control_message_word1_a(uint8_t pscc,
 	frame.ie[AMPS_IE_LOCAL_MSG_TYPE] = msg_type;
 	frame.ie[AMPS_IE_ORDQ] = ordq;
 	frame.ie[AMPS_IE_ORDER] = order;
-	return amps_encode_word(&frame, &mobile_station_control_message_word1_a, DEBUG_INFO);
+	return amps_encode_word(&frame, &mobile_station_control_message_word1_a, 1);
 }
 
 static uint64_t amps_encode_mobile_station_control_message_word1_b(uint8_t scc, uint8_t pscc, uint8_t dtx, uint8_t pvi, uint8_t mem, uint8_t vmac, uint16_t chan)
@@ -3016,7 +3017,7 @@ static uint64_t amps_encode_mobile_station_control_message_word1_b(uint8_t scc, 
 	frame.ie[AMPS_IE_MEM] = mem;
 	frame.ie[AMPS_IE_VMAC] = vmac;
 	frame.ie[AMPS_IE_CHAN] = chan;
-	return amps_encode_word(&frame, &mobile_station_control_message_word1_b, DEBUG_INFO);
+	return amps_encode_word(&frame, &mobile_station_control_message_word1_b, 1);
 }
 
 /* decoder function of a word */
@@ -3417,13 +3418,14 @@ static void amps_encode_fvc_bits(uint64_t word_a, char *bits)
 int amps_encode_frame_focc(amps_t *amps, char *bits)
 {
 	uint64_t word;
+	int debug = !amps->tx_focc_debugged;
 
 	/* init overhead train */
 	if (amps->tx_focc_frame_count == 0)
 		prepare_sysinfo(&amps->si);
 	/* send overhead train */
 	if (amps->si.num) {
-		word = get_sysinfo(&amps->si);
+		word = get_sysinfo(&amps->si, debug);
 		if (++amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 			amps->tx_focc_frame_count = 0;
 		goto send;
@@ -3474,9 +3476,12 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 	}
 
 	/* send filler */
-	word = amps_encode_control_filler(amps, amps->si.dcc, amps->si.filler.cmac, amps->si.filler.sdcc1, amps->si.filler.sdcc2, amps->si.filler.wfom);
+	word = amps_encode_control_filler(amps, amps->si.dcc, amps->si.filler.cmac, amps->si.filler.sdcc1, amps->si.filler.sdcc2, amps->si.filler.wfom, debug);
 	if (++amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 		amps->tx_focc_frame_count = 0;
+	if (debug)
+		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Subsequent system/filler frames are not show, to prevent flooding the output.\n");
+	amps->tx_focc_debugged = 1;
 
 send:
 	amps_encode_focc_bits(word, word, bits);

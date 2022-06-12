@@ -920,6 +920,7 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 		/* reset SAT detection */
 		sat_reset(amps, "Change to FOCC");
 		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode to FOCC\n");
+		amps->tx_focc_debugged = 0;
 	}
 	if (amps->dsp_mode == DSP_MODE_FRAME_RX_FRAME_TX
 	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX)) {

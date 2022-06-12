@@ -211,16 +211,16 @@ typedef struct amps_frame {
 } frame_t;
 
 void init_frame(void);
-uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc);
-uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc);
-uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end);
-uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end);
-uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8_t end);
-uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, uint8_t lreg, uint16_t locaid, uint8_t end);
-uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_t end);
-uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end);
-uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uint8_t pci_roam, uint8_t bspc, uint8_t bscap, uint8_t end);
-uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t maxsztr_pgr, uint8_t maxbusy_other, uint8_t maxsztr_other, uint8_t end);
+uint64_t amps_encode_word1_system(uint8_t dcc, uint16_t sid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc, int debug);
+uint64_t tacs_encode_word1_system(uint8_t dcc, uint16_t aid1, uint8_t ep, uint8_t auth, uint8_t pci, uint8_t nawc, int debug);
+uint64_t amps_encode_word2_system(uint8_t dcc, uint8_t s, uint8_t e, uint8_t regh, uint8_t regr, uint8_t dtx, uint8_t n_1, uint8_t rcf, uint8_t cpa, uint8_t cmax_1, uint8_t end, int debug);
+uint64_t amps_encode_registration_id(uint8_t dcc, uint32_t regid, uint8_t end, int debug);
+uint64_t amps_encode_registration_increment(uint8_t dcc, uint16_t regincr, uint8_t end, int debug);
+uint64_t amps_encode_location_area(uint8_t dcc, uint8_t pureg, uint8_t pdreg, uint8_t lreg, uint16_t locaid, uint8_t end, int debug);
+uint64_t amps_encode_new_access_channel_set(uint8_t dcc, uint16_t newacc, uint8_t end, int debug);
+uint64_t amps_encode_overload_control(uint8_t dcc, uint8_t *olc, uint8_t end, int debug);
+uint64_t amps_encode_access_type(uint8_t dcc, uint8_t bis, uint8_t pci_home, uint8_t pci_roam, uint8_t bspc, uint8_t bscap, uint8_t end, int debug);
+uint64_t amps_encode_access_attempt(uint8_t dcc, uint8_t maxbusy_pgr, uint8_t maxsztr_pgr, uint8_t maxbusy_other, uint8_t maxsztr_other, uint8_t end, int debug);
 int amps_encode_frame_focc(amps_t *amps, char *bits);
 int amps_encode_frame_fvc(amps_t *amps, char *bits);
 int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, double quality, int negative);

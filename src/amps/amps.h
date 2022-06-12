@@ -133,6 +133,7 @@ struct amps {
 	uint8_t			tx_focc_order;
 	int			tx_focc_word_count;	/* counts transmitted words in a multi word message */
 	int			tx_focc_word_repeat;	/* counts repeats of multi word message */
+	int			tx_focc_debugged;	/* indicator to prevent debugging all SI/filler frames */
 	/* FVC frame states */
 	int			tx_fvc_send;		/* if set, send message words */
 	int			tx_fvc_chan;		/* channel to assign for voice call */

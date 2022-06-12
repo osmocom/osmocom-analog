@@ -150,7 +150,7 @@ void prepare_sysinfo(amps_si *si)
 	}
 }
 
-uint64_t get_sysinfo(amps_si *si)
+uint64_t get_sysinfo(amps_si *si, int debug)
 {
 	int count, nawc, end = 0;
 	time_t ti = time(NULL);
@@ -166,27 +166,27 @@ uint64_t get_sysinfo(amps_si *si)
 	case SYSINFO_WORD1:
 		nawc = si->num - 1;
 		if (!tacs)
-			return amps_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc);
+			return amps_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc, debug);
 		else
-			return tacs_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc);
+			return tacs_encode_word1_system(si->dcc, si->word1.sid1, si->word1.ep, si->word1.auth, si->word1.pci, nawc, debug);
 	case SYSINFO_WORD2:
-		return amps_encode_word2_system(si->dcc, si->word2.s, si->word2.e, si->word2.regh, si->word2.regr, si->word2.dtx, si->word2.n_1, si->word2.rcf, si->word2.cpa, si->word2.cmax_1, end);
+		return amps_encode_word2_system(si->dcc, si->word2.s, si->word2.e, si->word2.regh, si->word2.regr, si->word2.dtx, si->word2.n_1, si->word2.rcf, si->word2.cpa, si->word2.cmax_1, end, debug);
 	case SYSINFO_REG_ID:
 		/* use time stamp to generate regid */
 		si->reg_id.regid = ti & 0xfffff;
-		return amps_encode_registration_id(si->dcc, si->reg_id.regid, end);
+		return amps_encode_registration_id(si->dcc, si->reg_id.regid, end, debug);
 	case SYSINFO_REG_INCR:
-		return amps_encode_registration_increment(si->dcc, si->reg_incr.regincr, end);
+		return amps_encode_registration_increment(si->dcc, si->reg_incr.regincr, end, debug);
 	case SYSINFO_LOC_AREA:
-		return amps_encode_location_area(si->dcc, si->loc_area.pureg, si->loc_area.pdreg, si->loc_area.lreg, si->loc_area.locaid, end);
+		return amps_encode_location_area(si->dcc, si->loc_area.pureg, si->loc_area.pdreg, si->loc_area.lreg, si->loc_area.locaid, end, debug);
 	case SYSINFO_NEW_ACC:
-		return amps_encode_new_access_channel_set(si->dcc, si->new_acc.newacc, end);
+		return amps_encode_new_access_channel_set(si->dcc, si->new_acc.newacc, end, debug);
 	case SYSINFO_OVERLOAD:
-		return amps_encode_overload_control(si->dcc, si->overload.olc, end);
+		return amps_encode_overload_control(si->dcc, si->overload.olc, end, debug);
 	case SYSINFO_ACC_TYPE:
-		return amps_encode_access_type(si->dcc, si->acc_type.bis, si->acc_type.pci_home, si->acc_type.pci_roam, si->acc_type.bspc, si->acc_type.bscap, end);
+		return amps_encode_access_type(si->dcc, si->acc_type.bis, si->acc_type.pci_home, si->acc_type.pci_roam, si->acc_type.bspc, si->acc_type.bscap, end, debug);
 	case SYSINFO_ACC_ATTEMPT:
-		return amps_encode_access_attempt(si->dcc, si->acc_attempt.maxbusy_pgr, si->acc_attempt.maxsztr_pgr, si->acc_attempt.maxbusy_other, si->acc_attempt.maxsztr_other, end);
+		return amps_encode_access_attempt(si->dcc, si->acc_attempt.maxbusy_pgr, si->acc_attempt.maxsztr_pgr, si->acc_attempt.maxbusy_other, si->acc_attempt.maxsztr_other, end, debug);
 	}
 
 	fprintf(stderr, "get_sysinfo unknown type, please fix!\n");
