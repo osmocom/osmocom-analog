@@ -29,7 +29,7 @@
 #include "../liboptions/options.h"
 #include "endpoint.h"
 
-#define NTP_OFFSET      2208988800
+#define NTP_OFFSET      2208988800U
 
 void osmo_cc_set_local_peer(osmo_cc_session_config_t *conf, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address)
 {

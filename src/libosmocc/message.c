@@ -33,7 +33,8 @@
 }
 
 #define _OSMO_CC_NAME2VALUE(array) { \
-	for (int value = 0; (size_t)value < (sizeof(array) / sizeof(array[0])); value++) { \
+	int value; \
+	for (value = 0; (size_t)value < (sizeof(array) / sizeof(array[0])); value++) { \
 		if (!strcasecmp(array[value], name)) \
 			return value; \
 	} \
