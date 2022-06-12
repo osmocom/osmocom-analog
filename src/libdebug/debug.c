@@ -189,7 +189,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 
 		printf("%04d-%02d-%02d %02d:%02d:%02d.%03d ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, (int)(tv.tv_usec / 10000.0));
 	}
-	printf("%s%s:%4d %s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_level[level], buffer);
+	printf("%s%s %4d %s-%s: %s\033[0;39m", debug_cat[cat].color, file, line, debug_cat[cat].name, debug_level[level], buffer);
 	if (debug_limit_scroll)
 		printf("\0337\033[%d;%dr\0338", 1, h);
 	if (print_console_text)
