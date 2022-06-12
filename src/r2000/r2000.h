@@ -90,6 +90,7 @@ typedef struct r2000 {
 	char			tx_frame[208];		/* carries bits of one frame to transmit */
 	int			tx_frame_length;
 	int			tx_frame_pos;
+	int			tx_last_frame_idle;	/* indicator to prevent debugging all idle frames */
 	uint16_t		rx_sync;		/* shift register to detect sync */
 	int			rx_in_sync;		/* if we are in sync and receive bits */
 	int			rx_mute;		/* mute count down after sync */

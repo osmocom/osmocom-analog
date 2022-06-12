@@ -1153,7 +1153,7 @@ const char *r2000_get_frame(r2000_t *r2000)
 {
 	frame_t frame;
 	const char *bits;
-	int debug = 1;
+	int last_frame_idle, debug = 1;
 
 	r2000->tx_frame_count++;
 
@@ -1165,11 +1165,16 @@ const char *r2000_get_frame(r2000_t *r2000)
 	frame.sm_power = r2000->sysinfo.sm_power;
 	frame.taxe = r2000->sysinfo.taxe;
 
+	last_frame_idle = r2000->tx_last_frame_idle;
+	r2000->tx_last_frame_idle = 0;
+
 	switch (r2000->state) {
 	case STATE_IDLE:
 	case STATE_RECALL_WAIT:
 		tx_idle(r2000, &frame);
-		debug = 0;
+		if (last_frame_idle)
+			debug = 0;
+		r2000->tx_last_frame_idle = 1;
 		break;
 	case STATE_INSCRIPTION:
 		tx_inscription(r2000, &frame);
@@ -1217,7 +1222,10 @@ const char *r2000_get_frame(r2000_t *r2000)
 
 	bits = encode_frame(&frame, debug);
 
-	PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Sending frame %s.\n", r2000_frame_name(frame.message, REL_TO_SM));
+	if (debug)
+		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Sending frame %s.\n", r2000_frame_name(frame.message, REL_TO_SM));
+	if (debug && r2000->tx_last_frame_idle)
+		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
 	return bits;
 }
 
