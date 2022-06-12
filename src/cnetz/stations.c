@@ -7,10 +7,10 @@
 /* The list of cell towers is ripped from BSA61 phone's firmware */
 
 static struct cnetz_stations {
-	char		standort[32], name[8];
+	char		long_name[32], name[8];
 	uint8_t		nat, fuvst, rest;
 } cnetz_stations[] = {
-/*	  Standort-Name				Kurzer Name,	Nat	FuVST	Rest	*/
+/*	  Langer-Name				Kurzer Name,	Nat	FuVST	Rest	*/
 	{ "Oberhausen 32",			"OB32",		1,	2,	1,	},
 	{ "Oberhausen 0 <prov.>",		"OB0",		1,	2,	5,	},
 	{ "Wuppertal 18",			"WUP18",	1,	2,	6,	},
@@ -2143,37 +2143,37 @@ void station_list(void)
 	char name[33];
 
 	printf("List of all base stations:\n\n");
-	printf("Name    Standort                        Nat     FuVst   Rest\n");
+	printf("Kurz    Name	                        Nat     FuVst   Rest\n");
 	printf("------------------------------------------------------------\n");
-	for (i = 0; cnetz_stations[i].standort[0]; i++) {
+	for (i = 0; cnetz_stations[i].long_name[0]; i++) {
 		memset(name, ' ', sizeof(name));
 		memcpy(name, cnetz_stations[i].name, strlen(cnetz_stations[i].name));
 		name[8] = '\0';
 		printf("%s", name);
 		memset(name, ' ', sizeof(name));
-		memcpy(name, cnetz_stations[i].standort, strlen(cnetz_stations[i].standort));
+		memcpy(name, cnetz_stations[i].long_name, strlen(cnetz_stations[i].long_name));
 		name[sizeof(name) - 1] = '\0';
 		printf("%s%d\t%d\t%d\n", name, cnetz_stations[i].nat, cnetz_stations[i].fuvst, cnetz_stations[i].rest);
 	}
 }
 
-const char *get_station_name(uint8_t nat, uint8_t fuvst, uint8_t rest, const char **standort)
+const char *get_station_name(uint8_t nat, uint8_t fuvst, uint8_t rest, const char **long_name)
 {
 
 	int i;
 
-	for (i = 0; cnetz_stations[i].standort[0]; i++) {
+	for (i = 0; cnetz_stations[i].long_name[0]; i++) {
 		if (cnetz_stations[i].nat == nat
 		 && cnetz_stations[i].fuvst == fuvst
 		 && cnetz_stations[i].rest == rest) {
-			if (standort)
-				*standort = cnetz_stations[i].standort;
+			if (long_name)
+				*long_name = cnetz_stations[i].long_name;
 			return cnetz_stations[i].name;
 		}
 	}
-	if (standort)
-		*standort = "unknown";
-	return *standort;
+	if (long_name)
+		*long_name = "unknown";
+	return *long_name;
 }
 
 const char *get_station_id(const char *name, uint8_t *nat, uint8_t *fuvst, uint8_t *rest)
@@ -2182,7 +2182,8 @@ const char *get_station_id(const char *name, uint8_t *nat, uint8_t *fuvst, uint8
 
 	for (i = 0; cnetz_stations[i].name[0]; i++) {
 		/* check for given prefix */
-		if (!strncasecmp(cnetz_stations[i].name, name, strlen(name))) {
+		if (!strncasecmp(cnetz_stations[i].name, name, strlen(name))
+		 || !strncasecmp(cnetz_stations[i].long_name, name, strlen(name)) ) {
 			/* found twice */
 			if (found >= 0)
 				return "Given station name is ambiguous, use more letters! Use '-S fuz-name=list' to get a list of all stations.";
