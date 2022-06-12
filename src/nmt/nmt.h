@@ -131,6 +131,7 @@ struct nmt {
 	char			tx_frame[166];		/* carries bits of one frame to transmit */
 	int			tx_frame_length;
 	int			tx_frame_pos;
+	int			tx_last_frame_idle;	/* indicator to prevent debugging all idle frames */
 
 	/* DMS/SMS states */
 	dms_t			dms;			/* DMS states */

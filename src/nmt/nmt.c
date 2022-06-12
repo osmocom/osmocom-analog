@@ -1627,7 +1627,7 @@ const char *nmt_get_frame(nmt_t *nmt)
 {
 	frame_t frame;
 	const char *bits;
-	int debug = 1;
+	int last_frame_idle, debug = 1;
 
 	memset(&frame, 0, sizeof(frame));
 
@@ -1681,13 +1681,18 @@ const char *nmt_get_frame(nmt_t *nmt)
 		break;
 	}
 
+	last_frame_idle = nmt->tx_last_frame_idle;
+	nmt->tx_last_frame_idle = 0;
+
 	/* no encoding debug for certain (idle) frames */
 	switch(frame.mt) {
 	case NMT_MESSAGE_1a:
 	case NMT_MESSAGE_4:
 	case NMT_MESSAGE_1b:
 	case NMT_MESSAGE_30:
-		debug = 0;
+		if (last_frame_idle)
+			debug = 0;
+		nmt->tx_last_frame_idle = 1;
 		break;
 	default:
 		break;
@@ -1699,7 +1704,10 @@ const char *nmt_get_frame(nmt_t *nmt)
 
 	bits = encode_frame(nmt->sysinfo.system, &frame, debug);
 
-	PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
+	if (debug)
+		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
+	if (debug && nmt->tx_last_frame_idle)
+		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
 	return bits;
 }
 
