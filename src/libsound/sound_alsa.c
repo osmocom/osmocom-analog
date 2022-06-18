@@ -395,7 +395,7 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 	return rc;
 }
 
-int sound_read(void *inst, sample_t **samples, int num, int channels, double __attribute__((unused)) *rf_level_db)
+int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf_level_db)
 {
 	sound_t *sound = (sound_t *)inst;
 	double spl_deviation = sound->spl_deviation;
@@ -474,12 +474,17 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double __a
 #ifdef HAVE_MOBILE
 	sender_t *sender;
 	for (i = 0; i < channels; i++) {
+		if (rf_level_db)
+			rf_level_db[i] = NAN;
 		sender = get_sender_by_empfangsfrequenz(sound->rx_frequency[i]);
 		if (!sender)
 			continue;
 		display_measurements_update(sound->dmp[i], log10((double)max[i] / 32768.0) * 20, 0.0);
+	}
+#else
+	for (i = 0; i < channels; i++) {
 		if (rf_level_db)
-			rf_level_db[i] = 0.0;
+			rf_level_db[i] = NAN;
 	}
 #endif
 
