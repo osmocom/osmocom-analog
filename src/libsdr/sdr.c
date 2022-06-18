@@ -997,6 +997,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 
 	if (channels) {
 		for (c = 0; c < channels; c++) {
+			if (rf_level_db)
+				rf_level_db[c] = NAN;
 			if (sdr->chan[c].am)
 				am_demodulate_complex(&sdr->chan[c].am_demod, samples[c], count, buff, sdr->modbuff_I, sdr->modbuff_Q, sdr->modbuff_carrier);
 			else
@@ -1013,7 +1015,8 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 			avg = sqrt(avg /(double)count); /* RMS */
 			avg = log10(avg) * 20;
 			display_measurements_update(sdr->chan[c].dmp_rf_level, avg, 0.0);
-			rf_level_db[c] = avg;
+			if (rf_level_db)
+				rf_level_db[c] = avg;
 			if (!sdr->chan[c].am) {
 				min = 0.0;
 				max = 0.0;
