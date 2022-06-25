@@ -1110,6 +1110,8 @@ static void osmo_cc_help_address(void)
 	printf("local [<IPv6 address>]:<port>\n");
 	printf("remote <IPv4 address>:<port>\n");
 	printf("remote [<IPv6 address>]:<port>\n\n");
+	printf("remote auto\n\n");
+	printf("remote none\n\n");
 
 	printf("These options can be used to define local and remote IP and port for the socket\n");
 	printf("interface. Note that IPv6 addresses must be enclosed by '[' and ']'.\n\n");
@@ -1120,6 +1122,9 @@ static void osmo_cc_help_address(void)
 	printf("If no remote address is given, the local IP is used. If the local port is %d,\n", OSMO_CC_DEFAULT_PORT);
 	printf("the remote port will be %d. If not, the remote port will be %d. This way it is\n", OSMO_CC_DEFAULT_PORT + 1, OSMO_CC_DEFAULT_PORT);
 	printf("possible to link two interfaces without any IP configuration required.\n\n");
+
+	printf("Use 'remote auto' to enable and 'remote none' to disable. This can be useful to\n");
+	printf("override application default.\n\n");
 }
 
 static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
@@ -1152,6 +1157,11 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 		if (!strcasecmp(text, "auto")) {
 			PDEBUG(DCC, DEBUG_DEBUG, "setting automatic remote peer selection\n");
 			ep->remote_auto = 1;
+			return 0;
+		}
+		if (!strcasecmp(text, "none")) {
+			PDEBUG(DCC, DEBUG_DEBUG, "disable automatic remote peer selection\n");
+			ep->remote_auto = 0;
 			return 0;
 		}
 		ep->remote_auto = 0;
