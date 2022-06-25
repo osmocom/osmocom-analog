@@ -150,7 +150,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	int s = sizeof(buffer) - 1;
 	const char *p;
 	va_list args;
-	int w, h;
+	int w, h = 0; // make GCC happy
 
 	if (debuglevel > level)
 		return;
