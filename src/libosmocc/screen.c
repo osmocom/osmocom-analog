@@ -58,6 +58,10 @@ void osmo_cc_help_screen(void)
 	printf("to allow any suffix to match from now on. The new caller ID or dialed number\n");
 	printf("may contain a '*', to append the suffix from the current caller ID or dialed\n");
 	printf("number.\n\n");
+
+	printf("When screening an incoming caller ID or dialed number, the '@' can be appended\n");
+	printf("to the 'new caller ID', followed by a 'host:port', to route call to a special\n");
+	printf("Osmo-CC endpoint. This way it is possible to do simple routing.\n\n");
 }
 
 char *osmo_cc_strtok_quotes(const char **text_p)
@@ -139,6 +143,7 @@ int osmo_cc_add_screen(osmo_cc_endpoint_t *ep, const char *text)
 	} else if (!strncasecmp(text, "screen-called-in", 16)) {
 		text += 16;
 		list_p = &ep->screen_called_in;
+		calling_in = 1;
 	} else if (!strncasecmp(text, "screen-calling-out", 18)) {
 		text += 18;
 		list_p = &ep->screen_calling_out;
@@ -218,6 +223,7 @@ no_present_error:
 		list->from_present = OSMO_CC_PRESENT_RESTRICTED;
 		goto next_from;
 	} else {
+		star_used = 0;
 		for (i = j = 0; token[i] && j < (int)sizeof(list->from) - 1; i++, j++) {
 			if (token[i] == '?')
 				list->from[j] = SCREEN_QUESTIONMARK;
@@ -240,7 +246,6 @@ no_present_error:
 		list->from[j] = '\0';
 	}
 
-	star_used = 0;
 next_to:
 	token = osmo_cc_strtok_quotes(&text);
 	if (!token) {
@@ -293,6 +298,7 @@ next_to:
 		list->to_present = OSMO_CC_PRESENT_RESTRICTED;
 		goto next_to;
 	} else {
+		at_used = star_used = 0;
 		for (i = j = 0; token[i] && j < (int)sizeof(list->to) - 1; i++, j++) {
 			if (token[i] == '*') {
 				if (star_used) {
@@ -506,7 +512,7 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 			continue;
 		/* '@' means to stop and return routing also */
 		} else if (list->to[i] == SCREEN_AT) {
-			*routing_p = &list->to[i];
+			*routing_p = &list->to[i + 1];
 			break;
 		}
 		/* copy output digit */
@@ -543,6 +549,8 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 		PDEBUG(DCC, DEBUG_INFO, " -> present = restricted\n");
 		break;
 	}
+	if (*routing_p && **routing_p)
+		PDEBUG(DCC, DEBUG_INFO, " -> remote = %s\n", *routing_p);
 
 	return 0;
 }
@@ -586,13 +594,13 @@ osmo_cc_msg_t *osmo_cc_screen_msg(osmo_cc_endpoint_t *ep, osmo_cc_msg_t *old_msg
 	if (in && ep->screen_called_in) {
 		rc = osmo_cc_get_ie_called(old_msg, 0, &called_type, &called_plan, id, sizeof(id));
 		if (rc >= 0) {
-			rc = osmo_cc_screen("incoming dialed number", ep->screen_called_in, &called_type, NULL, called, sizeof(called), id, NULL);
+			rc = osmo_cc_screen("incoming dialed number", ep->screen_called_in, &called_type, NULL, called, sizeof(called), id, routing_p);
 			if (rc >= 0)
 				called_status = 1;
 		} else {
 			called_type = OSMO_CC_TYPE_UNKNOWN;
 			called_plan = OSMO_CC_PLAN_TELEPHONY;
-			rc = osmo_cc_screen("incoming dialed number", ep->screen_called_in, &called_type, NULL, called, sizeof(called), "", NULL);
+			rc = osmo_cc_screen("incoming dialed number", ep->screen_called_in, &called_type, NULL, called, sizeof(called), "", routing_p);
 			if (rc >= 0)
 				called_status = 1;
 		}
