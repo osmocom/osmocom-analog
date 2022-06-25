@@ -1072,6 +1072,36 @@ void osmo_cc_ul_msg(void *priv, uint32_t callref, osmo_cc_msg_t *msg)
 	osmo_cc_msg_list_enqueue(&call->sock_queue, msg, call->callref);
 }
 
+static void osmo_cc_help_name(void)
+{
+	printf("Name options:\n\n");
+
+	printf("name <name>\n");
+
+	printf("Allows to override endpoint name given by application.\n");
+}
+
+static int osmo_cc_set_name(osmo_cc_endpoint_t *ep, const char *text)
+{
+	if (!strncasecmp(text, "name", 4)) {
+		text += 4;
+		/* remove spaces after keyword */
+		while (*text) {
+			if (*text > 32)
+				break;
+			text++;
+		}
+	} else {
+		PDEBUG(DCC, DEBUG_ERROR, "Invalid name definition '%s'\n", text);
+		return -EINVAL;
+	}
+
+	free((char *)ep->local_name);
+	ep->local_name = strdup(text);
+
+	return 0;
+}
+
 static void osmo_cc_help_address(void)
 {
 	printf("Address options:\n\n");
@@ -1249,9 +1279,10 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 
 void osmo_cc_help(void)
 {
-	osmo_cc_help_screen();
+	osmo_cc_help_name();
 	osmo_cc_help_address();
 	osmo_cc_help_rtp();
+	osmo_cc_help_screen();
 }
 
 /* create a new endpoint instance */
@@ -1288,6 +1319,12 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 
 	/* apply args */
 	for (i = 0; i < argc; i++) {
+		if (!strncasecmp(argv[i], "name", 4)) {
+			rc = osmo_cc_set_name(ep, argv[i]);
+			if (rc < 0) {
+				return rc;
+			}
+		} else
 		if (!strncasecmp(argv[i], "local", 5)) {
 			rc = osmo_cc_set_address(ep, argv[i]);
 			if (rc < 0) {
