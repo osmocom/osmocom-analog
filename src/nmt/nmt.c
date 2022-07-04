@@ -261,7 +261,7 @@ static inline int is_chan_class_tc(enum nmt_chan_type chan_type)
 static void nmt_timeout(struct timer *timer);
 
 /* Create transceiver instance and link to a list. */
-int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback)
+int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int send_clock, int loopback)
 {
 	nmt_t *nmt;
 	int rc;
@@ -291,6 +291,10 @@ int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for nothing but testing signal decoder.\n");
 	}
 
+	if (chan_type == CHAN_TYPE_CC_TC && send_clock) {
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Sending clock on combined CC + TC is not applicable.\n");
+	}
+
 	nmt = calloc(1, sizeof(nmt_t));
 	if (!nmt) {
 		PDEBUG(DNMT, DEBUG_ERROR, "No memory!\n");
@@ -315,6 +319,7 @@ int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_
 	nmt->compandor = compandor;
 	nmt->supervisory = supervisory;
 	nmt->send_callerid = send_callerid;
+	nmt->send_clock = send_clock;
 	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
 
 	/* init audio processing */
@@ -616,6 +621,10 @@ static void set_line_signal(nmt_t *nmt, frame_t *frame, uint8_t signal)
 
 static void tx_idle(nmt_t *nmt, frame_t *frame)
 {
+	time_t time_sec;
+	struct tm *tm;
+	uint16_t clock;
+
 	switch (nmt->sysinfo.chan_type) {
 	case CHAN_TYPE_CC:
 		frame->mt = NMT_MESSAGE_1a;
@@ -639,9 +648,31 @@ static void tx_idle(nmt_t *nmt, frame_t *frame)
 		frame->mt = NMT_MESSAGE_30;
 		break;
 	}
+
 	frame->channel_no = nmt_encode_channel(nmt->sysinfo.system, atoi(nmt->sender.kanal), nmt->sysinfo.ms_power);
 	frame->traffic_area = nmt_encode_traffic_area(nmt->sysinfo.system, atoi(nmt->sender.kanal), nmt->sysinfo.traffic_area);
-	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
+
+	/* additional info */
+	frame->additional_info = 0;
+	if (frame->mt == NMT_MESSAGE_1a || frame->mt == NMT_MESSAGE_1a_a || frame->mt == NMT_MESSAGE_1a_b || frame->mt == NMT_MESSAGE_1b) {
+		/* no battery saving, just use group 8 (all phones) with no saving period */
+		frame->additional_info |= 0xeb00008000;
+		/* phone is allowed to send overdecadic dialing digits */
+		frame->additional_info |= 0x0000020000;
+		/* no clock on combined CC+TC */
+		if (nmt->send_clock && frame->mt != NMT_MESSAGE_1b) {
+			/* send battery saving message including clock */
+			time_sec = get_time();
+			tm = localtime(&time_sec);
+			clock = (1 << 11) | (tm->tm_hour << 6) | tm->tm_min;
+			/* add clock with flag */
+			frame->additional_info |= clock;
+		}
+	}
+	if (frame->mt == NMT_MESSAGE_1b || frame->mt == NMT_MESSAGE_4 || frame->mt == NMT_MESSAGE_4b || frame->mt == NMT_MESSAGE_30) {
+		/* sent area info on traffic channels; it is always H8H9H10, because all IEs are aligned 'to the right' */
+		frame->additional_info |= nmt_encode_area_no(nmt->sysinfo.area_no);
+	}
 }
 
 static void rx_idle(nmt_t *nmt, frame_t *frame)
@@ -905,7 +936,53 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 	case NMT_MESSAGE_15: /* idle */
 		if (!len)
 			break;
+		if (nmt->dialing[0] == 'A') {
+			nmt->dialing[0] = '+';
+			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Dialing includes international '+' sign at the beginning.\n");
+		}
+		if (nmt->dialing[0] == 'B') {
+			const char *code = NULL;
+			switch (nmt->dialing[1]) {
+			case '1':
+				code = "general emergency number";
+				break;
+			case '2':
+				code = "fire alarm";
+				break;
+			case '3':
+				code = "police";
+				break;
+			case '4':
+				code = "ambulance";
+				break;
+			case '5':
+				code = "gas emergency";
+				break;
+			case '6':
+				code = "directory inquiry (national)";
+				break;
+			case '7':
+				code = "directory inquiry (international)";
+				break;
+			case '8':
+				code = "operator assisted service (to make outgoing calls)";
+				break;
+			case '9':
+				code = "local customer care";
+				break;
+			case 'B':
+				code = "road service";
+				break;
+			case 'C':
+				code = "weather";
+				break;
+			}
+			if (code)
+				PDEBUG_CHAN(DNMT, DEBUG_INFO, "Dialing includes service code: '%c%c' = '%s'\n", nmt->dialing[0], nmt->dialing[1], code);
+		}
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", &trans->subscriber.country, nmt->dialing);
+		if (nmt->dialing[0] == 'B')
+			nmt->dialing[0] = '+';
 		/* setup call */
 		if (!strcmp(nmt->dialing, nmt->smsc_number)) {
 			/* SMS */
@@ -1687,6 +1764,8 @@ const char *nmt_get_frame(nmt_t *nmt)
 	/* no encoding debug for certain (idle) frames */
 	switch(frame.mt) {
 	case NMT_MESSAGE_1a:
+	case NMT_MESSAGE_1a_a:
+	case NMT_MESSAGE_1a_b:
 	case NMT_MESSAGE_4:
 	case NMT_MESSAGE_1b:
 	case NMT_MESSAGE_30:

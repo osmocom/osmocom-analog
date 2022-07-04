@@ -55,6 +55,7 @@ int num_supervisory = 0;
 int supervisory[MAX_SENDER] = { 1 };
 const char *smsc_number = "767";
 int send_callerid = 0;
+int send_clock = 0;
 
 void print_help(const char *arg0)
 {
@@ -93,6 +94,9 @@ void print_help(const char *arg0)
 	printf("        Message Service Center). (default = '%s')\n", smsc_number);
 	printf(" -I --caller-id 1 | 0\n");
 	printf("        If set, the caller ID is sent while ringing the phone. (default = '%d')\n", send_callerid);
+	printf(" -U --clock 1 | 0\n");
+	printf("        If set, the current time is transmitted with CC. (default = '%d')\n", send_clock);
+	printf("        Note that this works only with pure CC, not with combined CC+TC.\n");
 	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
@@ -109,6 +113,7 @@ static void add_options(void)
 	option_add('0', "supervisory", 1);
 	option_add('S', "smsc-number", 1);
 	option_add('I', "caller-id", 1);
+	option_add('U', "clock", 1);
 }
 
 static int handle_options(int short_option, int argi, char **argv)
@@ -205,6 +210,9 @@ error_ta:
 		break;
 	case 'I':
 		send_callerid = atoi(argv[argi]);
+		break;
+	case 'U':
+		send_clock = atoi(argv[argi]);
 		break;
 	default:
 		return main_mobile_handle_options(short_option, argi, argv);
@@ -401,7 +409,7 @@ int main(int argc, char *argv[])
 
 	/* create transceiver instance */
 	for (i = 0; i < num_kanal; i++) {
-		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, traffic_area, area_no, compandor, supervisory[i], smsc_number, send_callerid, loopback);
+		rc = nmt_create(nmt_system, country, kanal[i], chan_type[i], dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, do_pre_emphasis, do_de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, ms_power, traffic_area, area_no, compandor, supervisory[i], smsc_number, send_callerid, send_clock, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create transceiver instance. Quitting!\n");
 			goto fail;

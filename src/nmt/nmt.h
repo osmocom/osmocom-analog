@@ -102,6 +102,7 @@ struct nmt {
 	int			compandor;		/* if compandor shall be used */
 	int			supervisory;		/* if set, use supervisory signal 1..4 */
 	int			send_callerid;		/* if set, send caller ID while ringing the phone */
+	int			send_clock;		/* if set, send clock with CC */
 
 	/* dsp states */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
@@ -144,7 +145,7 @@ void nmt_channel_list(int nmt_system);
 int nmt_channel_by_short_name(int nmt_system, const char *short_name);
 const char *chan_type_short_name(int nmt_system, enum nmt_chan_type chan_type);
 const char *chan_type_long_name(int nmt_system, enum nmt_chan_type chan_type);
-int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int loopback);
+int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int send_clock, int loopback);
 void nmt_check_channels(int nmt_system);
 void nmt_destroy(sender_t *sender);
 void nmt_go_idle(nmt_t *nmt);
