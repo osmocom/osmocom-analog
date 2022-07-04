@@ -71,6 +71,7 @@ double amps_channel2freq(int channel, int uplink)
 	double freq;
 
 	if (!tacs) {
+		/* AMPS */
 		if (uplink == 2)
 			return -45.000 * 1e6;
 
@@ -86,6 +87,7 @@ double amps_channel2freq(int channel, int uplink)
 		if (uplink)
 			freq -= 45.000;
 	} else if (!jtacs) {
+		/* TACS */
 		if (uplink == 2)
 			return -45.000 * 1e6;
 
@@ -98,14 +100,23 @@ double amps_channel2freq(int channel, int uplink)
 		if (uplink)
 			freq -= 45.000;
 	} else {
+		/* JTACS */
+		/* see "ARIB_STD-T64-C.S0057-0v1.0.pdf" */
 		if (uplink == 2)
 			return -55.000 * 1e6;
 
 		/* 799 channels */
-		if (channel < 1 || channel > 799)
+		if (channel >= 1 && channel <= 799)
+			freq = 860.0125 + (channel - 1) * 0.0125;
+		else if (channel >= 801 && channel <= 1039)
+			freq = 843.0125 + (channel - 801) * 0.0125;
+		else if (channel >= 1041 && channel <= 1199)
+			freq = 832.0125 + (channel - 1041) * 0.0125;
+		else if (channel >= 1201 && channel <= 1600)
+			freq = 838.0125 + (channel - 1201) * 0.0125;
+		else
 			return 0;
 
-		freq = 860.0125 + (channel - 1) * 0.025;
 
 		if (uplink)
 			freq += 55.000;
