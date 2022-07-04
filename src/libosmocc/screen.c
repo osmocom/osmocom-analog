@@ -512,7 +512,8 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 			continue;
 		/* '@' means to stop and return routing also */
 		} else if (list->to[i] == SCREEN_AT) {
-			*routing_p = &list->to[i + 1];
+			if (routing_p)
+				*routing_p = &list->to[i + 1];
 			break;
 		}
 		/* copy output digit */
@@ -549,7 +550,7 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 		PDEBUG(DCC, DEBUG_INFO, " -> present = restricted\n");
 		break;
 	}
-	if (*routing_p && **routing_p)
+	if (routing_p && *routing_p)
 		PDEBUG(DCC, DEBUG_INFO, " -> remote = %s\n", *routing_p);
 
 	return 0;
