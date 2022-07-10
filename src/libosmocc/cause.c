@@ -22,7 +22,7 @@
 #include "message.h"
 #include "cause.h"
 
-/* stolen from freeswitch */
+/* stolen from freeswitch, did some corrections */
 /* map sip responses to QSIG cause codes ala RFC4497 section 8.4.4 */
 static uint8_t status2isdn_cause(uint16_t status)
 {
@@ -36,10 +36,9 @@ static uint8_t status2isdn_cause(uint16_t status)
 	case 603:
 		return 21; //SWITCH_CAUSE_CALL_REJECTED;
 	case 404:
-		return 1; //SWITCH_CAUSE_UNALLOCATED_NUMBER;
 	case 485:
 	case 604:
-		return 3; //SWITCH_CAUSE_NO_ROUTE_DESTINATION;
+		return 1; //SWITCH_CAUSE_UNALLOCATED_NUMBER;
 	case 408:
 	case 504:
 		return 102; //SWITCH_CAUSE_RECOVERY_ON_TIMER_EXPIRE;
@@ -55,7 +54,7 @@ static uint8_t status2isdn_cause(uint16_t status)
 	case 513:
 		return 127; //SWITCH_CAUSE_INTERWORKING;
 	case 480:
-		return 180; //SWITCH_CAUSE_NO_USER_RESPONSE;
+		return 18; //SWITCH_CAUSE_NO_USER_RESPONSE;
 	case 400:
 	case 481:
 	case 500:
@@ -68,7 +67,7 @@ static uint8_t status2isdn_cause(uint16_t status)
 		return 28; //SWITCH_CAUSE_INVALID_NUMBER_FORMAT;
 	case 488:
 	case 606:
-		return 88; //SWITCH_CAUSE_INCOMPATIBLE_DESTINATION;
+		return 65; //SWITCH_CAUSE_BERER_CAPABILITY_NOT_IMPLEMENTED;
 	case 502:
 		return 38; //SWITCH_CAUSE_NETWORK_OUT_OF_ORDER;
 	case 405:
@@ -81,7 +80,7 @@ static uint8_t status2isdn_cause(uint16_t status)
 	case 483:
 		return 25; //SWITCH_CAUSE_EXCHANGE_ROUTING_ERROR;
 	case 487:
-		return 31; //??? SWITCH_CAUSE_ORIGINATOR_CANCEL;
+		return 31; //??? SWITCH_CAUSE_ORIGINATOR_CANCEL; (not specified)
 	default:
 		return 31; //SWITCH_CAUSE_NORMAL_UNSPECIFIED;
 	}
