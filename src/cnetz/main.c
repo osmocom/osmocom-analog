@@ -77,7 +77,7 @@ int meldeinterval = 120; /* when to ask the phone about beeing alive */
 int meldeaufrufe = 3; /* how many times to ask phone about beeing alive */
 enum demod_type demod = FSK_DEMOD_AUTO;
 int metering = 20;
-double speech_deviation = 4000.0; /* best results with all my equipment */
+double speech_deviation = 2400.0; /* best results with older equipment (not C5) */
 
 void print_help(const char *arg0)
 {
@@ -125,8 +125,8 @@ void print_help(const char *arg0)
 	printf("        Increment  metering counter every given number of seconds.\n");
 	printf("        To turn off, use 0. (default = %d)\n", metering);
 	printf(" -V --voice-deviation <2400..4000 Hz>\n");
-	printf("        It is unclear what the actual voice deviation is. Please decrease, if\n");
-	printf("        mobile's microphone is too loud and speaker is too quiet.\n");
+	printf("        It is unclear what the actual voice deviation is. Please increase, if\n");
+	printf("        mobile's earpiece is too quiet and the microphone is too loud.\n");
 	printf("        (default = %.0f)\n", speech_deviation);
 	printf(" -S --sysinfo timeslots=1|2|4|8\n");
 	printf("        Set number of timeslots of OgK broadcast. There are 32 time slots per\n");
