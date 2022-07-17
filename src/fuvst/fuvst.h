@@ -1,5 +1,4 @@
 #include "../libmobile/sender.h"
-#include "../libscrambler/scrambler.h"
 #include "../libv27/modem.h"
 #include "../libmtp/mtp.h"
 #include "mup.h"
