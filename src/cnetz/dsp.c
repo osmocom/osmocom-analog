@@ -46,7 +46,6 @@
 #define MAX_DISPLAY	1.4	/* something above speech level, no emphasis */
 #define BITRATE		5280.0	/* bits per second */
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
-#define CUT_OFF_OFFSET	300.0	/* cut off frequency for offset filter (level correction between subsequent audio chunks) */
 
 #ifdef TEST_SCRAMBLE
 jitter_t scrambler_test_jb;
@@ -103,7 +102,6 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 {
 	int rc = 0;
 	double size;
-	double RC, dt;
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init FSK for 'Sender'.\n");
 
@@ -150,7 +148,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	}
 
 	/* reinit the sample rate to shrink/expand audio */
-	init_samplerate(&cnetz->sender.srstate, 8000.0, (double)cnetz->sender.samplerate / 1.1, 3300.0); /* 66 <-> 60 */
+	init_samplerate(&cnetz->sender.srstate, 8000.0, (double)cnetz->sender.samplerate / (1.1 / (1.0 + clock_speed[0] / 1000000.0)), 3300.0); /* 66 <-> 60 */
 
 	rc = fsk_fm_init(&cnetz->fsk_demod, cnetz, cnetz->sender.samplerate, (double)BITRATE / (1.0 + clock_speed[0] / 1000000.0), demod);
 	if (rc < 0)
@@ -170,10 +168,8 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	 * shall not exceed according to ITU G.162 */
 	init_compandor(&cnetz->cstate, 8000, 5.0, 22.5);
 
-	/* use this filter to compensate level changes between two subsequent audio chunks */
-	RC = 1.0 / (CUT_OFF_OFFSET * 2.0 *3.14);
-	dt = 1.0 / cnetz->sender.samplerate;
-	cnetz->offset_factor = RC / (RC + dt);
+	/* use duration of one bit to ramp level of last frame to current frame */
+	cnetz->offset_range = ceil(cnetz->fsk_bitduration);
 
 #ifdef TEST_SCRAMBLE
 	rc = jitter_create(&scrambler_test_jb, cnetz->sender.samplerate / 5);
@@ -821,7 +817,8 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 {
 	sample_t *spl;
 	int pos, i;
-	double x, y, x_last, y_last, factor;
+	int range;
+	double offset;
 
 	/* check if we still have a transaction
 	 * this might not be true, if we just released transaction, but still
@@ -830,21 +827,13 @@ void unshrink_speech(cnetz_t *cnetz, sample_t *speech_buffer, int count)
 	if (!cnetz->trans_list)
 		return;
 
-	/* fix offset between speech blocks by using high pass filter */
-	/* use first sample as previous sample, so we don't have a level jump between two subsequent audio chunks */
-	x_last = speech_buffer[0];
-	y_last = cnetz->offset_y_last;
-	factor = cnetz->offset_factor;
-	for (i = 0; i < count; i++) {
-		/* change level */
-		x = speech_buffer[i];
-		/* high-pass to remove low level frequencies, caused by level jump between audio chunks */
-		y = factor * (y_last + x - x_last);
-		x_last = x;
-		y_last = y;
-		speech_buffer[i] = y;
+	/* ramp from level of last frame to level of current frame */
+	range = cnetz->offset_range;
+	offset = speech_buffer[0] - cnetz->offset_last;
+	for (i = 0; i < range; i++) {
+		speech_buffer[i] -= offset * (1.0 - (double)i / (double)range);
 	}
-	cnetz->offset_y_last = y_last;
+	cnetz->offset_last = speech_buffer[count - 1];
 
 	/* 4. de-emphasis is done by cnetz code, not by common code */
 	/* de-emphasis is only used when scrambler is off, see FTZ 171 TR 60 Clause 4 */

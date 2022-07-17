@@ -121,7 +121,10 @@
  * if debug is set to 1, debugging will start at program start
  */
 //#define DEBUG_DECODER
-//static int debug = 0;
+
+#ifdef DEBUG_DECODER
+static int debug = 0;
+#endif
 
 #include <stdio.h>
 #include <stdint.h>
@@ -182,7 +185,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 #ifdef DEBUG_DECODER
 	char debug_filename[256];
-	sprintf(debug_filename, "/tmp/debug_decoder_channel_%d.txt", cnetz->sender.kanal);
+	sprintf(debug_filename, "/tmp/debug_decoder_channel_%s.txt", cnetz->sender.kanal);
 	fsk->debug_fp = fopen(debug_filename, "w");
 	if (!fsk->debug_fp) {
 		fprintf(stderr, "Failed to open decoder debug file '%s'!\n", debug_filename);
@@ -414,17 +417,6 @@ static inline void find_change_slope(fsk_fm_demod_t *fsk)
 	sample_t threshold;
 	int i;
 	
-#ifdef DEBUG_DECODER
-	/* show deviation of middle sample in windows (in a range of bandwidth) */
-	if (debug) {
-		fprintf(fsk->debug_fp, "%s",
-			debug_amplitude(
-				fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_half) % fsk->bit_buffer_len]
-			)
-		);
-	}
-#endif
-
 	/* get level range (level_min and level_max) and also
 	 * get maximum slope (change_max) and where it was
 	 * (change_at) and what direction it went (change_positive)
@@ -492,10 +484,6 @@ static inline void find_change_slope(fsk_fm_demod_t *fsk)
 	}
 	fsk->next_bit -= fsk->bits_per_sample;
 
-#ifdef DEBUG_DECODER
-	if (debug)
-		fprintf(fsk->debug_fp, "\n");
-#endif
 }
 
 /* find bit change by looking at zero crossing */
@@ -506,12 +494,6 @@ static inline void find_change_level(fsk_fm_demod_t *fsk)
 
 	/* get bit in the middle of the buffer */
 	s = fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_half) % fsk->bit_buffer_len];
-
-#ifdef DEBUG_DECODER
-	/* show deviation */
-	if (debug)
-		fprintf(fsk->debug_fp, "%s", debug_amplitude(s));
-#endif
 
 	/* just sample first bit in distributed mode */
 	if (fsk->cnetz->dsp_mode == DSP_MODE_SPK_V && fsk->bit_count == 0) {
@@ -569,10 +551,6 @@ static inline void find_change_level(fsk_fm_demod_t *fsk)
 	fsk->next_bit -= fsk->bits_per_sample;
 
 done:
-#ifdef DEBUG_DECODER
-	if (debug)
-		fprintf(fsk->debug_fp, "\n");
-#endif
 	return;
 }
 
@@ -580,7 +558,7 @@ done:
 void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 {
 	int i;
-	double t;
+	double t = 0.0;
 
 	/* process signaling block, sample by sample */
 	for (i = 0; i < length; i++) {
@@ -589,6 +567,14 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 			fsk->bit_buffer_spl[fsk->bit_buffer_pos++] = samples[i];
 			if (fsk->bit_buffer_pos == fsk->bit_buffer_len)
 				fsk->bit_buffer_pos = 0;
+
+#ifdef DEBUG_DECODER
+			/* show deviation of center sample in window */
+			if (debug)
+				fprintf(fsk->debug_fp, "%s", debug_amplitude(fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_half) % fsk->bit_buffer_len]));
+			if (debug && fmod(fsk->bit_time - fsk->bits_per_sample, 1.0) > fmod(fsk->bit_time, 1.0))
+				fprintf(fsk->debug_fp, " -bitchange-");
+#endif
 
 			/* for each sample process buffer */
 			if (fsk->cnetz->dsp_mode != DSP_MODE_SPK_V) {
@@ -611,7 +597,7 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 					fsk->next_bit = 1.0 - fsk->bits_per_sample;
 #ifdef DEBUG_DECODER
 					if (debug && fsk->bit_count)
-						fprintf(fsk->debug_fp, "---- SPK(V) BLOCK START ----\n");
+						fprintf(fsk->debug_fp, "\n---- SPK(V) BLOCK START ----");
 #endif
 					fsk->bit_count = 0;
 				} else
@@ -622,13 +608,21 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 						find_change_level(fsk);
 				} else
 				if (t >= 5.5 && t < 65.5) {
+#ifdef DEBUG_DECODER
+					if (debug && !fsk->speech_count)
+						fprintf(fsk->debug_fp, " (start recording speech)");
+#endif
 					/* get audio for the duration of 60 bits */
 					/* prevent overflow, if speech_size != 0 and SPK_V
 					 * has been restarted. */
 					if (fsk->speech_count < fsk->speech_size)
-						fsk->speech_buffer[fsk->speech_count++] = samples[i];
+						fsk->speech_buffer[fsk->speech_count++] = fsk->bit_buffer_spl[(fsk->bit_buffer_pos + fsk->bit_buffer_half) % fsk->bit_buffer_len];
 				} else
 				if (t >= 65.5) {
+#ifdef DEBUG_DECODER
+					if (debug && fsk->speech_count)
+						fprintf(fsk->debug_fp, " (stop recording speech)");
+#endif
 					if (fsk->speech_count) {
 						unshrink_speech(fsk->cnetz, fsk->speech_buffer, fsk->speech_count);
 						fsk->speech_count = 0;
@@ -641,6 +635,10 @@ void fsk_fm_demod(fsk_fm_demod_t *fsk, sample_t *samples, int length)
 		if (fsk->bit_time >= BITS_PER_SUPERFRAME) {
 			fsk->bit_time -= BITS_PER_SUPERFRAME;
 		}
+#ifdef DEBUG_DECODER
+		if (debug && samples)
+				fprintf(fsk->debug_fp, "\n");
+#endif
 		/* another clock is used to measure actual super frame time */
 		fsk->bit_time_uncorrected += fsk->bits_per_sample;
 		if (fsk->bit_time_uncorrected >= BITS_PER_SUPERFRAME) {

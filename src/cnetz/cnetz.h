@@ -127,8 +127,8 @@ struct cnetz {
 	double			frame_last_phase;	/* master's bit phase of last frame sync */
 
 	/* audio offset removal */
-	double			offset_factor;		/* filer alpha of high-pass filter */
-	double			offset_y_last;		/* last stored sample */
+	double			offset_last;		/* last sample value of last frame */
+	int			offset_range;		/* range of samples to ramp the offset */
 
 	/* measurements */
 	int			measure_speed;		/* measure clock speed */
