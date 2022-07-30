@@ -59,9 +59,9 @@ void print_help(const char *arg0)
 	main_mobile_print_help(arg0, "-k 466.230 | -k list");
 	/*      -                                                                             - */
 	printf(" -T --tx\n");
-	printf("        Transmit Eurosignal on given channel, to page a receiver. (default)\n");
+	printf("        Transmit POCSAG signal on given channel, to page a receiver. (default)\n");
 	printf(" -R --rx\n");
-	printf("        Receive Eurosignal on given channel, so we are the receiver.\n");
+	printf("        Receive POCSAG signal on given channel, so we are the receiver.\n");
 	printf("        If none of the options -T nor -R is given, only transmitter is enabled.\n");
 	printf(" -B --baud-rate 512 | 1200 | 2400\n");
 	printf("        Choose baud rate of transmitter.\n");

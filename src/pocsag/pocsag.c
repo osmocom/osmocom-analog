@@ -481,7 +481,7 @@ void call_down_clock(void)
 }
 
 /* Call control starts call towards paging network. */
-int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
+int call_down_setup(int callref, const char *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	char channel = '\0';
 	sender_t *sender;
