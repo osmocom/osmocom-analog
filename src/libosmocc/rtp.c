@@ -52,7 +52,7 @@ struct rtp_x_hdr {
 	uint16_t length;
 } __attribute__((packed));
 
-static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_t *marker_p, uint8_t *pt_p, uint16_t *sequence_p, uint32_t *timestamp_p)
+static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_t *marker_p, uint8_t *pt_p, uint16_t *sequence_p, uint32_t *timestamp_p, uint32_t *ssrc_p)
 {
 	static uint8_t data[2048];
 	int len;
@@ -83,6 +83,7 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 	payload_type = rtph->byte1 & 0x7f;
 	*sequence_p = ntohs(rtph->sequence);
 	*timestamp_p = ntohl(rtph->timestamp);
+	*ssrc_p = ntohl(rtph->ssrc);
 
 	if (version != RTP_VERSION) {
 		PDEBUG(DCC, DEBUG_NOTICE, "Received RTP version %d not supported.\n", version);
@@ -172,7 +173,7 @@ int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 	int flags;
 	int rc;
 
-	media->rtp_ssrc = rand();
+	media->tx_ssrc = rand();
 
 	osmo_cc_rtp_close(media);
 
@@ -335,7 +336,7 @@ void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, in
 		payload_len = len;
 	}
 
-	rtp_send(codec->media->rtp_socket, payload, payload_len, codec->payload_type_remote, codec->media->tx_sequence, codec->media->tx_timestamp, codec->media->rtp_ssrc);
+	rtp_send(codec->media->rtp_socket, payload, payload_len, codec->payload_type_remote, codec->media->tx_sequence, codec->media->tx_timestamp, codec->media->tx_ssrc);
 	codec->media->tx_sequence += inc_sequence;
 	codec->media->tx_timestamp += inc_timestamp;
 
@@ -358,7 +359,7 @@ int osmo_cc_rtp_receive(osmo_cc_session_media_t *media)
 	if (!media || media->rtp_socket <= 0)
 		return -EIO;
 
-	rc = rtp_receive(media->rtp_socket, &payload, &payload_len, &marker, &payload_type, &media->rx_sequence, &media->rx_timestamp);
+	rc = rtp_receive(media->rtp_socket, &payload, &payload_len, &marker, &payload_type, &media->rx_sequence, &media->rx_timestamp, &media->rx_ssrc);
 	if (rc < 0)
 		return rc;
 
@@ -381,7 +382,7 @@ int osmo_cc_rtp_receive(osmo_cc_session_media_t *media)
 	}
 
 	if (codec->media->receive)
-		codec->media->receiver(codec, media->rx_sequence, media->rx_timestamp, data, len);
+		codec->media->receiver(codec, media->rx_sequence, media->rx_timestamp, media->rx_ssrc, data, len);
 
 	if (codec->decoder)
 		free(data);

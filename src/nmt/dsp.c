@@ -446,7 +446,7 @@ static void dial_tone(nmt_t *nmt, sample_t *samples, int length)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	nmt_t *nmt = (nmt_t *) sender;
-	int count;
+	int count, input_num;
 
 	memset(power, 1, length);
 
@@ -454,7 +454,9 @@ again:
 	switch (nmt->dsp_mode) {
 	case DSP_MODE_AUDIO:
 	case DSP_MODE_DTMF:
-		jitter_load(&nmt->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		/* send after dejitter, so audio is flushed */
 		if (nmt->dms.tx_frame_valid) {
 			fsk_mod_send(&nmt->fsk_mod, samples, length, 0);

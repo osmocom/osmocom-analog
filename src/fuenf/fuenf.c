@@ -390,7 +390,7 @@ void call_down_release(int callref, int cause)
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
 {
 	sender_t *sender;
 	fuenf_t *fuenf;
@@ -403,11 +403,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	if (!sender)
 		return;
 
-	if (fuenf->state == FUENF_STATE_DURCHSAGE) {
-		sample_t up[(int)((double)count * fuenf->sender.srstate.factor + 0.5) + 10];
-		count = samplerate_upsample(&fuenf->sender.srstate, samples, count, up);
-		jitter_save(&fuenf->sender.dejitter, up, count);
-	}
+	if (fuenf->state == FUENF_STATE_DURCHSAGE)
+		jitter_save(&fuenf->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 }
 
 void dump_info(void) {}

@@ -1240,13 +1240,17 @@ void fuvst_destroy(sender_t *sender)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
         fuvst_t *fuvst = (fuvst_t *) sender;
+	int input_num;
 
         memset(power, 1, length);
 
 	if (fuvst->chan_type == CHAN_TYPE_ZZK)
 		v27_modem_send(&fuvst->modem, samples, length);
-	else
-		jitter_load(&fuvst->sender.dejitter, samples, length);
+	else {
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
+	}
 }
 
 void sender_receive(sender_t *sender, sample_t *samples, int length, double __attribute__((unused)) rf_level_db)
@@ -1280,7 +1284,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
 {
 	sender_t *sender;
 	fuvst_t *fuvst;
@@ -1293,11 +1297,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	if (!sender)
 		return;
 
-	if (fuvst->callref) {
-		sample_t up[(int)((double)count * fuvst->sender.srstate.factor + 0.5) + 10];
-		count = samplerate_upsample(&fuvst->sender.srstate, samples, count, up);
-		jitter_save(&fuvst->sender.dejitter, up, count);
-	}
+	if (fuvst->callref)
+		jitter_save(&fuvst->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 }
 
 void call_down_clock(void) {}

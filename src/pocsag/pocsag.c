@@ -565,7 +565,7 @@ void call_down_release(int callref, int cause)
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int __attribute__((unused)) callref, sample_t __attribute__((unused)) *samples, int __attribute__((unused)) count)
+void call_down_audio(int __attribute__((unused)) callref, uint16_t __attribute__((unused)) sequence, uint32_t __attribute__((unused)) timestamp, uint32_t __attribute__((unused)) ssrc, sample_t __attribute__((unused)) *samples, int __attribute__((unused)) count)
 {
 }
 

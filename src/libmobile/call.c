@@ -387,7 +387,7 @@ static void process_timeout(struct timer *timer)
 	}
 }
 
-void down_audio(struct osmo_cc_session_codec *codec, uint16_t __attribute__((unused)) sequence_number, uint32_t __attribute__((unused)) timestamp, uint8_t *data, int len)
+void down_audio(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len)
 {
 	process_t *process = codec->media->session->priv;
 	sample_t samples[len / 2];
@@ -400,7 +400,7 @@ void down_audio(struct osmo_cc_session_codec *codec, uint16_t __attribute__((unu
 	double lev = level_of(samples, len / 2);
 	printf("festnetz-level: %s                  %.4f\n", debug_db(lev), (20 * log10(lev)));
 #endif
-	call_down_audio(process->callref, samples, len / 2);
+	call_down_audio(process->callref, sequence_number, timestamp, ssrc, samples, len / 2);
 }
 
 static void indicate_setup(process_t *process, const char *callerid, const char *dialing, uint8_t network_type, const char *network_id)

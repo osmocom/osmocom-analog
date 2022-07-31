@@ -106,8 +106,8 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
 			goto error;
 		}
-		jitter_create(&radio->tx_dejitter[0], radio->tx_audio_samplerate / 5);
-		jitter_create(&radio->tx_dejitter[1], radio->tx_audio_samplerate / 5);
+		jitter_create(&radio->tx_dejitter[0], "left", radio->tx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
+		jitter_create(&radio->tx_dejitter[1], "right", radio->tx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
 		radio->tx_audio_mode = AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
@@ -173,8 +173,8 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
 			goto error;
 		}
-		jitter_create(&radio->rx_dejitter[0], radio->rx_audio_samplerate / 5);
-		jitter_create(&radio->rx_dejitter[1], radio->rx_audio_samplerate / 5);
+		jitter_create(&radio->rx_dejitter[0], "left", radio->rx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
+		jitter_create(&radio->rx_dejitter[1], "right", radio->rx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
 		radio->rx_audio_mode |= AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
@@ -494,10 +494,10 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 			else
 				return 0;
 		}
-		jitter_save(&radio->tx_dejitter[0], audio_samples[0], rc);
+		jitter_save(&radio->tx_dejitter[0], audio_samples[0], rc, 0, 0, 0 ,0);
 		jitter_load(&radio->tx_dejitter[0], audio_samples[0], audio_num);
 		if (radio->tx_audio_channels == 2) {
-			jitter_save(&radio->tx_dejitter[1], audio_samples[1], rc);
+			jitter_save(&radio->tx_dejitter[1], audio_samples[1], rc, 0, 0, 0 ,0);
 			jitter_load(&radio->tx_dejitter[1], audio_samples[1], audio_num);
 		}
 		break;
@@ -554,9 +554,10 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	}
 
 	/* upsample */
-	signal_num = samplerate_upsample(&radio->tx_resampler[0], audio_samples[0], audio_num, signal_samples[0]);
+	signal_num = samplerate_upsample_output_num(&radio->tx_resampler[0], audio_num);
+	samplerate_upsample(&radio->tx_resampler[0], audio_samples[0], audio_num, signal_samples[0], signal_num);
 	if (radio->stereo)
-		samplerate_upsample(&radio->tx_resampler[1], audio_samples[1], audio_num, signal_samples[1]);
+		samplerate_upsample(&radio->tx_resampler[1], audio_samples[1], audio_num, signal_samples[1], signal_num);
 
 	/* prepare baseband */
 	memset(baseband, 0, sizeof(float) * 2 * signal_num);
@@ -727,9 +728,9 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 		wave_write(&radio->wave_rx_rec, samples, audio_num);
 #ifdef HAVE_ALSA
 	if ((radio->rx_audio_mode & AUDIO_MODE_AUDIODEV)) {
-		jitter_save(&radio->rx_dejitter[0], samples[0], audio_num);
+		jitter_save(&radio->rx_dejitter[0], samples[0], audio_num, 0, 0, 0 ,0);
 		if (radio->rx_audio_channels == 2)
-			jitter_save(&radio->rx_dejitter[1], samples[1], audio_num);
+			jitter_save(&radio->rx_dejitter[1], samples[1], audio_num, 0, 0, 0 ,0);
 		audio_num = sound_get_tosend(radio->rx_sound, radio->signal_buffer_size);
 		jitter_load(&radio->rx_dejitter[0], samples[0], audio_num);
 		if (radio->rx_audio_channels == 2)

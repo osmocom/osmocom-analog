@@ -73,6 +73,7 @@ typedef struct sender {
 
 	/* audio buffer for audio to send to transmitter (also used as loopback buffer) */
 	jitter_t		dejitter;
+	jitter_t		loop_dejitter;
 
 	/* audio buffer for audio to send to caller (20ms = 160 samples @ 8000Hz) */
 	sample_t		rxbuf[160];

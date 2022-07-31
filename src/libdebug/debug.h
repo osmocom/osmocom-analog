@@ -55,6 +55,8 @@
 #define DUK0		48
 #define DPH		49
 #define DDCF77		50
+#define DJITTER		51
+//NOTE: increment mask array, if 127 is exceeded
 
 void lock_debug(void);
 void unlock_debug(void);

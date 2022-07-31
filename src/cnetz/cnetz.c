@@ -576,7 +576,7 @@ static void cnetz_release(transaction_t *trans, uint8_t cause)
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
 {
 	sender_t *sender;
 	cnetz_t *cnetz;
@@ -591,7 +591,7 @@ void call_down_audio(int callref, sample_t *samples, int count)
 
 	if (cnetz->dsp_mode == DSP_MODE_SPK_V) {
 		/* store as is, since we convert rate when processing FSK frames */
-		jitter_save(&cnetz->sender.dejitter, samples, count);
+		jitter_save(&cnetz->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 	}
 }
 

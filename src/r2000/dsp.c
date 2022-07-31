@@ -335,7 +335,7 @@ static int super_send_bit(void *inst)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	r2000_t *r2000 = (r2000_t *) sender;
-	int count;
+	int count, input_num;
 
 again:
 	switch (r2000->dsp_mode) {
@@ -346,7 +346,9 @@ again:
 	case DSP_MODE_AUDIO_TX:
 	case DSP_MODE_AUDIO_TX_RX:
 		memset(power, 1, length);
-		jitter_load(&r2000->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		iir_process(&r2000->super_tx_hp, samples, length);
 		/* do pre-emphasis */
 		if (r2000->pre_emphasis)

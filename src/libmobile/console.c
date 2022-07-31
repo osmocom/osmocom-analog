@@ -141,17 +141,15 @@ static void free_console(void)
 	console.callref = 0;
 }
 
-void up_audio(struct osmo_cc_session_codec *codec, uint16_t __attribute__((unused)) sequence_number, uint32_t __attribute__((unused)) timestamp, uint8_t *data, int len)
+void up_audio(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len)
 {
 	int count = len / 2;
 	sample_t samples[count];
 
 	/* save audio from transceiver to jitter buffer */
 	if (console.sound) {
-		sample_t up[(int)((double)count * console.srstate.factor + 0.5) + 10];
 		int16_to_samples(samples, (int16_t *)data, count);
-		count = samplerate_upsample(&console.srstate, samples, count, up);
-		jitter_save(&console.dejitter, up, count);
+		jitter_save(&console.dejitter, samples, count, 1, sequence_number, timestamp, ssrc);
 		return;
 	}
 	/* if echo test is used, send echo back to mobile */
@@ -398,7 +396,7 @@ int console_init(const char *audiodev, int samplerate, int buffer, int loopback,
 		goto error;
 	}
 
-	rc = jitter_create(&console.dejitter, samplerate / 5);
+	rc = jitter_create(&console.dejitter, "console", 8000, sizeof(sample_t), 0.050, 0.200, JITTER_FLAG_NONE);
 	if (rc < 0) {
 		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init dejitter buffer!\n");
 		goto error;
@@ -580,7 +578,7 @@ void process_console(int c)
 	/* handle audio, if sound device is used */
 	sample_t samples[console.buffer_size + 10], *samples_list[1];
 	uint8_t *power_list[1];
-	int count;
+	int count, input_num;
 	int rc;
 
 	count = sound_get_tosend(console.sound, console.buffer_size);
@@ -591,7 +589,11 @@ void process_console(int c)
 		return;
 	}
 	if (count > 0) {
-		jitter_load(&console.dejitter, samples, count);
+		/* load and upsample */
+		input_num = samplerate_upsample_input_num(&console.srstate, count);
+		jitter_load(&console.dejitter, samples, input_num);
+		samplerate_upsample(&console.srstate, samples, input_num, samples, count);
+		/* write to sound device */
 		samples_list[0] = samples;
 		power_list[0] = NULL;
 		rc = sound_write(console.sound, samples_list, power_list, count, NULL, NULL, 1);
@@ -613,9 +615,9 @@ void process_console(int c)
 	if (count) {
 		int i;
 
-		if (console.loopback == 3)
-			jitter_save(&console.dejitter, samples, count);
 		count = samplerate_downsample(&console.srstate, samples, count);
+		if (console.loopback == 3)
+			jitter_save(&console.dejitter, samples, count, 0, 0, 0, 0);
 		/* put samples into ring buffer */
 		for (i = 0; i < count; i++) {
 			console.tx_buffer[console.tx_buffer_pos] = samples[i];

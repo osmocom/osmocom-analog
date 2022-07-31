@@ -276,7 +276,7 @@ static int generate_tone(imts_t *imts, sample_t *samples, int length)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	imts_t *imts = (imts_t *) sender;
-	int count;
+	int count, input_num;
 
 	memset(power, 1, length);
 
@@ -296,7 +296,9 @@ again:
 		break;
 	case DSP_MODE_AUDIO:
 		memset(power, 1, length);
-		jitter_load(&imts->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		if (imts->pre_emphasis)
 			pre_emphasis(&imts->estate, samples, length);
 		break;

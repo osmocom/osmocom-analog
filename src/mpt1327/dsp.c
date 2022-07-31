@@ -85,7 +85,7 @@ int dsp_init_sender(mpt1327_t *mpt1327, double squelch_db)
 	mpt1327->dmp_frame_quality = display_measurements_add(&mpt1327->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	/* repeater */
-	rc = jitter_create(&mpt1327->repeater_dejitter, mpt1327->sender.samplerate / 5);
+	rc = jitter_create(&mpt1327->repeater_dejitter, "repeater", mpt1327->sender.samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
 	if (rc < 0) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Failed to create and init repeater buffer!\n");
 		goto error;
@@ -235,7 +235,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 	if (mpt1327->dsp_mode == DSP_MODE_TRAFFIC) {
 		/* if repeater mode, store sample in jitter buffer */
 		if (mpt1327->repeater)
-			jitter_save(&mpt1327->repeater_dejitter, samples, length);
+			jitter_save(&mpt1327->repeater_dejitter, samples, length, 0, 0, 0, 0);
 
 		if (mpt1327->unit && mpt1327->unit->callref) {
 			int count;
@@ -279,6 +279,7 @@ static int fsk_send_bit(void *inst)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	mpt1327_t *mpt1327 = (mpt1327_t *) sender;
+	int input_num;
 
 	if (mpt1327->dsp_mode == DSP_MODE_OFF) {
 		memset(power, 0, length);
@@ -289,7 +290,9 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	memset(power, 1, length);
 
 	if (mpt1327->dsp_mode == DSP_MODE_TRAFFIC) {
-		jitter_load(&mpt1327->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		/* if repeater mode, sum samples from jitter buffer to samples */
 		if (mpt1327->repeater) {
 			sample_t uplink[length];

@@ -1284,7 +1284,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
 {
 	sender_t *sender;
 	imts_t *imts;
@@ -1298,9 +1298,7 @@ void call_down_audio(int callref, sample_t *samples, int count)
 		return;
 
 	if (imts->dsp_mode == DSP_MODE_AUDIO) {
-		sample_t up[(int)((double)count * imts->sender.srstate.factor + 0.5) + 10];
-		count = samplerate_upsample(&imts->sender.srstate, samples, count, up);
-		jitter_save(&imts->sender.dejitter, up, count);
+		jitter_save(&imts->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 	}
 }
 

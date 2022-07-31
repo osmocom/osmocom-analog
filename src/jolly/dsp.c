@@ -113,7 +113,7 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	/* repeater */
 	jolly->repeater = repeater;
 	jolly->repeater_max = (int)((double)jolly->sender.samplerate * REPEATER_TIME);
-	rc = jitter_create(&jolly->repeater_dejitter, jolly->sender.samplerate / 5);
+	rc = jitter_create(&jolly->repeater_dejitter, "repeater", jolly->sender.samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
 	if (rc < 0) {
 		PDEBUG(DDSP, DEBUG_ERROR, "Failed to create and init repeater buffer!\n");
 		goto error;
@@ -319,7 +319,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 
 	/* if repeater mode, store sample in jitter buffer */
 	if (jolly->repeater)
-		jitter_save(&jolly->repeater_dejitter, samples, length);
+		jitter_save(&jolly->repeater_dejitter, samples, length, 0, 0, 0, 0);
 
 	/* downsample, decode DTMF */
 	count = samplerate_downsample(&jolly->sender.srstate, samples, length);
@@ -346,7 +346,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	jolly_t *jolly = (jolly_t *) sender;
-	int count;
+	int count, input_num;
 
 	switch (jolly->state) {
 	case STATE_IDLE:
@@ -368,7 +368,9 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	case STATE_CALL:
 	case STATE_CALL_DIALING:
 		memset(power, 1, length);
-		jitter_load(&jolly->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		break;
 	case STATE_OUT_VERIFY:
 	case STATE_IN_PAGING:

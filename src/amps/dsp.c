@@ -473,7 +473,7 @@ static void sat_encode(amps_t *amps, sample_t *samples, int length)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	amps_t *amps = (amps_t *) sender;
-	int count;
+	int count, input_num;
 
 again:
 	switch (amps->dsp_mode) {
@@ -483,7 +483,9 @@ again:
 		break;
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 		memset(power, 1, length);
-		jitter_load(&amps->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		/* pre-emphasis */
 		if (amps->pre_emphasis)
 			pre_emphasis(&amps->estate, samples, length);

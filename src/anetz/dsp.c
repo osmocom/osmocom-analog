@@ -357,6 +357,7 @@ static void fsk_tone(anetz_t *anetz, sample_t *samples, int length)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	anetz_t *anetz = (anetz_t *) sender;
+	int input_num;
 
 	memset(power, 1, length);
 
@@ -365,7 +366,9 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 		memset(samples, 0, length * sizeof(*samples));
 		break;
 	case DSP_MODE_AUDIO:
-		jitter_load(&anetz->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		break;
 	case DSP_MODE_TONE:
 		fsk_tone(anetz, samples, length);

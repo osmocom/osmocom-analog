@@ -513,7 +513,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
 {
 	sender_t *sender;
 	anetz_t *anetz;
@@ -526,11 +526,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	if (!sender)
 		return;
 
-	if (anetz->dsp_mode == DSP_MODE_AUDIO) {
-		sample_t up[(int)((double)count * anetz->sender.srstate.factor + 0.5) + 10];
-		count = samplerate_upsample(&anetz->sender.srstate, samples, count, up);
-		jitter_save(&anetz->sender.dejitter, up, count);
-	}
+	if (anetz->dsp_mode == DSP_MODE_AUDIO)
+		jitter_save(&anetz->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 }
 
 void call_down_clock(void) {}

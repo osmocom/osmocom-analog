@@ -594,7 +594,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, sample_t *samples, int count)
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
 {
 	sender_t *sender;
 	jolly_t *jolly;
@@ -607,11 +607,8 @@ void call_down_audio(int callref, sample_t *samples, int count)
 	if (!sender)
 		return;
 
-	if (jolly->state == STATE_CALL || jolly->state == STATE_CALL_DIALING) {
-		sample_t up[(int)((double)count * jolly->sender.srstate.factor + 0.5) + 10];
-		count = samplerate_upsample(&jolly->sender.srstate, samples, count, up);
-		jitter_save(&jolly->sender.dejitter, up, count);
-	}
+	if (jolly->state == STATE_CALL || jolly->state == STATE_CALL_DIALING)
+		jitter_save(&jolly->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 }
 
 void call_down_clock(void) {}

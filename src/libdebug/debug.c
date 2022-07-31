@@ -93,12 +93,13 @@ struct debug_cat {
 	{ "uk0", "\033[1;34m" },
 	{ "ph", "\033[0;33m" },
 	{ "dcf77", "\033[1;34m" },
+	{ "jitter", "\033[0;36m" },
 	{ NULL, NULL }
 };
 
 int debuglevel = DEBUG_INFO;
 int debug_date = 0;
-uint64_t debug_mask = ~0;
+uint64_t debug_mask[2] = { ~0, ~0 };
 extern int num_kanal;
 
 void (*clear_console_text)(void) = NULL;
@@ -155,7 +156,7 @@ void _printdebug(const char *file, const char __attribute__((unused)) *function,
 	if (debuglevel > level)
 		return;
 
-	if (!(debug_mask & ((uint64_t)1 << cat)))
+	if (!(debug_mask[cat >> 6] & ((uint64_t)1 << (cat & 63))))
 		return;
 
 	lock_debug();
@@ -289,7 +290,7 @@ int parse_debug_opt(const char *optarg)
 		return -EINVAL;
 	}
 	if (dstring)
-		debug_mask = 0;
+		memset(debug_mask, 0, sizeof(debug_mask));
 	while((p = strsep(&dstring, ","))) {
 		for (i = 0; debug_cat[i].name; i++) {
 			if (!strcasecmp(p, debug_cat[i].name))
@@ -300,7 +301,7 @@ int parse_debug_opt(const char *optarg)
 			free(dup);
 			return -EINVAL;
 		}
-		debug_mask |= ((uint64_t)1 << i);
+		debug_mask[i >> 6] |= ((uint64_t)1 << (i & 63));
 	}
 
 	free(dup);

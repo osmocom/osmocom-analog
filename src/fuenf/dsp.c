@@ -595,15 +595,17 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	fuenf_t *fuenf = (fuenf_t *) sender;
 	sample_t *orig_samples = samples;
 	int orig_length = length;
-	int count;
+	int count, input_num;
 	sample_t *spl;
 	int pos;
 	int i;
 
 	/* speak through */
 	if (fuenf->state == FUENF_STATE_DURCHSAGE && fuenf->callref) {
-		jitter_load(&fuenf->sender.dejitter, samples, length);
 		memset(power, 1, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 	} else {
 		/* send if something has to be sent. else turn transmitter off */
 		while ((count = encode(fuenf, samples, length))) {

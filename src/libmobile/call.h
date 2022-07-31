@@ -37,7 +37,7 @@ void call_down_release(int callref, int cause);
 
 /* send and receive audio */
 void call_up_audio(int callref, sample_t *samples, int count);
-void call_down_audio(int callref, sample_t *samples, int count);
+void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count);
 
 /* clock to transmit to */
 void call_clock(void); /* from main loop */

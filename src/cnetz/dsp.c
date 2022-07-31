@@ -158,12 +158,6 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	scrambler_setup(&cnetz->scrambler_tx, (double)cnetz->sender.samplerate / 1.1); 
 	scrambler_setup(&cnetz->scrambler_rx, (double)cnetz->sender.samplerate / 1.1);
 
-	/* reinit jitter buffer for 8000 kHz */
-	jitter_destroy(&cnetz->sender.dejitter);
-	rc = jitter_create(&cnetz->sender.dejitter, 8000 / 5);
-	if (rc < 0)
-		goto error;
-
 	/* init compandor, according to C-Netz specs, attack and recovery time
 	 * shall not exceed according to ITU G.162 */
 	init_compandor(&cnetz->cstate, 8000, 5.0, 22.5);
@@ -172,7 +166,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	cnetz->offset_range = ceil(cnetz->fsk_bitduration);
 
 #ifdef TEST_SCRAMBLE
-	rc = jitter_create(&scrambler_test_jb, cnetz->sender.samplerate / 5);
+	rc = jitter_create(&scrambler_test_jb, "scramble", cnetz->sender.samplerate, sizeof(sample_t), JITTER_AUDIO);
 	if (rc < 0) {
 		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Failed to init jitter buffer for scrambler test!\n");
 		exit(0);
@@ -577,7 +571,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 #ifdef TEST_UNSCRAMBLE
 	scrambler(&scrambler_test_scrambler1, samples, length);
 #endif
-	jitter_save(&scrambler_test_jb, samples, length);
+	jitter_save(&scrambler_test_jb, samples, length, 0, 0, 0, 0);
 	return;
 #endif
 
@@ -598,7 +592,8 @@ static int shrink_speech(cnetz_t *cnetz, sample_t *speech_buffer)
 	/* 1. compress dynamics */
 	compress_audio(&cnetz->cstate, speech_buffer, 100);
 	/* 2. upsample */
-	speech_length = samplerate_upsample(&cnetz->sender.srstate, speech_buffer, 100, speech_buffer);
+	speech_length = samplerate_upsample_output_num(&cnetz->sender.srstate, 100);
+	samplerate_upsample(&cnetz->sender.srstate, speech_buffer, 100, speech_buffer, speech_length);
 	/* 3. scramble */
 	if (cnetz->scrambler)
 		scrambler(&cnetz->scrambler_tx, speech_buffer, speech_length);

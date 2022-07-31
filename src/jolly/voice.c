@@ -11072,7 +11072,7 @@ int init_voice(int samplerate)
 {
 	samplerate_t srstate;
 	sample_t spl_in[CHUNK], *spl_out;
-	int i, s, j, chunk, count;
+	int i, s, j, chunk, count, output_num;
 	int rc;
 
 	jolly_voice.spl[0] = (sample_t *)digit_0;
@@ -11109,7 +11109,8 @@ int init_voice(int samplerate)
 	}
 
 	for (i = 0; i < 13; i++) {
-		spl_out = calloc(((double)jolly_voice.size[i] * srstate.factor + 0.5) + 10, sizeof(*spl_out));
+		output_num = samplerate_upsample_output_num(&srstate, jolly_voice.size[i]);
+		spl_out = calloc(output_num, sizeof(*spl_out));
 		count = 0;
 		for (s = 0; s < jolly_voice.size[i]; s += CHUNK) {
 			chunk = jolly_voice.size[i] - s;
@@ -11117,7 +11118,8 @@ int init_voice(int samplerate)
 				chunk = CHUNK;
 			for (j = 0; j < chunk; j++)
 				spl_in[j] = (double)(((int16_t *)(jolly_voice.spl[i]))[s + j]) / 32767.0 * GAIN;
-			count += samplerate_upsample(&srstate, spl_in, chunk, spl_out + count);
+			samplerate_upsample(&srstate, spl_in, chunk, spl_out + count, output_num);
+			count += output_num;
 		}
 		jolly_voice.spl[i] = spl_out;
 		jolly_voice.size[i] = count;

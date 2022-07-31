@@ -361,7 +361,7 @@ static void metering_tone(bnetz_t *bnetz, sample_t *samples, int length)
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	bnetz_t *bnetz = (bnetz_t *) sender;
-	int count;
+	int count, input_num;
 
 	memset(power, 1, length);
 
@@ -372,7 +372,9 @@ again:
 		break;
 	case DSP_MODE_AUDIO:
 	case DSP_MODE_AUDIO_METER:
-		jitter_load(&bnetz->sender.dejitter, samples, length);
+		input_num = samplerate_upsample_input_num(&sender->srstate, length);
+		jitter_load(&sender->dejitter, samples, input_num);
+		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		if (bnetz->dsp_mode == DSP_MODE_AUDIO_METER)
 			metering_tone(bnetz, samples, length);
 		break;
