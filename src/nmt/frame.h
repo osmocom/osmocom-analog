@@ -18,6 +18,7 @@ enum nmt_mt {
 	NMT_MESSAGE_4b,
 	NMT_MESSAGE_5a,
 	NMT_MESSAGE_5b,
+	NMT_MESSAGE_5c,
 	NMT_MESSAGE_6,
 	NMT_MESSAGE_7,
 	NMT_MESSAGE_8,
@@ -51,7 +52,7 @@ enum nmt_mt {
 	NMT_MESSAGE_28,
 	NMT_MESSAGE_30,
 	NMT_MESSAGE_UKN_MTX,
-	NMT_MESSAGE_UKN_B,
+	NMT_MESSAGE_UKN_BS_MS,
 };
 	
 typedef struct frame {
@@ -79,6 +80,7 @@ typedef struct frame {
 	uint16_t	c;
 	uint8_t		seq_number;
 	uint16_t	checksum;
+	uint64_t	waiting_info;
 } frame_t;
 
 int init_frame(void);

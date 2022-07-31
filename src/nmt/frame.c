@@ -315,6 +315,7 @@ static struct nmt_frame {
 	{ NMT_MESSAGE_4b,	"NNNPYYJJJJJJJHHH", MTX_TO_MS, 7,	"4b",	"Access channel indication" },
 	{ NMT_MESSAGE_5a,	"NNNPYYZXXXXXXLLL", MTX_TO_MS, 6,	"5a",	"Line signal" },
 	{ NMT_MESSAGE_5b,	"NNNPYYZXXXXXXLQQ", MTX_TO_MS, 6,	"5b",	"Line signal: Answer to coin-box" },
+	{ NMT_MESSAGE_5c,	"NNNPYYZXXXXXXFFF", MTX_TO_MS, 2,	"5c",	"Line signal: Message(s) waiting" },
 	{ NMT_MESSAGE_6,	"JJJPJJJJJJJJJJJJ", MTX_TO_XX, 0,	"6",	"Idle frame" },
 	{ NMT_MESSAGE_7,	"NNNPYYCCCCCCCJJJ", MTX_TO_MS, 8,	"7",	"Authentication request" },
 	{ NMT_MESSAGE_8,	"NNNPYYMHHHHHHHWW", MTX_TO_MS, 1,	"8",	"A-subscriber number" },
@@ -323,7 +324,7 @@ static struct nmt_frame {
 	{ NMT_MESSAGE_10c,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 6,	"10c",	"Seizure and identity from called MS on traffic channel" },
 	{ NMT_MESSAGE_10d,	"NNNPZXXXXXXTJJJJ", MS_TO_MTX, 6,	"10d",	"Call acknowledgement from MS on the alternative type of call on combined CC/TC (shortened frame)" },
 	{ NMT_MESSAGE_11a,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 14,	"11a",	"Roaming updating seizure and identity on traffic channel" },
-	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgment on calling channel from MS with priority (shortened frame)" },
+	{ NMT_MESSAGE_11b,	"NNNPZXXXXXXTYJJJ", MS_TO_MTX, 15,	"11b",	"Seizure and call achnowledgment on calling channel from MS with priority (shortened frame)" },
 	{ NMT_MESSAGE_12,	"NNNPZXXXXXXTYKKK", MS_TO_MTX, 11,	"12",	"Seizure from coin-box on traffic channel" },
 	{ NMT_MESSAGE_13a,	"NNNPZXXXXXXLLLLL", MS_TO_MTX, 8,	"13a",	"Line signal" },
 	{ NMT_MESSAGE_13b,	"NNNPZXXXXXXLLLQQ", MS_TO_MTX, 8,	"13b",	"Line signal: Answer acknowledgment from coin box" },
@@ -348,7 +349,7 @@ static struct nmt_frame {
 	{ NMT_MESSAGE_28,	"NNNPZJJVVVVJJJJJ", BS_TO_MTX, 13,	"28",	"Other maintenance information from BS" },
 	{ NMT_MESSAGE_30,	"NNNPYYJJJJJJJHHH", MTX_TO_MS, 10,	"30",	"Test channel indication" },
 	{ NMT_MESSAGE_UKN_MTX,	"---P------------", MTX_TO_XX, 0,	"",	"illegal (Spare)" },
-	{ NMT_MESSAGE_UKN_B,	"---P------------", XX_TO_MTX, 0,	"",	"illegal (Spare)" },
+	{ NMT_MESSAGE_UKN_BS_MS,"---P------------", XX_TO_MTX, 0,	"",	"illegal (Spare)" },
 	{ 0, NULL, 0, 0, NULL, NULL }
 };
 
@@ -619,6 +620,27 @@ static const char *param_password(uint64_t value, int ndigits, enum nmt_directio
 	return result;
 }
 
+static const char *param_waiting(uint64_t value, int __attribute__((unused)) ndigits, enum nmt_direction __attribute__((unused)) direction)
+{
+	static char result[128];
+
+	if (value & 0x01)
+		strcat(result, "SMS ");
+	if (value & 0x02)
+		strcat(result, "voice-mail ");
+	if (value & 0x04)
+		strcat(result, "fax ");
+	if (value & 0x08)
+		strcat(result, "e-mail ");
+	if (value & 0x10)
+		strcat(result, "data ");
+	if (value & 0x20)
+		strcat(result, "(spare) ");
+	strcat(result, " is waiting");
+
+	return result;
+}
+
 static struct nmt_parameter {
 	int system;
 	char digit;
@@ -633,7 +655,7 @@ static struct nmt_parameter {
 	{ 900,	'Y',	"Traffic area",			param_ta_900 },
 	{ 0,	'Z',	"Mobile subscriber country",	param_country },
 	{ 0,	'X',	"Mobile subscriber No.",	param_number },
-	{ 0,	'Q',	"Tariff class",			param_integer },
+	{ 0,	'Q',	"Tariff class",			param_hex },
 	{ 0,	'L',	"Line signal",			param_line_signal },
 	{ 0,	'S',	"Digit signals",		param_digit },
 	{ 0,	'J',	"Idle information",		param_hex },
@@ -651,6 +673,7 @@ static struct nmt_parameter {
 	{ 0,	'c',	"c",				param_hex },
 	{ 0,	'M',	"Sequence Number",		param_integer },
 	{ 0,	'W',	"Checksum",			param_hex },
+	{ 0,	'F',	"Addit. Info.",			param_waiting },
 	{ 0,	0,	NULL,				NULL }
 };
 
@@ -714,7 +737,7 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 		case 15:
 			return NMT_MESSAGE_11b;
 		}
-		return NMT_MESSAGE_UKN_B;
+		return NMT_MESSAGE_UKN_BS_MS;
 	} else {
 		/* MTX to MS/BS */
 		switch (digits[3]) {
@@ -723,7 +746,7 @@ enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction,
 		case 1:
 			return NMT_MESSAGE_8;
 		case 2:
-			break;
+			return NMT_MESSAGE_5c;
 		case 3:
 			if (digits[6] == 15)
 				return NMT_MESSAGE_21b;
@@ -956,6 +979,9 @@ static void disassemble_frame(int nmt_system, frame_t *frame, const uint8_t *dig
 		case 'W':
 			frame->checksum = value;
 			break;
+		case 'F':
+			frame->waiting_info = value;
+			break;
 		default:
 			PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
 			abort();
@@ -1082,6 +1108,9 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 			break;
 		case 'W':
 			value = frame->checksum;
+			break;
+		case 'F':
+			value = frame->waiting_info;
 			break;
 		default:
 			PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' does not exist, please fix!\n", digit);

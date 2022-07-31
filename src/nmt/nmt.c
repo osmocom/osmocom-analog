@@ -393,15 +393,15 @@ void nmt_check_channels(int __attribute__((unused)) nmt_system)
 	if ((cca || ccb) && !tc) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call is possible.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use at least one 'TC'!\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** No registration and no call is possible.\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use at least one 'TC' or use combined 'CC/TC'!\n");
 		note = 1;
 	}
 	if (tc && !(cca || ccb)) {
 		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
 		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC'!\n");
+		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' or use combined 'CC/TC'!\n");
 		note = 1;
 	}
 	if (cca && !ccb) {
