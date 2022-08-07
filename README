@@ -24,10 +24,12 @@ Additionally the following communication services are implemented:
 
  * TV Transmitter with test Images
  * Radio transmitter / receiver
- * Analog Modem Emulation (AM7911)
+ * Analog Modem Emulation 'Datenklo' (AM7911)
  * German classic 'Zeitansage' (talking clock)
  * POCSAG transmitter / receiver
  * DCF77 time signal transmitter and receiver
+ * C-Netz SIM emulator
+ * C-Netz magnetic card emulator
 
 USE AT YOUR OWN RISK!
 
@@ -66,10 +68,10 @@ providing memory cards to be programmed for older C-Netz phone.
 
 Dieter Spaar providing TACS recordings to verify and debug TACS support.
 
-Hans Wigger providing Radiocom 2000 recordings, to reverse-enigeer the standard,
-which seems not to exist anymore...
+Hans Wigger providing Radiocom 2000 recordings, to reverse-enigineer the
+standard, which seems not to exist anymore...
 
-Peter, Peter and Friedhelm and Stephan for providing documentation and hardware
+Peter, Peter, Friedhelm and Stephan for providing documentation and hardware
 for C-Netz Base Station and other C-Netz documents.
 
 Carsten Wollesen for donating MPT1327 radios and programming tools.
