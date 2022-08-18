@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "../libsample/sample.h"
+#include "../libfilter/iir_filter.h"
+#include "bas.h"
 #include "color.h"
 
 #define RAMP_WIDTH	0.0000002
@@ -38,12 +40,40 @@ static struct color_bar {
 	{0.0, 0.0},
 };
 
-int color_gen_line(sample_t *sample, double x, double samplerate, sample_t *color_u, sample_t *color_v, int v_polarity, double line_start, double line_end)
+int color_gen_line(sample_t *sample, double x, double samplerate, sample_t *color_u, sample_t *color_v, int v_polarity, double line_start, double line_end, enum bas_type type)
 {
-	int b = 5;
+	int b;
 	double step = 1.0 / samplerate;
 	int i = 0;
 	double amplitude, Y, U, V, colorphase;
+
+	switch (type) {
+	case BAS_WHITE:
+		b = 0;
+		break;
+	case BAS_YELLOW:
+		b = 1;
+		break;
+	case BAS_CYAN:
+		b = 2;
+		break;
+	case BAS_GREEN:
+		b = 3;
+		break;
+	case BAS_MAGENTA:
+		b = 4;
+		break;
+	case BAS_RED:
+		b = 5;
+		break;
+	case BAS_BLUE:
+		b = 6;
+		break;
+	case BAS_BLACK:
+	default:
+		b = 7;
+		break;
+	}
 
 	/* skip x to line_start */
 	while (x < line_start && x < line_end) {

@@ -90,8 +90,15 @@ void print_help(const char *arg0)
 	printf("        tx-fubk          Transmit FUBK test image (German PAL image)\n");
 	printf("        tx-ebu           Transmit EBU test image (color bars)\n");
 	printf("        tx-convergence   Transmit convergence grid for color adjustemnt\n");
-	printf("        tx-red           Transmit single color image for DY adjustment\n");
-	printf("        tx-vcr           Transmit VCR calibration pattern\n");
+	printf("        tx-black         Transmit single color image\n");
+	printf("        tx-blue          Transmit single color image\n");
+	printf("        tx-red           Transmit single color image (for DY adjustment)\n");
+	printf("        tx-magenta       Transmit single color image\n");
+	printf("        tx-green         Transmit single color image\n");
+	printf("        tx-cyan          Transmit single color image\n");
+	printf("        tx-yellow        Transmit single color image\n");
+	printf("        tx-white         Transmit single color image\n");
+	printf("        tx-vcr           Transmit Jolly's VCR test pattern\n");
 	printf("        tx-img [<image>] Transmit natural image or given image file\n");
 	printf("                         Use 4:3 image with 574 lines for best result.\n");
 	printf("\ngeneral options:\n");
@@ -528,8 +535,22 @@ int main(int argc, char *argv[])
 		tx_test_picture(BAS_EBU);
 	} else if (!strcmp(argv[argi], "tx-convergence")) {
 		tx_test_picture(BAS_CONVERGENCE);
+	} else if (!strcmp(argv[argi], "tx-black")) {
+		tx_test_picture(BAS_BLACK);
+	} else if (!strcmp(argv[argi], "tx-blue")) {
+		tx_test_picture(BAS_BLUE);
 	} else if (!strcmp(argv[argi], "tx-red")) {
 		tx_test_picture(BAS_RED);
+	} else if (!strcmp(argv[argi], "tx-magenta")) {
+		tx_test_picture(BAS_MAGENTA);
+	} else if (!strcmp(argv[argi], "tx-green")) {
+		tx_test_picture(BAS_GREEN);
+	} else if (!strcmp(argv[argi], "tx-cyan")) {
+		tx_test_picture(BAS_CYAN);
+	} else if (!strcmp(argv[argi], "tx-yellow")) {
+		tx_test_picture(BAS_YELLOW);
+	} else if (!strcmp(argv[argi], "tx-white")) {
+		tx_test_picture(BAS_WHITE);
 	} else if (!strcmp(argv[argi], "tx-vcr")) {
 		tx_test_picture(BAS_VCR);
 	} else if (!strcmp(argv[argi], "tx-img")) {

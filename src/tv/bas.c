@@ -119,12 +119,19 @@ int bas_generate(bas_t *bas, sample_t *sample)
 				/* render color convergence test image */
 				convergence_gen_line(sample, x, bas->samplerate, H_LINE_START, H_LINE_END, middlefield_line, (bas->grid_width) > 1 ? 1.0: 0.5);
 				break;
+			case BAS_BLACK:
+			case BAS_BLUE:
 			case BAS_RED:
-				/* render (thin) color convergence test image */
-				color_gen_line(sample, x, bas->samplerate, color_u, color_v, bas->v_polarity, H_LINE_START, H_LINE_END);
+			case BAS_MAGENTA:
+			case BAS_GREEN:
+			case BAS_CYAN:
+			case BAS_YELLOW:
+			case BAS_WHITE:
+				/* single color test image */
+				color_gen_line(sample, x, bas->samplerate, color_u, color_v, bas->v_polarity, H_LINE_START, H_LINE_END, bas->type);
 				break;
 			case BAS_EBU:
-				/* render (thin) color convergence test image */
+				/* EBU test image */
 				ebu_gen_line(sample, x, bas->samplerate, color_u, color_v, bas->v_polarity, H_LINE_START, H_LINE_END);
 				break;
 			case BAS_IMAGE: {
