@@ -94,15 +94,60 @@ int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 	return output_num;
 }
 
-/* convert low sample rate to high sample rate */
-int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sample_t *output)
+int samplerate_upsample_input_num(samplerate_t *state, int output_num)
 {
-	int output_num = 0, i, idx;
-	double factor = 1.0 / state->factor, in_index, diff;
-	sample_t buff[(int)((double)input_num / factor + 0.5) + 10]; /* add some safety */
-	sample_t *samples, last_sample;
+	double factor = 1.0 / state->factor, in_index;
+	int idx = 0;
+
+	/* count output */
+	in_index = state->up.in_index;
+
+	while (output_num--) {
+		/* increment input index */
+		in_index += factor;
+		/* count index on overflow */
+		if (in_index >= 1.0) {
+			idx++;
+			in_index -= 1.0;
+		}
+	}
+
+	return idx;
+}
+
+int samplerate_upsample_output_num(samplerate_t *state, int input_num)
+{
+	double factor = 1.0 / state->factor, in_index;
+	int output_num = 0, idx = 0;
+
+	/* count output */
+	in_index = state->up.in_index;
+
+	while (idx < input_num) {
+		/* count output number */
+		output_num++;
+		/* increment input index */
+		in_index += factor;
+		/* count index on overflow */
+		if (in_index >= 1.0) {
+			idx++;
+			in_index -= 1.0;
+		}
+	}
+
+	return output_num;
+}
+
+/* convert low sample rate to high sample rate */
+void samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sample_t *output, int output_num)
+{
+	int i, idx;
+	double factor = 1.0 / state->factor, in_index;
+	sample_t buff[output_num];
+	sample_t *samples, current_sample, last_sample;
 
 	/* get last sample for interpolation */
+	current_sample = state->up.current_sample;
 	last_sample = state->up.last_sample;
 
 	if (input == output)
@@ -112,35 +157,31 @@ int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sam
 
 	/* resample input */
 	in_index = state->up.in_index;
+	idx = 0;
 
-	for (i = 0; ; i++) {
-		/* convert index to int */
-		idx = (int)in_index;
-		/* if index is outside input sample range, we are done */
-		if (idx >= input_num)
-			break;
+	for (i = 0; i < output_num; i++) {
 		/* linear interpolation */
-		diff = in_index - (double)idx;
-		if (idx)
-			samples[i] = input[idx - 1] * (1.0 - diff) + input[idx] * diff;
-		else
-			samples[i] = last_sample * (1.0 - diff) + input[idx] * diff;
-		/* count output number */
-		output_num++;
+		samples[i] = last_sample * (1.0 - in_index) + current_sample * in_index;
 		/* increment input index */
 		in_index += factor;
+		/* get next sample on overflow */
+		if (in_index >= 1.0) {
+			if (idx == input_num) {
+				fprintf(stderr, "Given input_num is too small, please fix!\n");
+			}
+			last_sample = current_sample;
+			current_sample = input[idx++];
+			in_index -= 1.0;
+		}
+	}
+	if (idx < input_num) {
+		fprintf(stderr, "Given input_num is too large, please fix!\n");
+		abort();
 	}
 
 	/* store last sample for interpolation */
-	if (input_num)
-		state->up.last_sample = input[input_num - 1];
-
-	/* remove number of input samples from index */
-	in_index -= (double)input_num;
-	/* in_index cannot be negative, except due to rounding error, so... */
-	if ((int)in_index < 0)
-		in_index = 0.0;
-
+	state->up.last_sample = last_sample;
+	state->up.current_sample = current_sample;
 	state->up.in_index = in_index;
 
 	/* filter up */
@@ -151,7 +192,5 @@ int samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sam
 		for (i = 0; i < output_num; i++)
 			*output++ = samples[i];
 	}
-
-	return output_num;
 }
 

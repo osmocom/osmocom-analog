@@ -9,6 +9,7 @@ typedef struct samplerate {
 	} down;
 	struct {
 		iir_filter_t lp;
+		sample_t current_sample;
 		sample_t last_sample;
 		double in_index;
 	} up;
