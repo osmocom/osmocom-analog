@@ -239,10 +239,7 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
-static const struct number_lengths number_lengths[] = {
-	{ 10, "AMPS number" },
-	{ 0, NULL }
-};
+extern const struct number_lengths number_lengths[];
 
 int main_amps_tacs(const char *name, int argc, char *argv[])
 {
@@ -250,6 +247,10 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 	const char *station_id = "";
 	int polarity;
 	int i;
+
+	/* jtacs has only system A, so there are only odd AIDs */
+	if (jtacs)
+		sid = 1;
 
 	/* override default */
 	dsp_samplerate = 96000;
@@ -280,7 +281,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 	}
 
 	if (!num_kanal) {
-		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", (!tacs) ? 333 : 323);
+		printf("No channel (\"Kanal\") is specified, I suggest channel %d.\n\n", (!tacs) ? 333 : ((!jtacs) ? 323 : 418));
 		print_help(argv[0]);
 		return 0;
 	}

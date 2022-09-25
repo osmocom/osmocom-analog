@@ -105,7 +105,7 @@ double amps_channel2freq(int channel, int uplink)
 		/* JTACS */
 		/* see "ARIB_STD-T64-C.S0057-0v1.0.pdf" */
 		if (uplink == 2)
-			return -55.000 * 1e6;
+			return 55.000 * 1e6;
 
 		/* 799 channels */
 		if (channel >= 1 && channel <= 799)
@@ -130,12 +130,18 @@ double amps_channel2freq(int channel, int uplink)
 enum amps_chan_type amps_channel2type(int channel)
 {
 	if (!tacs) {
+		/* AMPS */
 		if (channel >= 313 && channel <= 354)
 			return CHAN_TYPE_CC;
-	} else {
+	} else if (!jtacs) {
+		/* TACS */
 		if (channel >= 23 && channel <= 43)
 			return CHAN_TYPE_CC;
 		if (channel >= 323 && channel <= 343)
+			return CHAN_TYPE_CC;
+	} else {
+		/* JTACS */
+		if (channel >= 418 && channel <= 456)
 			return CHAN_TYPE_CC;
 	}
 
@@ -145,6 +151,7 @@ enum amps_chan_type amps_channel2type(int channel)
 const char *amps_channel2band(int channel)
 {
 	if (!tacs) {
+		/* AMPS */
 		if (channel >= 991 && channel <= 1023)
 			return "A''";
 		if (channel >= 1 && channel <= 333)
@@ -155,11 +162,15 @@ const char *amps_channel2band(int channel)
 			return "A'";
 		if (channel >= 717 && channel <= 799)
 			return "B'";
-	} else {
+	} else if (!jtacs) {
+		/* TACS */
 		if (channel >= 1 && channel <= 300)
 			return "A";
 		if (channel >= 301 && channel <= 600)
 			return "B";
+	} else {
+		/* JTACS */
+		return "A";
 	}
 
 	return "<invalid>";
@@ -213,12 +224,12 @@ void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2)
 	}
 
 	if (!tacs) {
-		/* MIN1 */
+		/* MIN1 (amps) */
 		*min1 = ((uint32_t)(digit2binary(number[0]) * 100 + digit2binary(number[1]) * 10 + digit2binary(number[2]) - 111)) << 14;
 		*min1 |= digit2binary(number[3]) << 10;
 		*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
 	} else {
-		/* MIN1 */
+		/* MIN1 (tacs/jtacs) */
 		*min1 = digit2binary(number[0]) << 20;
 		*min1 |= (digit2binary(number[1]) * 100 + digit2binary(number[2]) * 10 + digit2binary(number[3]) - 111) << 10;
 		*min1 |= digit2binary(number[4]) * 100 + digit2binary(number[5]) * 10 + digit2binary(number[6]) - 111;
@@ -228,6 +239,8 @@ void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2)
 /* AMPS: convert MIN1 and MIN2 to NPA-NXX-XXXX
  */
 /* TACS: convert MIN1 and MIN2 to AREA-XXXXXXX
+ */
+/* JTACS: convert MIN1 and MIN2 to NET-XXXXXXX (NET = mobile network code, always 440)
  */
 const char *amps_min22number(uint16_t min2)
 {
@@ -251,7 +264,7 @@ const char *amps_min12number(uint32_t min1)
 	static char number[8];
 
 	if (!tacs) {
-		/* MIN1 */
+		/* MIN1 (amps) */
 		if ((min1 >> 14) > 999)
 			strcpy(number, "???");
 		else {
@@ -271,7 +284,7 @@ const char *amps_min12number(uint32_t min1)
 			number[6] = binary2digit(((min1 & 0x3ff) % 10) + 1);
 		}
 	} else {
-		/* MIN1 */
+		/* MIN1 (tacs/jtacs) */
 		if ((min1 >> 20) < 1 || (min1 >> 20) > 10)
 			number[0] = '?';
 		else
@@ -515,6 +528,8 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 	/* check for channel number */
 	if (amps_channel2freq(atoi(kanal), 0) == 0) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s invalid.\n", kanal);
+		if (jtacs)
+			PDEBUG(DAMPS, DEBUG_ERROR, "Try an even channel number, like 440.\n");
 		return -EINVAL;
 	}
 
@@ -542,6 +557,11 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 	}
 	if (ct == CHAN_TYPE_VC && chan_type != CHAN_TYPE_VC) {
 		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", kanal, chan_type_long_name(chan_type));
+		return -EINVAL;
+	}
+	/* only even channels */
+	if (jtacs && chan_type != CHAN_TYPE_VC && (atoi(kanal) & 1)) {
+		PDEBUG(DAMPS, DEBUG_ERROR, "Control channel on JTACS system seem not to work with odd channel numbers. Please use even channel number.\n");
 		return -EINVAL;
 	}
 

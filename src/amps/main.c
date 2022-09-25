@@ -5,9 +5,15 @@
 #include "outoforder.h"
 #include "invalidnumber.h"
 #include "congestion.h"
+#include "../libmobile/main_mobile.h"
 
 const int tacs = 0;
 const int jtacs = 0;
+
+const struct number_lengths number_lengths[] = {
+	{ 10, "AMPS number (NPA-XXX-XXXX)" },
+	{ 0, NULL }
+};
 
 const char *number_prefixes[] = {
 	"1xxxxxxxxxx",
