@@ -25,6 +25,7 @@
  * of 16 bits signed value:
  */
 static double int_16_speech_level = SPEECH_LEVEL * 0.7079; /* 16 dBm below dBm0, which is about 3dBm below full 16 bit range */
+static double int_16_1mw_level = 0.7079; /* dBm0, 3dBm below full 16 bit range */
 
 /* A sample_t is a value that has virtually infinite precision but will also
  * support high numbers. 'double' or 'float' types are sufficient.
@@ -40,7 +41,8 @@ static double int_16_speech_level = SPEECH_LEVEL * 0.7079; /* 16 dBm below dBm0,
  * envelope is network dependent.
  */
 
-void samples_to_int16(int16_t *spl, sample_t *samples, int length)
+/* sample conversion relative to SPEECH level */
+void samples_to_int16_speech(int16_t *spl, sample_t *samples, int length)
 {
 	int32_t value;
 
@@ -55,10 +57,33 @@ void samples_to_int16(int16_t *spl, sample_t *samples, int length)
 	}
 }
 
-void int16_to_samples(sample_t *samples, int16_t *spl, int length)
+void int16_to_samples_speech(sample_t *samples, int16_t *spl, int length)
 {
 	while (length--) {
 		*samples++ = (double)(*spl++) / 32767.0 / int_16_speech_level;
+	}
+}
+
+/* sample conversion relative to 1mW level */
+void samples_to_int16_1mw(int16_t *spl, sample_t *samples, int length)
+{
+	int32_t value;
+
+	while (length--) {
+		value = *samples++ * int_16_1mw_level * 32768.0;
+		if (value > 32767.0)
+			*spl++ = 32767;
+		else if (value < -32767.0)
+			*spl++ = -32767;
+		else
+			*spl++ = (uint16_t)value;
+	}
+}
+
+void int16_to_samples_1mw(sample_t *samples, int16_t *spl, int length)
+{
+	while (length--) {
+		*samples++ = (double)(*spl++) / 32767.0 / int_16_1mw_level;
 	}
 }
 

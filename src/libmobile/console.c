@@ -148,7 +148,7 @@ void up_audio(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uin
 
 	/* save audio from transceiver to jitter buffer */
 	if (console.sound) {
-		int16_to_samples(samples, (int16_t *)data, count);
+		int16_to_samples_speech(samples, (int16_t *)data, count);
 		jitter_save(&console.dejitter, samples, count, 1, sequence_number, timestamp, ssrc);
 		return;
 	}
@@ -627,7 +627,7 @@ void process_console(int c)
 				/* only if we have a call */
 				if (console.callref && console.codec) {
 					int16_t data[160];
-					samples_to_int16(data, console.tx_buffer, 160);
+					samples_to_int16_speech(data, console.tx_buffer, 160);
 					osmo_cc_rtp_send(console.codec, (uint8_t *)data, 160 * 2, 1, 160);
 				}
 			}

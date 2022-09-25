@@ -506,7 +506,7 @@ static void call_play_announcement(euro_call_t *call)
 		else
 			chunk[i] = 0.0;
 	}
-	int16_to_samples(spl, chunk, 160);
+	int16_to_samples_speech(spl, chunk, 160);
 	call_up_audio(call->callref, spl, 160);
 }
 

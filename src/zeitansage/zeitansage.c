@@ -296,7 +296,7 @@ next_sample:
 	call->spl_time = spl_time;
 
 	/* convert to samples, apply gain and send toward fixed network */
-	int16_to_samples(spl, chunk, 160);
+	int16_to_samples_speech(spl, chunk, 160);
 	for (i = 0; i < 160; i++)
 		spl[i] *= audio_gain;
 	call_up_audio(call->callref, spl, 160);

@@ -395,7 +395,7 @@ void down_audio(struct osmo_cc_session_codec *codec, uint16_t sequence_number, u
 	/* if we are disconnected, ignore audio */
 	if (!process || process->pattern != PATTERN_NONE)
 		return;
-	int16_to_samples(samples, (int16_t *)data, len / 2);
+	int16_to_samples_speech(samples, (int16_t *)data, len / 2);
 #ifdef DEBUG_LEVEL
 	double lev = level_of(samples, len / 2);
 	printf("festnetz-level: %s                  %.4f\n", debug_db(lev), (20 * log10(lev)));
@@ -621,7 +621,7 @@ void call_up_audio(int callref, sample_t *samples, int count)
 	double lev = level_of(samples, count);
 	printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
 #endif
-	samples_to_int16(data, samples, count);
+	samples_to_int16_speech(data, samples, count);
 	osmo_cc_rtp_send(process->codec, (uint8_t *)data, count * 2, 1, count);
 	/* don't destroy process here in case of an error */
 }
