@@ -98,6 +98,12 @@ void dtmf_decode_exit(dtmf_dec_t *dtmf)
 	fm_demod_exit(&dtmf->demod_high);
 }
 
+void dtmf_decode_reset(dtmf_dec_t *dtmf)
+{
+	dtmf->detected = 0;
+	dtmf->count = 0;
+}
+
 void dtmf_decode_filter(dtmf_dec_t *dtmf, sample_t *samples, int length, sample_t *frequency_low, sample_t *frequency_high, sample_t *amplitude_low, sample_t *amplitude_high)
 {
 	sample_t I_low[length], Q_low[length];

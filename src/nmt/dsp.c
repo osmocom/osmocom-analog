@@ -356,16 +356,20 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 
 	if ((nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF)
 	 && nmt->trans && nmt->trans->callref) {
-		int count;
+		int len, count;
 
-		count = samplerate_downsample(&nmt->sender.srstate, samples, length);
+		len = samplerate_downsample(&nmt->sender.srstate, samples, length);
 		if (nmt->compandor)
-			expand_audio(&nmt->cstate, samples, count);
-		if (nmt->dsp_mode == DSP_MODE_DTMF)
-			dtmf_encode(&nmt->dtmf, samples, count);
+			expand_audio(&nmt->cstate, samples, len);
+		if (nmt->dsp_mode == DSP_MODE_DTMF) {
+			/* encode and fill with silence after finish */
+			count = dtmf_encode(&nmt->dtmf, samples, len);
+			if (count < len)
+				memset(samples + count, 0, sizeof(*samples) * (len - count));
+		}
 		spl = nmt->sender.rxbuf;
 		pos = nmt->sender.rxbuf_pos;
-		for (i = 0; i < count; i++) {
+		for (i = 0; i < len; i++) {
 			spl[pos++] = samples[i];
 			if (pos == 160) {
 				call_up_audio(nmt->trans->callref, spl, 160);

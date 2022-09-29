@@ -27,10 +27,6 @@
 
 #define PEAK_DTMF_LOW	0.2818	/* -11 dBm, relative to 0 dBm level */ 
 #define PEAK_DTMF_HIGH	0.3548	/* -9 dBm, relative to 0 dBm level */ 
-#define DTMF_DURATION	0.100	/* duration in seconds */
-
-static sample_t dsp_sine_dtmf_low[65536];
-static sample_t dsp_sine_dtmf_high[65536];
 
 void dtmf_encode_init(dtmf_enc_t *dtmf, int samplerate, double dBm_level)
 {
@@ -38,17 +34,15 @@ void dtmf_encode_init(dtmf_enc_t *dtmf, int samplerate, double dBm_level)
 
 	memset(dtmf, 0, sizeof(*dtmf));
 	dtmf->samplerate = samplerate;
-	dtmf->max = (int)((double)samplerate * DTMF_DURATION + 0.5);
 
-	// FIXME: do this globally and not per instance */
 	for (i = 0; i < 65536; i++) {
-		dsp_sine_dtmf_low[i] = sin((double)i / 65536.0 * 2.0 * PI) * PEAK_DTMF_LOW * dBm_level;
-		dsp_sine_dtmf_high[i] = sin((double)i / 65536.0 * 2.0 * PI) * PEAK_DTMF_HIGH * dBm_level;
+		dtmf->sine_low[i] = sin((double)i / 65536.0 * 2.0 * PI) * PEAK_DTMF_LOW * dBm_level;
+		dtmf->sine_high[i] = sin((double)i / 65536.0 * 2.0 * PI) * PEAK_DTMF_HIGH * dBm_level;
 	}
 }
 
 /* set dtmf tone */
-void dtmf_encode_set_tone(dtmf_enc_t *dtmf, char tone)
+int dtmf_encode_set_tone(dtmf_enc_t *dtmf, char tone, double on_duration, double off_duration)
 {
 	double f1, f2;
 
@@ -71,53 +65,66 @@ void dtmf_encode_set_tone(dtmf_enc_t *dtmf, char tone)
 	case'd':case 'D': f1 = 941.0; f2 = 1633.0; break;
 	default:
 		dtmf->tone = 0;
-		return;
+		return -1;
 	}
 	dtmf->tone = tone;
 	dtmf->pos = 0;
+	dtmf->on = (int)((double)dtmf->samplerate * on_duration);
+	dtmf->off = dtmf->on + (int)((double)dtmf->samplerate * off_duration);
 	dtmf->phaseshift65536[0] = 65536.0 / ((double)dtmf->samplerate / f1);
 	dtmf->phaseshift65536[1] = 65536.0 / ((double)dtmf->samplerate / f2);
+	dtmf->phase65536[0] = 0.0;
+	dtmf->phase65536[1] = 0.0;
+
+	return 0;
 }
 
-/* Generate audio stream from DTMF tone. Keep phase for next call of function. */
-void dtmf_encode(dtmf_enc_t *dtmf, sample_t *samples, int length)
+/* Generate audio stream from DTMF tone.
+ * Keep phase for next call of function.
+ * Stop, if tone has finished and return only the samples that were used.
+ */
+int dtmf_encode(dtmf_enc_t *dtmf, sample_t *samples, int length)
 {
         double *phaseshift, *phase;
-	int i, pos, max;
+	sample_t *sine_low, *sine_high;
+	int count = 0;
+	int i;
 
-	/* use silence, if no tone */
-	if (!dtmf->tone) {
-		memset(samples, 0, length * sizeof(*samples));
-		return;
-	}
+	/* if no tone */
+	if (!dtmf->tone)
+		return 0;
 
+	sine_low = dtmf->sine_low;
+	sine_high = dtmf->sine_high;
 	phaseshift = dtmf->phaseshift65536;
 	phase = dtmf->phase65536;
-	pos = dtmf->pos;
-	max = dtmf->max;
 
 	for (i = 0; i < length; i++) {
-		*samples++ = dsp_sine_dtmf_low[(uint16_t)phase[0]]
-			   + dsp_sine_dtmf_high[(uint16_t)phase[1]];
+		*samples++ = sine_low[(uint16_t)phase[0]]
+			   + sine_high[(uint16_t)phase[1]];
 		phase[0] += phaseshift[0];
-		if (phase[0] >= 65536)
-			phase[0] -= 65536;
+		if (phase[0] >= 65536.0)
+			phase[0] -= 65536.0;
 		phase[1] += phaseshift[1];
-		if (phase[1] >= 65536)
-			phase[1] -= 65536;
+		if (phase[1] >= 65536.0)
+			phase[1] -= 65536.0;
 
+		dtmf->pos++;
 		/* tone ends */
-		if (++pos == max) {
+		if (dtmf->pos == dtmf->on) {
+			phaseshift[0] = 0.0;
+			phaseshift[1] = 0.0;
+			phase[0] = 0.0;
+			phase[1] = 0.0;
+		}
+		/* pause ends */
+		if (dtmf->pos == dtmf->off) {
 			dtmf->tone = 0;
 			break;
 		}
 	}
-	length -= i;
+	count += i;
 
-	dtmf->pos = pos;
-
-	/* if tone ends, fill rest with silence */
-	if (length)
-		memset(samples, 0, length * sizeof(*samples));
+	return count;
 }
 

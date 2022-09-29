@@ -30,6 +30,7 @@ typedef struct dtmf_dec {
 
 int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv, char digit, dtmf_meas_t *meas), int samplerate, double max_amplitude, double min_amplitude);
 void dtmf_decode_exit(dtmf_dec_t *dtmf);
+void dtmf_decode_reset(dtmf_dec_t *dtmf);
 void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length);
 void dtmf_decode_filter(dtmf_dec_t *dtmf, sample_t *samples, int length, sample_t *frequency_low, sample_t *frequency_high, sample_t *amplitude_low, sample_t *amplitude_high);
 

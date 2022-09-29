@@ -1,3 +1,6 @@
+#ifndef _LIB_FSK_H
+#define _LIB_FSK_H
+
 #include "../libfm/fm.h"
 
 typedef struct fsk_mod {
@@ -41,3 +44,4 @@ int fsk_demod_init(fsk_demod_t *fsk, void *inst, void (*receive_bit)(void *inst,
 void fsk_demod_cleanup(fsk_demod_t *fsk);
 void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length);
 
+#endif /* _LIB_FSK_H */

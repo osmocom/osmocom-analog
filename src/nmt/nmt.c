@@ -58,6 +58,7 @@ static int sms_ref = 0;
 #define RINGING_TO	60.0	/* how long may the phone ring */
 #define SUPERVISORY_TO1	3.0	/* 3 sec to detect after setup */
 #define SUPERVISORY_TO2	20.0	/* 20 sec lost until abort */
+#define DTMF_DURATION	0.1	/* 100ms */
 
 /* Counters */
 #define PAGE_TRIES	3	/* How many time do we try to page the phone */
@@ -1519,7 +1520,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		}
 		digit = nmt_value2digit(frame->digit);
-		dtmf_encode_set_tone(&nmt->dtmf, digit);
+		dtmf_encode_set_tone(&nmt->dtmf, digit, DTMF_DURATION, 0.0);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (odd)  digit %c.\n", digit);
 		nmt->mft_num++;
 		break;
@@ -1542,7 +1543,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 			break;
 		}
 		digit = nmt_value2digit(frame->digit);
-		dtmf_encode_set_tone(&nmt->dtmf, digit);
+		dtmf_encode_set_tone(&nmt->dtmf, digit, DTMF_DURATION, 0.0);
 		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (even) digit %c.\n", digit);
 		nmt->mft_num++;
 		break;

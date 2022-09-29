@@ -96,7 +96,7 @@ int main(void)
 	for (i = 0; i < 16; i++) {
 		printf("Testing digit '%c' encoding and decoding:\n", test_digits[i]);
 		memset(samples, 0, sizeof(samples[0]) * SAMPLERATE);
-		dtmf_encode_set_tone(&dtmf_enc, test_digits[i]);
+		dtmf_encode_set_tone(&dtmf_enc, test_digits[i], 1.0, 0.0);
 		dtmf_encode(&dtmf_enc, samples + SAMPLERATE / 10, SAMPLERATE / 20);
 		got_digit = 0;
 		dtmf_decode(&dtmf_dec, samples, SAMPLERATE);

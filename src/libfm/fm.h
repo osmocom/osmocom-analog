@@ -1,3 +1,6 @@
+#ifndef _LIB_FM_H
+#define _LIB_FM_H
+
 #include "../libfilter/iir_filter.h"
 
 int fm_init(int fast_math);
@@ -38,3 +41,4 @@ void fm_demod_exit(fm_demod_t *demod);
 void fm_demodulate_complex(fm_demod_t *demod, sample_t *frequency, int length, float *baseband, sample_t *I, sample_t *Q);
 void fm_demodulate_real(fm_demod_t *demod, sample_t *frequency, int length, sample_t *baseband, sample_t *I, sample_t *Q);
 
+#endif /* _LIB_FM_H */
