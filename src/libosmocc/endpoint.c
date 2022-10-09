@@ -568,6 +568,18 @@ static void notify_ind(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	forward_to_ul(call, msg);
 }
 
+static void update_req(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
+{
+	/* to lower layer */
+	forward_to_ll(call, msg);
+}
+
+static void update_cnf(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
+{
+	/* to upper layer */
+	forward_to_ul(call, msg);
+}
+
 static void disc_req(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 {
 	/* change state */
@@ -853,6 +865,10 @@ static struct statemachine {
 	 OSMO_CC_MSG_INFO_IND, info_ind},
 	{SBIT(OSMO_CC_STATE_ACTIVE),
 	 OSMO_CC_MSG_INFO_REQ, info_req},
+	{SBIT(OSMO_CC_STATE_ACTIVE),
+	 OSMO_CC_MSG_UPDATE_REQ, update_req},
+	{SBIT(OSMO_CC_STATE_ACTIVE),
+	 OSMO_CC_MSG_UPDATE_CNF, update_cnf},
 
 	/* call release */
 	{SBIT(OSMO_CC_STATE_INIT_OUT) | SBIT(OSMO_CC_STATE_INIT_IN) |
