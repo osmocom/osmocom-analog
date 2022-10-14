@@ -387,7 +387,7 @@ static void process_timeout(struct timer *timer)
 	}
 }
 
-void down_audio(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len)
+void down_audio(struct osmo_cc_session_codec *codec, uint8_t __attribute__((unused)) marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len)
 {
 	process_t *process = codec->media->session->priv;
 	sample_t samples[len / 2];
@@ -622,7 +622,7 @@ void call_up_audio(int callref, sample_t *samples, int count)
 	printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
 #endif
 	samples_to_int16_speech(data, samples, count);
-	osmo_cc_rtp_send(process->codec, (uint8_t *)data, count * 2, 1, count);
+	osmo_cc_rtp_send(process->codec, (uint8_t *)data, count * 2, 0, 1, count);
 	/* don't destroy process here in case of an error */
 }
 
@@ -645,7 +645,7 @@ void call_clock(void)
 			printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
 			samples_to_int16(data, samples, 160);
 #endif
-			osmo_cc_rtp_send(process->codec, (uint8_t *)data, 160 * 2, 1, 160);
+			osmo_cc_rtp_send(process->codec, (uint8_t *)data, 160 * 2, 0, 1, 160);
 			/* don't destroy process here in case of an error */
 		}
 		process = process->next;

@@ -132,7 +132,7 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 	return 0;
 }
 
-static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t pt, uint16_t sequence, uint32_t timestamp, uint32_t ssrc)
+static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t marker, uint8_t pt, uint16_t sequence, uint32_t timestamp, uint32_t ssrc)
 {
 	struct rtp_hdr *rtph;
 	char data[sizeof(*rtph) + payload_len];
@@ -141,7 +141,7 @@ static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t pt, ui
 	rtph = (struct rtp_hdr *)data;
 	len = sizeof(*rtph);
 	rtph->byte0 = RTP_VERSION << 6;
-	rtph->byte1 = pt;
+	rtph->byte1 = pt | (marker << 7);
 	rtph->sequence = htons(sequence);
 	rtph->timestamp = htonl(timestamp);
 	rtph->ssrc = htonl(ssrc);
@@ -321,7 +321,7 @@ connect_error:
 }
 
 /* send rtp data with given codec */
-void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, int inc_sequence, int inc_timestamp)
+void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, uint8_t marker, int inc_sequence, int inc_timestamp)
 {
 	uint8_t *payload = NULL;
 	int payload_len = 0;
@@ -336,7 +336,7 @@ void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, in
 		payload_len = len;
 	}
 
-	rtp_send(codec->media->rtp_socket, payload, payload_len, codec->payload_type_remote, codec->media->tx_sequence, codec->media->tx_timestamp, codec->media->tx_ssrc);
+	rtp_send(codec->media->rtp_socket, payload, payload_len, marker, codec->payload_type_remote, codec->media->tx_sequence, codec->media->tx_timestamp, codec->media->tx_ssrc);
 	codec->media->tx_sequence += inc_sequence;
 	codec->media->tx_timestamp += inc_timestamp;
 
@@ -382,7 +382,7 @@ int osmo_cc_rtp_receive(osmo_cc_session_media_t *media)
 	}
 
 	if (codec->media->receive)
-		codec->media->receiver(codec, media->rx_sequence, media->rx_timestamp, media->rx_ssrc, data, len);
+		codec->media->receiver(codec, marker, media->rx_sequence, media->rx_timestamp, media->rx_ssrc, data, len);
 
 	if (codec->decoder)
 		free(data);

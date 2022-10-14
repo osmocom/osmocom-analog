@@ -29,7 +29,7 @@
 #include "endpoint.h"
 #include "helper.h"
 
-osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, int debug)
+osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, int debug)
 {
 	osmo_cc_session_t *session;
 	osmo_cc_session_media_t *media;
@@ -52,7 +52,7 @@ osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, vo
 	return session;
 }
 
-const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, int force_our_codec)
+const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, int force_our_codec)
 {
 	char offer_sdp[65536];
 	const char *accept_sdp;

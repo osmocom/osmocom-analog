@@ -127,7 +127,7 @@ void osmo_cc_free_session(osmo_cc_session_t *session)
 	free(session);
 }
 
-osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, enum osmo_cc_session_media_type type, uint16_t port, enum osmo_cc_session_media_proto proto, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), int debug)
+osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, enum osmo_cc_session_media_type type, uint16_t port, enum osmo_cc_session_media_proto proto, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), int debug)
 {
 	osmo_cc_session_config_t *conf = session->config;
 	osmo_cc_session_media_t *media, **mediap;
@@ -374,7 +374,7 @@ osmo_cc_session_t *osmo_cc_session_receive_offer(osmo_cc_session_config_t *conf,
 	return session;
 }
 
-void osmo_cc_session_accept_media(osmo_cc_session_media_t *media, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len))
+void osmo_cc_session_accept_media(osmo_cc_session_media_t *media, enum osmo_cc_session_nettype nettype, enum osmo_cc_session_addrtype addrtype, const char *address, int send, int receive, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len))
 {
 	osmo_cc_session_config_t *conf = media->session->config;
 
