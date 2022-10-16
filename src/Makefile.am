@@ -48,8 +48,6 @@ SUBDIRS += \
 	cnetz \
 	nmt \
 	amps \
-	tacs \
-	jtacs \
 	r2000 \
 	imts \
 	mpt1327 \

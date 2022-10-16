@@ -62,8 +62,8 @@ src/nmt/nmt
 src/amps/libusatone.a
 src/amps/libamps.a
 src/amps/amps
-src/tacs/tacs
-src/jtacs/jtacs
+src/amps/tacs
+src/amps/jtacs
 src/r2000/radiocom2000
 src/imts/imts
 src/imts/imts-dialer

@@ -98,8 +98,6 @@ AC_OUTPUT(
     src/cnetz/Makefile
     src/nmt/Makefile
     src/amps/Makefile
-    src/tacs/Makefile
-    src/jtacs/Makefile
     src/r2000/Makefile
     src/imts/Makefile
     src/mpt1327/Makefile
