@@ -54,6 +54,7 @@ SUBDIRS += \
 	jolly \
 	eurosignal \
 	pocsag \
+	golay \
 	fuenf \
 	tv \
 	radio \

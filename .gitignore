@@ -71,6 +71,7 @@ src/mpt1327/mpt1327
 src/jolly/jollycom
 src/eurosignal/eurosignal
 src/pocsag/pocsag
+src/golay/golay
 src/fuenf/5-ton-folge
 src/tv/osmotv
 src/radio/osmoradio

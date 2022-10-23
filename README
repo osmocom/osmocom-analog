@@ -27,6 +27,7 @@ Additionally the following communication services are implemented:
  * Analog Modem Emulation 'Datenklo' (AM7911)
  * German classic 'Zeitansage' (talking clock)
  * POCSAG transmitter / receiver
+ * Golay/GSC transmitter / receiver
  * DCF77 time signal transmitter and receiver
  * C-Netz SIM emulator
  * C-Netz magnetic card emulator

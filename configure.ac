@@ -104,6 +104,7 @@ AC_OUTPUT(
     src/jolly/Makefile
     src/eurosignal/Makefile
     src/pocsag/Makefile
+    src/golay/Makefile
     src/fuenf/Makefile
     src/tv/Makefile
     src/radio/Makefile
