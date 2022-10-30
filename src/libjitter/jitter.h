@@ -45,6 +45,8 @@ typedef struct jitter {
 	int extra_size;
 	int extra_index;
 	void *extra_samples;
+	int extra_timeout_max;
+	int extra_timeout_count;
 
 	/* list of frames */
 	jitter_frame_t *frame_list;

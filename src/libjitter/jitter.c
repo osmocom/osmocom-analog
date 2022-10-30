@@ -51,7 +51,8 @@
  *
  * Missing packets are interpolated by repeating last 20ms of audio (optional)
  * or by inserting zeroes (sample size > 1 byte) or by inserting 0xff (sample
- * size = 1).
+ * size = 1). In case of repeating audio, the number of turns are limited until
+ * buffer is reset to silence, if no frames are received for a certain time.
  *
  * Optionally the constant delay will be measured continuously and lowered if
  * greater than minimum window size. (adaptive jitter buffer size)
@@ -82,6 +83,7 @@
 #define INITIAL_DELAY_INTERVAL	0.5
 #define REPEAT_DELAY_INTERVAL	3.0
 #define EXTRA_BUFFER		0.020	// 20 ms
+#define EXTRA_TIMEOUT		0.500	// maximum time to repeat extrapolation buffer
 
 /* uncomment to enable heavy debugging */
 //#define HEAVY_DEBUG
@@ -106,7 +108,7 @@ int jitter_create(jitter_t *jb, const char *name, double samplerate, int sample_
 		rc = -ENOMEM;
 		goto error;
 	}
-
+	jb->extra_timeout_max = (int)ceil(EXTRA_TIMEOUT / EXTRA_BUFFER);
 
 	/* optionally give a string to be show with the debug */
 	if (name && *name)
@@ -122,6 +124,14 @@ error:
 	if (rc)
 		jitter_destroy(jb);
 	return rc;
+}
+
+static void clear_extra_buffer(jitter_t *jb)
+{
+	if (jb->sample_size == 1)
+		memset(jb->extra_samples, 0xff, jb->sample_size * jb->extra_size);
+	else
+		memset(jb->extra_samples, 0, jb->sample_size * jb->extra_size);
 }
 
 /* reset jitter buffer */
@@ -147,13 +157,10 @@ void jitter_reset(jitter_t *jb)
 	jb->frame_list = NULL;
 
 	/* clear extrapolation buffer */
-	if (jb->extra_samples) {
-		if (jb->sample_size == 1)
-			memset(jb->extra_samples, 0xff, jb->sample_size * jb->extra_size);
-		else
-			memset(jb->extra_samples, 0, jb->sample_size * jb->extra_size);
-	}
+	if (jb->extra_samples)
+		clear_extra_buffer(jb);
 	jb->extra_index = 0;
+	jb->extra_timeout_count = jb->extra_timeout_max; /* no data in buffer yet, so we set timeout condition */
 
 	/* delay measurement and reduction */
 	jb->delay_counter = 0.0;
@@ -353,8 +360,18 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 					count2 = jb->extra_size - jb->extra_index;
 				memcpy(samples, (uint8_t *)jb->extra_samples + jb->extra_index * jb->sample_size, count2 * jb->sample_size);
 				jb->extra_index += count2;
-				if (jb->extra_index == jb->extra_size)
+				if (jb->extra_index == jb->extra_size) {
 					jb->extra_index = 0;
+					if ((jb->window_flags & JITTER_FLAG_REPEAT) && jb->extra_timeout_count < jb->extra_timeout_max) {
+						jb->extra_timeout_count++;
+						if (jb->extra_timeout_count == jb->extra_timeout_max) {
+#ifdef HEAVY_DEBUG
+							PDEBUG(DJITTER, DEBUG_DEBUG, "%s Repeated jitter buffer enough, clearing to silence.\n", jb->name);
+#endif
+							clear_extra_buffer(jb);
+						}
+					}
+				}
 				samples = (uint8_t *)samples + count2 * jb->sample_size;
 				length -= count2;
 				jb->window_timestamp += count2;
@@ -371,8 +388,8 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 			count = length;
 			if (jf->length - index < count)
 				count = jf->length - index;
-			/* if extrapolation is used, limit count to what we can store into buffer */
-			if (jb->extra_samples && jb->extra_size - jb->extra_index < count)
+			/* if extrapolation is to be written, limit count to what we can store into buffer */
+			if ((jb->window_flags & JITTER_FLAG_REPEAT) && jb->extra_size - jb->extra_index < count)
 				count = jb->extra_size - jb->extra_index;
 			/* copy samples from packet to play out, increment sample pointer and decrement length */
 #ifdef HEAVY_DEBUG
@@ -387,6 +404,7 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 				jb->extra_index += count;
 				if (jb->extra_index == jb->extra_size)
 					jb->extra_index = 0;
+				jb->extra_timeout_count = 0; /* now we have new data, we reset timeout condition */
 			}
 			/* increment time stamp */
 			jb->window_timestamp += count;
