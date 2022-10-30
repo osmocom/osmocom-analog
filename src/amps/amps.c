@@ -62,7 +62,7 @@
 #define PAGE_TO1	8.0	/* max time to wait for paging reply */
 #define PAGE_TO2	4.0	/* max time to wait for last paging reply */
 #define ALERT_TRIES	3	/* how many times to alert the phone */
-#define ALERT_TO	0.3	/* max time to wait for alert confirm */
+#define ALERT_TO	0.6	/* max time to wait for alert confirm */
 #define ANSWER_TO	60.0	/* max time to wait for answer */
 #define RELEASE_TIMER	5.0	/* max time to send release messages */
 
@@ -1276,7 +1276,7 @@ transaction_t *amps_tx_frame_fvc(amps_t *amps)
 		trans->msg_type = 0;
 		trans->ordq = 0;
 		// "Alert with caller ID" causes older phones to interrupt the connection for some reason, therefore we don't use order 17 when no caller ID is set
-		if (amps->send_callerid && trans->alert_retry == 1 && !trans->caller_id) {
+		if (amps->send_callerid && trans->alert_retry == 1 && trans->caller_id[0]) {
 			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting with caller ID\n");
 			trans->order = 17;
 		} else {
