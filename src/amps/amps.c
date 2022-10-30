@@ -819,13 +819,6 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
 	}
 
-	/* no SAT timeout handling during alerting */
-	if (trans->state == TRANS_CALL_MT_ALERT
-	 || trans->state == TRANS_CALL_MT_ALERT_SEND
-	 || trans->state == TRANS_CALL_MT_ALERT_CONFIRM
-	 || trans->state == TRANS_CALL_MT_ANSWER_WAIT)
-		return;
-
 	if (tone) {
 		timer_stop(&trans->timer);
 	} else {

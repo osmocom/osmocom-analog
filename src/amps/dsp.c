@@ -125,7 +125,7 @@
 #define SIG_LOST_COUNT		4	/* number of measures to loose Signaling Tone */
 #define CUT_OFF_HIGHPASS	300.0   /* cut off frequency for high pass filter to remove dc level from sound card / sample */
 #define BEST_QUALITY		0.68	/* Best possible RX quality */
-#define COMFORT_NOISE		0.02	/* audio level of comfort noise (relative to ISDN level) */
+#define COMFORT_NOISE		0.02	/* audio level of comfort noise (relative to speech level) */
 
 static sample_t ramp_up[256], ramp_down[256];
 
@@ -253,6 +253,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
+	PDEBUG(DDSP, DEBUG_DEBUG, "Sat detection interval is %d ms.\n", amps->sat_samples * 1000 / amps->sender.samplerate);
 	amps->sat_filter_spl = spl;
 
 	/* count SAT tones */
@@ -840,7 +841,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 {
 	transaction_t *trans = amps->trans_list;
-	sample_t *spl;
+	sample_t *spl, s;
 	int max, pos;
 	int i;
 
@@ -849,7 +850,10 @@ static void sender_receive_audio(amps_t *amps, sample_t *samples, int length)
 	spl = amps->sat_filter_spl;
 	pos = amps->sat_filter_pos;
 	for (i = 0; i < length; i++) {
+		/* unmute: use buffer, to delay audio, so we do not miss that chunk when SAT is detected */
+		s = spl[pos];
 		spl[pos++] = samples[i];
+		samples[i] = s;
 		if (pos == max) {
 			pos = 0;
 			sat_decode(amps, spl, max);
