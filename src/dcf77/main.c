@@ -27,11 +27,14 @@
 #include <termios.h>
 #include <sched.h>
 #include <time.h>
+#include <math.h>
 #include "../libdebug/debug.h"
 #include "../liboptions/options.h"
 #include "../libsample/sample.h"
 #include "../libsound/sound.h"
+#include "../libaaimage/aaimage.h"
 #include "dcf77.h"
+#include "cities.h"
 
 int num_kanal = 1;
 dcf77_t *dcf77 = NULL;
@@ -40,7 +43,17 @@ static const char *dsp_device = "";
 static int dsp_samplerate = 192000;
 static int dsp_buffer = 50;
 static int rx = 0, tx = 0;
-static time_t timestamp = -1;
+static double timestamp = -1;
+static int weather = 0;
+static int weather_day;
+static int weather_night;
+static int extreme;
+static int rain;
+static int wind_dir;
+static int wind_bft;
+static int temperature_day;
+static int temperature_night;
+static int region = -1, region_advance;
 static int double_amplitude = 0;
 static int test_tone = 0;
 static int dsp_interval = 1; /* ms */
@@ -110,8 +123,6 @@ static time_t feierabend_time()
 
 	t = get_time();
 	tm = localtime(&t);
-	if (!tm)
-		return -1;
 
 	tm->tm_hour = 17;
 	tm->tm_min = 0;
@@ -148,7 +159,7 @@ void print_help(void)
 	printf(" -R --rx\n");
 	printf("        Receive time signal\n");
 	printf(" -F --fake\n");
-	printf("        Use given time stamp: <year> <month> <day> <hour> <min< <sec>.\n");
+	printf("        Use given time stamp: <year> <month> <day> <hour> <min> <sec>.\n");
 	printf("        All values have to be numerical. The year must have 4 digits.\n");
 	printf("    --feierabend\n");
 	printf("    --end-of-working-day\n");
@@ -156,6 +167,29 @@ void print_help(void)
 	printf("    --geburtstag\n");
 	printf("    --birthday\n");
 	printf("        Use fake time stamp that equals birth of the author.\n");
+	printf(" -W --weather <weather> <extreme> <rain> <wind dir> <wind bft> <temperature>\n");
+	printf("        Send these weather info for all regions / all days.\n");
+	printf("        See -L for infos on values.\n");
+	printf("        weather = 1..15 for common day and night weather.\n");
+	printf("        weather = 1..15,1..15 for specific day and night weather.\n");
+	printf("        extreme = 0..15 for extreme weather conditions.\n");
+	printf("        rain = 0..100 for rain/show probability. (closest is used)\n");
+	printf("        wind dir = N | NE | E | SE | S | SW | W | NW | 0 for wind direction.\n");
+	printf("        wind bft = <bft> for wind speed in bft. (closest is used)\n");
+	printf("        temerature = <celsius> for common min and max temperature.\n");
+	printf("        temerature = <celsius>,<celsius> for specific min and max temperature.\n");
+	printf(" --beach-party\n");
+	printf("        Beach weather, equivalent to -W 1 0 0 0 2 35,20\n");
+	printf(" --santa-claus\n");
+	printf(" --muenster-2005\n");
+	printf("        Deep snow, equivalent to -W 7 1 100 E 3 1,-1\n");
+	printf(" -A --at-region <region> <advance minutes>\n");
+	printf("        Alter time, so that the weather of the given region is transmitted.\n");
+	printf("        To allow the receiver to sync, give time to advance in minutes.\n");
+	printf(" -L --list\n");
+	printf("        List all regions / weather values.\n");
+	printf(" -C --city <name fragment>\n");
+	printf("        Search for city (case insensitive) and display its region code.\n");
 	printf(" -D --double-amplitude\n");
 	printf("        Transmit with double amplitude by using differential stereo output.\n");
 	printf("     --test-tone\n");
@@ -173,8 +207,11 @@ void print_help(void)
 #define OPT_F2		1002
 #define OPT_G1		1003
 #define OPT_G2		1004
-#define OPT_TEST_TONE	1005
-#define OPT_FAST_MATH	1006
+#define OPT_BEACH	1005
+#define OPT_SANTA	1006
+#define OPT_MUENSTER	1007
+#define OPT_TEST_TONE	1008
+#define OPT_FAST_MATH	1009
 
 static void add_options(void)
 {
@@ -190,15 +227,25 @@ static void add_options(void)
 	option_add(OPT_F2, "end-of-working-day", 0);
 	option_add(OPT_G1, "geburtstag", 0);
 	option_add(OPT_G2, "birthday", 0);
-	option_add(OPT_TEST_TONE, "test-tone", 0);
+	option_add('W', "weather", 6);
+	option_add(OPT_BEACH, "beach-party", 0);
+	option_add(OPT_SANTA, "santa-claus", 0);
+	option_add(OPT_MUENSTER, "muenster-2005", 0);
+	option_add('A', "at-region", 2);
+	option_add('L', "list", 0);
+	option_add('C', "city", 1);
 	option_add('D', "double-amplitude", 0);
+	option_add(OPT_TEST_TONE, "test-tone", 0);
 	option_add('r', "realtime", 1);
 	option_add(OPT_FAST_MATH, "fast-math", 0);
 }
 
+static const char *wind_dirs[8] = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+
 static int handle_options(int short_option, int argi, char **argv)
 {
-	int rc;
+	char *string, *string1;
+	int rc, i;
 
 	switch (short_option) {
 	case 'h':
@@ -233,7 +280,6 @@ static int handle_options(int short_option, int argi, char **argv)
 		break;
 	case 'F':
 		timestamp = parse_time(argv + argi);
-		printf("%ld\n",timestamp);
 		if (timestamp < 0) {
 			fprintf(stderr, "Given time stamp is invalid, please use -h for help.\n");
 			return -EINVAL;
@@ -247,6 +293,79 @@ static int handle_options(int short_option, int argi, char **argv)
 	case OPT_G2:
 		timestamp = 115099200 - 70;
 		break;
+	case 'W':
+		if (weather) {
+no_multiple_weathers:
+			fprintf(stderr, "You cannot define more than one weather situation.\n");
+			return -EINVAL;
+		}
+		weather = 1;
+		string = options_strdup(argv[argi++]);
+		string1 = strsep(&string, ",");
+		weather_day = atoi(string1);
+		if (string)
+			weather_night = atoi(string);
+		else
+			weather_night = weather_day;
+		extreme = atoi(argv[argi++]);
+		rain = atoi(argv[argi++]);
+		/* if wind is not found, wind 8 (changable) is selected */
+		string = options_strdup(argv[argi++]);
+		for (i = 0; i < 8; i++) {
+			if (!strcasecmp(string, wind_dirs[i]))
+				break;
+		}
+		wind_dir = i;
+		wind_bft = atoi(argv[argi++]);
+		string = options_strdup(argv[argi++]);
+		string1 = strsep(&string, ",");
+		temperature_day = atoi(string1);
+		if (string)
+			temperature_night = atoi(string);
+		else
+			temperature_night = temperature_day;
+		break;
+	case OPT_BEACH:
+		if (weather)
+			goto no_multiple_weathers;
+		weather = 1;
+		weather_day = 1;
+		weather_night = 1;
+		extreme = 0;
+		rain = 0;
+		wind_dir = 8;
+		wind_bft = 2;
+		temperature_day = 35;
+		temperature_night = 20; /* tropical night >= 20 */
+		break;
+	case OPT_SANTA:
+	case OPT_MUENSTER:
+		if (weather)
+			goto no_multiple_weathers;
+		weather = 1;
+		weather_day = 7;
+		weather_night = 7;
+		extreme = 0;
+		rain = 100;
+		wind_dir = 6;
+		wind_bft = 3;
+		temperature_day = 1;
+		temperature_night = -1; /* freezing a little */
+		break;
+	case 'A':
+		region = atoi(argv[argi++]);
+		if (region < 0 || region > 89) {
+			fprintf(stderr, "Given region number is is invalid, please use -L for list of valid regions.\n");
+			return -EINVAL;
+		}
+		region_advance = atoi(argv[argi++]);
+		break;
+	case 'L':
+		list_weather();
+		return 0;
+	case 'C':
+		display_city(argv[argi++]);
+		return 0;
 	case OPT_TEST_TONE:
 		test_tone = 1;
 		break;
@@ -407,8 +526,20 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Failed to create \"DCF77\" instance. Quitting!\n");
 		goto error;
 	}
+	if (weather)
+		dcf77_set_weather(dcf77, weather_day, weather_night, extreme, rain, wind_dir, wind_bft, temperature_day, temperature_night);
 
-	printf("\n");
+	/* no time stamp given, so we use our clock */
+	if (tx) {
+		if (timestamp < 0 && region < 0)
+			printf("No alternative time given, so you might not notice the difference between our transmission and the real DCF77 transmission.\n");
+		if (timestamp < 0)
+			timestamp = get_time();
+		if (region >= 0 && weather)
+			timestamp = dcf77_start_weather((time_t)timestamp, region, region_advance);
+	}
+
+	print_aaimage();
 	printf("DCF77 ready.\n");
 
 	/* prepare terminal */
@@ -437,7 +568,7 @@ int main(int argc, char *argv[])
 
 	soundif_start();
 	if (tx)
-		dcf77_tx_start(dcf77, timestamp);
+		dcf77_tx_start(dcf77, (time_t)timestamp, fmod(timestamp, 1.0));
 
 	while (!quit) {
 		int w;

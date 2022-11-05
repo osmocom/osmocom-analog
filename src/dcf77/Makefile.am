@@ -6,6 +6,9 @@ bin_PROGRAMS = \
 
 dcf77_SOURCES = \
 	dcf77.c \
+	weather.c \
+	cities.c \
+	image.c \
 	main.c
 dcf77_LDADD = \
 	$(COMMON_LA) \

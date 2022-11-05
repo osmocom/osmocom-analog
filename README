@@ -28,7 +28,7 @@ Additionally the following communication services are implemented:
  * German classic 'Zeitansage' (talking clock)
  * POCSAG transmitter / receiver
  * Golay/GSC transmitter / receiver
- * DCF77 time signal transmitter and receiver
+ * DCF77 time signal transmitter and receiver with weather info
  * C-Netz SIM emulator
  * C-Netz magnetic card emulator
 
