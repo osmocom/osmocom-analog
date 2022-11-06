@@ -72,7 +72,7 @@ tacs_SOURCES = \
 
 tacs_LDADD = \
 	$(COMMON_LA) \
-	../amps/libamps.a \
+	libamps.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
@@ -115,7 +115,7 @@ jtacs_SOURCES = \
 
 jtacs_LDADD = \
 	$(COMMON_LA) \
-	../amps/libamps.a \
+	libamps.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
