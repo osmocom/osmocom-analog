@@ -321,7 +321,7 @@ connect_error:
 }
 
 /* send rtp data with given codec */
-void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, uint8_t marker, int inc_sequence, int inc_timestamp)
+void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, uint8_t marker, int inc_sequence, int inc_timestamp, void *priv)
 {
 	uint8_t *payload = NULL;
 	int payload_len = 0;
@@ -330,7 +330,7 @@ void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, ui
 		return;
 
 	if (codec->encoder)
-		codec->encoder(data, len, &payload, &payload_len);
+		codec->encoder(data, len, &payload, &payload_len, priv);
 	else {
 		payload = data;
 		payload_len = len;
@@ -345,7 +345,7 @@ void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, ui
 }
 
 /* receive rtp data for given media, return < 0, if there is nothing this time */
-int osmo_cc_rtp_receive(osmo_cc_session_media_t *media)
+int osmo_cc_rtp_receive(osmo_cc_session_media_t *media, void *priv)
 {
 	int rc;
 	uint8_t *payload = NULL;
@@ -375,7 +375,7 @@ int osmo_cc_rtp_receive(osmo_cc_session_media_t *media)
 	}
 
 	if (codec->decoder)
-		codec->decoder(payload, payload_len, &data, &len);
+		codec->decoder(payload, payload_len, &data, &len, priv);
 	else {
 		data = payload;
 		len = payload_len;

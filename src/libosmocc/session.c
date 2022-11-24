@@ -197,7 +197,7 @@ void osmo_cc_free_media(osmo_cc_session_media_t *media)
 	free(media);
 }
 
-osmo_cc_session_codec_t *osmo_cc_add_codec(osmo_cc_session_media_t *media, const char *payload_name, uint32_t payload_rate, int payload_channels, void (*encoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len), void (*decoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len), int debug)
+osmo_cc_session_codec_t *osmo_cc_add_codec(osmo_cc_session_media_t *media, const char *payload_name, uint32_t payload_rate, int payload_channels, void (*encoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void *priv), void (*decoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void *priv), int debug)
 {
 	osmo_cc_session_codec_t *codec, **codecp;
 	int rc;
@@ -403,7 +403,7 @@ void osmo_cc_session_accept_media(osmo_cc_session_media_t *media, enum osmo_cc_s
 }
 
 
-void osmo_cc_session_accept_codec(osmo_cc_session_codec_t *codec, void (*encoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len), void (*decoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len))
+void osmo_cc_session_accept_codec(osmo_cc_session_codec_t *codec, void (*encoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void *priv), void (*decoder)(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void *priv))
 {
 	codec->accepted = 1;
 	codec->encoder = encoder;
@@ -622,14 +622,14 @@ int osmo_cc_session_if_codec(osmo_cc_session_codec_t *codec, const char *name, u
 	     && codec->payload_channels == channels);
 }
 
-int osmo_cc_session_handle(osmo_cc_session_t *session)
+int osmo_cc_session_handle(osmo_cc_session_t *session, void *codec_priv)
 {
 	osmo_cc_session_media_t *media;
 	int w = 0, rc;
 
 	osmo_cc_session_for_each_media(session->media_list, media) {
 		do {
-			rc = osmo_cc_rtp_receive(media);
+			rc = osmo_cc_rtp_receive(media, codec_priv);
 			if (rc >= 0)
 				w = 1;
 		} while (rc >= 0);

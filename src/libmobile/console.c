@@ -89,8 +89,8 @@ static console_t console;
 
 extern osmo_cc_endpoint_t *ep;
 
-void encode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len);
-void decode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len);
+void encode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg);
+void decode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg);
 
 static struct osmo_cc_helper_audio_codecs codecs[] = {
 	{ "L16", 8000, 1, encode_l16, decode_l16 },
@@ -154,13 +154,13 @@ void up_audio(struct osmo_cc_session_codec *codec, uint8_t __attribute__((unused
 	}
 	/* if echo test is used, send echo back to mobile */
 	if (console.echo_test) {
-		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 0, 1, count);
+		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 0, 1, count, &console);
 		return;
 	}
 	/* if no sound is used, send test tone to mobile */
 	if (console.state == CONSOLE_CONNECT) {
 		get_test_patterns((int16_t *)data, count);
-		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 0, 1, count);
+		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 0, 1, count, &console);
 		return;
 	}
 }
@@ -569,7 +569,7 @@ void process_console(int c)
 		process_ui(c);
 
 	if (console.session)
-		osmo_cc_session_handle(console.session);
+		osmo_cc_session_handle(console.session, &console);
 
 	if (!console.sound)
 		return;
@@ -628,7 +628,7 @@ void process_console(int c)
 				if (console.callref && console.codec) {
 					int16_t data[160];
 					samples_to_int16_speech(data, console.tx_buffer, 160);
-					osmo_cc_rtp_send(console.codec, (uint8_t *)data, 160 * 2, 0, 1, 160);
+					osmo_cc_rtp_send(console.codec, (uint8_t *)data, 160 * 2, 0, 1, 160, &console);
 				}
 			}
 		}

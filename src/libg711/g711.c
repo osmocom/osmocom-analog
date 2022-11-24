@@ -242,7 +242,7 @@ void g711_init(void)
 	g711_initialized = 1;
 }
 
-void g711_encode_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_encode_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	int16_t *src = (int16_t *)src_data;
 	uint8_t *dst;
@@ -262,7 +262,7 @@ void g711_encode_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data
 	*dst_len = len;
 }
 
-void g711_encode_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_encode_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	int16_t *src = (int16_t *)src_data;
 	uint8_t *dst;
@@ -282,7 +282,7 @@ void g711_encode_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data
 	*dst_len = len;
 }
 
-void g711_decode_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_decode_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
         uint8_t *src = src_data;
 	int16_t *dst;
@@ -302,7 +302,7 @@ void g711_decode_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data
         *dst_len = len * 2;
 }
 
-void g711_decode_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_decode_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
         uint8_t *src = src_data;
 	int16_t *dst;
@@ -322,7 +322,7 @@ void g711_decode_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data
         *dst_len = len * 2;
 }
 
-void g711_encode_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_encode_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	int16_t *src = (int16_t *)src_data;
 	uint8_t *dst;
@@ -342,7 +342,7 @@ void g711_encode_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *d
 	*dst_len = len;
 }
 
-void g711_encode_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_encode_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	int16_t *src = (int16_t *)src_data;
 	uint8_t *dst;
@@ -362,7 +362,7 @@ void g711_encode_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *d
 	*dst_len = len;
 }
 
-void g711_decode_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_decode_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
         uint8_t *src = src_data;
 	int16_t *dst;
@@ -382,7 +382,7 @@ void g711_decode_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *d
         *dst_len = len * 2;
 }
 
-void g711_decode_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_decode_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
         uint8_t *src = src_data;
 	int16_t *dst;
@@ -402,7 +402,7 @@ void g711_decode_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *d
         *dst_len = len * 2;
 }
 
-void g711_transcode_alaw_to_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_alaw_to_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
@@ -421,7 +421,7 @@ void g711_transcode_alaw_to_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_d
         *dst_len = len;
 }
 
-void g711_transcode_alaw_flipped_to_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_alaw_flipped_to_ulaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
@@ -440,7 +440,7 @@ void g711_transcode_alaw_flipped_to_ulaw(uint8_t *src_data, int src_len, uint8_t
         *dst_len = len;
 }
 
-void g711_transcode_alaw_to_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_alaw_to_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
@@ -459,7 +459,7 @@ void g711_transcode_alaw_to_ulaw_flipped(uint8_t *src_data, int src_len, uint8_t
         *dst_len = len;
 }
 
-void g711_transcode_ulaw_to_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_ulaw_to_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
@@ -478,7 +478,7 @@ void g711_transcode_ulaw_to_alaw(uint8_t *src_data, int src_len, uint8_t **dst_d
         *dst_len = len;
 }
 
-void g711_transcode_ulaw_flipped_to_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_ulaw_flipped_to_alaw(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
@@ -497,7 +497,7 @@ void g711_transcode_ulaw_flipped_to_alaw(uint8_t *src_data, int src_len, uint8_t
         *dst_len = len;
 }
 
-void g711_transcode_ulaw_to_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_ulaw_to_alaw_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
@@ -516,7 +516,7 @@ void g711_transcode_ulaw_to_alaw_flipped(uint8_t *src_data, int src_len, uint8_t
         *dst_len = len;
 }
 
-void g711_transcode_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len)
+void g711_transcode_flipped(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *priv)
 {
 	uint8_t *src = src_data, *dst;
 	int len = src_len, i;
