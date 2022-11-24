@@ -125,6 +125,7 @@ const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *pr
 	if (!selected_codec) {
 		PDEBUG(DCC, DEBUG_ERROR, "No codec found in setup message that we support.\n");
 		osmo_cc_free_session(*session_p);
+		*session_p = NULL;
 		return NULL;
 	}
 	osmo_cc_session_accept_codec(selected_codec, codecs[selected_codec_i].encoder, codecs[selected_codec_i].decoder);
@@ -138,6 +139,7 @@ const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *pr
 	accept_sdp = osmo_cc_session_send_answer(*session_p);
 	if (!accept_sdp) {
 		osmo_cc_free_session(*session_p);
+		*session_p = NULL;
 		return NULL;
 	}
 
