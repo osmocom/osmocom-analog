@@ -1001,7 +1001,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 			break;
 		case TCOON:
 			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns on output.\n");
-			datenklo->output_off = 1;
+			datenklo->output_off = 0;
 			break;
 		case TCIOFF:
 			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns off input.\n");
