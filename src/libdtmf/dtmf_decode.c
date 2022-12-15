@@ -22,6 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
+#include "../libdebug/debug.h"
 #include "dtmf_decode.h"
 
 //#define DEBUG
@@ -39,22 +40,6 @@
 #define DTMF_HIGH_4	1633.0
 
 static const char dtmf_digit[] = "     123A456B789C*0#D";
-
-#ifdef DEBUG
-const char *_debug_amplitude(double level)
-{
-        static char text[42];
-
-	strcpy(text, "                    :                    ");
-	if (level > 1.0)
-		level = 1.0;
-	if (level < -1.0)
-		level = -1.0;
-	text[20 + (int)(level * 20)] = '*';
-
-	return text;
-}
-#endif
 
 int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv, char digit, dtmf_meas_t *meas), int samplerate, double max_amplitude, double min_amplitude)
 {
@@ -149,7 +134,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 
 	for (i = 0; i < length; i++) {
 #ifdef DEBUG
-//		printf("%s %.5f\n", _debug_amplitude(samples[i]/2.0), samples[i]/2.0);
+//		printf("%s %.5f\n", debug_amplitude(samples[i]/2.0), samples[i]/2.0);
 #endif
 		/* get frequency of low frequencies, correct amplitude drop at cutoff point */
 		f1 = frequency_low[i] + (DTMF_LOW_1 + DTMF_LOW_4) / 2.0;
