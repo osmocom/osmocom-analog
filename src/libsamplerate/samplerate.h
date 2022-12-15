@@ -2,6 +2,7 @@
 
 typedef struct samplerate {
 	double factor;
+	double filter_cutoff;
 	struct {
 		iir_filter_t lp;
 		sample_t last_sample;

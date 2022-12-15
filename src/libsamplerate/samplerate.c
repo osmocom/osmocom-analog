@@ -34,8 +34,11 @@ int init_samplerate(samplerate_t *state, double low_samplerate, double high_samp
 		abort();
 	}
 
-	iir_lowpass_init(&state->up.lp, filter_cutoff, high_samplerate, 2);
-	iir_lowpass_init(&state->down.lp, filter_cutoff, high_samplerate, 2);
+	state->filter_cutoff = filter_cutoff;
+	if (state->filter_cutoff) {
+		iir_lowpass_init(&state->up.lp, filter_cutoff, high_samplerate, 2);
+		iir_lowpass_init(&state->down.lp, filter_cutoff, high_samplerate, 2);
+	}
 
 	return 0;
 }
@@ -49,7 +52,8 @@ int samplerate_downsample(samplerate_t *state, sample_t *samples, int input_num)
 	sample_t last_sample;
 
 	/* filter down */
-	iir_process(&state->down.lp, samples, input_num);
+	if (state->filter_cutoff)
+		iir_process(&state->down.lp, samples, input_num);
 
 	/* get last sample for interpolation */
 	last_sample = state->down.last_sample;
@@ -185,7 +189,8 @@ void samplerate_upsample(samplerate_t *state, sample_t *input, int input_num, sa
 	state->up.in_index = in_index;
 
 	/* filter up */
-	iir_process(&state->up.lp, samples, output_num);
+	if (state->filter_cutoff)
+		iir_process(&state->up.lp, samples, output_num);
 
 	if (input == output) {
 		/* copy samples */
