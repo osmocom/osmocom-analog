@@ -314,7 +314,7 @@ int send_sto(am791x_t *am791x, sample_t *sample, int length)
 
 	/* modulate STO */
 	phaseshift = am791x->sto_phaseshift65536;
-	while (count < length && fsk->tx_bitpos < 1.0) {
+	while (count < length) {
 		sample[count++] = fsk->sin_tab[(uint16_t)phase];
 		phase += phaseshift;
 		if (phase >= 65536.0)

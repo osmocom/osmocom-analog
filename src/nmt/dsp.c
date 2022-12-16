@@ -515,7 +515,7 @@ void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 {
 	/* reset frame */
 	if (mode == DSP_MODE_FRAME && nmt->dsp_mode != mode) {
-		fsk_mod_tx_reset(&nmt->fsk_mod);
+		fsk_mod_reset(&nmt->fsk_mod);
 		nmt->tx_frame_length = 0;
 	}
 

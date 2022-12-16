@@ -402,12 +402,12 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 	/* reset telegramm */
 	if (mode == DSP_MODE_FRAME && r2000->dsp_mode != mode) {
 		r2000->tx_frame_length = 0;
-		fsk_mod_tx_reset(&r2000->fsk_mod);
+		fsk_mod_reset(&r2000->fsk_mod);
 	}
 	if ((mode == DSP_MODE_AUDIO_TX || mode == DSP_MODE_AUDIO_TX_RX)
 	 && (r2000->dsp_mode != DSP_MODE_AUDIO_TX && r2000->dsp_mode != DSP_MODE_AUDIO_TX_RX)) {
 		r2000->super_tx_word_length = 0;
-		fsk_mod_tx_reset(&r2000->super_fsk_mod);
+		fsk_mod_reset(&r2000->super_fsk_mod);
 	}
 
 	if (super >= 0) {

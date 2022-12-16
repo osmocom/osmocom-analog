@@ -29,6 +29,12 @@
 
 #define PI			M_PI
 
+/* uncomment to see the modulated curve */
+//#define DEBUG_MODULATOR
+
+/* uncomment to see the shape of the filter */
+//#define DEBUG_MODULATOR_SHAPE
+
 /*
  * fsk = instance of fsk modem
  * inst = instance of user
@@ -41,6 +47,7 @@
  */
 int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int samplerate, double bitrate, double f0, double f1, double level, int ffsk, int filter)
 {
+	double temp;
 	int i;
 	int rc;
 
@@ -49,7 +56,7 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	memset(fsk, 0, sizeof(*fsk));
 
 	/* gen sine table with deviation */
-	fsk->sin_tab = calloc(65536+16384, sizeof(*fsk->sin_tab));
+	fsk->sin_tab = calloc(65536, sizeof(*fsk->sin_tab));
 	if (!fsk->sin_tab) {
 		fprintf(stderr, "No mem!\n");
 		rc = -ENOMEM;
@@ -59,7 +66,6 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 		fsk->sin_tab[i] = sin((double)i / 65536.0 * 2.0 * PI) * level;
 
 	fsk->inst = inst;
-	fsk->tx_bit = -1;
 	fsk->level = level;
 	fsk->send_bit = send_bit;
 	fsk->f0_deviation = (f0 - f1) / 2.0;
@@ -72,12 +78,12 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 		fsk->high_bit = 0;
 	}
 
-	fsk->bits_per_sample = (double)bitrate / (double)samplerate;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits_per_sample, samplerate);
+	fsk->bits65536_per_sample = (double)bitrate / (double)samplerate * 65536.0;
+	PDEBUG(DDSP, DEBUG_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits65536_per_sample / 65536.0, samplerate);
 
 	fsk->phaseshift65536[0] = f0 / (double)samplerate * 65536.0;
-	PDEBUG(DDSP, DEBUG_DEBUG, "F0 = %.0f Hz (phaseshift65536[0] = %.4f)\n", f0, fsk->phaseshift65536[0]);
 	fsk->phaseshift65536[1] = f1 / (double)samplerate * 65536.0;
+	PDEBUG(DDSP, DEBUG_DEBUG, "F0 = %.0f Hz (phaseshift65536[0] = %.4f)\n", f0, fsk->phaseshift65536[0]);
 	PDEBUG(DDSP, DEBUG_DEBUG, "F1 = %.0f Hz (phaseshift65536[1] = %.4f)\n", f1, fsk->phaseshift65536[1]);
 
 	/* use ffsk modulation, i.e. each bit has an integer number of
@@ -85,6 +91,12 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	 */
 	if (ffsk) {
 		double waves;
+
+		if (filter) {
+			PDEBUG(DDSP, DEBUG_ERROR, "Cannot use FFSK with filter.\n");
+			rc = -EINVAL;
+			goto error;
+		}
 
 		PDEBUG(DDSP, DEBUG_DEBUG, "enable FFSK modulation mode\n");
 		fsk->ffsk = 1;
@@ -100,21 +112,38 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 			abort();
 		}
 		fsk->cycles_per_bit65536[1] = waves * 65536.0;
+	} else {
+		fsk->cycles_per_bit65536[0] = f0 / bitrate * 65536.0;
+		fsk->cycles_per_bit65536[1] = f1 / bitrate * 65536.0;
 	}
+	PDEBUG(DDSP, DEBUG_DEBUG, "F0 = %.0f Hz (cycles_per_bit65536[0] = %.4f)\n", f0, fsk->cycles_per_bit65536[0]);
+	PDEBUG(DDSP, DEBUG_DEBUG, "F1 = %.0f Hz (cycles_per_bit65536[1] = %.4f)\n", f1, fsk->cycles_per_bit65536[1]);
 
-	/* if filter is enabled, add a band pass filter to smooth the spectrum of the tones
-	 * the bandwidth is twice the difference between f0 and f1
-	 */
+	/* if filter is enabled, use a cosine shaped curve to change the phase each sample */
 	if (filter) {
-		double low = (f0 + f1) / 2.0 - fabs(f0 - f1);
-		double high = (f0 + f1) / 2.0 + fabs(f0 - f1);
+		fsk->phase_tab_0_1 = calloc(65536 + 65536, sizeof(*fsk->sin_tab));
+		if (!fsk->phase_tab_0_1) {
+			fprintf(stderr, "No mem!\n");
+			rc = -ENOMEM;
+			goto error;
+		}
+		fsk->phase_tab_1_0 = fsk->phase_tab_0_1 + 65536;
+		for (i = 0; i < 65536; i++) {
+			temp = cos((double)i / 65536.0 * PI) / 2 + 0.5; /* half cosine going from 1 to 0 */
+			fsk->phase_tab_0_1[i] = temp * fsk->phaseshift65536[0] + (1.0 - temp) * fsk->phaseshift65536[1];
+			fsk->phase_tab_1_0[i] = temp * fsk->phaseshift65536[1] + (1.0 - temp) * fsk->phaseshift65536[0];
+#ifdef DEBUG_MODULATOR_SHAPE
+			fsk->phase_tab_0_1[i] = 1.0 - temp;
+			fsk->phase_tab_1_0[i] = temp;
+#endif
+		}
 
-		PDEBUG(DDSP, DEBUG_DEBUG, "enable filter to smooth FSK transmission. (frequency rage %.0f .. %.0f)\n", low, high);
+		PDEBUG(DDSP, DEBUG_DEBUG, "Enable filter to smooth FSK transmission.\n");
 		fsk->filter = 1;
-		/* use fourth order (2 iter) filter, since it is as fast as second order (1 iter) filter */
-		iir_highpass_init(&fsk->lp[0], low, samplerate, 2);
-		iir_lowpass_init(&fsk->lp[1], high, samplerate, 2);
 	}
+
+	/* must reset, because bit states must be initialized */
+	fsk_mod_reset(fsk);
 
 	return 0;
 
@@ -131,6 +160,11 @@ void fsk_mod_cleanup(fsk_mod_t *fsk)
 	if (fsk->sin_tab) {
 		free(fsk->sin_tab);
 		fsk->sin_tab = NULL;
+	}
+	if (fsk->phase_tab_0_1) {
+		free(fsk->phase_tab_0_1);
+		fsk->phase_tab_0_1 = NULL;
+		fsk->phase_tab_1_0 = NULL;
 	}
 }
 
@@ -154,12 +188,16 @@ int fsk_mod_send(fsk_mod_t *fsk, sample_t *sample, int length, int add)
 	/* get next bit */
 	if (fsk->tx_bit < 0) {
 next_bit:
+		fsk->tx_last_bit = fsk->tx_bit;
 		fsk->tx_bit = fsk->send_bit(fsk->inst);
 #ifdef DEBUG_MODULATOR
-		printf("bit change to %d\n", fsk->tx_bit);
+		printf("bit change from %d to %d\n", fsk->tx_last_bit, fsk->tx_bit);
 #endif
-		if (fsk->tx_bit < 0)
+		if (fsk->tx_bit < 0) {
+			fsk_mod_reset(fsk);
 			goto done;
+		}
+		fsk->tx_bit &= 1;
 		/* correct phase when changing bit */
 		if (fsk->ffsk) {
 			/* round phase to nearest zero crossing */
@@ -167,38 +205,84 @@ next_bit:
 				phase = 32768.0;
 			else
 				phase = 0;
-			/* set phase according to current position in bit */
-			phase += fsk->tx_bitpos * fsk->cycles_per_bit65536[fsk->tx_bit & 1];
 #ifdef DEBUG_MODULATOR
-			printf("phase %.3f bitpos=%.6f\n", phase, fsk->tx_bitpos);
+			printf("phase %.3f bitpos=%.6f\n", phase / 65536.0, fsk->tx_bitpos65536 / 65536.0);
 #endif
+		}
+		if (!fsk->filter) {
+			/* change phase forward to the current bit position */
+			phase += fsk->tx_bitpos65536 / 65536.0 * fsk->cycles_per_bit65536[fsk->tx_bit];
+			if (phase >= 65536.0)
+				phase -= 65536.0;
 		}
 	}
 
 	/* modulate bit */
-	phaseshift = fsk->phaseshift65536[fsk->tx_bit & 1];
-	while (count < length && fsk->tx_bitpos < 1.0) {
-		if (add)
-			sample[count++] += fsk->sin_tab[(uint16_t)phase];
-		else
-			sample[count++] = fsk->sin_tab[(uint16_t)phase];
+	if (!fsk->filter || fsk->tx_last_bit < 0 || fsk->tx_last_bit == fsk->tx_bit) {
+		/* without filtering or when there is no bit change */
+		phaseshift = fsk->phaseshift65536[fsk->tx_bit];
+		while (count < length && fsk->tx_bitpos65536 < 65536.0) {
+			if (add)
+				sample[count++] += fsk->sin_tab[(uint16_t)phase];
+			else
+				sample[count++] = fsk->sin_tab[(uint16_t)phase];
 #ifdef DEBUG_MODULATOR
-		printf("|%s|\n", debug_amplitude(fsk->sin_tab[(uint16_t)phase] / fsk->level));
+			printf("|%s| %d\n", debug_amplitude(fsk->sin_tab[(uint16_t)phase] / fsk->level), fsk->tx_bit);
 #endif
-		phase += phaseshift;
-		if (phase >= 65536.0)
-			phase -= 65536.0;
-		fsk->tx_bitpos += fsk->bits_per_sample;
+#ifdef DEBUG_MODULATOR_SHAPE
+			printf("|%s| %d\n", debug_amplitude(fsk->tx_bit), fsk->tx_bit);
+#endif
+			phase += phaseshift;
+			if (phase >= 65536.0)
+				phase -= 65536.0;
+			fsk->tx_bitpos65536 += fsk->bits65536_per_sample;
+		}
+	} else if (fsk->tx_bit > fsk->tx_last_bit) {
+		/* with cosine shape filter, going from phase of 0 to phase of 1 */
+		while (count < length && fsk->tx_bitpos65536 < 65536.0) {
+			if (add)
+				sample[count++] += fsk->sin_tab[(uint16_t)phase];
+			else
+				sample[count++] = fsk->sin_tab[(uint16_t)phase];
+#ifdef DEBUG_MODULATOR
+			printf("|%s| 0->1\n", debug_amplitude(fsk->sin_tab[(uint16_t)phase] / fsk->level));
+#endif
+#ifdef DEBUG_MODULATOR_SHAPE
+			printf("|%s|0->1\n", debug_amplitude(fsk->phase_tab_0_1[(uint16_t)fsk->tx_bitpos65536]));
+#endif
+			phase += fsk->phase_tab_0_1[(uint16_t)fsk->tx_bitpos65536];
+			if (phase >= 65536.0)
+				phase -= 65536.0;
+			fsk->tx_bitpos65536 += fsk->bits65536_per_sample;
+		}
+	} else {
+		/* with cosine shape filter, going from phase of 1 to phase of 0 */
+		while (count < length && fsk->tx_bitpos65536 < 65536.0) {
+			if (add)
+				sample[count++] += fsk->sin_tab[(uint16_t)phase];
+			else
+				sample[count++] = fsk->sin_tab[(uint16_t)phase];
+#ifdef DEBUG_MODULATOR
+			printf("|%s|1->0\n", debug_amplitude(fsk->sin_tab[(uint16_t)phase] / fsk->level));
+#endif
+#ifdef DEBUG_MODULATOR_SHAPE
+			printf("|%s|1->0\n", debug_amplitude(fsk->phase_tab_1_0[(uint16_t)fsk->tx_bitpos65536]));
+#endif
+			phase += fsk->phase_tab_1_0[(uint16_t)fsk->tx_bitpos65536];
+			if (phase >= 65536.0)
+				phase -= 65536.0;
+			fsk->tx_bitpos65536 += fsk->bits65536_per_sample;
+		}
 	}
-	if (fsk->tx_bitpos >= 1.0) {
-		fsk->tx_bitpos -= 1.0;
+	if (fsk->tx_bitpos65536 >= 65536.0) {
+		fsk->tx_bitpos65536 -= 65536.0;
+		if (!fsk->filter) {
+			/* change phase back to the point when bit has changed */
+			phase -= fsk->tx_bitpos65536 / 65536.0 * fsk->cycles_per_bit65536[fsk->tx_bit];
+			if (phase < 0.0)
+				phase += 65536.0;
+		}
 		goto next_bit;
-	}
-
-	/* post filter */
-	if (fsk->filter) {
-		iir_process(&fsk->lp[0], sample, length);
-		iir_process(&fsk->lp[1], sample, length);
 	}
 
 done:
@@ -208,11 +292,12 @@ done:
 }
 
 /* reset transmitter state, so we get a clean start */
-void fsk_mod_tx_reset(fsk_mod_t *fsk)
+void fsk_mod_reset(fsk_mod_t *fsk)
 {
-	fsk->tx_phase65536 = 0;
-	fsk->tx_bitpos = 0;
+	fsk->tx_phase65536 = 0.0;
+	fsk->tx_bitpos65536 = 0.0;
 	fsk->tx_bit = -1;
+	fsk->tx_last_bit = -1;
 }
 
 /*

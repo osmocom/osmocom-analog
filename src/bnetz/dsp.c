@@ -420,7 +420,7 @@ void bnetz_set_dsp_mode(bnetz_t *bnetz, enum dsp_mode mode)
 	/* reset telegramm */
 	if (mode == DSP_MODE_TELEGRAMM && bnetz->dsp_mode != mode) {
 		bnetz->tx_telegramm = 0;
-		fsk_mod_tx_reset(&bnetz->fsk_mod);
+		fsk_mod_reset(&bnetz->fsk_mod);
 	}
 	
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", bnetz_dsp_mode_name(bnetz->dsp_mode), bnetz_dsp_mode_name(mode));
