@@ -33,6 +33,7 @@ src/libhagelbarger/libhagelbarger.a
 src/libdtmf/libdtmf.a
 src/libtimer/libtimer.a
 src/libselect/libselect.a
+src/libph_socket/libph_socket.a
 src/libsamplerate/libsamplerate.a
 src/libscrambler/libscrambler.a
 src/libemphasis/libemphasis.a

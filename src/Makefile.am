@@ -16,6 +16,7 @@ SUBDIRS = \
 	libdtmf \
 	libtimer \
 	libselect \
+	libph_socket \
 	libsamplerate \
 	libscrambler \
 	libemphasis \

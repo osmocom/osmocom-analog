@@ -75,6 +75,7 @@ AC_OUTPUT(
     src/libdtmf/Makefile
     src/libtimer/Makefile
     src/libselect/Makefile
+    src/libph_socket/Makefile
     src/libsamplerate/Makefile
     src/libscrambler/Makefile
     src/libemphasis/Makefile
