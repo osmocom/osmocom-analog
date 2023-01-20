@@ -84,3 +84,10 @@ extern int debug_limit_scroll;
 
 const char *debug_hex(const uint8_t *data, int len);
 
+#define LOGP		PDEBUG
+#define LOGL_DEBUG	DEBUG_DEBUG
+#define LOGL_INFO	DEBUG_INFO
+#define LOGL_NOTICE	DEBUG_NOTICE
+#define LOGL_ERROR	DEBUG_ERROR
+#define osmo_hexdump	debug_hex
+
