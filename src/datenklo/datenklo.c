@@ -1257,9 +1257,9 @@ void sighandler(int sigset)
 }
 
 /* vtimer */
-static void vtime_timeout(struct timer *timer)
+static void vtime_timeout(void *data)
 {
-        datenklo_t *datenklo = (datenklo_t *)timer->priv;
+        datenklo_t *datenklo = data;
 
 	/* check if there is enough data to read */
 	datenklo->vtimeout = 1;

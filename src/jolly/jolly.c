@@ -204,8 +204,8 @@ static void jolly_new_state(jolly_t *jolly, enum jolly_state new_state)
 	jolly_display_status();
 }
 
-static void jolly_timeout(struct timer *timer);
-static void jolly_speech_timeout(struct timer *timer);
+static void jolly_timeout(void *data);
+static void jolly_speech_timeout(void *data);
 static void jolly_go_idle(jolly_t *jolly);
 
 /* Create transceiver instance and link to a list. */
@@ -425,9 +425,9 @@ void jolly_receive_dtmf(void *priv, char digit, dtmf_meas_t *meas)
 }
 
 /* Timeout handling */
-static void jolly_timeout(struct timer *timer)
+static void jolly_timeout(void *data)
 {
-	jolly_t *jolly = (jolly_t *)timer->priv;
+	jolly_t *jolly = data;
 
 	switch (jolly->state) {
 	case STATE_OUT_DIALING:
@@ -453,9 +453,9 @@ static void jolly_timeout(struct timer *timer)
 	}
 }
 
-static void jolly_speech_timeout(struct timer *timer)
+static void jolly_speech_timeout(void *data)
 {
-	jolly_t *jolly = (jolly_t *)timer->priv;
+	jolly_t *jolly = data;
 
 	switch (jolly->state) {
 	case STATE_OUT_VERIFY:

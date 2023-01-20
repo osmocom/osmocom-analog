@@ -283,7 +283,7 @@ int imts_init(void)
 	return 0;
 }
 
-static void imts_timeout(struct timer *timer);
+static void imts_timeout(void *data);
 static void imts_go_idle(imts_t *imts);
 static void imts_paging(imts_t *imts, const char *dial_string, int loopback);
 static void imts_detector_test(imts_t *imts, double length_1, double length_2, double length_3);
@@ -899,9 +899,9 @@ static void page_after_digit(imts_t *imts)
 }
 
 /* Timeout handling */
-static void imts_timeout(struct timer *timer)
+static void imts_timeout(void *data)
 {
-	imts_t *imts = (imts_t *)timer->priv;
+	imts_t *imts = data;
 
 	switch (imts->state) {
 	case IMTS_IDLE:

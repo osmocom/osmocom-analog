@@ -85,9 +85,9 @@ static void remove_db(cnetz_db_t *db)
 }
 
 /* Timeout handling */
-static void db_timeout(struct timer *timer)
+static void db_timeout(void *data)
 {
-	cnetz_db_t *db = (cnetz_db_t *)timer->priv;
+	cnetz_db_t *db = data;
 	int rc;
 
 	PDEBUG(DDB, DEBUG_INFO, "Check, if subscriber '%d,%d,%05d' is still available.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);

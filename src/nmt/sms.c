@@ -94,7 +94,7 @@ static const char sms_header[] = {
  * init and exit
  */
 
-static void sms_timeout(struct timer *timer);
+static void sms_timeout(void *data);
 
 /* init instance */
 int sms_init_sender(nmt_t *nmt)
@@ -675,9 +675,9 @@ release:
 	return;
 }
 
-static void sms_timeout(struct timer *timer)
+static void sms_timeout(void *data)
 {
-	nmt_t *nmt = (nmt_t *)timer->priv;
+	nmt_t *nmt = data;
 
 	sms_release(nmt);
 }

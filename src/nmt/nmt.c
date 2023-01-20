@@ -259,7 +259,7 @@ static inline int is_chan_class_tc(enum nmt_chan_type chan_type)
 	return 0;
 }
 
-static void nmt_timeout(struct timer *timer);
+static void nmt_timeout(void *data);
 
 /* Create transceiver instance and link to a list. */
 int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint8_t ms_power, uint8_t traffic_area, uint8_t area_no, int compandor, int supervisory, const char *smsc_number, int send_callerid, int send_clock, int loopback)
@@ -1677,9 +1677,9 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 }
 
 /* Timeout handling */
-static void nmt_timeout(struct timer *timer)
+static void nmt_timeout(void *data)
 {
-	nmt_t *nmt = (nmt_t *)timer->priv;
+	nmt_t *nmt = data;
 
 	switch (nmt->state) {
 	case STATE_MO_DIALING:
@@ -1692,7 +1692,7 @@ static void nmt_timeout(struct timer *timer)
 		timeout_mt_release(nmt);
 		break;
 	case STATE_ACTIVE:
-		timeout_active(nmt, timer->duration);
+		timeout_active(nmt, nmt->timer.duration);
 		break;
 	default:
 		break;

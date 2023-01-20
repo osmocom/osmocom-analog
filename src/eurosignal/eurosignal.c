@@ -234,7 +234,7 @@ void euro_exit(void)
 	flush_id();
 }
 
-static void call_timeout(struct timer *timer);
+static void call_timeout(void *data);
 
 /* Create transceiver instance and link to a list. */
 int euro_create(const char *kanal, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int fm, int tx, int rx, int repeat, int degraded, int random, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
@@ -549,9 +549,9 @@ void call_down_clock(void)
 }
 
 /* Timeout handling */
-static void call_timeout(struct timer *timer)
+static void call_timeout(void *data)
 {
-	euro_call_t *call = (euro_call_t *)timer->priv;
+	euro_call_t *call = data;
 
 	switch (call->state) {
 	case EURO_CALL_ANSWER:

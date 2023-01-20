@@ -27,7 +27,7 @@
 #include "transaction.h"
 
 static transaction_t *trans_list = NULL;
-static void transaction_timeout(struct timer *timer);
+static void transaction_timeout(void *data);
 
 /* link transaction to list */
 static void link_transaction(transaction_t *trans)
@@ -106,9 +106,9 @@ void destroy_transaction(transaction_t *trans)
 }
 
 /* Timeout handling */
-static void transaction_timeout(struct timer *timer)
+static void transaction_timeout(void *data)
 {
-	transaction_t *trans = (transaction_t *)timer->priv;
+	transaction_t *trans = data;
 
 	timeout_mt_paging(trans);
 }

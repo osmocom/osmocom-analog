@@ -71,6 +71,6 @@ transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref);
 transaction_t *search_transaction_queue(void);
 void trans_new_state(transaction_t *trans, uint64_t state);
 void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans);
-void transaction_timeout(struct timer *timer);
+void transaction_timeout(void *data);
 const char *trans_short_state_name(uint64_t state);
 

@@ -1100,20 +1100,20 @@ void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_
 void call_down_clock(void) {}
 
 /* Timeout handling */
-void transaction_timeout(struct timer *timer)
+void transaction_timeout(void *data)
 {
-	transaction_t *trans = (transaction_t *)timer->priv;
+	transaction_t *trans = data;
 	amps_t *amps = trans->amps;
 
 	switch (trans->state) {
 	case TRANS_CALL_MO_ASSIGN_CONFIRM:
 	case TRANS_CALL_MT_ASSIGN_CONFIRM:
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving initial SAT signal.\n", timer->duration);
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving initial SAT signal.\n", trans->timer.duration);
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
 		amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 		break;
 	case TRANS_CALL:
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", timer->duration);
+		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", trans->timer.duration);
 		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
 		amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 		break;

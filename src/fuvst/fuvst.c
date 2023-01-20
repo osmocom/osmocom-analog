@@ -591,9 +591,9 @@ static void destroy_transaction(transaction_t *trans)
 }
 
 /* Timeout handling */
-void trans_timeout(struct timer *timer)
+void trans_timeout(void *data)
 {
-	transaction_t *trans = (transaction_t *)timer->priv;
+	transaction_t *trans = data;
 
 	PDEBUG(DTRANS, DEBUG_NOTICE, "Releasing transaction due to timeout.\n");
 	if (trans->callref)

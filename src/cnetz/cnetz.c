@@ -835,9 +835,9 @@ const char *chan_type_long_name(enum cnetz_chan_type chan_type)
 }
 
 /* Timeout handling */
-void transaction_timeout(struct timer *timer)
+void transaction_timeout(void *data)
 {
-	transaction_t *trans = (transaction_t *)timer->priv;
+	transaction_t *trans = data;
 	cnetz_t *cnetz = trans->cnetz;
 
 	switch (trans->state) {

@@ -80,9 +80,9 @@ static void rej_msg(osmo_cc_socket_t *os, uint32_t callref, uint8_t socket_cause
 	os->recv_msg_cb(os->priv, callref, msg);
 }
 
-void tx_keepalive_timeout(struct timer *timer)
+static void tx_keepalive_timeout(void *data)
 {
-	osmo_cc_conn_t *conn = (osmo_cc_conn_t *)timer->priv;
+	osmo_cc_conn_t *conn = data;
 	osmo_cc_msg_t *msg;
 
 	/* send keepalive message */ 
@@ -93,9 +93,9 @@ void tx_keepalive_timeout(struct timer *timer)
 
 static void close_conn(osmo_cc_conn_t *conn, uint8_t socket_cause);
 
-void rx_keepalive_timeout(struct timer *timer)
+static void rx_keepalive_timeout(void *data)
 {
-	osmo_cc_conn_t *conn = (osmo_cc_conn_t *)timer->priv;
+	osmo_cc_conn_t *conn = data;
 
 	PDEBUG(DCC, DEBUG_ERROR, "OsmoCC-Socket failed due to timeout.\n");
 	close_conn(conn, OSMO_CC_SOCKET_CAUSE_TIMEOUT);

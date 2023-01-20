@@ -159,7 +159,7 @@ static void zeit_calc_time(zeit_call_t *call, time_t time_sec)
 	PDEBUG(DZEIT, DEBUG_INFO, "The time at the next beep is: %d:%02d:%02d\n", call->h, call->m, call->s);
 }
 
-static void call_timeout(struct timer *timer);
+static void call_timeout(void *data);
 
 /* Create call instance */
 static zeit_call_t *zeit_call_create(uint32_t callref, const char *id)
@@ -317,9 +317,9 @@ void call_down_clock(void)
 }
 
 /* Timeout handling */
-static void call_timeout(struct timer *timer)
+static void call_timeout(void *data)
 {
-	zeit_call_t *call = (zeit_call_t *)timer->priv;
+	zeit_call_t *call = data;
 	double now, time_offset;
 	time_t time_sec;
 

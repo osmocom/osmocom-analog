@@ -258,7 +258,7 @@ typedef struct process {
 
 static process_t *process_head = NULL;
 
-static void process_timeout(struct timer *timer);
+static void process_timeout(void *data);
 static void indicate_disconnect_release(int callref, int cause, uint8_t msg_type);
 
 static process_t *create_process(int callref, enum process_state state)
@@ -372,9 +372,9 @@ static void get_process_patterns(process_t *process, int16_t *samples, int lengt
 	process->audio_pos = pos;
 }
 
-static void process_timeout(struct timer *timer)
+static void process_timeout(void *data)
 {
-	process_t *process = (process_t *)timer->priv;
+	process_t *process = data;
 
 	{
 		/* announcement timeout */

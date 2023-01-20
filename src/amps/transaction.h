@@ -53,6 +53,6 @@ transaction_t *search_transaction_number(amps_t *amps, uint32_t min1, uint16_t m
 transaction_t *search_transaction_callref(amps_t *amps, int callref);
 void trans_new_state(transaction_t *trans, int state);
 void amps_flush_other_transactions(amps_t *amps, transaction_t *trans);
-void transaction_timeout(struct timer *timer);
+void transaction_timeout(void *data);
 const char *trans_short_state_name(int state);
 

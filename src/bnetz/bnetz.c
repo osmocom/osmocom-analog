@@ -150,7 +150,7 @@ int bnetz_init(void)
 	return 0;
 }
 
-static void bnetz_timeout(struct timer *timer);
+static void bnetz_timeout(void *data);
 static void bnetz_go_idle(bnetz_t *bnetz);
 
 /* Create transceiver instance and link to a list. */
@@ -631,9 +631,9 @@ lets see, if noise will not generate a release signal....
 }
 
 /* Timeout handling */
-static void bnetz_timeout(struct timer *timer)
+static void bnetz_timeout(void *data)
 {
-	bnetz_t *bnetz = (bnetz_t *)timer->priv;
+	bnetz_t *bnetz = data;
 
 	switch (bnetz->state) {
 	case BNETZ_WAHLABRUF:

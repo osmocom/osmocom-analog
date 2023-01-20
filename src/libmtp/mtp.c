@@ -29,30 +29,30 @@
 #include "../libdebug/debug.h"
 #include "mtp.h"
 
-static void mtp_t1(struct timer *timer)
+static void mtp_t1(void *data)
 {
-        mtp_t *mtp = (mtp_t *)timer->priv;
+        mtp_t *mtp = data;
 
 	mtp_send(mtp, MTP_PRIM_T1_TIMEOUT, 0, NULL, 0);
 }
 
-static void mtp_t2(struct timer *timer)
+static void mtp_t2(void *data)
 {
-        mtp_t *mtp = (mtp_t *)timer->priv;
+        mtp_t *mtp = data;
 
 	mtp_send(mtp, MTP_PRIM_T2_TIMEOUT, 0, NULL, 0);
 }
 
-static void mtp_t3(struct timer *timer)
+static void mtp_t3(void *data)
 {
-        mtp_t *mtp = (mtp_t *)timer->priv;
+        mtp_t *mtp = data;
 
 	mtp_send(mtp, MTP_PRIM_T3_TIMEOUT, 0, NULL, 0);
 }
 
-static void mtp_t4(struct timer *timer)
+static void mtp_t4(void *data)
 {
-        mtp_t *mtp = (mtp_t *)timer->priv;
+        mtp_t *mtp = data;
 
 	mtp_send(mtp, MTP_PRIM_T4_TIMEOUT, 0, NULL, 0);
 }

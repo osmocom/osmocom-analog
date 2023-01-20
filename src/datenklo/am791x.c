@@ -1066,16 +1066,16 @@ static void handle_state(am791x_t *am791x)
 }
 
 /* timeout events */
-static void tx_timeout(struct timer *timer)
+static void tx_timeout(void *data)
 {
-	am791x_t *am791x = (am791x_t *)timer->priv;
+	am791x_t *am791x = data;
 
 	handle_tx_state(am791x);
 }
 
-static void rx_timeout(struct timer *timer)
+static void rx_timeout(void *data)
 {
-	am791x_t *am791x = (am791x_t *)timer->priv;
+	am791x_t *am791x = data;
 
 	handle_rx_state(am791x);
 }

@@ -382,7 +382,7 @@ uint8_t r2000_encode_super(r2000_t *r2000)
 	return super ^ 0x7f;
 }
 
-static void r2000_timeout(struct timer *timer);
+static void r2000_timeout(void *data);
 
 /* Create transceiver instance and link to a list. */
 int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, uint16_t relais, uint8_t deport, uint8_t agi, uint8_t sm_power, uint8_t taxe, uint8_t crins, int destruction, uint8_t nconv, int recall, int loopback)
@@ -1337,9 +1337,9 @@ void r2000_receive_super(r2000_t *r2000, uint8_t super, double quality, double l
 }
 
 /* Timeout handling */
-static void r2000_timeout(struct timer *timer)
+static void r2000_timeout(void *data)
 {
-	r2000_t *r2000 = (r2000_t *)timer->priv;
+	r2000_t *r2000 = data;
 
 	switch (r2000->state) {
 	case STATE_OUT_IDENT:

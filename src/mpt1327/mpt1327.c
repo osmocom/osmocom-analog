@@ -199,7 +199,7 @@ void unit_new_state(mpt1327_unit_t *unit, uint64_t new_state)
 	unit->state = new_state;
 }
 
-static void unit_timeout(struct timer *timer);
+static void unit_timeout(void *data);
 
 mpt1327_unit_t *get_unit(uint8_t prefix, uint16_t ident)
 {
@@ -253,9 +253,9 @@ static void mpt1327_go_idle(mpt1327_t *mpt1327);
 static void mpt1327_release(mpt1327_unit_t *unit);
 
 /* Timeout handling */
-static void unit_timeout(struct timer *timer)
+static void unit_timeout(void *data)
 {
-	mpt1327_unit_t *unit = (mpt1327_unit_t *)timer->priv;
+	mpt1327_unit_t *unit = data;
 
 	// FIXME: do some retry
 	switch (unit->state) {
@@ -600,7 +600,7 @@ static void mpt1327_new_state(mpt1327_t *mpt1327, enum mpt1327_state new_state, 
 	mpt1327_display_status();
 }
 
-static void mpt1327_timeout(struct timer *timer);
+static void mpt1327_timeout(void *data);
 
 /* Create transceiver instance and link to a list. */
 int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db)
@@ -1538,9 +1538,9 @@ void mpt1327_signal_indication(mpt1327_t *mpt1327)
 }
 
 /* Timeout handling */
-static void mpt1327_timeout(struct timer *timer)
+static void mpt1327_timeout(void *data)
 {
-	mpt1327_t *mpt1327 = (mpt1327_t *)timer->priv;
+	mpt1327_t *mpt1327 = data;
 
 	switch (mpt1327->state) {
 	default:

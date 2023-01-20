@@ -278,9 +278,9 @@ reject:
 }
 
 /* send attach indication to socket */
-void send_attach_ind(struct timer *timer)
+void send_attach_ind(void *data)
 {
-	osmo_cc_endpoint_t *ep = (osmo_cc_endpoint_t *)timer->priv;
+	osmo_cc_endpoint_t *ep = data;
 	osmo_cc_call_t *call;
 	osmo_cc_msg_t *msg;
 
@@ -1447,7 +1447,7 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 		/* attach to remote host */
 		timer_init(&ep->attach_timer, send_attach_ind, ep);
 		if (ep->remote_host) {
-			send_attach_ind(&ep->attach_timer);
+			send_attach_ind(ep->attach_timer.data);
 		}
 	}
 

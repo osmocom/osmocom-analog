@@ -186,7 +186,7 @@ int anetz_init(void)
 	return 0;
 }
 
-static void anetz_timeout(struct timer *timer);
+static void anetz_timeout(void *data);
 static void anetz_go_idle(anetz_t *anetz);
 
 /* Create transceiver instance and link to a list. */
@@ -362,9 +362,9 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 }
 
 /* Timeout handling */
-static void anetz_timeout(struct timer *timer)
+static void anetz_timeout(void *data)
 {
-	anetz_t *anetz = (anetz_t *)timer->priv;
+	anetz_t *anetz = data;
 
 	switch (anetz->state) {
 	case ANETZ_ANRUF:
