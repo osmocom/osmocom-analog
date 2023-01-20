@@ -67,6 +67,7 @@ test_dms_LDADD = \
 	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
+	$(top_builddir)/src/libselect/libselect.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
@@ -104,6 +105,7 @@ test_sms_LDADD = \
 	$(top_builddir)/src/nmt/libdmssms.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
+	$(top_builddir)/src/libselect/libselect.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfilter/libfilter.a \

@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "../libdebug/debug.h"
 #include "endpoint.h"
 #include "message.h"

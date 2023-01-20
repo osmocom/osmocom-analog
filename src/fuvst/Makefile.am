@@ -22,6 +22,7 @@ fuvst_LDADD = \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
+	$(top_builddir)/src/libselect/libselect.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfm/libfm.a \
@@ -48,6 +49,7 @@ fuvst_sniffer_LDADD = \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
+	$(top_builddir)/src/libselect/libselect.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfm/libfm.a \

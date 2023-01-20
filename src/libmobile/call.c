@@ -28,6 +28,7 @@
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "../libosmocc/endpoint.h"
 #include "../libosmocc/helper.h"
 #include "../libg711/g711.h"
@@ -927,16 +928,5 @@ void call_exit(void)
 int call_handle(void)
 {
 	return osmo_cc_handle();
-}
-
-void call_media_handle(void)
-{
-	process_t *process = process_head;
-
-	while(process) {
-		if (process->session)
-			osmo_cc_session_handle(process->session, process);
-		process = process->next;
-	}
 }
 

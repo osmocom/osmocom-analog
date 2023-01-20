@@ -32,6 +32,7 @@
 #include "../libdebug/debug.h"
 #include "sender.h"
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "call.h"
 #include "../libosmocc/endpoint.h"
 #include "console.h"
@@ -711,6 +712,7 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 		*quit = 1;
 
 	while(!(*quit)) {
+		int work;
 		begin_time = get_time();
 
 		/* process sound of all transceivers */
@@ -803,9 +805,14 @@ next_char:
 #endif
 		}
 
-		/* process call control */
-		call_media_handle();
-		while (call_handle());
+		/* handle all handlers until no more events */
+		do {
+			work = 0;
+			work |= osmo_cc_handle();
+			work |= (process_timer() == 0.0);
+			work |= osmo_fd_select(0.0);
+		} while (work);
+
 		if (!use_osmocc_sock)
 			process_console(c);
 

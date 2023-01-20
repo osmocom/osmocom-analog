@@ -28,6 +28,7 @@
 #include <netdb.h>
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "message.h"
 #include "cause.h"
 #include "socket.h"
@@ -101,12 +102,14 @@ static void rx_keepalive_timeout(void *data)
 	close_conn(conn, OSMO_CC_SOCKET_CAUSE_TIMEOUT);
 }
 
+static int socket_listen_cb(struct osmo_fd *ofd, unsigned int when);
+
 /* create socket process and bind socket */
 int osmo_cc_open_socket(osmo_cc_socket_t *os, const char *host, uint16_t port, void *priv, void (*recv_msg_cb)(void *priv, uint32_t callref, osmo_cc_msg_t *msg), uint8_t location)
 {
 	int try = 0, auto_port = 0;
 	struct addrinfo *result, *rp;
-	int rc, sock, flags;
+	int rc, sock;
 
 	memset(os, 0, sizeof(*os));
 
@@ -148,21 +151,24 @@ try_again:
 	rc = listen(sock, 10);
 	if (rc < 0) {
 		PDEBUG(DCC, DEBUG_ERROR, "Failed to listen on socket.\n");
+		close(sock);
 		return rc;
 	}
 
-	/* set nonblocking io */
-	flags = fcntl(sock, F_GETFL);
-	flags |= O_NONBLOCK;
-	fcntl(sock, F_SETFL, flags);
-
-	os->socket = sock;
+	/* register */
+	os->ofd.fd = sock;
+	os->ofd.cb = socket_listen_cb;
+	os->ofd.data = os;
+	os->ofd.when = OSMO_FD_READ;
+	osmo_fd_register(&os->ofd);
 	os->recv_msg_cb = recv_msg_cb;
 	os->priv = priv;
 	os->location = location;
 
 	return port;
 }
+
+static int socket_conn_cb(struct osmo_fd *ofd, unsigned int when);
 
 /* create a connection */
 static osmo_cc_conn_t *open_conn(osmo_cc_socket_t *os, int sock, uint32_t callref, int read_setup)
@@ -176,7 +182,11 @@ static osmo_cc_conn_t *open_conn(osmo_cc_socket_t *os, int sock, uint32_t callre
 		abort();
 	}
 	conn->os = os;
-	conn->socket = sock;
+	conn->ofd.fd = sock;
+	conn->ofd.cb = socket_conn_cb;
+	conn->ofd.data = conn;
+	conn->ofd.when = OSMO_FD_READ;
+	osmo_fd_register(&conn->ofd);
 	conn->read_version = 1;
 	conn->write_version = 1;
 	conn->read_setup = read_setup;
@@ -221,8 +231,10 @@ static void close_conn(osmo_cc_conn_t *conn, uint8_t socket_cause)
 	PDEBUG(DCC, DEBUG_DEBUG, "Destroy socket connection (callref %d).\n", conn->callref);
 
 	/* close socket */
-	if (conn->socket)
-		close(conn->socket);
+	if (conn->ofd.fd) {
+		osmo_fd_unregister(&conn->ofd);
+		close(conn->ofd.fd);
+	}
 	/* free partly received message */
 	if (conn->read_msg)
 		osmo_cc_free_msg(conn->read_msg);
@@ -250,9 +262,10 @@ void osmo_cc_close_socket(osmo_cc_socket_t *os)
 	while (os->conn_list)
 		close_conn(os->conn_list, 0);
 	/* close socket */
-	if (os->socket > 0) {
-		close(os->socket);
-		os->socket = 0;
+	if (os->ofd.fd > 0) {
+		osmo_fd_unregister(&os->ofd);
+		close(os->ofd.fd);
+		os->ofd.fd = 0;
 	}
 	/* free send queue */
 	while ((ml = os->write_list)) {
@@ -293,7 +306,7 @@ static int receive_conn(osmo_cc_conn_t *conn)
 
 	/* get version from remote */
 	if (conn->read_version) {
-		rc = recv(conn->socket, conn->read_version_string + conn->read_version_pos, strlen(version_string) - conn->read_version_pos, 0);
+		rc = recv(conn->ofd.fd, conn->read_version_string + conn->read_version_pos, strlen(version_string) - conn->read_version_pos, 0);
 		if (rc < 0 && errno == EAGAIN)
 			return work;
 		work = 1;
@@ -320,7 +333,7 @@ static int receive_conn(osmo_cc_conn_t *conn)
 try_next_message:
 	/* read message header from remote */
 	if (!conn->read_msg) {
-		rc = recv(conn->socket, ((uint8_t *)&conn->read_hdr) + conn->read_pos, sizeof(conn->read_hdr) - conn->read_pos, 0);
+		rc = recv(conn->ofd.fd, ((uint8_t *)&conn->read_hdr) + conn->read_pos, sizeof(conn->read_hdr) - conn->read_pos, 0);
 		if (rc < 0 && errno == EAGAIN)
 			return work;
 		work = 1;
@@ -344,7 +357,7 @@ try_next_message:
 	len = ntohs(msg->length_networkorder);
 	if (len == 0)
 		goto empty_message;
-	rc = recv(conn->socket, msg->data + conn->read_pos, len - conn->read_pos, 0);
+	rc = recv(conn->ofd.fd, msg->data + conn->read_pos, len - conn->read_pos, 0);
 	if (rc < 0 && errno == EAGAIN)
 		return work;
 	work = 1;
@@ -397,7 +410,7 @@ static int transmit_conn(osmo_cc_conn_t *conn)
 
 	/* send socket version to remote */
 	if (conn->write_version) {
-		rc = write(conn->socket, version_string, strlen(version_string));
+		rc = write(conn->ofd.fd, version_string, strlen(version_string));
 		if (rc < 0 && errno == EAGAIN)
 			return work;
 		work = 1;
@@ -416,7 +429,7 @@ static int transmit_conn(osmo_cc_conn_t *conn)
 		timer_stop(&conn->tx_keepalive_timer);
 		msg = conn->write_list->msg;
 		len = sizeof(*msg) + ntohs(msg->length_networkorder);
-		rc = write(conn->socket, msg, len);
+		rc = write(conn->ofd.fd, msg, len);
 		if (rc < 0 && errno == EAGAIN)
 			return work;
 		work = 1;
@@ -460,8 +473,6 @@ close:
  */
 int osmo_cc_handle_socket(osmo_cc_socket_t *os)
 {
-	struct sockaddr_storage sa;
-	socklen_t slen = sizeof(sa);
 	int sock;
 	osmo_cc_conn_t *conn;
 	osmo_cc_msg_list_t *ml, **mlp;
@@ -487,6 +498,7 @@ int osmo_cc_handle_socket(osmo_cc_socket_t *os)
 			while (*mlp)
 				mlp = &((*mlp)->next);
 			*mlp = ml;
+			conn->ofd.when |= OSMO_FD_WRITE;
 			/* done with message */
 			continue;
 		}
@@ -526,7 +538,7 @@ int osmo_cc_handle_socket(osmo_cc_socket_t *os)
 			sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 			if (sock < 0)
 				continue;
-			/* set nonblocking io */
+			/* set nonblocking io, to prevent connect() and subsequent reads from blocking */
 			flags = fcntl(sock, F_GETFL);
 			flags |= O_NONBLOCK;
 			fcntl(sock, F_SETFL, flags);
@@ -550,34 +562,58 @@ int osmo_cc_handle_socket(osmo_cc_socket_t *os)
 		conn = open_conn(os, sock, ml->callref, 0);
 		/* attach to list */
 		conn->write_list = ml;
+		conn->ofd.when |= OSMO_FD_WRITE;
 		/* done with (setup) message */
 	}
 
-	/* handle new socket connection */
-	while ((sock = accept(os->socket, (struct sockaddr *)&sa, &slen)) > 0) {
-		work = 1;
-		/* set nonblocking io */
-		flags = fcntl(sock, F_GETFL);
-		flags |= O_NONBLOCK;
-		fcntl(sock, F_SETFL, flags);
-		/* create connection */
-		open_conn(os, sock, 0, 1);
+	return work;
+}
+
+static int socket_listen_cb(struct osmo_fd *ofd, unsigned int when)
+{
+	osmo_cc_socket_t *os = ofd->data;
+	struct sockaddr_storage sa;
+	socklen_t slen = sizeof(sa);
+	int sock;
+	int flags;
+
+	if (when & OSMO_FD_READ) {
+		/* handle new socket connection */
+		if ((sock = accept(os->ofd.fd, (struct sockaddr *)&sa, &slen)) > 0) {
+			/* set nonblocking io, to prevent subsequent reads from blocking */
+			flags = fcntl(sock, F_GETFL);
+			flags |= O_NONBLOCK;
+			fcntl(sock, F_SETFL, flags);
+			/* create connection */
+			open_conn(os, sock, 0, 1);
+		}
 	}
 
-	/* start with list after each read/write, because while handling (the message), one or more connections may be destroyed */
-	for (conn = os->conn_list; conn; conn=conn->next) {
+	return 0;
+}
+
+static int socket_conn_cb(struct osmo_fd *ofd, unsigned int when)
+{
+	osmo_cc_conn_t *conn = ofd->data;
+	int work;
+
+	if (when & OSMO_FD_READ) {
 		/* check for rx */
 		work = receive_conn(conn);
 		/* if "change" is set, connection list might have changed, so we restart processing the list */
 		if (work)
-			break;
+			return 0;
+	}
+	if (when & OSMO_FD_WRITE) {
 		/* check for tx */
 		work = transmit_conn(conn);
 		/* if "change" is set, connection list might have changed, so we restart processing the list */
 		if (work)
-			break;
+			return 0;
+		else
+			conn->ofd.when &= ~OSMO_FD_WRITE;
 	}
 
-	return work;
+	return 0;
 }
 

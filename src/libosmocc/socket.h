@@ -12,7 +12,7 @@ struct osmo_cc_socket;
 typedef struct osmo_cc_conn {
 	struct osmo_cc_conn	*next;
 	struct osmo_cc_socket	*os;
-	int			socket;
+	struct osmo_fd		ofd;
 	uint32_t		callref;
 	int			read_setup;
 	int			read_version;
@@ -28,7 +28,7 @@ typedef struct osmo_cc_conn {
 } osmo_cc_conn_t;
 
 typedef struct osmo_cc_socket {
-	int			socket;
+	struct osmo_fd		ofd;
 	osmo_cc_conn_t		*conn_list;
 	osmo_cc_msg_list_t	*write_list;
 	void (*recv_msg_cb)(void *priv, uint32_t callref, osmo_cc_msg_t *msg);

@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <inttypes.h>
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "../libdebug/debug.h"
 #include "endpoint.h"
 #include "helper.h"

@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <inttypes.h>
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "../libdebug/debug.h"
 #include "../liboptions/options.h"
 #include "endpoint.h"
@@ -620,21 +621,5 @@ int osmo_cc_session_if_codec(osmo_cc_session_codec_t *codec, const char *name, u
 	return (!strcmp(codec->payload_name, name)
 	     && codec->payload_rate == rate
 	     && codec->payload_channels == channels);
-}
-
-int osmo_cc_session_handle(osmo_cc_session_t *session, void *codec_priv)
-{
-	osmo_cc_session_media_t *media;
-	int w = 0, rc;
-
-	osmo_cc_session_for_each_media(session->media_list, media) {
-		do {
-			rc = osmo_cc_rtp_receive(media, codec_priv);
-			if (rc >= 0)
-				w = 1;
-		} while (rc >= 0);
-	}
-
-	return w;
 }
 

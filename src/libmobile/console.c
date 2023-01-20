@@ -29,6 +29,7 @@
 #include "../libjitter/jitter.h"
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
+#include "../libselect/select.h"
 #include "../libosmocc/endpoint.h"
 #include "../libosmocc/helper.h"
 #include "testton.h"
@@ -567,9 +568,6 @@ void process_console(int c)
 {
 	if (!console.loopback && console.number_max_length)
 		process_ui(c);
-
-	if (console.session)
-		osmo_cc_session_handle(console.session, &console);
 
 	if (!console.sound)
 		return;

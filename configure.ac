@@ -74,6 +74,7 @@ AC_OUTPUT(
     src/libhagelbarger/Makefile
     src/libdtmf/Makefile
     src/libtimer/Makefile
+    src/libselect/Makefile
     src/libsamplerate/Makefile
     src/libscrambler/Makefile
     src/libemphasis/Makefile

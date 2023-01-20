@@ -80,8 +80,8 @@ typedef struct osmo_cc_session_media {
 	struct osmo_cc_session_codec *codec_list;
 	int send, receive;
 	void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len);
-	int rtp_socket;
-	int rtcp_socket;
+	struct osmo_fd rtp_ofd;
+	struct osmo_fd rtcp_ofd;
 	uint32_t tx_ssrc, rx_ssrc;
 	uint16_t tx_sequence, rx_sequence;
 	uint32_t tx_timestamp, rx_timestamp;
@@ -126,5 +126,4 @@ const char *osmo_cc_session_addrtype2string(enum osmo_cc_session_addrtype addrty
 const char *osmo_cc_session_media_type2string(enum osmo_cc_session_media_type media_type);
 const char *osmo_cc_session_media_proto2string(enum osmo_cc_session_media_proto media_proto);
 int osmo_cc_session_if_codec(osmo_cc_session_codec_t *codec, const char *name, uint32_t rate, int channels);
-int osmo_cc_session_handle(osmo_cc_session_t *session, void *codec_priv);
 

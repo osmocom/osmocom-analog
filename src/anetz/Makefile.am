@@ -27,6 +27,7 @@ anetz_LDADD = \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libsquelch/libsquelch.a \
 	$(top_builddir)/src/libtimer/libtimer.a \
+	$(top_builddir)/src/libselect/libselect.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfm/libfm.a \

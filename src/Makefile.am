@@ -15,6 +15,7 @@ SUBDIRS = \
 	libhagelbarger \
 	libdtmf \
 	libtimer \
+	libselect \
 	libsamplerate \
 	libscrambler \
 	libemphasis \
