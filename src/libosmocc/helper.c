@@ -63,24 +63,24 @@ const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *pr
 	int i, selected_codec_i, telephone_event_i;
 
 	if (*session_p) {
-		PDEBUG(DCC, DEBUG_ERROR, "Session already set, please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Session already set, please fix!\n");
 		abort();
 	}
 	if (*codec_p) {
-		PDEBUG(DCC, DEBUG_ERROR, "Codec already set, please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Codec already set, please fix!\n");
 		abort();
 	}
 
 	/* SDP IE */
 	rc = osmo_cc_get_ie_sdp(msg, 0, offer_sdp, sizeof(offer_sdp));
 	if (rc < 0) {
-		PDEBUG(DCC, DEBUG_ERROR, "There is no SDP included in setup request.\n");
+		LOGP(DCC, LOGL_ERROR, "There is no SDP included in setup request.\n");
 		return NULL;
 	}
 
 	*session_p = osmo_cc_session_receive_offer(conf, priv, offer_sdp);
 	if (!*session_p) {
-		PDEBUG(DCC, DEBUG_ERROR, "Failed to parse SDP.\n");
+		LOGP(DCC, LOGL_ERROR, "Failed to parse SDP.\n");
 		return NULL;
 	}
 
@@ -124,7 +124,7 @@ const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *pr
 			break;
 	}
 	if (!selected_codec) {
-		PDEBUG(DCC, DEBUG_ERROR, "No codec found in setup message that we support.\n");
+		LOGP(DCC, LOGL_ERROR, "No codec found in setup message that we support.\n");
 		osmo_cc_free_session(*session_p);
 		*session_p = NULL;
 		return NULL;
@@ -154,7 +154,7 @@ int osmo_cc_helper_audio_negotiate(osmo_cc_msg_t *msg, osmo_cc_session_t **sessi
 	int rc;
 
 	if (!(*session_p)) {
-		PDEBUG(DCC, DEBUG_ERROR, "Session not set, please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Session not set, please fix!\n");
 		abort();
 	}
 
@@ -185,7 +185,7 @@ int osmo_cc_helper_audio_negotiate(osmo_cc_msg_t *msg, osmo_cc_session_t **sessi
 		}
 	}
 	if (!(*codec_p)) {
-		PDEBUG(DCC, DEBUG_ERROR, "No codec found in setup reply message that we support.\n");
+		LOGP(DCC, LOGL_ERROR, "No codec found in setup reply message that we support.\n");
 		return -EIO;
 	}
 

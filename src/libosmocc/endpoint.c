@@ -36,11 +36,11 @@ static osmo_cc_call_t *call_new(osmo_cc_endpoint_t *ep, uint32_t callref)
 
 	call = calloc(1, sizeof(*call));
 	if (!call) {
-		PDEBUG(DCC, DEBUG_ERROR, "No memory for call process instance.\n");
+		LOGP(DCC, LOGL_ERROR, "No memory for call process instance.\n");
 		abort();
 	}
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Creating new call with callref %u.\n", callref);
+	LOGP(DCC, LOGL_DEBUG, "Creating new call with callref %u.\n", callref);
 
 	call->ep = ep;
 	call->callref = callref;
@@ -59,7 +59,7 @@ static void call_delete(osmo_cc_call_t *call)
 {
 	osmo_cc_call_t **cp;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Destroying call with callref %u.\n", call->callref);
+	LOGP(DCC, LOGL_DEBUG, "Destroying call with callref %u.\n", call->callref);
 
 	/* detach from call process list */
 	cp = &call->ep->call_list;
@@ -105,7 +105,7 @@ static const char *state_names[] = {
 
 static void new_call_state(osmo_cc_call_t *call, enum osmo_cc_state new_state)
 {
-	PDEBUG(DCC, DEBUG_DEBUG, "Changing call state with callref %u from %s to %s.\n", call->callref, state_names[call->state], state_names[new_state]);
+	LOGP(DCC, LOGL_DEBUG, "Changing call state with callref %u from %s to %s.\n", call->callref, state_names[call->state], state_names[new_state]);
 	call->state = new_state;
 }
 
@@ -160,12 +160,12 @@ static int split_address(const char *address, const char **host_p, uint16_t *por
 
 	*host_p = osmo_cc_host_of_address(address);
 	if (!(*host_p)) {
-		PDEBUG(DCC, DEBUG_ERROR, "Host IP in given address '%s' is invalid.\n", address);
+		LOGP(DCC, LOGL_ERROR, "Host IP in given address '%s' is invalid.\n", address);
 		return -EINVAL;
 	}
 	portstring = osmo_cc_port_of_address(address);
 	if (!portstring) {
-		PDEBUG(DCC, DEBUG_ERROR, "Port number in given address '%s' is not specified or invalid.\n", address);
+		LOGP(DCC, LOGL_ERROR, "Port number in given address '%s' is not specified or invalid.\n", address);
 		return -EINVAL;
 	}
 	*port_p = atoi(portstring);
@@ -220,7 +220,7 @@ static void forward_to_ul(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	if (address && msg->type == OSMO_CC_MSG_SETUP_IND) {
 		rc = split_address(address, &host, &port);
 		if (rc < 0) {
-			PDEBUG(DCC, DEBUG_ERROR, "Given remote peer's address '%s' in setup message is invalid, rejecting call.\n", address);
+			LOGP(DCC, LOGL_ERROR, "Given remote peer's address '%s' in setup message is invalid, rejecting call.\n", address);
 reject:
 			/* reject, due to error */
 			osmo_cc_free_msg(msg);
@@ -229,21 +229,21 @@ reject:
 			call_delete(call);
 			return;
 		}
-		PDEBUG(DCC, DEBUG_DEBUG, "Using host IP '%s' and port '%d' from setup message.\n", host, port);
+		LOGP(DCC, LOGL_DEBUG, "Using host IP '%s' and port '%d' from setup message.\n", host, port);
 	}
 
 	/* for attach message, use remote peer */
 	if (msg->type == OSMO_CC_MSG_ATTACH_IND) {
 		host = call->ep->remote_host;
 		port = call->ep->remote_port;
-		PDEBUG(DCC, DEBUG_DEBUG, "Using host IP '%s' and port '%d' from remote address for attach message.\n", host, port);
+		LOGP(DCC, LOGL_DEBUG, "Using host IP '%s' and port '%d' from remote address for attach message.\n", host, port);
 	}
 
 	/* if there is no remote peer in the setup message, use remote peer */
 	if (!address && msg->type == OSMO_CC_MSG_SETUP_IND && call->ep->remote_host) {
 		host = call->ep->remote_host;
 		port = call->ep->remote_port;
-		PDEBUG(DCC, DEBUG_DEBUG, "Using host IP '%s' and port '%d' from remote address for setup message.\n", host, port);
+		LOGP(DCC, LOGL_DEBUG, "Using host IP '%s' and port '%d' from remote address for setup message.\n", host, port);
 	}
 
 	/* if there is no remote peer set, try to use the interface name */
@@ -257,16 +257,16 @@ reject:
 		/* check for incoming attachment */
 		att = osmo_cc_get_attached_interface(call->ep, interface);
 		if (!att && !interface[0]) {
-			PDEBUG(DCC, DEBUG_ERROR, "No remote peer attached, rejecting call.\n");
+			LOGP(DCC, LOGL_ERROR, "No remote peer attached, rejecting call.\n");
 			goto reject;
 		}
 		if (!att) {
-			PDEBUG(DCC, DEBUG_ERROR, "No remote peer attached for given interface '%s', rejecting call.\n", interface);
+			LOGP(DCC, LOGL_ERROR, "No remote peer attached for given interface '%s', rejecting call.\n", interface);
 			goto reject;
 		}
 		host = att->attached_host;
 		port = att->attached_port;
-		PDEBUG(DCC, DEBUG_DEBUG, "Using host IP '%s' and port '%d' from attached peer for setup message.\n", host, port);
+		LOGP(DCC, LOGL_DEBUG, "Using host IP '%s' and port '%d' from attached peer for setup message.\n", host, port);
 	}
 
 	/* add local interface name to setup message */
@@ -285,7 +285,7 @@ void send_attach_ind(void *data)
 	osmo_cc_call_t *call;
 	osmo_cc_msg_t *msg;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Trying to attach to remote peer \"%s\".\n", ep->remote_host);
+	LOGP(DCC, LOGL_DEBUG, "Trying to attach to remote peer \"%s\".\n", ep->remote_host);
 
 	/* create new call for attachment */
 	call = osmo_cc_call_new(ep);
@@ -306,7 +306,7 @@ void send_attach_ind(void *data)
 
 void attach_rsp(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 {
-	PDEBUG(DCC, DEBUG_INFO, "Attached to remote peer \"%s\".\n", call->ep->remote_address);
+	LOGP(DCC, LOGL_INFO, "Attached to remote peer \"%s\".\n", call->ep->remote_address);
 
 	/* set state */
 	new_call_state(call, OSMO_CC_STATE_ATTACH_OUT);
@@ -321,11 +321,11 @@ void attach_rel(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	if (call->state == OSMO_CC_STATE_ATTACH_SENT
 	 || call->state == OSMO_CC_STATE_ATTACH_OUT) {
 		timer_start(&call->ep->attach_timer, OSMO_CC_ATTACH_TIMER);
-		PDEBUG(DCC, DEBUG_INFO, "Attachment to remote peer \"%s\" failed, retrying.\n", call->ep->remote_address);
+		LOGP(DCC, LOGL_INFO, "Attachment to remote peer \"%s\" failed, retrying.\n", call->ep->remote_address);
 	}
 
 	if (call->attached_name)
-		PDEBUG(DCC, DEBUG_INFO, "Peer with remote interface \"%s\" detached from us.\n", call->attached_name);
+		LOGP(DCC, LOGL_INFO, "Peer with remote interface \"%s\" detached from us.\n", call->attached_name);
 
 	/* change state */
 	new_call_state(call, OSMO_CC_STATE_IDLE);
@@ -356,12 +356,12 @@ void attach_req(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	if (rc < 0)
 		address[0] = '\0';
 	if (!address[0]) {
-		PDEBUG(DCC, DEBUG_ERROR, "Attachment request from remote peer has no remote address set, rejecting.\n");
+		LOGP(DCC, LOGL_ERROR, "Attachment request from remote peer has no remote address set, rejecting.\n");
 
 rel:
 		/* change to REL_REQ */
 		msg->type = OSMO_CC_MSG_REL_IND;
-		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+		LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 		/* message to socket */
 		forward_to_ul(call, msg);
@@ -373,7 +373,7 @@ rel:
 	}
 	rc = split_address(address, &host, &port);
 	if (rc < 0) {
-		PDEBUG(DCC, DEBUG_ERROR, "Given remote peer's address '%s' in attach message is invalid, rejecting call.\n", address);
+		LOGP(DCC, LOGL_ERROR, "Given remote peer's address '%s' in attach message is invalid, rejecting call.\n", address);
 		goto rel;
 	}
 	free((char *)call->attached_host);
@@ -388,11 +388,11 @@ rel:
 		call->attached_name = strdup(interface);
 	}
 
-	PDEBUG(DCC, DEBUG_INFO, "Remote peer with socket address '%s' and port '%d' and interface '%s' attached to us.\n", call->attached_host, call->attached_port, call->attached_name);
+	LOGP(DCC, LOGL_INFO, "Remote peer with socket address '%s' and port '%d' and interface '%s' attached to us.\n", call->attached_host, call->attached_port, call->attached_name);
 
 	/* changing to confirm message */
 	msg->type = OSMO_CC_MSG_ATTACH_CNF;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+	LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 	/* message to socket */
 	forward_to_ul(call, msg);
@@ -667,7 +667,7 @@ static void disc_collision_ind(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 		/* change to REL_REQ */
 		msg->type = OSMO_CC_MSG_REL_REQ;
-		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+		LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 		/* to lower layer */
 		forward_to_ll(call, msg);
@@ -688,7 +688,7 @@ static void disc_collision_req(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	if (call->lower_layer_released) {
 		/* change to REL_REQ */
 		msg->type = OSMO_CC_MSG_REL_IND;
-		PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+		LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 		/* to upper layer */
 		forward_to_ul(call, msg);
@@ -726,7 +726,7 @@ static void rej_ind_disc(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to REL_IND */
 	msg->type = OSMO_CC_MSG_REL_IND;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+	LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 	/* to upper layer */
 	forward_to_ul(call, msg);
@@ -742,7 +742,7 @@ static void rej_req_disc(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to REL_REQ */
 	msg->type = OSMO_CC_MSG_REL_REQ;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+	LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 
 	/* to lower layer */
 	forward_to_ll(call, msg);
@@ -771,7 +771,7 @@ static void rel_ind_other(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to DISC_IND */
 	msg->type = OSMO_CC_MSG_DISC_IND;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+	LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 	call->lower_layer_released = 1;
 
 	/* to upper layer */
@@ -798,7 +798,7 @@ static void rel_req_other(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 
 	/* change to DISC_REQ */
 	msg->type = OSMO_CC_MSG_DISC_REQ;
-	PDEBUG(DCC, DEBUG_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
+	LOGP(DCC, LOGL_INFO, "Changing message to %s.\n", osmo_cc_msg_value2name(msg->type));
 	call->upper_layer_released = 1;
 
 	/* to lower layer */
@@ -955,16 +955,16 @@ static void handle_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		 && ((1 << call->state) & statemachine_list[i].states))
 			break;
 	if (i == STATEMACHINE_LEN) {
-		PDEBUG(DCC, DEBUG_INFO, "Message %s unhandled at state %s (callref %d)\n",
+		LOGP(DCC, LOGL_INFO, "Message %s unhandled at state %s (callref %d)\n",
 			osmo_cc_msg_value2name(msg->type), state_names[call->state], call->callref);
 		osmo_cc_free_msg(msg);
 		return;
 	}
 
-	PDEBUG(DCC, DEBUG_INFO, "Handle message %s at state %s (callref %d)\n",
+	LOGP(DCC, LOGL_INFO, "Handle message %s at state %s (callref %d)\n",
 		osmo_cc_msg_value2name(msg->type), state_names[call->state], call->callref);
-	if (debuglevel <= DEBUG_INFO)
-		osmo_cc_debug_ie(msg, DEBUG_INFO);
+	if (debuglevel <= LOGL_INFO)
+		osmo_cc_debug_ie(msg, LOGL_INFO);
 	statemachine_list[i].action(call, msg);
 }
 
@@ -1041,7 +1041,7 @@ void osmo_cc_ll_msg(osmo_cc_endpoint_t *ep, uint32_t callref, osmo_cc_msg_t *msg
 	osmo_cc_call_t *call;
 
 	if (!(msg->type & 1)) {
-		PDEBUG(DCC, DEBUG_ERROR, "Received message from lower layer that is not an _IND nor _CNF, please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Received message from lower layer that is not an _IND nor _CNF, please fix!\n");
 		osmo_cc_free_msg(msg);
 		return;
 	}
@@ -1064,7 +1064,7 @@ void osmo_cc_ul_msg(void *priv, uint32_t callref, osmo_cc_msg_t *msg)
 	osmo_cc_call_t *call;
 
 	if ((msg->type & 1)) {
-		PDEBUG(DCC, DEBUG_ERROR, "Received message from socket that is not an _REQ nor _RSP, please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Received message from socket that is not an _REQ nor _RSP, please fix!\n");
 		osmo_cc_free_msg(msg);
 		return;
 	}
@@ -1125,7 +1125,7 @@ static int osmo_cc_set_name(osmo_cc_endpoint_t *ep, const char *text)
 			text++;
 		}
 	} else {
-		PDEBUG(DCC, DEBUG_ERROR, "Invalid name definition '%s'\n", text);
+		LOGP(DCC, LOGL_ERROR, "Invalid name definition '%s'\n", text);
 		return -EINVAL;
 	}
 
@@ -1188,12 +1188,12 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 			text++;
 		}
 		if (!strcasecmp(text, "auto")) {
-			PDEBUG(DCC, DEBUG_DEBUG, "setting automatic remote peer selection\n");
+			LOGP(DCC, LOGL_DEBUG, "setting automatic remote peer selection\n");
 			ep->remote_auto = 1;
 			return 0;
 		}
 		if (!strcasecmp(text, "none")) {
-			PDEBUG(DCC, DEBUG_DEBUG, "disable automatic remote peer selection\n");
+			LOGP(DCC, LOGL_DEBUG, "disable automatic remote peer selection\n");
 			ep->remote_auto = 0;
 			return 0;
 		}
@@ -1202,7 +1202,7 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 		host_p = &ep->remote_host;
 		port_p = &ep->remote_port;
 	} else {
-		PDEBUG(DCC, DEBUG_ERROR, "Invalid local or remote address definition '%s'\n", text);
+		LOGP(DCC, LOGL_ERROR, "Invalid local or remote address definition '%s'\n", text);
 		return -EINVAL;
 	}
 
@@ -1227,7 +1227,7 @@ static int osmo_cc_set_address(osmo_cc_endpoint_t *ep, const char *text)
 		enum osmo_cc_session_addrtype addrtype;
 		addrtype = osmo_cc_address_type(*host_p);
 		if (addrtype == osmo_cc_session_addrtype_unknown) {
-			PDEBUG(DCC, DEBUG_ERROR, "Given local address '%s' is invalid.\n", *host_p);
+			LOGP(DCC, LOGL_ERROR, "Given local address '%s' is invalid.\n", *host_p);
 			return -EINVAL;
 		}
 		osmo_cc_set_local_peer(&ep->session_config, osmo_cc_session_nettype_inet, addrtype, *host_p);
@@ -1261,7 +1261,7 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 		text += 9;
 		ports = 1;
 	} else {
-		PDEBUG(DCC, DEBUG_ERROR, "Invalid RTP definition '%s'\n", text);
+		LOGP(DCC, LOGL_ERROR, "Invalid RTP definition '%s'\n", text);
 		return -EINVAL;
 	}
 
@@ -1276,7 +1276,7 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 		enum osmo_cc_session_addrtype addrtype;
 		addrtype = osmo_cc_address_type(text);
 		if (addrtype == osmo_cc_session_addrtype_unknown) {
-			PDEBUG(DCC, DEBUG_ERROR, "Given RTP address '%s' is invalid.\n", text);
+			LOGP(DCC, LOGL_ERROR, "Given RTP address '%s' is invalid.\n", text);
 			return -EINVAL;
 		}
 		osmo_cc_set_local_peer(&ep->session_config, osmo_cc_session_nettype_inet, addrtype, text);
@@ -1289,7 +1289,7 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 		/* from port */
 		while (*text > ' ') {
 			if (*text < '0' || *text > '9') {
-				PDEBUG(DCC, DEBUG_ERROR, "Given 'from' port in '%s' is invalid.\n", text);
+				LOGP(DCC, LOGL_ERROR, "Given 'from' port in '%s' is invalid.\n", text);
 				return -EINVAL;
 			}
 			from = from * 10 + *text - '0';
@@ -1306,7 +1306,7 @@ static int osmo_cc_set_rtp(osmo_cc_endpoint_t *ep, const char *text)
 		/* to port */
 		while (*text > ' ') {
 			if (*text < '0' || *text > '9') {
-				PDEBUG(DCC, DEBUG_ERROR, "Given 'to' port in '%s' is invalid.\n", text);
+				LOGP(DCC, LOGL_ERROR, "Given 'to' port in '%s' is invalid.\n", text);
 				return -EINVAL;
 			}
 			to = to * 10 + *text - '0';
@@ -1335,10 +1335,10 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 	int rc;
 	int i;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Creating new endpoint instance.\n");
+	LOGP(DCC, LOGL_DEBUG, "Creating new endpoint instance.\n");
 
 	if (!!strcmp(version, OSMO_CC_VERSION)) {
-		PDEBUG(DCC, DEBUG_ERROR, "Application was compiled for different Osmo-CC version.\n");
+		LOGP(DCC, LOGL_ERROR, "Application was compiled for different Osmo-CC version.\n");
 		return OSMO_CC_RC_VERSION_MISMATCH;
 	}
 
@@ -1392,7 +1392,7 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 				return rc;
 			}
 		} else {
-			PDEBUG(DCC, DEBUG_ERROR, "Unknown osmo-cc argument \"%s\"\n", argv[i]);
+			LOGP(DCC, LOGL_ERROR, "Unknown osmo-cc argument \"%s\"\n", argv[i]);
 			return -EINVAL;
 		}
 	}
@@ -1408,7 +1408,7 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 		port = ep->local_port;
 		if (!host) {
 			host = "127.0.0.1";
-			PDEBUG(DCC, DEBUG_DEBUG, "No local peer set, using default \"%s\"\n", host);
+			LOGP(DCC, LOGL_DEBUG, "No local peer set, using default \"%s\"\n", host);
 		}
 		rc = osmo_cc_open_socket(&ep->os, host, port, ep, osmo_cc_ul_msg, serving_location);
 		if (rc < 0) {
@@ -1430,12 +1430,12 @@ int osmo_cc_new(osmo_cc_endpoint_t *ep, const char *version, const char *name, u
 		if (ep->remote_auto) {
 			free((char *)ep->remote_host);
 			ep->remote_host = strdup(ep->local_host);
-			PDEBUG(DCC, DEBUG_DEBUG, "Remote peer set to auto, using local peer's host \"%s\" for remote peer.\n", ep->remote_host);
+			LOGP(DCC, LOGL_DEBUG, "Remote peer set to auto, using local peer's host \"%s\" for remote peer.\n", ep->remote_host);
 			if (rc == OSMO_CC_DEFAULT_PORT)
 				ep->remote_port = OSMO_CC_DEFAULT_PORT + 1;
 			else
 				ep->remote_port = OSMO_CC_DEFAULT_PORT;
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Using remote port %d.\n", ep->remote_port);
+			LOGP(DCC, LOGL_DEBUG, " -> Using remote port %d.\n", ep->remote_port);
 			/* create address string */
 			free((char *)ep->remote_address);
 			addrtype = osmo_cc_address_type(ep->remote_host);
@@ -1460,7 +1460,7 @@ void osmo_cc_delete(osmo_cc_endpoint_t *ep)
 {
 	osmo_cc_endpoint_t **epp;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Destroying endpoint instance.\n");
+	LOGP(DCC, LOGL_DEBUG, "Destroying endpoint instance.\n");
 
 	/* detach from list >*/
 	epp = &osmo_cc_endpoint_list;
@@ -1536,7 +1536,7 @@ const char *osmo_cc_host_of_address(const char *address)
 	char *p;
 
 	if (strlen(address) >= sizeof(host)) {
-		PDEBUG(DCC, DEBUG_ERROR, "String way too long!\n");
+		LOGP(DCC, LOGL_ERROR, "String way too long!\n");
 		return NULL;
 	}
 

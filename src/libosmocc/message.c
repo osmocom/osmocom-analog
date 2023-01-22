@@ -374,7 +374,7 @@ osmo_cc_msg_t *osmo_cc_new_msg(uint8_t msg_type)
 	/* allocate message */
 	msg = calloc(1, sizeof(*msg) + 65535);
 	if (!msg) {
-		PDEBUG(DCC, DEBUG_ERROR, "No memory\n");
+		LOGP(DCC, LOGL_ERROR, "No memory\n");
 		abort();
 	}
 	/* set message type and zero length */
@@ -453,14 +453,14 @@ void osmo_cc_debug_ie(osmo_cc_msg_t *msg, int level)
 		ie = (osmo_cc_ie_t *)p;
 		/* check for minimum IE length */
 		if (msg_len < sizeof(*ie)) {
-			PDEBUG(DCC, level, "****** Rest of message is too short for an IE: value=%s\n", debug_hex(p, msg_len));
+			LOGP(DCC, level, "****** Rest of message is too short for an IE: value=%s\n", debug_hex(p, msg_len));
 			return;
 		}
 		/* get actual IE length */
 		len = ntohs(ie->length_networkorder);
 		/* check if IE length does not exceed message */
 		if (msg_len < sizeof(*ie) + len) {
-			PDEBUG(DCC, level, "****** IE: type=0x%02x length=%d would exceed the rest length of message (%d bytes left)\n", ie->type, len, msg_len - (int)sizeof(*ie));
+			LOGP(DCC, level, "****** IE: type=0x%02x length=%d would exceed the rest length of message (%d bytes left)\n", ie->type, len, msg_len - (int)sizeof(*ie));
 			return;
 		}
 		switch (ie->type) {
@@ -468,109 +468,109 @@ void osmo_cc_debug_ie(osmo_cc_msg_t *msg, int level)
 			rc = osmo_cc_get_ie_called(msg, ie_repeat[ie->type], &type, &plan, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), string);
+			LOGP(DCC, level, "  %s type=%d(%s) plan=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), string);
 			break;
 		case OSMO_CC_IE_CALLED_SUB:
 			rc = osmo_cc_get_ie_called_sub(msg, ie_repeat[ie->type], &type, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), string);
+			LOGP(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), string);
 			break;
 		case OSMO_CC_IE_CALLED_NAME:
 			rc = osmo_cc_get_ie_called_name(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_CALLED_INTERFACE:
 			rc = osmo_cc_get_ie_called_interface(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_COMPLETE:
 			rc = osmo_cc_get_ie_complete(msg, ie_repeat[ie->type]);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s\n", osmo_cc_ie_value2name(ie->type));
+			LOGP(DCC, level, "  %s\n", osmo_cc_ie_value2name(ie->type));
 			break;
 		case OSMO_CC_IE_CALLING:
 			rc = osmo_cc_get_ie_calling(msg, ie_repeat[ie->type], &type, &plan, &present, &screen, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s), presentation=%d(%s), screening=%d(%s), number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), present, osmo_cc_present_value2name(present), screen, osmo_cc_screen_value2name(screen), string);
+			LOGP(DCC, level, "  %s type=%d(%s) plan=%d(%s), presentation=%d(%s), screening=%d(%s), number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), present, osmo_cc_present_value2name(present), screen, osmo_cc_screen_value2name(screen), string);
 			break;
 		case OSMO_CC_IE_CALLING_SUB:
 			rc = osmo_cc_get_ie_calling_sub(msg, ie_repeat[ie->type], &type, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), string);
+			LOGP(DCC, level, "  %s type=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), string);
 			break;
 		case OSMO_CC_IE_CALLING_NAME:
 			rc = osmo_cc_get_ie_calling_name(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_CALLING_INTERFACE:
 			rc = osmo_cc_get_ie_calling_interface(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s name='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_CALLING_NETWORK:
 			rc = osmo_cc_get_ie_calling_network(msg, ie_repeat[ie->type], &type, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) id='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_network_value2name(type), string);
+			LOGP(DCC, level, "  %s type=%d(%s) id='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_network_value2name(type), string);
 			break;
 		case OSMO_CC_IE_BEARER:
 			rc = osmo_cc_get_ie_bearer(msg, ie_repeat[ie->type], &coding, &capability, &mode);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s coding=%d(%s) capability=%d(%s) mode=%d(%s)\n", osmo_cc_ie_value2name(ie->type), coding, osmo_cc_coding_value2name(coding), capability, osmo_cc_capability_value2name(capability), mode, osmo_cc_mode_value2name(mode));
+			LOGP(DCC, level, "  %s coding=%d(%s) capability=%d(%s) mode=%d(%s)\n", osmo_cc_ie_value2name(ie->type), coding, osmo_cc_coding_value2name(coding), capability, osmo_cc_capability_value2name(capability), mode, osmo_cc_mode_value2name(mode));
 			break;
 		case OSMO_CC_IE_REDIR:
 			rc = osmo_cc_get_ie_redir(msg, ie_repeat[ie->type], &type, &plan, &present, &screen, &reason, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s type=%d(%s) plan=%d(%s) presentation=%d(%s) screening=%d(%s) reason=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), present, osmo_cc_present_value2name(present), screen, osmo_cc_screen_value2name(screen), reason, osmo_cc_redir_reason_value2name(reason), string);
+			LOGP(DCC, level, "  %s type=%d(%s) plan=%d(%s) presentation=%d(%s) screening=%d(%s) reason=%d(%s) number='%s'\n", osmo_cc_ie_value2name(ie->type), type, osmo_cc_type_value2name(type), plan, osmo_cc_plan_value2name(plan), present, osmo_cc_present_value2name(present), screen, osmo_cc_screen_value2name(screen), reason, osmo_cc_redir_reason_value2name(reason), string);
 			break;
 		case OSMO_CC_IE_DTMF:
 			rc = osmo_cc_get_ie_dtmf(msg, ie_repeat[ie->type], &duration_ms, &pause_ms, &dtmf_mode, string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s duration=%dms pause=%dms mode=%d(%s)\n", osmo_cc_ie_value2name(ie->type), duration_ms, pause_ms, dtmf_mode, osmo_cc_dtmf_mode_value2name(dtmf_mode));
+			LOGP(DCC, level, "  %s duration=%dms pause=%dms mode=%d(%s)\n", osmo_cc_ie_value2name(ie->type), duration_ms, pause_ms, dtmf_mode, osmo_cc_dtmf_mode_value2name(dtmf_mode));
 			break;
 		case OSMO_CC_IE_KEYPAD:
 			rc = osmo_cc_get_ie_keypad(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s digits='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s digits='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_PROGRESS:
 			rc = osmo_cc_get_ie_progress(msg, ie_repeat[ie->type], &coding, &location, &progress);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s coding=%d(%s) location=%d(%s) progress=%d(%s)\n", osmo_cc_ie_value2name(ie->type), coding, osmo_cc_coding_value2name(coding), location, osmo_cc_location_value2name(location), progress, osmo_cc_progress_value2name(progress));
+			LOGP(DCC, level, "  %s coding=%d(%s) location=%d(%s) progress=%d(%s)\n", osmo_cc_ie_value2name(ie->type), coding, osmo_cc_coding_value2name(coding), location, osmo_cc_location_value2name(location), progress, osmo_cc_progress_value2name(progress));
 			break;
 		case OSMO_CC_IE_NOTIFY:
 			rc = osmo_cc_get_ie_notify(msg, ie_repeat[ie->type], &notify);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s indicator=%d(%s)\n", osmo_cc_ie_value2name(ie->type), notify, osmo_cc_notify_value2name(notify));
+			LOGP(DCC, level, "  %s indicator=%d(%s)\n", osmo_cc_ie_value2name(ie->type), notify, osmo_cc_notify_value2name(notify));
 			break;
 		case OSMO_CC_IE_CAUSE:
 			rc = osmo_cc_get_ie_cause(msg, ie_repeat[ie->type], &location, &isdn_cause, &sip_cause, &socket_cause);
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s location=%d(%s) isdn_cause=%d(%s) sip_cause=%d socket_cause=%d(%s)\n", osmo_cc_ie_value2name(ie->type), location, osmo_cc_location_value2name(location), isdn_cause, osmo_cc_isdn_cause_value2name(isdn_cause), sip_cause, socket_cause, osmo_cc_socket_cause_value2name(socket_cause));
+			LOGP(DCC, level, "  %s location=%d(%s) isdn_cause=%d(%s) sip_cause=%d socket_cause=%d(%s)\n", osmo_cc_ie_value2name(ie->type), location, osmo_cc_location_value2name(location), isdn_cause, osmo_cc_isdn_cause_value2name(isdn_cause), sip_cause, socket_cause, osmo_cc_socket_cause_value2name(socket_cause));
 			break;
 		case OSMO_CC_IE_DISPLAY:
 			rc = osmo_cc_get_ie_display(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s info='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s info='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_SDP:
 			rc = osmo_cc_get_ie_sdp(msg, ie_repeat[ie->type], string, sizeof(string));
@@ -582,22 +582,22 @@ void osmo_cc_debug_ie(osmo_cc_msg_t *msg, int level)
 				if (string[i] == '\n')
 					string[i] = 'n';
 			}
-			PDEBUG(DCC, level, "  %s payload=%s\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s payload=%s\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_SOCKET_ADDRESS:
 			rc = osmo_cc_get_ie_socket_address(msg, ie_repeat[ie->type], string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s address='%s'\n", osmo_cc_ie_value2name(ie->type), string);
+			LOGP(DCC, level, "  %s address='%s'\n", osmo_cc_ie_value2name(ie->type), string);
 			break;
 		case OSMO_CC_IE_PRIVATE:
 			rc = osmo_cc_get_ie_private(msg, ie_repeat[ie->type], &unique, (uint8_t *)string, sizeof(string));
 			if (rc < 0)
 				break;
-			PDEBUG(DCC, level, "  %s unique=%u=0x%08x private=%s\n", osmo_cc_ie_value2name(ie->type), unique, unique, debug_hex((uint8_t *)string, rc));
+			LOGP(DCC, level, "  %s unique=%u=0x%08x private=%s\n", osmo_cc_ie_value2name(ie->type), unique, unique, debug_hex((uint8_t *)string, rc));
 			break;
 		default:
-			PDEBUG(DCC, level, "  %s type=0x%02x length=%d value=%s\n", osmo_cc_ie_value2name(ie->type), ie->type, len, debug_hex(ie->data, len));
+			LOGP(DCC, level, "  %s type=0x%02x length=%d value=%s\n", osmo_cc_ie_value2name(ie->type), ie->type, len, debug_hex(ie->data, len));
 		}
 		ie_repeat[ie->type]++;
 		p += sizeof(*ie) + len;
@@ -625,16 +625,16 @@ int osmo_cc_get_ie_struct(osmo_cc_msg_t *msg, uint8_t ie_type, int ie_repeat, in
 		ie = (osmo_cc_ie_t *)p;
 		/* check for minimum IE length */
 		if (msg_len < sizeof(*ie)) {
-			PDEBUG(DCC, DEBUG_ERROR, "MSG short read\n");
-			osmo_cc_debug_ie(msg, DEBUG_ERROR);
+			LOGP(DCC, LOGL_ERROR, "MSG short read\n");
+			osmo_cc_debug_ie(msg, LOGL_ERROR);
 			return -EINVAL;
 		}
 		/* get actual IE length */
 		len = ntohs(ie->length_networkorder);
 		/* check if IE length does not exceed message */
 		if (msg_len < sizeof(*ie) + len) {
-			PDEBUG(DCC, DEBUG_ERROR, "MSG short read\n");
-			osmo_cc_debug_ie(msg, DEBUG_ERROR);
+			LOGP(DCC, LOGL_ERROR, "MSG short read\n");
+			osmo_cc_debug_ie(msg, LOGL_ERROR);
 			return -EINVAL;
 		}
 		/* check if IE matches the one that is searched for */
@@ -652,7 +652,7 @@ int osmo_cc_get_ie_struct(osmo_cc_msg_t *msg, uint8_t ie_type, int ie_repeat, in
 		}
 		/* return IE and indicate how many bytes we have more than the given length*/
 		if (ntohs(ie->length_networkorder) < ie_len) {
-			PDEBUG(DCC, DEBUG_ERROR, "IE 0x%02d has length of %d, but we expect it to have at least %d!\n", ie_type, ntohs(ie->length_networkorder), ie_len);
+			LOGP(DCC, LOGL_ERROR, "IE 0x%02d has length of %d, but we expect it to have at least %d!\n", ie_type, ntohs(ie->length_networkorder), ie_len);
 			return -EINVAL;
 		}
 		*ie_struct = ie;
@@ -728,7 +728,7 @@ void *osmo_cc_add_ie(osmo_cc_msg_t *msg, uint8_t ie_type, int ie_len)
 	msg_len = ntohs(msg->length_networkorder);
 	new_msg_len = msg_len + sizeof(*ie) + ie_len;
 	if (new_msg_len > 65535) {
-		PDEBUG(DCC, DEBUG_ERROR, "MSG overflow\n");
+		LOGP(DCC, LOGL_ERROR, "MSG overflow\n");
 		return NULL;
 	}
 	msg->length_networkorder = htons(new_msg_len);

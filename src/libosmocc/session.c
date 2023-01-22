@@ -43,11 +43,11 @@ osmo_cc_session_t *osmo_cc_new_session(osmo_cc_session_config_t *conf, void *pri
 {
 	osmo_cc_session_t *session;
 
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, "Creating session structure.\n");
+	if (debug) LOGP(DCC, LOGL_DEBUG, "Creating session structure.\n");
 
 	session = calloc(1, sizeof(*session));
 	if (!session) {
-		PDEBUG(DCC, DEBUG_ERROR, "No mem!\n");
+		LOGP(DCC, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	session->config = conf;
@@ -56,7 +56,7 @@ osmo_cc_session_t *osmo_cc_new_session(osmo_cc_session_config_t *conf, void *pri
 		int i;
 		for (i = 0; username[i]; i++) {
 			if ((uint8_t)username[i] < 33) {
-				PDEBUG(DCC, DEBUG_ERROR, "Fatal error: SDP's originator (username) uses invalid characters, please fix!\n");
+				LOGP(DCC, LOGL_ERROR, "Fatal error: SDP's originator (username) uses invalid characters, please fix!\n");
 				abort();
 			}
 		}
@@ -64,7 +64,7 @@ osmo_cc_session_t *osmo_cc_new_session(osmo_cc_session_config_t *conf, void *pri
 	}
 	if (!username)
 		session->origin_local.username = strdup("-");
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> user name = %s\n", session->origin_local.username);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> user name = %s\n", session->origin_local.username);
 	if (sess_id)
 		session->origin_local.sess_id = strdup(sess_id);
 	if (sess_version)
@@ -80,35 +80,35 @@ osmo_cc_session_t *osmo_cc_new_session(osmo_cc_session_config_t *conf, void *pri
 		if (!sess_version)
 			session->origin_local.sess_version = strdup(ntp_timestamp);
 	}
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> session ID = %s\n", session->origin_local.sess_id);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> session version = %s\n", session->origin_local.sess_version);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> session ID = %s\n", session->origin_local.sess_id);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> session version = %s\n", session->origin_local.sess_version);
 	if (nettype)
 		session->origin_local.nettype = strdup(osmo_cc_session_nettype2string(nettype));
 	else
 		session->origin_local.nettype = strdup(osmo_cc_session_nettype2string(conf->default_nettype));
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> network type = %s\n", session->origin_local.nettype);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> network type = %s\n", session->origin_local.nettype);
 	if (addrtype)
 		session->origin_local.addrtype = strdup(osmo_cc_session_addrtype2string(addrtype));
 	else
 		session->origin_local.addrtype = strdup(osmo_cc_session_addrtype2string(conf->default_addrtype));
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> address type = %s\n", session->origin_local.addrtype);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> address type = %s\n", session->origin_local.addrtype);
 	if (unicast_address)
 		session->origin_local.unicast_address = strdup(unicast_address);
 	else
 		session->origin_local.unicast_address = strdup(conf->default_unicast_address);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> unicast address = %s\n", session->origin_local.unicast_address);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> unicast address = %s\n", session->origin_local.unicast_address);
 	if (session_name)
 		session->name = strdup(session_name);
 	if (!session_name)
 		session->name = strdup("-");
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> session name = %s\n", session->name);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> session name = %s\n", session->name);
 
 	return session;
 }
 
 void osmo_cc_free_session(osmo_cc_session_t *session)
 {
-	PDEBUG(DCC, DEBUG_DEBUG, "Free session structure.\n");
+	LOGP(DCC, LOGL_DEBUG, "Free session structure.\n");
 
 	free((char *)session->origin_local.username);
 	free((char *)session->origin_local.sess_id);
@@ -135,7 +135,7 @@ osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo
 
 	media = calloc(1, sizeof(*media));
 	if (!media) {
-		PDEBUG(DCC, DEBUG_ERROR, "No mem!\n");
+		LOGP(DCC, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	media->session = session;
@@ -164,14 +164,14 @@ osmo_cc_session_media_t *osmo_cc_add_media(osmo_cc_session_t *session, enum osmo
 		mediap = &((*mediap)->next);
 	*mediap = media;
 
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, "Adding session media.\n");
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> network type = %s\n", osmo_cc_session_nettype2string(media->connection_data_local.nettype));
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> address type = %s\n", osmo_cc_session_addrtype2string(media->connection_data_local.addrtype));
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> address = %s\n", media->connection_data_local.address);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> media type = %s\n", osmo_cc_session_media_type2string(media->description.type));
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> media port = %d\n", media->description.port_local);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> media proto = %s\n", osmo_cc_session_media_proto2string(media->description.proto));
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, "Opening and binding media port %d\n", media->description.port_local);
+	if (debug) LOGP(DCC, LOGL_DEBUG, "Adding session media.\n");
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> network type = %s\n", osmo_cc_session_nettype2string(media->connection_data_local.nettype));
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> address type = %s\n", osmo_cc_session_addrtype2string(media->connection_data_local.addrtype));
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> address = %s\n", media->connection_data_local.address);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> media type = %s\n", osmo_cc_session_media_type2string(media->description.type));
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> media port = %d\n", media->description.port_local);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> media proto = %s\n", osmo_cc_session_media_proto2string(media->description.proto));
+	if (debug) LOGP(DCC, LOGL_DEBUG, "Opening and binding media port %d\n", media->description.port_local);
 
 	return media;
 }
@@ -180,7 +180,7 @@ void osmo_cc_free_media(osmo_cc_session_media_t *media)
 {
 	osmo_cc_session_media_t **mediap;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Free session media.\n");
+	LOGP(DCC, LOGL_DEBUG, "Free session media.\n");
 
 	osmo_cc_rtp_close(media);
 	free((char *)media->connection_data_local.nettype_name);
@@ -205,7 +205,7 @@ osmo_cc_session_codec_t *osmo_cc_add_codec(osmo_cc_session_media_t *media, const
 
 	codec = calloc(1, sizeof(*codec));
 	if (!codec) {
-		PDEBUG(DCC, DEBUG_ERROR, "No mem!\n");
+		LOGP(DCC, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	codec->media = media;
@@ -232,11 +232,11 @@ osmo_cc_session_codec_t *osmo_cc_add_codec(osmo_cc_session_media_t *media, const
 		codecp = &((*codecp)->next);
 	*codecp = codec;
 
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, "Adding session codec.\n");
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> payload type = %d\n", codec->payload_type_local);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> payload name = %s\n", codec->payload_name);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> payload rate = %d\n", codec->payload_rate);
-	if (debug) PDEBUG(DCC, DEBUG_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
+	if (debug) LOGP(DCC, LOGL_DEBUG, "Adding session codec.\n");
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> payload type = %d\n", codec->payload_type_local);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> payload name = %s\n", codec->payload_name);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> payload rate = %d\n", codec->payload_rate);
+	if (debug) LOGP(DCC, LOGL_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
 
 	return codec;
 }
@@ -245,7 +245,7 @@ void osmo_cc_free_codec(osmo_cc_session_codec_t *codec)
 {
 	osmo_cc_session_codec_t **codecp;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Free session codec.\n");
+	LOGP(DCC, LOGL_DEBUG, "Free session codec.\n");
 
 	free((char *)codec->payload_name);
 	codecp = &codec->media->codec_list;
@@ -274,15 +274,15 @@ int osmo_cc_session_check(osmo_cc_session_t *session, int remote)
 	 || !orig->nettype
 	 || !orig->addrtype
 	 || !orig->unicast_address) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Missing data in session origin\n");
+		LOGP(DCC, LOGL_NOTICE, "Missing data in session origin\n");
 		return -EINVAL;
 	}
 	if (!session->name) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Missing data in session origin\n");
+		LOGP(DCC, LOGL_NOTICE, "Missing data in session origin\n");
 		return -EINVAL;
 	}
 	if (!session->media_list) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Missing media session\n");
+		LOGP(DCC, LOGL_NOTICE, "Missing media session\n");
 		return -EINVAL;
 	}
 	i = 0;
@@ -293,39 +293,39 @@ int osmo_cc_session_check(osmo_cc_session_t *session, int remote)
 		else
 			cd = &media->connection_data_local;
 		if (!cd->nettype && !cd->nettype_name) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d is missing connection network type\n", i);
+			LOGP(DCC, LOGL_NOTICE, "Session with media #%d is missing connection network type\n", i);
 			return -EINVAL;
 		}
 		if (!cd->addrtype && !cd->addrtype_name) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d is missing connection address type\n", i);
+			LOGP(DCC, LOGL_NOTICE, "Session with media #%d is missing connection address type\n", i);
 			return -EINVAL;
 		}
 		if (!cd->address) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d is missing connection address\n", i);
+			LOGP(DCC, LOGL_NOTICE, "Session with media #%d is missing connection address\n", i);
 			return -EINVAL;
 		}
 		md = &media->description;
 		if (!md->type && !md->type_name) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d is missing media type\n", i);
+			LOGP(DCC, LOGL_NOTICE, "Session with media #%d is missing media type\n", i);
 			return -EINVAL;
 		}
 		if (!md->proto && !md->proto_name) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d is missing protocol\n", i);
+			LOGP(DCC, LOGL_NOTICE, "Session with media #%d is missing protocol\n", i);
 			return -EINVAL;
 		}
 		j = 0;
 		osmo_cc_session_for_each_codec(media->codec_list, codec) {
 			j++;
 			if (!codec->payload_name) {
-				PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d, codec #%d is missing name\n", i, j);
+				LOGP(DCC, LOGL_NOTICE, "Session with media #%d, codec #%d is missing name\n", i, j);
 				return -EINVAL;
 			}
 			if (!codec->payload_rate) {
-				PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d, codec #%d is missing rate\n", i, j);
+				LOGP(DCC, LOGL_NOTICE, "Session with media #%d, codec #%d is missing rate\n", i, j);
 				return -EINVAL;
 			}
 			if (!codec->payload_channels) {
-				PDEBUG(DCC, DEBUG_NOTICE, "Session with media #%d, codec #%d is missing channel count\n", i, j);
+				LOGP(DCC, LOGL_NOTICE, "Session with media #%d, codec #%d is missing channel count\n", i, j);
 				return -EINVAL;
 			}
 		}
@@ -340,11 +340,11 @@ const char *osmo_cc_session_send_offer(osmo_cc_session_t *session)
 	const char *sdp;
 	int rc;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Generating session offer and opening RTP stream.\n");
+	LOGP(DCC, LOGL_DEBUG, "Generating session offer and opening RTP stream.\n");
 
 	rc = osmo_cc_session_check(session, 0);
 	if (rc < 0) {
-		PDEBUG(DCC, DEBUG_ERROR, "Please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Please fix!\n");
 		abort();
 	}
 
@@ -359,7 +359,7 @@ osmo_cc_session_t *osmo_cc_session_receive_offer(osmo_cc_session_config_t *conf,
 	osmo_cc_session_t *session;
 	int rc;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Parsing session offer.\n");
+	LOGP(DCC, LOGL_DEBUG, "Parsing session offer.\n");
 
 	osmo_cc_debug_sdp(sdp);
 	session = osmo_cc_session_parsesdp(conf, priv, sdp);
@@ -397,10 +397,10 @@ void osmo_cc_session_accept_media(osmo_cc_session_media_t *media, enum osmo_cc_s
 	media->receive = receive;
 	media->receiver = receiver;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Accepting session media.\n");
-	PDEBUG(DCC, DEBUG_DEBUG, " -> network type = %s\n", osmo_cc_session_nettype2string(media->connection_data_local.nettype));
-	PDEBUG(DCC, DEBUG_DEBUG, " -> address type = %s\n", osmo_cc_session_addrtype2string(media->connection_data_local.addrtype));
-	PDEBUG(DCC, DEBUG_DEBUG, " -> address = %s\n", media->connection_data_local.address);
+	LOGP(DCC, LOGL_DEBUG, "Accepting session media.\n");
+	LOGP(DCC, LOGL_DEBUG, " -> network type = %s\n", osmo_cc_session_nettype2string(media->connection_data_local.nettype));
+	LOGP(DCC, LOGL_DEBUG, " -> address type = %s\n", osmo_cc_session_addrtype2string(media->connection_data_local.addrtype));
+	LOGP(DCC, LOGL_DEBUG, " -> address = %s\n", media->connection_data_local.address);
 }
 
 
@@ -412,11 +412,11 @@ void osmo_cc_session_accept_codec(osmo_cc_session_codec_t *codec, void (*encoder
 	/* when we accept a codec, we just use the same payload type as the remote */
 	codec->payload_type_local = codec->payload_type_remote;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Accepting session codec.\n");
-	PDEBUG(DCC, DEBUG_DEBUG, " -> payload type = %d\n", codec->payload_type_local);
-	PDEBUG(DCC, DEBUG_DEBUG, " -> payload name = %s\n", codec->payload_name);
-	PDEBUG(DCC, DEBUG_DEBUG, " -> payload rate = %d\n", codec->payload_rate);
-	PDEBUG(DCC, DEBUG_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
+	LOGP(DCC, LOGL_DEBUG, "Accepting session codec.\n");
+	LOGP(DCC, LOGL_DEBUG, " -> payload type = %d\n", codec->payload_type_local);
+	LOGP(DCC, LOGL_DEBUG, " -> payload name = %s\n", codec->payload_name);
+	LOGP(DCC, LOGL_DEBUG, " -> payload rate = %d\n", codec->payload_rate);
+	LOGP(DCC, LOGL_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
 }
 
 /* remove codecs/media that have not been accepted and generate SDP */
@@ -427,7 +427,7 @@ const char *osmo_cc_session_send_answer(osmo_cc_session_t *session)
 	const char *sdp;
 	int rc;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Generating session answer.\n");
+	LOGP(DCC, LOGL_DEBUG, "Generating session answer.\n");
 
 	/* loop all media */
 	osmo_cc_session_for_each_media(session->media_list, media) {
@@ -450,7 +450,7 @@ const char *osmo_cc_session_send_answer(osmo_cc_session_t *session)
 
 	rc = osmo_cc_session_check(session, 0);
 	if (rc < 0) {
-		PDEBUG(DCC, DEBUG_ERROR, "Please fix!\n");
+		LOGP(DCC, LOGL_ERROR, "Please fix!\n");
 		abort();
 	}
 
@@ -470,7 +470,7 @@ static int osmo_cc_session_negotiate(osmo_cc_session_t *session_local, struct os
 	osmo_cc_session_codec_t *codec_local, *codec_remote, **codec_local_p;
 	int rc;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Negotiating session.\n");
+	LOGP(DCC, LOGL_DEBUG, "Negotiating session.\n");
 
 	/* copy remote session information */
 	session_local->origin_remote.username = strdup(session_remote->origin_remote.username);
@@ -517,11 +517,11 @@ static int osmo_cc_session_negotiate(osmo_cc_session_t *session_local, struct os
 		}
 	}
 	if (media_local) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Negotiation failed, because remote endpoint returns less media streams than we offered.\n");
+		LOGP(DCC, LOGL_NOTICE, "Negotiation failed, because remote endpoint returns less media streams than we offered.\n");
 		return -EINVAL;
 	}
 	if (media_remote) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Negotiation failed, because remote endpoint returns more media streams than we offered.\n");
+		LOGP(DCC, LOGL_NOTICE, "Negotiation failed, because remote endpoint returns more media streams than we offered.\n");
 		return -EINVAL;
 	}
 
@@ -550,7 +550,7 @@ int osmo_cc_session_receive_answer(osmo_cc_session_t *session, const char *sdp)
 	osmo_cc_session_t *session_remote;
 	int rc;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Parsing session answer.\n");
+	LOGP(DCC, LOGL_DEBUG, "Parsing session answer.\n");
 
 	osmo_cc_debug_sdp(sdp);
 	session_remote = osmo_cc_session_parsesdp(session->config, NULL, sdp);

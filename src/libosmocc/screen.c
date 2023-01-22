@@ -153,7 +153,7 @@ int osmo_cc_add_screen(osmo_cc_endpoint_t *ep, const char *text)
 		text += 17;
 		list_p = &ep->screen_called_out;
 	} else {
-		PDEBUG(DCC, DEBUG_ERROR, "Invalid screening definition \"%s\". It must start with 'screen-calling-in' or 'screen-called-in' or 'screen-calling-out' or 'screen-called-out'\n", text);
+		LOGP(DCC, LOGL_ERROR, "Invalid screening definition \"%s\". It must start with 'screen-calling-in' or 'screen-called-in' or 'screen-calling-out' or 'screen-called-out'\n", text);
 		return -EINVAL;
 	}
 
@@ -172,7 +172,7 @@ next_from:
 	token = osmo_cc_strtok_quotes(&text);
 	if (!token) {
 		free(list);
-		PDEBUG(DCC, DEBUG_ERROR, "Missing 'from' string in screening definition \"%s\". If the string shall be empty, use double quotes. (\'\' or \"\")\n", text);
+		LOGP(DCC, LOGL_ERROR, "Missing 'from' string in screening definition \"%s\". If the string shall be empty, use double quotes. (\'\' or \"\")\n", text);
 		return -EINVAL;
 	}
 	if (!strcasecmp(token, "unknown")) {
@@ -209,8 +209,8 @@ next_from:
 		if (no_present) {
 no_present_error:
 			free(list);
-			PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-			PDEBUG(DCC, DEBUG_ERROR, "Keyword '%s' not allowed in screen entry for called number\n", token);
+			LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+			LOGP(DCC, LOGL_ERROR, "Keyword '%s' not allowed in screen entry for called number\n", token);
 			return -EINVAL;
 		}
 		list->has_from_present = 1;
@@ -232,8 +232,8 @@ no_present_error:
 			if (token[i] == '*') {
 				if (star_used) {
 					free(list);
-					PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-					PDEBUG(DCC, DEBUG_ERROR, "The '*' may be used only once.\n");
+					LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+					LOGP(DCC, LOGL_ERROR, "The '*' may be used only once.\n");
 					return -EINVAL;
 				}
 				list->from[j] = SCREEN_STAR;
@@ -251,8 +251,8 @@ next_to:
 	token = osmo_cc_strtok_quotes(&text);
 	if (!token) {
 		free(list);
-		PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-		PDEBUG(DCC, DEBUG_ERROR, "Missing screening result. If the string shall be empty, use double quotes. (\'\' or \"\")\n");
+		LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+		LOGP(DCC, LOGL_ERROR, "Missing screening result. If the string shall be empty, use double quotes. (\'\' or \"\")\n");
 		return -EINVAL;
 	}
 	if (!strcasecmp(token, "unknown")) {
@@ -304,8 +304,8 @@ next_to:
 			if (token[i] == '*') {
 				if (star_used) {
 					free(list);
-					PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-					PDEBUG(DCC, DEBUG_ERROR, "The '*' may be used only once.\n");
+					LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+					LOGP(DCC, LOGL_ERROR, "The '*' may be used only once.\n");
 					return -EINVAL;
 				}
 				list->to[j] = SCREEN_STAR;
@@ -314,14 +314,14 @@ next_to:
 			if (token[i] == '@') {
 				if (!calling_in) {
 					free(list);
-					PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-					PDEBUG(DCC, DEBUG_ERROR, "The '@' may be used only for incoming calls from interface.\n");
+					LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+					LOGP(DCC, LOGL_ERROR, "The '@' may be used only for incoming calls from interface.\n");
 					return -EINVAL;
 				}
 				if (at_used) {
 					free(list);
-					PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-					PDEBUG(DCC, DEBUG_ERROR, "The '@' may be used only once.\n");
+					LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+					LOGP(DCC, LOGL_ERROR, "The '@' may be used only once.\n");
 					return -EINVAL;
 				}
 				list->to[j] = SCREEN_AT;
@@ -338,8 +338,8 @@ next_to:
 	token = osmo_cc_strtok_quotes(&text);
 	if (token) {
 		free(list);
-		PDEBUG(DCC, DEBUG_ERROR, "Error in screening definition '%s'.\n", text);
-		PDEBUG(DCC, DEBUG_ERROR, "Got garbage behind screening result.\n");
+		LOGP(DCC, LOGL_ERROR, "Error in screening definition '%s'.\n", text);
+		LOGP(DCC, LOGL_ERROR, "Got garbage behind screening result.\n");
 		return -EINVAL;
 	}
 
@@ -392,76 +392,76 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 	const char *suffix;
 	int i, j, rule;
 
-	PDEBUG(DCC, DEBUG_INFO, "Screening %s '%s':\n", what, id_from);
+	LOGP(DCC, LOGL_INFO, "Screening %s '%s':\n", what, id_from);
 	switch (*type) {
 	case OSMO_CC_TYPE_UNKNOWN:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = unknown\n");
+		LOGP(DCC, LOGL_INFO, " -> type = unknown\n");
 		break;
 	case OSMO_CC_TYPE_INTERNATIONAL:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = international\n");
+		LOGP(DCC, LOGL_INFO, " -> type = international\n");
 		break;
 	case OSMO_CC_TYPE_NATIONAL:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = national\n");
+		LOGP(DCC, LOGL_INFO, " -> type = national\n");
 		break;
 	case OSMO_CC_TYPE_NETWORK:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = network\n");
+		LOGP(DCC, LOGL_INFO, " -> type = network\n");
 		break;
 	case OSMO_CC_TYPE_SUBSCRIBER:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = subscriber\n");
+		LOGP(DCC, LOGL_INFO, " -> type = subscriber\n");
 		break;
 	case OSMO_CC_TYPE_ABBREVIATED:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = abbreviated\n");
+		LOGP(DCC, LOGL_INFO, " -> type = abbreviated\n");
 		break;
 	}
 	if (present) switch (*present) {
 	case OSMO_CC_PRESENT_ALLOWED:
-		PDEBUG(DCC, DEBUG_INFO, " -> present = allowed\n");
+		LOGP(DCC, LOGL_INFO, " -> present = allowed\n");
 		break;
 	case OSMO_CC_PRESENT_RESTRICTED:
-		PDEBUG(DCC, DEBUG_INFO, " -> present = restricted\n");
+		LOGP(DCC, LOGL_INFO, " -> present = restricted\n");
 		break;
 	}
 
 	rule = 0;
 	while (list) {
 		rule++;
-		PDEBUG(DCC, DEBUG_INFO, "Comparing with rule #%d: '%s':\n", rule, print_rule_string(list->from));
+		LOGP(DCC, LOGL_INFO, "Comparing with rule #%d: '%s':\n", rule, print_rule_string(list->from));
 		if (list->has_from_type) switch (list->from_type) {
 		case OSMO_CC_TYPE_UNKNOWN:
-			PDEBUG(DCC, DEBUG_INFO, " -> type = unknown\n");
+			LOGP(DCC, LOGL_INFO, " -> type = unknown\n");
 			break;
 		case OSMO_CC_TYPE_INTERNATIONAL:
-			PDEBUG(DCC, DEBUG_INFO, " -> type = international\n");
+			LOGP(DCC, LOGL_INFO, " -> type = international\n");
 			break;
 		case OSMO_CC_TYPE_NATIONAL:
-			PDEBUG(DCC, DEBUG_INFO, " -> type = national\n");
+			LOGP(DCC, LOGL_INFO, " -> type = national\n");
 			break;
 		case OSMO_CC_TYPE_NETWORK:
-			PDEBUG(DCC, DEBUG_INFO, " -> type = network\n");
+			LOGP(DCC, LOGL_INFO, " -> type = network\n");
 			break;
 		case OSMO_CC_TYPE_SUBSCRIBER:
-			PDEBUG(DCC, DEBUG_INFO, " -> type = subscriber\n");
+			LOGP(DCC, LOGL_INFO, " -> type = subscriber\n");
 			break;
 		case OSMO_CC_TYPE_ABBREVIATED:
-			PDEBUG(DCC, DEBUG_INFO, " -> type = abbreviated\n");
+			LOGP(DCC, LOGL_INFO, " -> type = abbreviated\n");
 			break;
 		}
 		if (list->has_from_present) switch (list->from_present) {
 		case OSMO_CC_PRESENT_ALLOWED:
-			PDEBUG(DCC, DEBUG_INFO, " -> present = allowed\n");
+			LOGP(DCC, LOGL_INFO, " -> present = allowed\n");
 			break;
 		case OSMO_CC_PRESENT_RESTRICTED:
-			PDEBUG(DCC, DEBUG_INFO, " -> present = restricted\n");
+			LOGP(DCC, LOGL_INFO, " -> present = restricted\n");
 			break;
 		}
 		suffix = NULL;
 		/* attributes do not match */
 		if (list->has_from_type && list->from_type != *type) {
-			PDEBUG(DCC, DEBUG_INFO, "Rule does not match, because 'type' is different.\n");
+			LOGP(DCC, LOGL_INFO, "Rule does not match, because 'type' is different.\n");
 			continue;
 		}
 		if (present && list->has_from_present && list->from_present != *present) {
-			PDEBUG(DCC, DEBUG_INFO, "Rule does not match, because 'present' is different.\n");
+			LOGP(DCC, LOGL_INFO, "Rule does not match, because 'present' is different.\n");
 			continue;
 		}
 		for (i = 0; list->from[i] && id_from[i]; i++) {
@@ -485,7 +485,7 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 		/* if all digits have matched */
 		if (list->from[i] == '\0' && id_from[i] == '\0')
 			break;
-		PDEBUG(DCC, DEBUG_INFO, "Rule does not match, because %s is different.\n", what);
+		LOGP(DCC, LOGL_INFO, "Rule does not match, because %s is different.\n", what);
 		list = list->next;
 	}
 
@@ -522,37 +522,37 @@ static int osmo_cc_screen(const char *what, osmo_cc_screen_list_t *list, uint8_t
 	}
 	id_to[j] = '\0';
 
-	PDEBUG(DCC, DEBUG_INFO, "Rule matches, changing %s to '%s'.\n", what, print_rule_string(id_to));
+	LOGP(DCC, LOGL_INFO, "Rule matches, changing %s to '%s'.\n", what, print_rule_string(id_to));
 	if (list->has_to_type) switch (list->to_type) {
 	case OSMO_CC_TYPE_UNKNOWN:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = unknown\n");
+		LOGP(DCC, LOGL_INFO, " -> type = unknown\n");
 		break;
 	case OSMO_CC_TYPE_INTERNATIONAL:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = international\n");
+		LOGP(DCC, LOGL_INFO, " -> type = international\n");
 		break;
 	case OSMO_CC_TYPE_NATIONAL:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = national\n");
+		LOGP(DCC, LOGL_INFO, " -> type = national\n");
 		break;
 	case OSMO_CC_TYPE_NETWORK:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = network\n");
+		LOGP(DCC, LOGL_INFO, " -> type = network\n");
 		break;
 	case OSMO_CC_TYPE_SUBSCRIBER:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = subscriber\n");
+		LOGP(DCC, LOGL_INFO, " -> type = subscriber\n");
 		break;
 	case OSMO_CC_TYPE_ABBREVIATED:
-		PDEBUG(DCC, DEBUG_INFO, " -> type = abbreviated\n");
+		LOGP(DCC, LOGL_INFO, " -> type = abbreviated\n");
 		break;
 	}
 	if (list->has_to_present) switch (list->to_present) {
 	case OSMO_CC_PRESENT_ALLOWED:
-		PDEBUG(DCC, DEBUG_INFO, " -> present = allowed\n");
+		LOGP(DCC, LOGL_INFO, " -> present = allowed\n");
 		break;
 	case OSMO_CC_PRESENT_RESTRICTED:
-		PDEBUG(DCC, DEBUG_INFO, " -> present = restricted\n");
+		LOGP(DCC, LOGL_INFO, " -> present = restricted\n");
 		break;
 	}
 	if (routing_p && *routing_p)
-		PDEBUG(DCC, DEBUG_INFO, " -> remote = %s\n", *routing_p);
+		LOGP(DCC, LOGL_INFO, " -> remote = %s\n", *routing_p);
 
 	return 0;
 }

@@ -68,11 +68,11 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 	if (len < 0) {
 		if (errno == EAGAIN)
 			return -EAGAIN;
-		PDEBUG(DCC, DEBUG_DEBUG, "Read errno = %d (%s)\n", errno, strerror(errno));
+		LOGP(DCC, LOGL_DEBUG, "Read errno = %d (%s)\n", errno, strerror(errno));
 		return -EIO;
 	}
 	if (len < 12) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame too short (len = %d).\n", len);
+		LOGP(DCC, LOGL_NOTICE, "Received RTP frame too short (len = %d).\n", len);
 		return -EINVAL;
 	}
 
@@ -87,20 +87,20 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 	*ssrc_p = ntohl(rtph->ssrc);
 
 	if (version != RTP_VERSION) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Received RTP version %d not supported.\n", version);
+		LOGP(DCC, LOGL_NOTICE, "Received RTP version %d not supported.\n", version);
 		return -EINVAL;
 	}
 
 	payload = data + sizeof(*rtph) + (csrc_count << 2);
 	payload_len = len - sizeof(*rtph) - (csrc_count << 2);
 	if (payload_len < 0) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame too short (len = %d, csrc count = %d).\n", len, csrc_count);
+		LOGP(DCC, LOGL_NOTICE, "Received RTP frame too short (len = %d, csrc count = %d).\n", len, csrc_count);
 		return -EINVAL;
 	}
 
 	if (extension) {
 		if (payload_len < (int)sizeof(*rtpxh)) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame too short for extension header.\n");
+			LOGP(DCC, LOGL_NOTICE, "Received RTP frame too short for extension header.\n");
 			return -EINVAL;
 		}
 		rtpxh = (struct rtp_x_hdr *)payload;
@@ -108,19 +108,19 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 		payload += x_len;
 		payload_len -= x_len;
 		if (payload_len < (int)sizeof(*rtpxh)) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame too short, extension header exceeds frame length.\n");
+			LOGP(DCC, LOGL_NOTICE, "Received RTP frame too short, extension header exceeds frame length.\n");
 			return -EINVAL;
 		}
 	}
 
 	if (padding) {
 		if (payload_len < 1) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame too short for padding length.\n");
+			LOGP(DCC, LOGL_NOTICE, "Received RTP frame too short for padding length.\n");
 			return -EINVAL;
 		}
 		payload_len -= payload[payload_len - 1];
 		if (payload_len < 0) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame padding is greater than payload.\n");
+			LOGP(DCC, LOGL_NOTICE, "Received RTP frame padding is greater than payload.\n");
 			return -EINVAL;
 		}
 	}
@@ -142,7 +142,7 @@ static int rtcp_receive(int sock)
 	if (len < 0) {
 		if (errno == EAGAIN)
 			return -EAGAIN;
-		PDEBUG(DCC, DEBUG_DEBUG, "Read errno = %d (%s)\n", errno, strerror(errno));
+		LOGP(DCC, LOGL_DEBUG, "Read errno = %d (%s)\n", errno, strerror(errno));
 		return -EIO;
 	}
 
@@ -164,14 +164,14 @@ static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t marker
 	rtph->ssrc = htonl(ssrc);
 	len += payload_len;
 	if (len > (int)sizeof(data)) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Buffer overflow, please fix!.\n");
+		LOGP(DCC, LOGL_NOTICE, "Buffer overflow, please fix!.\n");
 		abort();
 	}
 	memcpy(data + sizeof(*rtph), payload, payload_len);
 
 	rc = write(sock, data, len);
 	if (rc < 0)
-		PDEBUG(DCC, DEBUG_DEBUG, "Write errno = %d (%s)\n", errno, strerror(errno));
+		LOGP(DCC, LOGL_DEBUG, "Write errno = %d (%s)\n", errno, strerror(errno));
 }
 
 static int rtp_listen_cb(struct osmo_fd *ofd, unsigned int when);
@@ -206,7 +206,7 @@ int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 		rc = inet_pton(AF_INET, media->connection_data_local.address, &sa4->sin_addr);
 		if (rc < 1) {
 pton_error:
-			PDEBUG(DCC, DEBUG_NOTICE, "Cannot bind to address '%s'.\n", media->connection_data_local.address);
+			LOGP(DCC, LOGL_NOTICE, "Cannot bind to address '%s'.\n", media->connection_data_local.address);
 			return -EINVAL;
 		}
 		sport = &sa4->sin_port;
@@ -224,7 +224,7 @@ pton_error:
 		slen = sizeof(*sa6);
 		break;
 	case osmo_cc_session_addrtype_unknown:
-		PDEBUG(DCC, DEBUG_NOTICE, "Unsupported address type '%s'.\n", media->connection_data_local.addrtype_name);
+		LOGP(DCC, LOGL_NOTICE, "Unsupported address type '%s'.\n", media->connection_data_local.addrtype_name);
 		return -EINVAL;
 	}
 
@@ -237,7 +237,7 @@ pton_error:
 		rc = socket(domain, SOCK_DGRAM, IPPROTO_UDP);
 		if (rc < 0) {
 socket_error:
-			PDEBUG(DCC, DEBUG_ERROR, "Cannot create socket (domain=%d, errno=%d(%s))\n", domain, errno, strerror(errno));
+			LOGP(DCC, LOGL_ERROR, "Cannot create socket (domain=%d, errno=%d(%s))\n", domain, errno, strerror(errno));
 			osmo_cc_rtp_close(media);
 			return -EIO;
 		}
@@ -263,7 +263,7 @@ bind_error:
 			osmo_cc_rtp_close(media);
 			conf->rtp_port_next = (conf->rtp_port_next + 2 > conf->rtp_port_to) ? conf->rtp_port_from : conf->rtp_port_next + 2;
 			if (conf->rtp_port_next == start_port) {
-				PDEBUG(DCC, DEBUG_ERROR, "Cannot bind socket (errno=%d(%s))\n", errno, strerror(errno));
+				LOGP(DCC, LOGL_ERROR, "Cannot bind socket (errno=%d(%s))\n", errno, strerror(errno));
 				return -EIO;
 			}
 			continue;
@@ -284,7 +284,7 @@ bind_error:
 		break;
 	}
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Opening media port %d\n", media->description.port_local);
+	LOGP(DCC, LOGL_DEBUG, "Opening media port %d\n", media->description.port_local);
 
 	return 0;
 }
@@ -301,7 +301,7 @@ int osmo_cc_rtp_connect(osmo_cc_session_media_t *media)
 	uint16_t *sport;
 	int rc;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Connecting media port %d->%d\n", media->description.port_local, media->description.port_remote);
+	LOGP(DCC, LOGL_DEBUG, "Connecting media port %d->%d\n", media->description.port_local, media->description.port_remote);
 
 	switch (media->connection_data_remote.addrtype) {
 	case osmo_cc_session_addrtype_ipv4:
@@ -311,7 +311,7 @@ int osmo_cc_rtp_connect(osmo_cc_session_media_t *media)
 		rc = inet_pton(AF_INET, media->connection_data_remote.address, &sa4->sin_addr);
 		if (rc < 1) {
 pton_error:
-			PDEBUG(DCC, DEBUG_NOTICE, "Cannot connect to address '%s'.\n", media->connection_data_remote.address);
+			LOGP(DCC, LOGL_NOTICE, "Cannot connect to address '%s'.\n", media->connection_data_remote.address);
 			return -EINVAL;
 		}
 		sport = &sa4->sin_port;
@@ -328,7 +328,7 @@ pton_error:
 		slen = sizeof(*sa6);
 		break;
 	case osmo_cc_session_addrtype_unknown:
-		PDEBUG(DCC, DEBUG_NOTICE, "Unsupported address type '%s'.\n", media->connection_data_local.addrtype_name);
+		LOGP(DCC, LOGL_NOTICE, "Unsupported address type '%s'.\n", media->connection_data_local.addrtype_name);
 		return -EINVAL;
 	}
 
@@ -336,7 +336,7 @@ pton_error:
 	rc = connect(media->rtp_ofd.fd, (struct sockaddr *)&sa, slen);
 	if (rc < 0) {
 connect_error:
-		PDEBUG(DCC, DEBUG_NOTICE, "Cannot connect to address '%s'.\n", media->connection_data_remote.address);
+		LOGP(DCC, LOGL_NOTICE, "Cannot connect to address '%s'.\n", media->connection_data_remote.address);
 		osmo_cc_rtp_close(media);
 		return -EIO;
 	}
@@ -395,7 +395,7 @@ static int rtp_listen_cb(struct osmo_fd *ofd, unsigned int when)
 				break;
 		}
 		if (!codec) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Received RTP frame for unknown codec (payload_type = %d).\n", payload_type);
+			LOGP(DCC, LOGL_NOTICE, "Received RTP frame for unknown codec (payload_type = %d).\n", payload_type);
 			return 0;
 		}
 

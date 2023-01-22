@@ -55,7 +55,7 @@ static int _getaddrinfo(const char *host, uint16_t port, struct addrinfo **resul
 
 	rc = getaddrinfo(host, portstr, &hints, result);
 	if (rc < 0) {
-		PDEBUG(DCC, DEBUG_ERROR, "Failed to create socket for host '%s', port '%d': %s.\n", host, port, gai_strerror(rc));
+		LOGP(DCC, LOGL_ERROR, "Failed to create socket for host '%s', port '%d': %s.\n", host, port, gai_strerror(rc));
 		return rc;
 	}
 	return rc;
@@ -98,7 +98,7 @@ static void rx_keepalive_timeout(void *data)
 {
 	osmo_cc_conn_t *conn = data;
 
-	PDEBUG(DCC, DEBUG_ERROR, "OsmoCC-Socket failed due to timeout.\n");
+	LOGP(DCC, LOGL_ERROR, "OsmoCC-Socket failed due to timeout.\n");
 	close_conn(conn, OSMO_CC_SOCKET_CAUSE_TIMEOUT);
 }
 
@@ -121,7 +121,7 @@ try_again:
 		auto_port = 1;
 	}
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Create socket for host %s port %d.\n", host, port);
+	LOGP(DCC, LOGL_DEBUG, "Create socket for host %s port %d.\n", host, port);
 
 	rc = _getaddrinfo(host, port, &result);
 	if (rc < 0)
@@ -140,17 +140,17 @@ try_again:
 	freeaddrinfo(result);
 	if (rp == NULL) {
 		if (auto_port && port < OSMO_CC_DEFAULT_PORT_MAX) {
-			PDEBUG(DCC, DEBUG_DEBUG, "Failed to bind host %s port %d, trying again.\n", host, port);
+			LOGP(DCC, LOGL_DEBUG, "Failed to bind host %s port %d, trying again.\n", host, port);
 			goto try_again;
 		}
-		PDEBUG(DCC, DEBUG_ERROR, "Failed to bind given host %s port %d.\n", host, port);
+		LOGP(DCC, LOGL_ERROR, "Failed to bind given host %s port %d.\n", host, port);
 		return -EIO;
 	}
 
 	/* listen to socket */
 	rc = listen(sock, 10);
 	if (rc < 0) {
-		PDEBUG(DCC, DEBUG_ERROR, "Failed to listen on socket.\n");
+		LOGP(DCC, LOGL_ERROR, "Failed to listen on socket.\n");
 		close(sock);
 		return rc;
 	}
@@ -178,7 +178,7 @@ static osmo_cc_conn_t *open_conn(osmo_cc_socket_t *os, int sock, uint32_t callre
 	/* create connection */
 	conn = calloc(1, sizeof(*conn));
 	if (!conn) {
-		PDEBUG(DCC, DEBUG_ERROR, "No mem!\n");
+		LOGP(DCC, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	conn->os = os;
@@ -200,7 +200,7 @@ static osmo_cc_conn_t *open_conn(osmo_cc_socket_t *os, int sock, uint32_t callre
 	timer_start(&conn->tx_keepalive_timer, OSMO_CC_SOCKET_TX_KEEPALIVE);
 	timer_start(&conn->rx_keepalive_timer, OSMO_CC_SOCKET_RX_KEEPALIVE);
 
-	PDEBUG(DCC, DEBUG_DEBUG, "New socket connection (callref %d).\n", conn->callref);
+	LOGP(DCC, LOGL_DEBUG, "New socket connection (callref %d).\n", conn->callref);
 
 	/* attach to list */
 	connp = &os->conn_list;
@@ -228,7 +228,7 @@ static void close_conn(osmo_cc_conn_t *conn, uint8_t socket_cause)
 		rej_msg(conn->os, conn->callref, socket_cause, 0, 0);
 	}
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Destroy socket connection (callref %d).\n", conn->callref);
+	LOGP(DCC, LOGL_DEBUG, "Destroy socket connection (callref %d).\n", conn->callref);
 
 	/* close socket */
 	if (conn->ofd.fd) {
@@ -256,7 +256,7 @@ void osmo_cc_close_socket(osmo_cc_socket_t *os)
 {
 	osmo_cc_msg_list_t *ml;
 
-	PDEBUG(DCC, DEBUG_DEBUG, "Destroy socket.\n");
+	LOGP(DCC, LOGL_DEBUG, "Destroy socket.\n");
 
 	/* free all connections */
 	while (os->conn_list)
@@ -317,12 +317,12 @@ static int receive_conn(osmo_cc_conn_t *conn)
 		if (conn->read_version_pos == strlen(version_string)) {
 			conn->read_version = 0;
 			if (!!memcmp(conn->read_version_string, version_string, strlen(version_string) - 1)) {
-				PDEBUG(DCC, DEBUG_NOTICE, "Remote does not seem to be an Osmo-CC socket, rejecting!\n");
+				LOGP(DCC, LOGL_NOTICE, "Remote does not seem to be an Osmo-CC socket, rejecting!\n");
 				socket_cause = OSMO_CC_SOCKET_CAUSE_FAILED;
 				goto close;
 			}
 			if (conn->read_version_string[strlen(version_string) - 1] != version_string[strlen(version_string) - 1]) {
-				PDEBUG(DCC, DEBUG_NOTICE, "Remote Osmo-CC socket has wrong version (local=%s, remote=%s), rejecting!\n", version_string, conn->read_version_string);
+				LOGP(DCC, LOGL_NOTICE, "Remote Osmo-CC socket has wrong version (local=%s, remote=%s), rejecting!\n", version_string, conn->read_version_string);
 				socket_cause = OSMO_CC_SOCKET_CAUSE_VERSION_MISMATCH;
 				goto close;
 			}
@@ -382,7 +382,7 @@ empty_message:
 		else
 			conn->os->recv_msg_cb(conn->os->priv, conn->callref, msg);
 		if (msg_type == OSMO_CC_MSG_REL_REQ || msg_type == OSMO_CC_MSG_REJ_REQ) {
-			PDEBUG(DCC, DEBUG_DEBUG, "closing socket because we received a release or reject message.\n");
+			LOGP(DCC, LOGL_DEBUG, "closing socket because we received a release or reject message.\n");
 			close_conn(conn, 0);
 			return 1; /* conn removed */
 		}
@@ -391,7 +391,7 @@ empty_message:
 	return work;
 
 close:
-	PDEBUG(DCC, DEBUG_ERROR, "OsmoCC-Socket failed, socket cause %d.\n", socket_cause);
+	LOGP(DCC, LOGL_ERROR, "OsmoCC-Socket failed, socket cause %d.\n", socket_cause);
 	close_conn(conn, socket_cause);
 	return work; /* conn removed */
 }
@@ -418,7 +418,7 @@ static int transmit_conn(osmo_cc_conn_t *conn)
 			goto close;
 		}
 		if (rc != strlen(version_string)) {
-			PDEBUG(DCC, DEBUG_ERROR, "short write, please fix handling!\n");
+			LOGP(DCC, LOGL_ERROR, "short write, please fix handling!\n");
 			abort();
 		}
 		conn->write_version = 0;
@@ -437,12 +437,12 @@ static int transmit_conn(osmo_cc_conn_t *conn)
 			goto close;
 		}
 		if (rc != len) {
-			PDEBUG(DCC, DEBUG_ERROR, "short write, please fix handling!\n");
+			LOGP(DCC, LOGL_ERROR, "short write, please fix handling!\n");
 			abort();
 		}
 		/* close socket after sending release/reject message */
 		if (msg->type == OSMO_CC_MSG_REL_REQ || msg->type == OSMO_CC_MSG_REJ_REQ) {
-			PDEBUG(DCC, DEBUG_DEBUG, "closing socket because we sent a release or reject message.\n");
+			LOGP(DCC, LOGL_DEBUG, "closing socket because we sent a release or reject message.\n");
 			close_conn(conn, 0);
 			return work; /* conn removed */
 		}
@@ -463,7 +463,7 @@ static int transmit_conn(osmo_cc_conn_t *conn)
 	return work;
 
 close:
-	PDEBUG(DCC, DEBUG_NOTICE, "OsmoCC-Socket failed.\n");
+	LOGP(DCC, LOGL_NOTICE, "OsmoCC-Socket failed.\n");
 	close_conn(conn, socket_cause);
 	return work; /* conn removed */
 }
@@ -516,7 +516,7 @@ int osmo_cc_handle_socket(osmo_cc_socket_t *os)
 		/* reject, if this is not a setup message */
 		if (ml->msg->type != OSMO_CC_MSG_SETUP_REQ
 		 && ml->msg->type != OSMO_CC_MSG_ATTACH_REQ) {
-			PDEBUG(DCC, DEBUG_ERROR, "Message with unknown callref.\n");
+			LOGP(DCC, LOGL_ERROR, "Message with unknown callref.\n");
 			rej_msg(os, ml->callref, 0, OSMO_CC_ISDN_CAUSE_INVAL_CALLREF, 0);
 			/* drop message */
 			osmo_cc_free_msg(ml->msg);
@@ -550,7 +550,7 @@ int osmo_cc_handle_socket(osmo_cc_socket_t *os)
 		}
 		freeaddrinfo(result);
 		if (rp == NULL) {
-			PDEBUG(DCC, DEBUG_ERROR, "Failed to connect to given host %s port %d.\n", ml->host, ml->port);
+			LOGP(DCC, LOGL_ERROR, "Failed to connect to given host %s port %d.\n", ml->host, ml->port);
 			rej_msg(os, ml->callref, OSMO_CC_SOCKET_CAUSE_FAILED, 0, 0);
 			/* drop message */
 			osmo_cc_free_msg(ml->msg);

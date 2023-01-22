@@ -136,7 +136,7 @@ char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
 
 	/* check for overflow and return */
 	if (strlen(sdp) == sizeof(sdp) - 1) {
-		PDEBUG(DCC, DEBUG_ERROR, "Fatal error: Allocated SDP buffer with %d bytes is too small, please fix!\n", (int)sizeof(sdp));
+		LOGP(DCC, LOGL_ERROR, "Fatal error: Allocated SDP buffer with %d bytes is too small, please fix!\n", (int)sizeof(sdp));
 		return NULL;
 	}
 	return sdp;
@@ -286,21 +286,21 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 			continue;
 
 		if (line[1] != '=') {
-			PDEBUG(DCC, DEBUG_NOTICE, "SDP line %d = '%s' is garbage, expecting '=' as second character.\n", line_no, line);
+			LOGP(DCC, LOGL_NOTICE, "SDP line %d = '%s' is garbage, expecting '=' as second character.\n", line_no, line);
 			continue;
 		}
 
 		switch(line[0]) {
 		case 'v':
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Version: %s\n", next_word);
+			LOGP(DCC, LOGL_DEBUG, " -> Version: %s\n", next_word);
 			if (atoi(next_word) != 0) {
-				PDEBUG(DCC, DEBUG_NOTICE, "SDP line %d = '%s' describes unsupported version.\n", line_no, line);
+				LOGP(DCC, LOGL_NOTICE, "SDP line %d = '%s' describes unsupported version.\n", line_no, line);
 				osmo_cc_free_session(session);
 				return NULL;
 			}
 			break;
 		case 'o':
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Originator: %s\n", next_word);
+			LOGP(DCC, LOGL_DEBUG, " -> Originator: %s\n", next_word);
 			/* Originator */
 			word = wordsep(&next_word);
 			if (!word)
@@ -335,12 +335,12 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 			break;
 		case 's':
 			/* Session Name */
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Session Name: %s\n", next_word);
+			LOGP(DCC, LOGL_DEBUG, " -> Session Name: %s\n", next_word);
 			free((char *)session->name); // if already set
 			session->name = strdup(next_word);
 			break;
 		case 'c': /* Connection Data */
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Connection Data: %s\n", next_word);
+			LOGP(DCC, LOGL_DEBUG, " -> Connection Data: %s\n", next_word);
 			if (media)
 				cd = &media->connection_data_remote;
 			else
@@ -351,7 +351,7 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 			if (!strcmp(word, "IN"))
 				cd->nettype = osmo_cc_session_nettype_inet;
 			else {
-				PDEBUG(DCC, DEBUG_NOTICE, "Unsupported network type '%s' in SDP line %d = '%s'\n", word, line_no, line);
+				LOGP(DCC, LOGL_NOTICE, "Unsupported network type '%s' in SDP line %d = '%s'\n", word, line_no, line);
 				break;
 			}
 			/* address type */
@@ -359,13 +359,13 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 				break;
 			if (!strcmp(word, "IP4")) {
 				cd->addrtype = osmo_cc_session_addrtype_ipv4;
-				PDEBUG(DCC, DEBUG_DEBUG, " -> Address Type = IPv4\n");
+				LOGP(DCC, LOGL_DEBUG, " -> Address Type = IPv4\n");
 			} else
 			if (!strcmp(word, "IP6")) {
 				cd->addrtype = osmo_cc_session_addrtype_ipv6;
-				PDEBUG(DCC, DEBUG_DEBUG, " -> Address Type = IPv6\n");
+				LOGP(DCC, LOGL_DEBUG, " -> Address Type = IPv6\n");
 			} else {
-				PDEBUG(DCC, DEBUG_NOTICE, "Unsupported address type '%s' in SDP line %d = '%s'\n", word, line_no, line);
+				LOGP(DCC, LOGL_NOTICE, "Unsupported address type '%s' in SDP line %d = '%s'\n", word, line_no, line);
 				break;
 			}
 			/* connection address */
@@ -375,10 +375,10 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 				*p++ = '\0';
 			free((char *)cd->address); // in case of multiple lines of 'c'
 			cd->address = strdup(word);
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Address = %s\n", word);
+			LOGP(DCC, LOGL_DEBUG, " -> Address = %s\n", word);
 			break;
 		case 'm': /* Media Description */
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Media Description: %s\n", next_word);
+			LOGP(DCC, LOGL_DEBUG, " -> Media Description: %s\n", next_word);
 			/* add media description */
 			media = osmo_cc_add_media(session, 0, 0, NULL, 0, 0, 0, csend, creceive, NULL, 0);
 			/* copy common connection data from common connection, if exists */
@@ -395,7 +395,7 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 			else {
 				media->description.type = osmo_cc_session_media_type_unknown;
 				media->description.type_name = strdup(word);
-				PDEBUG(DCC, DEBUG_DEBUG, "Unsupported media type in SDP line %d = '%s'\n", line_no, line);
+				LOGP(DCC, LOGL_DEBUG, "Unsupported media type in SDP line %d = '%s'\n", line_no, line);
 			}
 			/* port */
 			if (!(word = wordsep(&next_word)))
@@ -409,7 +409,7 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 			else {
 				media->description.proto = osmo_cc_session_media_proto_unknown;
 				media->description.proto_name = strdup(word);
-				PDEBUG(DCC, DEBUG_NOTICE, "Unsupported protocol type in SDP line %d = '%s'\n", line_no, line);
+				LOGP(DCC, LOGL_NOTICE, "Unsupported protocol type in SDP line %d = '%s'\n", line_no, line);
 				break;
 			}
 			/* create codec description for each codec and link */
@@ -419,17 +419,17 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 				/* fmt */
 				codec->payload_type_remote = atoi(word);
 				complete_codec_by_fmt(codec->payload_type_remote, &codec->payload_name, &codec->payload_rate, &codec->payload_channels);
-				PDEBUG(DCC, DEBUG_DEBUG, " -> payload type = %d\n", codec->payload_type_remote);
+				LOGP(DCC, LOGL_DEBUG, " -> payload type = %d\n", codec->payload_type_remote);
 				if (codec->payload_name)
-					PDEBUG(DCC, DEBUG_DEBUG, " -> payload name = %s\n", codec->payload_name);
+					LOGP(DCC, LOGL_DEBUG, " -> payload name = %s\n", codec->payload_name);
 				if (codec->payload_rate)
-					PDEBUG(DCC, DEBUG_DEBUG, " -> payload rate = %d\n", codec->payload_rate);
+					LOGP(DCC, LOGL_DEBUG, " -> payload rate = %d\n", codec->payload_rate);
 				if (codec->payload_channels)
-					PDEBUG(DCC, DEBUG_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
+					LOGP(DCC, LOGL_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
 			}
 			break;
 		case 'a':
-			PDEBUG(DCC, DEBUG_DEBUG, " -> Attribute: %s\n", next_word);
+			LOGP(DCC, LOGL_DEBUG, " -> Attribute: %s\n", next_word);
 			word = wordsep(&next_word);
 			if (!strcmp(word, "sendrecv")) {
 				if (media) {
@@ -472,7 +472,7 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 				break;
 			} else
 			if (!media) {
-				PDEBUG(DCC, DEBUG_NOTICE, "Attribute without previously defined media in SDP line %d = '%s'\n", line_no, line);
+				LOGP(DCC, LOGL_NOTICE, "Attribute without previously defined media in SDP line %d = '%s'\n", line_no, line);
 				break;
 			}
 			if (!strncmp(word, "rtpmap:", 7)) {
@@ -482,23 +482,23 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 						break;
 				}
 				if (!codec) {
-					PDEBUG(DCC, DEBUG_NOTICE, "Attribute without previously defined codec in SDP line %d = '%s'\n", line_no, line);
+					LOGP(DCC, LOGL_NOTICE, "Attribute without previously defined codec in SDP line %d = '%s'\n", line_no, line);
 					break;
 				}
-				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload type = %d\n", codec->payload_type_remote);
+				LOGP(DCC, LOGL_DEBUG, " -> (rtpmap) payload type = %d\n", codec->payload_type_remote);
 				if (!(word = wordsep(&next_word)))
 					goto rtpmap_done;
 				if ((p = strchr(word, '/')))
 					*p++ = '\0';
 				free((char *)codec->payload_name); // in case it is already set above
 				codec->payload_name = strdup(word);
-				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload name = %s\n", codec->payload_name);
+				LOGP(DCC, LOGL_DEBUG, " -> (rtpmap) payload name = %s\n", codec->payload_name);
 				if (!(word = p))
 					goto rtpmap_done;
 				if ((p = strchr(word, '/')))
 					*p++ = '\0';
 				codec->payload_rate = atoi(word);
-				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload rate = %d\n", codec->payload_rate);
+				LOGP(DCC, LOGL_DEBUG, " -> (rtpmap) payload rate = %d\n", codec->payload_rate);
 				if (!(word = p)) {
 					/* if no channel is given and no default was specified, we must set 1 channel */
 					if (!codec->payload_channels)
@@ -506,10 +506,10 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 					goto rtpmap_done;
 				}
 				codec->payload_channels = atoi(word);
-				PDEBUG(DCC, DEBUG_DEBUG, " -> (rtpmap) payload channels = %d\n", codec->payload_channels);
+				LOGP(DCC, LOGL_DEBUG, " -> (rtpmap) payload channels = %d\n", codec->payload_channels);
 				rtpmap_done:
 				if (!codec->payload_name || !codec->payload_rate || !codec->payload_channels) {
-					PDEBUG(DCC, DEBUG_NOTICE, "Broken 'rtpmap' definition in SDP line %d = '%s' Skipping codec!\n", line_no, line);
+					LOGP(DCC, LOGL_NOTICE, "Broken 'rtpmap' definition in SDP line %d = '%s' Skipping codec!\n", line_no, line);
 					osmo_cc_free_codec(codec);
 				}
 			}
@@ -519,7 +519,7 @@ struct osmo_cc_session *osmo_cc_session_parsesdp(osmo_cc_session_config_t *conf,
 
 	/* if something is incomplete, abort here */
 	if (osmo_cc_session_check(session, 1)) {
-		PDEBUG(DCC, DEBUG_NOTICE, "Parsing SDP failed.\n");
+		LOGP(DCC, LOGL_NOTICE, "Parsing SDP failed.\n");
 		osmo_cc_free_session(session);
 		return NULL;
 	}
@@ -537,7 +537,7 @@ void osmo_cc_debug_sdp(const char *_sdp)
 		for (i = 0; *sdp > 0 && *sdp >= 32 && i < (int)sizeof(text) - 1; i++)
 			text[i] = *sdp++;
 		text[i] = '\0';
-		PDEBUG(DCC, DEBUG_DEBUG, " | %s\n", text);
+		LOGP(DCC, LOGL_DEBUG, " | %s\n", text);
 		while (*sdp > 0 && *sdp < 32)
 			sdp++;
 	}
