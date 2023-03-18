@@ -162,6 +162,8 @@ void dsp_init(void)
 	}
 	dsp_sync_check[0x712] = 0x00; /* no bit error */
 	dsp_sync_check[0x0ed] = 0x80; /* no bit error */
+
+	compandor_init();
 }
 
 static void dsp_init_ramp(amps_t *amps)
@@ -194,7 +196,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	int half;
 
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
-	init_compandor(&amps->cstate, 8000, 3.0, 13.5);
+	setup_compandor(&amps->cstate, 8000, 3.0, 13.5);
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
 

@@ -76,6 +76,7 @@ const char *cnetz_dsp_mode_name(enum dsp_mode mode)
 
 void dsp_init(void)
 {
+	compandor_init();
 }
 
 static void dsp_init_ramp(cnetz_t *cnetz)
@@ -160,7 +161,7 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 
 	/* init compandor, according to C-Netz specs, attack and recovery time
 	 * shall not exceed according to ITU G.162 */
-	init_compandor(&cnetz->cstate, 8000, 5.0, 22.5);
+	setup_compandor(&cnetz->cstate, 8000, 5.0, 22.5);
 
 	/* use duration of one bit to ramp level of last frame to current frame */
 	cnetz->offset_range = ceil(cnetz->fsk_bitduration);

@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <math.h>
+#include <sys/param.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libdisplay/display.h"
@@ -246,7 +247,7 @@ static void print_measurements(int on)
 				memset(line_color + width - MAX_UNIT_LEN, 4, MAX_UNIT_LEN); /* blue */
 			else
 				memset(line_color + width - MAX_UNIT_LEN, 3, MAX_UNIT_LEN); /* yellow */
-			strncpy(line + width - MAX_UNIT_LEN + 1, text, (strlen(text) < MAX_UNIT_LEN) ? strlen(text) : MAX_UNIT_LEN);
+			memcpy(line + width - MAX_UNIT_LEN + 1, text, MAX(strlen(text), MAX_UNIT_LEN));
 			display_line(on, width);
 		}
 	}

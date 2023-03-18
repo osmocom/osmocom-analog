@@ -97,6 +97,8 @@ void dsp_init(void)
 		/* dialtone sine */
 		dsp_sine_dialtone[i] = s * TX_PEAK_DIALTONE;
 	}
+
+	compandor_init();
 }
 
 static int fsk_send_bit(void *inst);
@@ -109,7 +111,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	int i;
 
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
-	init_compandor(&nmt->cstate, 8000, 3.0, 13.5);
+	setup_compandor(&nmt->cstate, 8000, 3.0, 13.5);
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 

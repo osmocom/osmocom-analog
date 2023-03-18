@@ -14,7 +14,8 @@ typedef struct compandor {
 	} e;
 } compandor_t;
 
-void init_compandor(compandor_t *state, double samplerate, double attack_ms, double recovery_ms);
+void compandor_init(void);
+void setup_compandor(compandor_t *state, double samplerate, double attack_ms, double recovery_ms);
 void compress_audio(compandor_t *state, sample_t *samples, int num);
 void expand_audio(compandor_t *state, sample_t *samples, int num);
 

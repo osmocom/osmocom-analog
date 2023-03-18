@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
@@ -39,6 +40,7 @@
 #define ENVELOPE_MAX	9.990
 
 static double sqrt_tab[10000];
+static int compandor_initalized = 0;
 
 /*
  * Init compandor according to ITU-T G.162 specification
@@ -46,9 +48,23 @@ static double sqrt_tab[10000];
  * Hopefully this is correct
  *
  */
-void init_compandor(compandor_t *state, double samplerate, double attack_ms, double recovery_ms)
+
+void compandor_init(void)
 {
 	int i;
+
+	// FIXME: make global, not at instance
+	for (i = 0; i < 10000; i++)
+		sqrt_tab[i] = sqrt(i * 0.001);
+	compandor_initalized = 1;
+}
+
+void setup_compandor(compandor_t *state, double samplerate, double attack_ms, double recovery_ms)
+{
+	if (!compandor_initalized) {
+		fprintf(stderr, "Compandor nicht initialized.\n");
+		abort();
+	}
 
 	memset(state, 0, sizeof(*state));
 
@@ -60,10 +76,6 @@ void init_compandor(compandor_t *state, double samplerate, double attack_ms, dou
 	state->c.step_down = pow(COMPRESS_RECOVERY_FACTOR, 1000.0 / recovery_ms / samplerate);
 	state->e.step_up = pow(EXPAND_ATTACK_FACTOR, 1000.0 / attack_ms / samplerate);
 	state->e.step_down = pow(EXPAND_RECOVERY_FACTOR, 1000.0 / recovery_ms / samplerate);
-
-	// FIXME: make global, not at instance
-	for (i = 0; i < 10000; i++)
-		sqrt_tab[i] = sqrt(i * 0.001);
 }
 
 void compress_audio(compandor_t *state, sample_t *samples, int num)

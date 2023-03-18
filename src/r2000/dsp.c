@@ -64,6 +64,7 @@
 /* global init for FSK */
 void dsp_init(void)
 {
+	compandor_init();
 }
 
 static int fsk_send_bit(void *inst);
@@ -75,7 +76,7 @@ static void super_receive_bit(void *inst, int bit, double quality, double level)
 int dsp_init_sender(r2000_t *r2000)
 {
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
-	init_compandor(&r2000->cstate, 8000, 3.0, 13.5);
+	setup_compandor(&r2000->cstate, 8000, 3.0, 13.5);
 
 	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
 
