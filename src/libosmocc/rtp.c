@@ -422,7 +422,7 @@ static int rtcp_listen_cb(struct osmo_fd *ofd, unsigned int when)
 	int rc;
 
 	if (when & OSMO_FD_READ) {
-		rc = rtcp_receive(media->rtp_ofd.fd);
+		rc = rtcp_receive(media->rtcp_ofd.fd);
 		if (rc < 0)
 			return rc;
 	}
