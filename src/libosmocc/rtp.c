@@ -24,7 +24,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../libdebug/debug.h"
 #include "../libtimer/timer.h"
@@ -53,7 +52,7 @@ struct rtp_x_hdr {
 	uint16_t length;
 } __attribute__((packed));
 
-static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_t *marker_p, uint8_t *pt_p, uint16_t *sequence_p, uint32_t *timestamp_p, uint32_t *ssrc_p)
+static int rtp_receive(struct sockaddr_storage *sa, socklen_t *slen, int sock, uint8_t **payload_p, int *payload_len_p, uint8_t *marker_p, uint8_t *pt_p, uint16_t *sequence_p, uint32_t *timestamp_p, uint32_t *ssrc_p)
 {
 	static uint8_t data[2048];
 	int len;
@@ -64,7 +63,7 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 	int payload_len;
 	int x_len;
 
-	len = read(sock, data, sizeof(data));
+	len = recvfrom(sock, data, sizeof(data), 0, (struct sockaddr *)sa, slen);
 	if (len < 0) {
 		if (errno == EAGAIN)
 			return -EAGAIN;
@@ -133,12 +132,12 @@ static int rtp_receive(int sock, uint8_t **payload_p, int *payload_len_p, uint8_
 	return 0;
 }
 
-static int rtcp_receive(int sock)
+static int rtcp_receive(struct sockaddr_storage *sa, socklen_t *slen, int sock)
 {
 	static uint8_t data[2048];
 	int len;
 
-	len = read(sock, data, sizeof(data));
+	len = recvfrom(sock, data, sizeof(data), 0, (struct sockaddr *)sa, slen);
 	if (len < 0) {
 		if (errno == EAGAIN)
 			return -EAGAIN;
@@ -149,7 +148,7 @@ static int rtcp_receive(int sock)
 	return 0;
 }
 
-static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t marker, uint8_t pt, uint16_t sequence, uint32_t timestamp, uint32_t ssrc)
+static void rtp_send(struct sockaddr_storage *sa, socklen_t slen, int sock, uint8_t *payload, int payload_len, uint8_t marker, uint8_t pt, uint16_t sequence, uint32_t timestamp, uint32_t ssrc)
 {
 	struct rtp_hdr *rtph;
 	char data[sizeof(*rtph) + payload_len];
@@ -169,9 +168,9 @@ static void rtp_send(int sock, uint8_t *payload, int payload_len, uint8_t marker
 	}
 	memcpy(data + sizeof(*rtph), payload, payload_len);
 
-	rc = write(sock, data, len);
+	rc = sendto(sock, data, len, 0, (struct sockaddr *)sa, slen);
 	if (rc < 0)
-		LOGP(DCC, LOGL_DEBUG, "Write errno = %d (%s)\n", errno, strerror(errno));
+		LOGP(DCC, LOGL_DEBUG, "sendto errno = %d (%s)\n", errno, strerror(errno));
 }
 
 static int rtp_listen_cb(struct osmo_fd *ofd, unsigned int when);
@@ -186,7 +185,7 @@ int osmo_cc_rtp_open(osmo_cc_session_media_t *media)
 	int domain = 0; // make GCC happy
 	uint16_t start_port;
 	struct sockaddr_storage sa;
-	int slen = 0; // make GCC happy
+	socklen_t slen = 0; // make GCC happy
 	struct sockaddr_in6 *sa6;
 	struct sockaddr_in *sa4;
 	uint16_t *sport;
@@ -294,19 +293,16 @@ bind_error:
  */
 int osmo_cc_rtp_connect(osmo_cc_session_media_t *media)
 {
-	struct sockaddr_storage sa;
-	int slen = 0; // make GCC happy
 	struct sockaddr_in6 *sa6;
 	struct sockaddr_in *sa4;
-	uint16_t *sport;
 	int rc;
 
-	LOGP(DCC, LOGL_DEBUG, "Connecting media port %d->%d\n", media->description.port_local, media->description.port_remote);
+	LOGP(DCC, LOGL_DEBUG, "Connecting media port %d->%d (remote %s)\n", media->description.port_local, media->description.port_remote, media->connection_data_remote.address);
 
 	switch (media->connection_data_remote.addrtype) {
 	case osmo_cc_session_addrtype_ipv4:
-		memset(&sa, 0, sizeof(sa));
-		sa4 = (struct sockaddr_in *)&sa;
+		memset(&media->rtp_sa, 0, sizeof(media->rtp_sa));
+		sa4 = (struct sockaddr_in *)&media->rtp_sa;
 		sa4->sin_family = AF_INET;
 		rc = inet_pton(AF_INET, media->connection_data_remote.address, &sa4->sin_addr);
 		if (rc < 1) {
@@ -314,36 +310,34 @@ pton_error:
 			LOGP(DCC, LOGL_NOTICE, "Cannot connect to address '%s'.\n", media->connection_data_remote.address);
 			return -EINVAL;
 		}
-		sport = &sa4->sin_port;
-		slen = sizeof(*sa4);
+		media->rtp_sport = &sa4->sin_port;
+		media->rtp_slen = sizeof(*sa4);
+		memcpy(&media->rtcp_sa, &media->rtp_sa, sizeof(*sa4));
+		sa4 = (struct sockaddr_in *)&media->rtcp_sa;
+		media->rtcp_sport = &sa4->sin_port;
+		media->rtcp_slen = sizeof(*sa4);
 		break;
 	case osmo_cc_session_addrtype_ipv6:
-		memset(&sa, 0, sizeof(sa));
-		sa6 = (struct sockaddr_in6 *)&sa;
+		memset(&media->rtp_sa, 0, sizeof(media->rtp_sa));
+		sa6 = (struct sockaddr_in6 *)&media->rtp_sa;
 		sa6->sin6_family = AF_INET6;
 		rc = inet_pton(AF_INET6, media->connection_data_remote.address, &sa6->sin6_addr);
 		if (rc < 1)
 			goto pton_error;
-		sport = &sa6->sin6_port;
-		slen = sizeof(*sa6);
+		media->rtp_sport = &sa6->sin6_port;
+		media->rtp_slen = sizeof(*sa6);
+		memcpy(&media->rtcp_sa, &media->rtp_sa, sizeof(*sa6));
+		sa6 = (struct sockaddr_in6 *)&media->rtcp_sa;
+		media->rtcp_sport = &sa6->sin6_port;
+		media->rtcp_slen = sizeof(*sa6);
 		break;
 	case osmo_cc_session_addrtype_unknown:
 		LOGP(DCC, LOGL_NOTICE, "Unsupported address type '%s'.\n", media->connection_data_local.addrtype_name);
 		return -EINVAL;
 	}
 
-	*sport = htons(media->description.port_remote);
-	rc = connect(media->rtp_ofd.fd, (struct sockaddr *)&sa, slen);
-	if (rc < 0) {
-connect_error:
-		LOGP(DCC, LOGL_NOTICE, "Cannot connect to address '%s'.\n", media->connection_data_remote.address);
-		osmo_cc_rtp_close(media);
-		return -EIO;
-	}
-	*sport = htons(media->description.port_remote + 1);
-	rc = connect(media->rtcp_ofd.fd, (struct sockaddr *)&sa, slen);
-	if (rc < 0)
-		goto connect_error;
+	*media->rtp_sport = htons(media->description.port_remote);
+	*media->rtcp_sport = htons(media->description.port_remote + 1);
 
 	return 0;
 }
@@ -364,12 +358,50 @@ void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, ui
 		payload_len = len;
 	}
 
-	rtp_send(codec->media->rtp_ofd.fd, payload, payload_len, marker, codec->payload_type_remote, codec->media->tx_sequence, codec->media->tx_timestamp, codec->media->tx_ssrc);
+	rtp_send(&codec->media->rtp_sa, codec->media->rtp_slen, codec->media->rtp_ofd.fd, payload, payload_len, marker, codec->payload_type_remote, codec->media->tx_sequence, codec->media->tx_timestamp, codec->media->tx_ssrc);
 	codec->media->tx_sequence += inc_sequence;
 	codec->media->tx_timestamp += inc_timestamp;
 
 	if (codec->encoder)
 		free(payload);
+}
+
+static void check_port_translation(struct sockaddr_storage *sa, struct sockaddr_storage *media_sa, const char *what)
+{
+	struct sockaddr_in6 *sa6, *sa6_2;
+	struct sockaddr_in *sa4, *sa4_2;
+	int from = 0, to = 0;
+
+	if (sa->ss_family != media_sa->ss_family)
+		return;
+
+	switch (sa->ss_family) {
+	case AF_INET:
+		sa4 = (struct sockaddr_in *)sa;
+		sa4_2 = (struct sockaddr_in *)media_sa;
+		if (sa4->sin_port != sa4_2->sin_port) {
+			if (!!memcmp(&sa4->sin_addr, &sa4_2->sin_addr, sizeof(struct in_addr)))
+				break;
+			from = ntohs(sa4_2->sin_port);
+			to = ntohs(sa4->sin_port);
+			sa4_2->sin_port = sa4->sin_port;
+		}
+		break;
+	case AF_INET6:
+		sa6 = (struct sockaddr_in6 *)sa;
+		sa6_2 = (struct sockaddr_in6 *)media_sa;
+		if (sa6->sin6_port != sa6_2->sin6_port) {
+			if (!!memcmp(&sa6->sin6_addr, &sa6_2->sin6_addr, sizeof(struct in6_addr)))
+				break;
+			from = ntohs(sa6_2->sin6_port);
+			to = ntohs(sa6->sin6_port);
+			sa6_2->sin6_port = sa6->sin6_port;
+		}
+		break;
+	}
+
+	if (from)
+		LOGP(DCC, LOGL_NOTICE, "Remote sends with different %s port, changing from %d to %d!\n", what, from, to);
 }
 
 static int rtp_listen_cb(struct osmo_fd *ofd, unsigned int when)
@@ -383,11 +415,14 @@ static int rtp_listen_cb(struct osmo_fd *ofd, unsigned int when)
 	osmo_cc_session_codec_t *codec;
 	uint8_t *data;
 	int len;
+	struct sockaddr_storage sa;
+	socklen_t slen = sizeof(sa); // must be initialized and will be overwritten
 
 	if (when & OSMO_FD_READ) {
-		rc = rtp_receive(media->rtp_ofd.fd, &payload, &payload_len, &marker, &payload_type, &media->rx_sequence, &media->rx_timestamp, &media->rx_ssrc);
+		rc = rtp_receive(&sa, &slen, media->rtp_ofd.fd, &payload, &payload_len, &marker, &payload_type, &media->rx_sequence, &media->rx_timestamp, &media->rx_ssrc);
 		if (rc < 0)
 			return rc;
+		check_port_translation(&sa, &media->rtp_sa, "RTP");
 
 		/* search for codec */
 		for (codec = media->codec_list; codec; codec = codec->next) {
@@ -420,11 +455,14 @@ static int rtcp_listen_cb(struct osmo_fd *ofd, unsigned int when)
 {
 	osmo_cc_session_media_t *media = ofd->data;
 	int rc;
+	struct sockaddr_storage sa;
+	socklen_t slen = sizeof(sa); // must be initialized and will be overwritten
 
 	if (when & OSMO_FD_READ) {
-		rc = rtcp_receive(media->rtcp_ofd.fd);
+		rc = rtcp_receive(&sa, &slen, media->rtcp_ofd.fd);
 		if (rc < 0)
 			return rc;
+		check_port_translation(&sa, &media->rtcp_sa, "RTCP");
 	}
 
 	return 0;

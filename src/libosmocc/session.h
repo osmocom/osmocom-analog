@@ -1,3 +1,5 @@
+#include <sys/socket.h>
+
 /* configuration */
 
 enum osmo_cc_session_nettype {
@@ -80,6 +82,9 @@ typedef struct osmo_cc_session_media {
 	struct osmo_cc_session_codec *codec_list;
 	int send, receive;
 	void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len);
+	struct sockaddr_storage rtp_sa, rtcp_sa;
+	socklen_t rtp_slen, rtcp_slen;
+	uint16_t *rtp_sport, *rtcp_sport; // pointers to the port inside sa sockaddr
 	struct osmo_fd rtp_ofd;
 	struct osmo_fd rtcp_ofd;
 	uint32_t tx_ssrc, rx_ssrc;
