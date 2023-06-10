@@ -310,6 +310,7 @@ int osmo_cc_socket_cause_name2value(const char *name);
 #define OSMO_CC_NETWORK_DECT_NONE		0x08
 #define OSMO_CC_NETWORK_BLUETOOTH_NONE		0x09
 #define OSMO_CC_NETWORK_SS5_NONE		0x0a
+#define OSMO_CC_NETWORK_R1_NONE			0x0b
 #define OSMO_CC_NETWORK_ANETZ_NONE		0x80
 #define OSMO_CC_NETWORK_BNETZ_MUENZ		0x81	/* id starts with 'M' */
 #define OSMO_CC_NETWORK_CNETZ_NONE		0x82

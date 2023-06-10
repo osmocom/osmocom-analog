@@ -338,6 +338,7 @@ static const char *osmo_cc_network_name[OSMO_CC_NETWORK_NUM] = {
 	[OSMO_CC_NETWORK_DECT_NONE] = "decs",
 	[OSMO_CC_NETWORK_BLUETOOTH_NONE] = "bluetooth",
 	[OSMO_CC_NETWORK_SS5_NONE] = "ss5",
+	[OSMO_CC_NETWORK_R1_NONE] = "r1",
 	[OSMO_CC_NETWORK_ANETZ_NONE] = "anetz",
 	[OSMO_CC_NETWORK_BNETZ_MUENZ] = "bnetz",
 	[OSMO_CC_NETWORK_CNETZ_NONE] = "cnetz",
