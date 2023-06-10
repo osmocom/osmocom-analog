@@ -48,15 +48,16 @@
 #define DROUTER		41
 #define DSTDERR		42
 #define DSS5		43
-#define DISDN		44
-#define DMISDN		45
-#define DDSS1		46
-#define DSIP		47
-#define DTEL		48
-#define DUK0		49
-#define DPH		50
-#define DDCF77		51
-#define DJITTER		52
+#define DR1		44
+#define DISDN		45
+#define DMISDN		46
+#define DDSS1		47
+#define DSIP		48
+#define DTEL		49
+#define DUK0		50
+#define DPH		51
+#define DDCF77		52
+#define DJITTER		53
 //NOTE: increment mask array, if 127 is exceeded
 
 void lock_debug(void);
