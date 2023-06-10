@@ -85,6 +85,25 @@ int main(void)
 			printf("\n");
 	}
 
+	printf("testing notch filter with %d iterations, Q = 4\n", 1);
+
+	iir_notch_init(&filter_high, 2605.0, SAMPLERATE, 1, 4);
+
+	for (i = 0; i < 4001; i += 100) {
+		gen_samples(samples, (double)i);
+		iir_process(&filter_high, samples, SAMPLERATE);
+		level = get_level(samples);
+		printf("%s%4d Hz: %.1f dB", debug_db(level), i, level2db(level));
+		if (i == 2600)
+			printf(" filter frequency (2605 Hz)\n");
+		else if (i == 2800)
+			printf(" about 200 Hz above\n");
+		else if (i == 2400)
+			printf(" about 200 Hz below\n");
+		else
+			printf("\n");
+	}
+
 	printf("testing band-pass filter with %d iterations\n", iter);
 
 	iir_lowpass_init(&filter_low, 2000.0, SAMPLERATE, iter);

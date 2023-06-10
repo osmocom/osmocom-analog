@@ -88,13 +88,12 @@ void iir_bandpass_init(iir_filter_t *filter, double frequency, int samplerate, i
 	filter->b2 = (1 - K / Q + K * K) * norm;
 }
 
-void iir_notch_init(iir_filter_t *filter, double frequency, int samplerate, int iterations)
+void iir_notch_init(iir_filter_t *filter, double frequency, int samplerate, int iterations, double Q)
 {
-	double Fc, Q, K, norm;
+	double Fc, K, norm;
 
 	memset(filter, 0, sizeof(*filter));
 	filter->iter = iterations;
-	Q = pow(sqrt(0.5), 1.0 / (double)iterations); /* 0.7071 @ 1 iteration */
 	Fc = frequency / (double)samplerate;
 	K = tan(PI * Fc);
 	norm = 1 / (1 + K / Q + K * K);
