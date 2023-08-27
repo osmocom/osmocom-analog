@@ -17,11 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* NOTE: Reset must be an input pin, not the reset of the controller.
+ * The clock pulse must be detected during reset.
+ */
 #if defined(__AVR_ATtiny85__)
 #define RST_PIN  2
 #define CLK_PIN  3
 #define DATA_PIN 4
-#error UNTESTED!
 #else
 #define CLK_PIN  5
 #define RST_PIN  6
@@ -29,15 +31,14 @@
 #endif
 
 uint8_t card_data[] = {
-
+/* Example: Service card for AEG OLYMPIA. */
 0xff, 0xf7, 0x5c, 0xff, 0xff, 0xff, 0xff, 0xff,
-0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x4b, 0x90,
-0x5f, 0x25, 0x07, 0x0c, 0x00, 0x00, 0xfe, 0xfd,
+0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x47, 0x38,
+0x78, 0x28, 0x07, 0x8c, 0xc7, 0x03, 0xfe, 0xfd,
 0xfb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 0x00, 0x00, 0x00, 0x00,
-
 };
 
 volatile uint8_t *rst_in, *clk_in, *data_in, *data_out, *data_mode;
@@ -70,6 +71,8 @@ void setup()
   data_out = portOutputRegister(port);
   data_in = portInputRegister(port);
   *data_mode |= data_bit; /* output */
+  /* wait for reset */
+  while (!(*rst_in & rst_bit));
 }
 
 uint8_t byte_count;
@@ -78,22 +81,14 @@ uint8_t bit_count;
 void loop()
 {
 reset:
+  /* initial reset state */
   byte_count = 0;
   bit_count = 0;
-
-  /* wait for reset pulse */
-  while (!(*rst_in & rst_bit));
-  /* now we have reset, so we wait for clock pulse */
-  while (!(*clk_in & clk_bit)) {
-    /* if we lost reset, go to start */
-    if (!(*rst_in & rst_bit))
-      goto reset;
-  }
-  while ((*clk_in & clk_bit)) {
-    /* if we lost reset, go to start */
-    if (!(*rst_in & rst_bit))
-      goto reset;
-  }
+  *data_out |= data_bit; /* high */
+  /* now we have reset, so we wait for the first clock pulse */
+  while (!(*clk_in & clk_bit));
+  while ((*clk_in & clk_bit));
+  /* wait for reset to become low, if not already before first clock pulse (AEG phone) */
   while ((*rst_in & rst_bit));
 
 next_bit:
