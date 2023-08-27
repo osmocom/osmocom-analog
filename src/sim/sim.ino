@@ -1,4 +1,4 @@
-/* SIM card for ATMEL
+                                                                                                                                                         /* SIM card for ATMEL
  *
  * (C) 2020 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved
@@ -27,14 +27,14 @@ extern "C"
 #if defined(__AVR_ATtiny85__)
 #define SERIAL_DATA  4
 #define SERIAL_DELAY 124
-#define SERIAL_TIMEOUT 1200 /* > two bytes */
+#define SERIAL_TIMEOUT 800 /* > more than two bytes */
 #else
 /* settings for Arduino UNO with 16 MHz */
 #define STATUS_LED   LED_BUILTIN
 #define RESET_PIN    6
 #define SERIAL_DATA  7
 #define SERIAL_DELAY 410
-#define SERIAL_TIMEOUT 2500 /* > two bytes */
+#define SERIAL_TIMEOUT 1600 /* > more than two bytes */
 #endif
 /* to set fused for ATTINY85:
  * avrdude -c usbasp-clone -p t85 -U lfuse:w:0xc0:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m

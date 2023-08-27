@@ -13,6 +13,8 @@ enum l1_state {
 	L1_STATE_IDLE,		/* waiting for message or reset */
 	L1_STATE_SEND,		/* sending reply */
 	L1_STATE_RECEIVE,	/* receiving message */
+	L1_STATE_COMPLETE,	/* received message complete, waiting for card reader to release */
+	L1_STATE_GARBAGE,	/* received garbage right after frame, waiting for timeout */
 };
 
 enum block_state {

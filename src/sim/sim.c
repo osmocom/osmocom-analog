@@ -1212,8 +1212,11 @@ static int rx_char(sim_sim_t *sim, uint8_t c)
 			sim->block_rx_data[sim->block_count++] = c;
 			return 0;
 		}
-		sim->l1_state = L1_STATE_IDLE;
-		rx_block(sim);
+		sim->l1_state = L1_STATE_COMPLETE;
+		/* Waiting for timeout, then process the received PDU.
+		 * This way we detect garbage after the message.
+		 * Also we wait for the card reader to release the I/O line. (22 bit durations minimum) */
+		return 0;
 	}
 
 	return -1;
@@ -1395,6 +1398,9 @@ int sim_rx(sim_sim_t *sim, uint8_t c)
 	case L1_STATE_RECEIVE:
 		rc = rx_char(sim, c);
 		break;
+	case L1_STATE_COMPLETE:
+		PDEBUG(DSIM1, DEBUG_NOTICE, "Received garbage after message!\n");
+		sim->l1_state = L1_STATE_GARBAGE;
 	default:
 		break;
 	}
@@ -1434,9 +1440,18 @@ void sim_timeout(sim_sim_t *sim)
 		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout while receiving message!\n");
 		sim->block_state = BLOCK_STATE_ADDRESS;
 		break;
+	case L1_STATE_GARBAGE:
+		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout after skipping garbage!\n");
+		sim->l1_state = L1_STATE_IDLE;
+		break;
 	case L1_STATE_SEND:
 		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout while sending message!\n");
 		sim->l1_state = L1_STATE_IDLE;
+		break;
+	case L1_STATE_COMPLETE:
+		/* We did not receive garbage after message, so we process it now. */
+		sim->l1_state = L1_STATE_IDLE;
+		rx_block(sim);
 		break;
 	default:
 		break;
