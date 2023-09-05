@@ -1316,6 +1316,7 @@ static uint8_t tx_atr(sim_sim_t *sim)
 int sim_init_eeprom(void)
 {
 	uint8_t ebdt_data[9];
+	uint8_t dir_data[24];
 	int i, rc;
 
 	/* init EEPROM with all bits '1' */
@@ -1345,6 +1346,10 @@ int sim_init_eeprom(void)
 		eeprom_write(EEPROM_PIN_DATA + i, PIN_DEFAULT[i]);
 	for (i = 0; i < 8; i++)
 		eeprom_write(EEPROM_AUTH_DATA + i, AUTH_DEFAULT >> ((7 - i) * 8));
+
+	/* store version number to phone book entry 1 */
+	encode_directory(dir_data, SIM_VERSION, SIM_VERSION_NAME);
+	save_directory(1, dir_data);
 
 	/* now write magic characters to identify virgin or initialized EEPROM */
 	eeprom_write(EEPROM_MAGIC + 0, 'C');
