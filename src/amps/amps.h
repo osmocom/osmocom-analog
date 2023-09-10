@@ -182,6 +182,8 @@ const char *amps_min22number(uint16_t min2);
 const char *amps_min12number(uint32_t min1);
 void amps_number2min(const char *number, uint32_t *min1, uint16_t *min2);
 const char *amps_min2number(uint32_t min1, uint16_t min2);
+void amps_encode_esn(uint32_t *esn, uint8_t mfr, uint32_t serial);
+void amps_decode_esn(uint32_t esn, uint8_t *mfr, uint32_t *serial);
 const char *amps_scm(uint8_t scm);
 int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, amps_si *si, uint16_t sid, uint8_t sat, int polarity, int send_callerid, int tolerant, int loopback);
 void amps_destroy(sender_t *sender);

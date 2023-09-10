@@ -11,7 +11,8 @@ libamps_a_SOURCES = \
 	transaction.c \
 	frame.c \
 	dsp.c \
-	sysinfo.c
+	sysinfo.c \
+	esn.c
 
 libusatone_a_SOURCES = \
 	usa_tones.c \

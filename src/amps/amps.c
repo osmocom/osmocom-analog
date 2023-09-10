@@ -51,6 +51,7 @@
 #include "dsp.h"
 #include "frame.h"
 #include "stations.h"
+#include "esn.h"
 #include "main.h"
 
 /* Uncomment this to test SAT via loopback */
@@ -847,7 +848,7 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_
 	}
 
 	if (order == 13 && (ordq == 0 || ordq == 1 || ordq == 2 || ordq == 3) && msg_type == 0) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 _register:
 		numbering(callerid, &carrier, &country, &national_number);
 		if (carrier)
@@ -863,14 +864,14 @@ _register:
 		}
 	} else
 	if (order == 13 && ordq == 3 && msg_type == 1) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
+		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 		goto _register;
 	} else
 	if (order == 0 && ordq == 0 && msg_type == 0) {
 		if (!dialing)
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %08x, %s, %s)\n", callerid, esn, amps_scm(scm), amps_mpci(mpci));
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 		else
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %08x, %s, %s)\n", callerid, dialing, esn, amps_scm(scm), amps_mpci(mpci));
+			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %s, %s, %s)\n", callerid, dialing, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 		trans = search_transaction_number(amps, min1, min2);
 		if (!trans && !dialing) {
 			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging reply, but call is already gone, rejecting call\n");
