@@ -139,7 +139,7 @@ static struct nmt_country {
 	{ 450, 1, 7, 1,9,	"PL",	"Poland",		"CENTERTEL",			frq_450_scandinavia },
 	{ 450, 1, 6, 1,9,	"BG",	"Bulgaria",		"MOBIFON",			frq_450_scandinavia },
 	{ 450, 1, 5, 1,9,	"RO",	"Romania",		"Telefonica Romania",		frq_450_scandinavia },
-	{ 450, 1, 6, 1,9,	"UA",	"Ukraine",		"Ukraine Mobile Comm.",		frq_450_scandinavia },
+	{ 450, 1, 8, 1,9,	"UA",	"Ukraine",		"Ukrainian Mobile Communications",		frq_450_scandinavia },
 	{ 450, 1, 1, 1,9,	"RU1",	"",			"",				frq_450_scandinavia },
 	{ 450, 1, 2, 1,9,	"RU2",	"",			"",				frq_450_scandinavia },
 	{ 450, 1, 3, 1,9,	"RU3",	"",			"",				frq_450_scandinavia },
