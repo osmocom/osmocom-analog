@@ -73,6 +73,7 @@ void print_help(const char *arg0)
 	printf("        Write \"<address>[,message]\" to it, to send a default message.\n");
 	printf("        Write \"<address>,n,message\" to it, to send a numeric message.\n");
 	printf("        Write \"<address>,a,message\" to it, to send an alphanumeric message.\n");
+	printf("        Write \"<address>,v,<wave file name>\" to it, to send a voice message.\n");
 	printf("\n");
 	printf("By default, an alphanumic message is sent, if last digit of the functional\n");
 	printf("address is 5..8. Otherwise a tone only message is sent.\n");

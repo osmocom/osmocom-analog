@@ -25,12 +25,14 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <sys/param.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "golay.h"
 #include "dsp.h"
 
 #define MAX_DISPLAY	1.4	/* something above speech level, no emphasis */
+#define VOICE_BANDWIDTH	3000	/* just guessing */
 
 static void dsp_init_ramp(gsc_t *gsc)
 {
@@ -172,11 +174,62 @@ void sender_receive(sender_t __attribute__((unused)) *sender, sample_t __attribu
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length)
 {
 	gsc_t *gsc = (gsc_t *) sender;
+	int rc;
 
 again:
-	/* get word */
+	/* play 2 seconds of pause */
+	if (gsc->wait_2_sec) {
+		int tosend = MIN(length, gsc->wait_2_sec);
+		memset(power, 1, tosend);
+		memset(samples, 0, sizeof(samples) * tosend);
+		power += tosend;
+		samples += tosend;
+		gsc->wait_2_sec -= tosend;
+		if (gsc->wait_2_sec)
+			return;
+	}
+
+	/* play wave file, if open */
+	if (gsc->wave_tx_play.left) {
+		int wave_num, s;
+		wave_num = samplerate_upsample_input_num(&gsc->wave_tx_upsample, length);
+		sample_t buffer[wave_num * 2], *wave_samples[2] = { buffer, buffer + wave_num };
+		wave_read(&gsc->wave_tx_play, wave_samples, wave_num);
+		if (gsc->wave_tx_channels == 2) {
+			for (s = 0; s < wave_num; s++) {
+				wave_samples[0][s] += wave_samples[1][s];
+			}
+		}
+		samplerate_upsample(&gsc->wave_tx_upsample, wave_samples[0], wave_num, samples, length);
+		if (!gsc->wave_tx_play.left) {
+			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Voice message sent.\n");
+			wave_destroy_playback(&gsc->wave_tx_play);
+			return;
+		}
+		return;
+	}
+
+
+	/* get FSK bits or start playing wave file */
 	if (!gsc->fsk_tx_buffer_length) {
 		int8_t bit = get_bit(gsc);
+
+		/* bit == 2 means voice transmission. */
+		if (bit == 2) {
+			if (gsc->wave_tx_filename[0]) {
+				gsc->wave_tx_samplerate = gsc->wave_tx_channels = 0;
+				rc = wave_create_playback(&gsc->wave_tx_play, gsc->wave_tx_filename, &gsc->wave_tx_samplerate, &gsc->wave_tx_channels, gsc->fsk_deviation);
+				if (rc < 0) {
+					gsc->wave_tx_play.left = 0;
+					PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Failed to open wave file '%s' for voice message.\n", gsc->wave_tx_filename);
+				} else {
+					PDEBUG_CHAN(DDSP, DEBUG_INFO, "Sending wave file '%s' for voice message after 2 seconds.\n", gsc->wave_tx_filename);
+					init_samplerate(&gsc->wave_tx_upsample, gsc->wave_tx_samplerate, gsc->sender.samplerate, VOICE_BANDWIDTH);
+				}
+			}
+			gsc->wait_2_sec = gsc->sender.samplerate * 2.0;
+			goto again;
+		}
 
 		/* no message, power is off */
 		if (bit < 0) {
@@ -205,5 +258,4 @@ again:
 	if (length)
 		goto again;
 }
-
 

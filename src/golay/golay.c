@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/param.h>
 #include "../libsample/sample.h"
 #include "../libdebug/debug.h"
 #include "../libmobile/call.h"
@@ -98,18 +99,10 @@ void golay_destroy(sender_t *sender)
 }
 
 /* Create message and add to queue */
-static gsc_msg_t *golay_msg_create(gsc_t *gsc, const char *address, const char *text, int force_type)
+static gsc_msg_t *golay_msg_create(gsc_t *gsc, const char *address, const char *text, enum gsc_msg_type type)
 {
 	gsc_msg_t *msg, **msgp;
 
-	PDEBUG(DGOLAY, DEBUG_INFO, "Creating msg instance to page address '%s'.\n", address);
-
-	/* create */
-	msg = calloc(1, sizeof(*msg));
-	if (!msg) {
-		PDEBUG(DGOLAY, DEBUG_ERROR, "No mem!\n");
-		abort();
-	}
 	if (strlen(address) != sizeof(msg->address) - 1) {
 		PDEBUG(DGOLAY, DEBUG_NOTICE, "Address has incorrect length, cannot page!\n");
 		return NULL;
@@ -119,10 +112,39 @@ static gsc_msg_t *golay_msg_create(gsc_t *gsc, const char *address, const char *
 		return NULL;
 	}
 
+	/* get type from last digit, if automatic type is given */
+	if (type == TYPE_AUTO) {
+		switch (address[6]) {
+			case '1': type = TYPE_VOICE; break;
+			case '2': type = TYPE_VOICE; break;
+			case '3': type = TYPE_VOICE; break;
+			case '4': type = TYPE_VOICE; break;
+			case '5': type = TYPE_ALPHA; break;
+			case '6': type = TYPE_ALPHA; break;
+			case '7': type = TYPE_ALPHA; break;
+			case '8': type = TYPE_ALPHA; break;
+			case '9': type = TYPE_TONE;  break;
+			case '0': type = TYPE_TONE;  break;
+			default:
+				PDEBUG(DGOLAY, DEBUG_NOTICE, "Illegal function suffix '%c' in last address digit.\n", address[6]);
+				return NULL;
+		}
+	} else
+		PDEBUG(DGOLAY, DEBUG_INFO, "Overriding message type as defined by sender.\n");
+
+	PDEBUG(DGOLAY, DEBUG_INFO, "Creating msg instance to page address '%s'.\n", address);
+
+	/* create */
+	msg = calloc(1, sizeof(*msg));
+	if (!msg) {
+		PDEBUG(DGOLAY, DEBUG_ERROR, "No mem!\n");
+		abort();
+	}
+
 	/* init */
-	strcpy(msg->address, address);
-	msg->force_type = force_type;
-	strcpy(msg->data, text);
+	memcpy(msg->address, address, MIN(sizeof(msg->address) - 1, strlen(address) + 1));
+	msg->type = type;
+	memcpy(msg->data, text, MIN(sizeof(msg->data) - 1, strlen(text) + 1));
 
 	/* link */
 	msgp = &gsc->msg_list;
@@ -240,6 +262,7 @@ static const uint16_t preamble_values[] = {
 };
 
 static const uint32_t start_code = 713;
+static const uint32_t activation_code = 2563;
 
 /* Rep. 900-2 Table VI */
 static const uint16_t word1s[50] = {
@@ -455,6 +478,7 @@ static inline void queue_reset(gsc_t *gsc)
 {
 	gsc->bit_index = 0;
 	gsc->bit_num = 0;
+	gsc->bit_ac = 0;
 	gsc->bit_overflow = 0;
 }
 
@@ -489,9 +513,8 @@ static inline void queue_comma(gsc_t *gsc, int bits, uint8_t polarity)
 	}
 }
 
-static int queue_batch(gsc_t *gsc, const char *address, int force_type, const char *message)
+static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, const char *message)
 {
-	int type;
 	int preamble;
 	uint16_t word1, word2;
 	uint8_t function;
@@ -514,33 +537,34 @@ static int queue_batch(gsc_t *gsc, const char *address, int force_type, const ch
 	if (rc < 0)
 		return rc;
 
-	/* calculate function */
+	/* get function from last digit */
 	switch (address[6]) {
-		case '1': type = TYPE_VOICE; function = 0; break;
-		case '2': type = TYPE_VOICE; function = 1; break;
-		case '3': type = TYPE_VOICE; function = 2; break;
-		case '4': type = TYPE_VOICE; function = 3; break;
-		case '5': type = TYPE_ALPHA; function = 0; break;
-		case '6': type = TYPE_ALPHA; function = 1; break;
-		case '7': type = TYPE_ALPHA; function = 2; break;
-		case '8': type = TYPE_ALPHA; function = 3; break;
-		case '9': type = TYPE_TONE;  function = 0; break;
-		case '0': type = TYPE_TONE;  function = 1; break;
+		case '1': function = 0; break;
+		case '2': function = 1; break;
+		case '3': function = 2; break;
+		case '4': function = 3; break;
+		case '5': function = 0; break;
+		case '6': function = 1; break;
+		case '7': function = 2; break;
+		case '8': function = 3; break;
+		case '9': function = 0; break;
+		case '0': function = 1; break;
 		default:
 			PDEBUG(DGOLAY, DEBUG_NOTICE, "Illegal function suffix '%c' in last address digit.\n", address[6]);
 			return -EINVAL;
 	}
 
-	/* override type */
-	if (force_type >= 0) {
-		type = force_type;
-		PDEBUG(DGOLAY, DEBUG_INFO, "Overriding message type as defined by sender.\n");
-	}
-
-	if (type == TYPE_ALPHA || type == TYPE_NUMERIC)
+	switch (type) {
+	case TYPE_ALPHA:
+	case TYPE_NUMERIC:
 		PDEBUG(DGOLAY, DEBUG_INFO, "Coding text message for functional address '%s' and message '%s'.\n", address, message);
-	else
+		break;
+	case TYPE_VOICE:
+		PDEBUG(DGOLAY, DEBUG_INFO, "Coding voice message for functional address %s with wave file '%s'.\n", address, message);
+		break;
+	default:
 		PDEBUG(DGOLAY, DEBUG_INFO, "Coding tone only message for functional address %s.\n", address);
+	}
 
 	/* encode preamble and store */
 	PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding preamble '%d'.\n", preamble);
@@ -573,7 +597,8 @@ static int queue_batch(gsc_t *gsc, const char *address, int force_type, const ch
 	queue_dup(gsc, golay, 23);
 
 	/* encode message */
-	if (type == TYPE_ALPHA) {
+	switch (type) {
+	case TYPE_ALPHA:
 		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding %d alphanumeric digits.\n", (int)strlen(message));
 		for (i = 0; *message; i++) {
 			if (i == MAX_ADB) {
@@ -608,8 +633,8 @@ static int queue_batch(gsc_t *gsc, const char *address, int force_type, const ch
 					queue_bit(gsc, (bch[k] >> j) & 1);
 			}
 		}
-	}
-	if (type == TYPE_NUMERIC) {
+		break;
+	case TYPE_NUMERIC:
 		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding %d numeric digits.\n", (int)strlen(message));
 		shifted = 0;
 		for (i = 0; *message; i++) {
@@ -658,11 +683,26 @@ static int queue_batch(gsc_t *gsc, const char *address, int force_type, const ch
 					queue_bit(gsc, (bch[k] >> j) & 1);
 			}
 		}
+		break;
+	case TYPE_VOICE:
+		/* store wave file name */
+		memcpy(gsc->wave_tx_filename, message, MIN(sizeof(gsc->wave_tx_filename) - 1, strlen(message) + 1));
+		/* store bit number for activation code. this is used to play the AC again after voice message. */
+		gsc->bit_ac = gsc->bit_num;
+		/* encode activation code and store */
+		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding activation code.\n");
+		golay = calc_golay(activation_code);
+		queue_comma(gsc, 28, golay & 1);
+		queue_dup(gsc, golay, 23);
+		golay ^= 0x7fffff;
+		queue_bit(gsc, (golay & 1) ^ 1);
+		queue_dup(gsc, golay, 23);
+		break;
+	default:
+		/* encode comma after message and store */
+		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding 'comma' sequence after message.\n");
+		queue_comma(gsc, 121 * 8, 1);
 	}
-
-	/* encode comma after message and store */
-	PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding 'comma' sequence after message.\n");
-	queue_comma(gsc, 121 * 8, 1);
 
 	/* check overflow */
 	if (gsc->bit_overflow) {
@@ -680,21 +720,31 @@ static int queue_batch(gsc_t *gsc, const char *address, int force_type, const ch
  * if there is a message, return next bit to be transmitted.
  *
  * if there is a message in the queue, encode message and return its first bit.
+ *
+ * if there is a voice message, return 2 at the end, to tell the DSP to send voice.
  */
 int8_t get_bit(gsc_t *gsc)
 {
 	gsc_msg_t *msg;
-	uint8_t bit;
 	int rc;
 
 	/* if currently transmiting message, send next bit */
 	if (gsc->bit_num) {
-		bit = gsc->bit[gsc->bit_index++];
+		/* Transmission complete. */
 		if (gsc->bit_index == gsc->bit_num) {
+			/* on voice message... */
+			if (gsc->bit_ac) {
+				/* rewind to play the AC again after voice transmission */
+				gsc->bit_index = gsc->bit_ac;
+				gsc->bit_ac = 0;
+				/* indicate voice message to DSP */
+				return 2;
+			}
 			queue_reset(gsc);
 			PDEBUG(DGOLAY, DEBUG_INFO, "Done transmitting message.\n");
+			goto next_msg;
 		}
-		return bit;
+		return gsc->bit[gsc->bit_index++];
 	}
 
 next_msg:
@@ -705,7 +755,7 @@ next_msg:
 		return -1;
 
 	/* encode first message in queue */
-	rc = queue_batch(gsc, msg->address, msg->force_type, msg->data);
+	rc = queue_batch(gsc, msg->address, msg->type, msg->data);
 	if (rc >= 0)
 		PDEBUG(DGOLAY, DEBUG_INFO, "Transmitting message to address '%s'.\n", msg->address);
 	golay_msg_destroy(gsc, msg);
@@ -713,33 +763,37 @@ next_msg:
 		goto next_msg;
 
 	/* return first bit */
-	bit = gsc->bit[gsc->bit_index++];
-	return bit;
+	return gsc->bit[gsc->bit_index++];
 }
 
 void golay_msg_send(const char *text)
 {
 	char buffer[strlen(text) + 1], *p = buffer, *address_string, *message;
 	gsc_t *gsc;
-	int force_type = -1;
+	enum gsc_msg_type type = TYPE_AUTO;
 
 	strcpy(buffer, text);
 	address_string = strsep(&p, ",");
 	message = p;
-	if (message) {
-		if (message[0] == 'a' && message[1] == ',') {
-			force_type = TYPE_ALPHA;
-			message += 2;
-		} else
-		if (message[0] == 'n' && message[1] == ',') {
-			force_type = TYPE_NUMERIC;
-			message += 2;
-		}
-	} else
+	switch ((message[0] << 8) | message[1]) {
+	case ('a' << 8) | ',':
+		type = TYPE_ALPHA;
+		message += 2;
+		break;
+	case ('n' << 8) | ',':
+		type = TYPE_NUMERIC;
+		message += 2;
+		break;
+	case ('v' << 8) | ',':
+		type = TYPE_VOICE;
+		message += 2;
+		break;
+	default:
 		message = "";
+	}
 
 	gsc = (gsc_t *) sender_head;
-	golay_msg_create(gsc, address_string, message, force_type);
+	golay_msg_create(gsc, address_string, message, type);
 }
 
 void call_down_clock(void)
@@ -785,7 +839,7 @@ int call_down_setup(int __attribute__((unused)) callref, const char *caller_id, 
 		message = gsc->default_message;
 
 	/* create call process to page station */
-	msg = golay_msg_create(gsc, address, message, -1);
+	msg = golay_msg_create(gsc, address, message, TYPE_AUTO);
 	if (!msg)
 		return -CAUSE_INVALNUMBER;
 	return -CAUSE_NORMAL;
