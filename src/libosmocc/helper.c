@@ -158,10 +158,6 @@ int osmo_cc_helper_audio_negotiate(osmo_cc_msg_t *msg, osmo_cc_session_t **sessi
 		abort();
 	}
 
-	/* once done, just ignore further messages that reply to setup */
-	if (*codec_p)
-		return 0;
-
 	/* SDP IE */
 	rc = osmo_cc_get_ie_sdp(msg, 0, sdp, sizeof(sdp));
 	if (rc < 0)
@@ -172,12 +168,22 @@ int osmo_cc_helper_audio_negotiate(osmo_cc_msg_t *msg, osmo_cc_session_t **sessi
 		return rc;
 
 	osmo_cc_session_for_each_media((*session_p)->media_list, media) {
+		/* skip not accepted medias */
+		if (!media->accepted)
+			continue;
 		/* only audio */
 		if (media->description.type != osmo_cc_session_media_type_audio)
 			continue;
-		/* select first codec, if one was accpeted */
-		if (media->codec_list)
-			*codec_p = media->codec_list;
+		osmo_cc_session_for_each_codec(media->codec_list, codec) {
+			/* skip not accepted codecs */
+			if (!codec->accepted)
+				continue;
+			/* select first codec, if one was accpeted */
+			if (!(*codec_p)) {
+				LOGP(DCC, LOGL_DEBUG, "Select codec '%s'.\n", codec->payload_name);
+				*codec_p = codec;
+			}
+		}
 		if (*codec_p) {
 			osmo_cc_rtp_connect(media);
 			/* no more media streams */

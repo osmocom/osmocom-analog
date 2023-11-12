@@ -36,7 +36,7 @@
 	}
 
 /* generate SDP from session structure */
-char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
+char *osmo_cc_session_gensdp(osmo_cc_session_t *session, int accepted_only)
 {
 	/* calc max size of SDP: quick an dirty (close to max UDP payload size) */
 	static char sdp[65000];
@@ -68,6 +68,8 @@ char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
 	/* Connection Data (if all media have the same data) */
 	if (session->media_list) {
 		osmo_cc_session_for_each_media(session->media_list->next, media) {
+			if (accepted_only && !media->accepted)
+				continue;
 			if (session->media_list->connection_data_local.nettype != media->connection_data_local.nettype)
 				break;
 			if (session->media_list->connection_data_local.addrtype != media->connection_data_local.addrtype)
@@ -87,6 +89,8 @@ char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
 	/* sendonly /recvonly (if all media have the same data) */
 	if (session->media_list) {
 		osmo_cc_session_for_each_media(session->media_list->next, media) {
+			if (accepted_only && !media->accepted)
+				continue;
 			if (session->media_list->send != media->send)
 				break;
 			if (session->media_list->receive != media->receive)
@@ -106,12 +110,17 @@ char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
 
 	/* media */
 	osmo_cc_session_for_each_media(session->media_list, media) {
+		if (accepted_only && !media->accepted)
+			continue;
 		strncat_printf(sdp, "m=%s %u %s",
 			osmo_cc_session_media_type2string(media->description.type) ? : media->description.type_name,
 			media->description.port_local,
 			osmo_cc_session_media_proto2string(media->description.proto) ? : media->description.proto_name);
-		osmo_cc_session_for_each_codec(media->codec_list, codec)
+		osmo_cc_session_for_each_codec(media->codec_list, codec) {
+			if (accepted_only && !codec->accepted)
+				continue;
 			strncat_printf(sdp, " %u", codec->payload_type_local);
+		}
 		strncat_printf(sdp, "\r\n");
 		/* don't list rtpmap when session was canceled by setting port to 0 */
 		if (media->description.port_local == 0)
@@ -119,6 +128,8 @@ char *osmo_cc_session_gensdp(osmo_cc_session_t *session)
 		if (individual_connection_data)
 			strncat_printf(sdp, "c=%s %s %s\r\n", osmo_cc_session_nettype2string(media->connection_data_local.nettype), osmo_cc_session_addrtype2string(media->connection_data_local.addrtype), media->connection_data_local.address);
 		osmo_cc_session_for_each_codec(media->codec_list, codec) {
+			if (accepted_only && !codec->accepted)
+				continue;
 			strncat_printf(sdp, "a=rtpmap:%u %s/%d", codec->payload_type_local, codec->payload_name, codec->payload_rate);
 			if (codec->payload_channels >= 2)
 				strncat_printf(sdp, "/%d", codec->payload_channels);

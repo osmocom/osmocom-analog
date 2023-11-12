@@ -348,7 +348,7 @@ const char *osmo_cc_session_send_offer(osmo_cc_session_t *session)
 		abort();
 	}
 
-	sdp = osmo_cc_session_gensdp(session);
+	sdp = osmo_cc_session_gensdp(session, 0);
 	osmo_cc_debug_sdp(sdp);
 
 	return sdp;
@@ -419,34 +419,12 @@ void osmo_cc_session_accept_codec(osmo_cc_session_codec_t *codec, void (*encoder
 	LOGP(DCC, LOGL_DEBUG, " -> payload channels = %d\n", codec->payload_channels);
 }
 
-/* remove codecs/media that have not been accepted and generate SDP */
 const char *osmo_cc_session_send_answer(osmo_cc_session_t *session)
 {
-	osmo_cc_session_media_t *media;
-	osmo_cc_session_codec_t *codec, **codec_p;
 	const char *sdp;
 	int rc;
 
 	LOGP(DCC, LOGL_DEBUG, "Generating session answer.\n");
-
-	/* loop all media */
-	osmo_cc_session_for_each_media(session->media_list, media) {
-		/* remove unaccepted codecs */
-		codec_p = &media->codec_list;
-		codec = *codec_p;
-		while (codec) {
-			if (!codec->accepted) {
-				osmo_cc_free_codec(codec);
-				codec = *codec_p;
-				continue;
-			}
-			codec_p = &codec->next;
-			codec = *codec_p;
-		}
-		/* mark media as unused, if no codec or not accepted */
-		if (!media->accepted || !media->codec_list)
-			media->description.port_local = 0;
-	}
 
 	rc = osmo_cc_session_check(session, 0);
 	if (rc < 0) {
@@ -454,7 +432,7 @@ const char *osmo_cc_session_send_answer(osmo_cc_session_t *session)
 		abort();
 	}
 
-	sdp = osmo_cc_session_gensdp(session);
+	sdp = osmo_cc_session_gensdp(session, 1);
 	osmo_cc_debug_sdp(sdp);
 
 	return sdp;
@@ -505,13 +483,14 @@ static int osmo_cc_session_negotiate(osmo_cc_session_t *session_local, struct os
 				 && codec_local->payload_channels == codec_remote->payload_channels)
 					break;
 			}
-			if (!codec_remote) {
-				osmo_cc_free_codec(codec_local);
-				codec_local = *codec_local_p;
-				continue;
+			if (codec_remote) {
+				/* mark as accepted, copy remote codec information */
+				codec_local->accepted = 1;
+				codec_local->payload_type_remote = codec_remote->payload_type_remote;
+			} else {
+				/* mark as not accepted, in case it was accepted in earlier response */
+				codec_local->accepted = 0;
 			}
-			/* copy remote codec information */
-			codec_local->payload_type_remote = codec_remote->payload_type_remote;
 			codec_local_p = &codec_local->next;
 			codec_local = *codec_local_p;
 		}
@@ -525,14 +504,16 @@ static int osmo_cc_session_negotiate(osmo_cc_session_t *session_local, struct os
 		return -EINVAL;
 	}
 
-	/* remove media with port == 0 or no codec at all */
+	/* mark media as accepted, if there is a remote port and there is at least one codec */
 	media_local_p = &session_local->media_list;
 	media_local = *media_local_p;
 	while (media_local) {
-		if (media_local->description.port_remote == 0 || !media_local->codec_list) {
-			osmo_cc_free_media(media_local);
-			media_local = *media_local_p;
-			continue;
+		if (media_local->description.port_remote && media_local->codec_list) {
+			/* mark as accepted */
+			media_local->accepted = 1;
+		} else {
+			/* mark as not accepted, in case it was accepted in earlier response */
+			media_local->accepted = 0;
 		}
 		media_local_p = &media_local->next;
 		media_local = *media_local_p;
