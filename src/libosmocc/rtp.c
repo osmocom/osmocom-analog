@@ -366,6 +366,30 @@ void osmo_cc_rtp_send(osmo_cc_session_codec_t *codec, uint8_t *data, int len, ui
 		free(payload);
 }
 
+/* dito, but with absolute sequence and timestamp */
+void osmo_cc_rtp_send_ts(osmo_cc_session_codec_t *codec, uint8_t *data, int len, uint8_t marker, uint16_t tx_sequence, uint32_t tx_timestamp, void *priv)
+{
+	uint8_t *payload = NULL;
+	int payload_len = 0;
+
+	if (!codec || !codec->media->rtp_ofd.fd)
+		return;
+
+	if (codec->encoder)
+		codec->encoder(data, len, &payload, &payload_len, priv);
+	else {
+		payload = data;
+		payload_len = len;
+	}
+
+	rtp_send(&codec->media->rtp_sa, codec->media->rtp_slen, codec->media->rtp_ofd.fd, payload, payload_len, marker, codec->payload_type_remote, tx_sequence, tx_timestamp, codec->media->tx_ssrc);
+	codec->media->tx_sequence = tx_sequence;
+	codec->media->tx_timestamp = tx_timestamp;
+
+	if (codec->encoder)
+		free(payload);
+}
+
 static void check_port_translation(struct sockaddr_storage *sa, struct sockaddr_storage *media_sa, const char *what)
 {
 	struct sockaddr_in6 *sa6, *sa6_2;

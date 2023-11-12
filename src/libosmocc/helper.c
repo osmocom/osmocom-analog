@@ -55,6 +55,11 @@ osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, vo
 
 const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, int force_our_codec)
 {
+	return osmo_cc_helper_audio_accept_te(conf, priv, codecs, receiver, msg, session_p, codec_p, NULL, force_our_codec);
+}
+
+const char *osmo_cc_helper_audio_accept_te(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, osmo_cc_session_codec_t **telephone_event_p, int force_our_codec)
+{
 	char offer_sdp[65536];
 	const char *accept_sdp;
 	osmo_cc_session_media_t *media, *selected_media;
@@ -136,6 +141,8 @@ const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *pr
 	osmo_cc_rtp_open(selected_media);
 	osmo_cc_rtp_connect(selected_media);
 	*codec_p = selected_codec;
+	if (telephone_event_p)
+		*telephone_event_p = telephone_event;
 
 	accept_sdp = osmo_cc_session_send_answer(*session_p);
 	if (!accept_sdp) {
@@ -149,8 +156,14 @@ const char *osmo_cc_helper_audio_accept(osmo_cc_session_config_t *conf, void *pr
 
 int osmo_cc_helper_audio_negotiate(osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p)
 {
+	return osmo_cc_helper_audio_negotiate_te(msg, session_p, codec_p, NULL);
+}
+
+int osmo_cc_helper_audio_negotiate_te(osmo_cc_msg_t *msg, osmo_cc_session_t **session_p, osmo_cc_session_codec_t **codec_p, osmo_cc_session_codec_t **telephone_event_p)
+{
 	char sdp[65536];
 	osmo_cc_session_media_t *media;
+	osmo_cc_session_codec_t *codec;
 	int rc;
 
 	if (!(*session_p)) {
@@ -178,10 +191,17 @@ int osmo_cc_helper_audio_negotiate(osmo_cc_msg_t *msg, osmo_cc_session_t **sessi
 			/* skip not accepted codecs */
 			if (!codec->accepted)
 				continue;
-			/* select first codec, if one was accpeted */
-			if (!(*codec_p)) {
-				LOGP(DCC, LOGL_DEBUG, "Select codec '%s'.\n", codec->payload_name);
-				*codec_p = codec;
+			if (!!strcasecmp(codec->payload_name, "telephone-event")) {
+				/* select first codec, if one was accpeted */
+				if (!(*codec_p)) {
+					LOGP(DCC, LOGL_DEBUG, "Select codec '%s'.\n", codec->payload_name);
+					*codec_p = codec;
+				}
+			} else {
+				if (telephone_event_p && !(*telephone_event_p)) {
+					LOGP(DCC, LOGL_DEBUG, "select telephone event codec.\n");
+					*telephone_event_p = codec;
+				}
 			}
 		}
 		if (*codec_p) {
