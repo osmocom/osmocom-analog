@@ -48,9 +48,9 @@ void print_help(const char *arg0)
 	main_mobile_print_help(arg0, "-k <kanal> | -k list");
 	/*      -                                                                             - */
 	printf(" -T --tx\n");
-	printf("        Transmit Eurosignal on given channel, to page a receiver. (default)\n");
+	printf("        Transmit 5-tones on given channel, to page a receiver. (default)\n");
 	printf(" -R --rx\n");
-	printf("        Receive Eurosignal on given channel, so we are the receiver.\n");
+	printf("        Receive 5-tones on given channel, so we are the receiver.\n");
 	printf("        If none of the options -T nor -R is given, only transmitter is enabled.\n");
 	printf(" -D --deviation <KHz>\n");
 	printf("        Choose deviation of FM signal (default %.0f KHz).\n", signal_deviation / 1000.0);
