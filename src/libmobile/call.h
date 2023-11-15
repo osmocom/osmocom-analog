@@ -9,7 +9,7 @@ enum number_type {
 	TYPE_INTERNATIONAL,
 };
 
-int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[]);
+int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[], int no_l16);
 void call_exit(void);
 int call_handle(void);
 void call_media_handle(void);

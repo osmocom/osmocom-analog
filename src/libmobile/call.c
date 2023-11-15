@@ -97,6 +97,8 @@ static struct osmo_cc_helper_audio_codecs codecs[] = {
 	{ NULL, 0, 0, NULL, NULL},
 };
 
+static int no_l16 = 0;
+
 /* stream patterns/announcements */
 int16_t *ringback_spl = NULL;
 int ringback_size = 0;
@@ -421,7 +423,7 @@ static void indicate_setup(process_t *process, const char *callerid, const char 
 	/* bearer capability */
 	osmo_cc_add_ie_bearer(msg, OSMO_CC_CODING_ITU_T, OSMO_CC_CAPABILITY_AUDIO, OSMO_CC_MODE_CIRCUIT);
 	/* sdp offer */
-	process->session = osmo_cc_helper_audio_offer(&ep->session_config, process, codecs, down_audio, msg, 1);
+	process->session = osmo_cc_helper_audio_offer(&ep->session_config, process, codecs + no_l16, down_audio, msg, 1);
 
 	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC setup towards fixed network\n");
 	osmo_cc_ll_msg(ep, process->callref, msg);
@@ -708,7 +710,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		const char *sdp;
 
 		/* sdp accept */
-		sdp = osmo_cc_helper_audio_accept(&ep->session_config, process, codecs, down_audio, msg, &process->session, &process->codec, 0);
+		sdp = osmo_cc_helper_audio_accept(&ep->session_config, process, codecs + no_l16, down_audio, msg, &process->session, &process->codec, 0);
 		if (!sdp) {
 			disconnect_process(callref, 47);
 			indicate_disconnect_release(callref, 47, OSMO_CC_MSG_REJ_IND);
@@ -898,7 +900,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 	osmo_cc_free_msg(msg);
 }
 
-int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[])
+int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[], int _no_l16)
 {
 	int rc;
 
@@ -907,6 +909,7 @@ int call_init(const char *name, int _send_patterns, int _release_on_disconnect, 
 
 	g711_init();
 
+	no_l16 = !!_no_l16;
 	ep = &endpoint;
 	rc = osmo_cc_new(ep, OSMO_CC_VERSION, name, OSMO_CC_LOCATION_PRIV_SERV_LOC_USER, ll_msg_cb, (use_socket) ? NULL : console_msg, NULL, argc, argv);
 	if (rc > 0)

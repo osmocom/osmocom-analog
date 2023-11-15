@@ -72,6 +72,7 @@ static int use_osmocc_sock = 0;
 #define MAX_CC_ARGS 1024
 static int cc_argc = 0;
 static const char *cc_argv[MAX_CC_ARGS];
+int no_l16 = 0;
 int send_patterns = 1;
 static int release_on_disconnect = 1;
 int loopback = 0;
@@ -276,6 +277,8 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf("        Disable built-in call control and offer socket\n");
 	printf("    --cc \"<osmo-cc arg>\" [--cc ...]\n");
 	printf("        Pass arguments to Osmo-CC endpoint. Use '-cc help' for description.\n");
+	printf("    --no-l16\n");
+	printf("        Disable L16 (linear 16 bit) codec.\n");
 	printf(" -t --tones 0 | 1\n");
 	printf("        Connect call on setup/release to provide classic tones towards fixed\n");
 	printf("        network (default = '%d')\n", send_patterns);
@@ -358,6 +361,7 @@ void main_mobile_print_hotkeys(void)
 #define	OPT_CALL_SAMPLERATE	1008
 #define	OPT_CALL_BUFFER		1009
 #define	OPT_FAST_MATH		1010
+#define	OPT_NO_L16		1011
 #define	OPT_LIMESDR		1100
 #define	OPT_LIMESDR_MINI	1101
 
@@ -379,6 +383,7 @@ void main_mobile_add_options(void)
 	option_add('x', "osmocc-cross", 0);
 	option_add('o', "osmocc-sock", 0);
 	option_add(OPT_OSMO_CC, "cc", 1);
+	option_add(OPT_NO_L16, "no-l16", 0);
 	option_add('c', "call-device", 1);
 	option_add(OPT_CALL_SAMPLERATE, "call-samplerate", 1);
 	option_add(OPT_CALL_BUFFER, "call-buffer", 1);
@@ -479,6 +484,9 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 			break;
 		}
 		cc_argv[cc_argc++] = options_strdup(argv[argi]);
+		break;
+	case OPT_NO_L16:
+		no_l16 = 1;
 		break;
 	case 'c':
 		call_device = options_strdup(argv[argi]);
@@ -658,7 +666,7 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 		console_init(call_device, call_samplerate, call_buffer, loopback, echo_test, number_digits, number_lengths, station_id);
 
 	/* init call control instance */
-	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv);
+	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv, no_l16);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		return;

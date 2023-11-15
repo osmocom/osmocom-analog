@@ -27,7 +27,9 @@
 #include "../libtimer/timer.h"
 #include "../libselect/select.h"
 #include "../libdebug/debug.h"
-#include "endpoint.h"
+#include "session.h"
+#include "message.h"
+#include "rtp.h"
 #include "helper.h"
 
 osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, void *priv, struct osmo_cc_helper_audio_codecs *codecs, void (*receiver)(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len), osmo_cc_msg_t *msg, int debug)
@@ -44,8 +46,9 @@ osmo_cc_session_t *osmo_cc_helper_audio_offer(osmo_cc_session_config_t *conf, vo
 	media = osmo_cc_add_media(session, 0, 0, NULL, osmo_cc_session_media_type_audio, 0, osmo_cc_session_media_proto_rtp, 1, 1, receiver, debug);
 	osmo_cc_rtp_open(media);
 
-	for (i = 0; codecs[i].payload_name; i++)
+	for (i = 0; codecs[i].payload_name; i++) {
 		osmo_cc_add_codec(media, codecs[i].payload_name, codecs[i].payload_rate, codecs[i].payload_channels, codecs[i].encoder, codecs[i].decoder, debug);
+	}
 
 	sdp = osmo_cc_session_send_offer(session);
 	osmo_cc_add_ie_sdp(msg, sdp);
