@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 /* ulaw -> signed 16-bit */
-static int16_t g711_ulaw_flipped_to_linear[256] =
+static int16_t g711_ulaw_to_linear[256] =
 {
 	0x8284, 0x8684, 0x8a84, 0x8e84, 0x9284, 0x9684, 0x9a84, 0x9e84,
 	0xa284, 0xa684, 0xaa84, 0xae84, 0xb284, 0xb684, 0xba84, 0xbe84,
@@ -89,7 +89,7 @@ static int16_t g711_alaw_flipped_to_linear[256] =
 
 /* Xlaw -> signed 16-bit */
 static int16_t g711_alaw_to_linear[256];
-static int16_t g711_ulaw_to_linear[256];
+static int16_t g711_ulaw_flipped_to_linear[256];
 
 /* signed 16-bit -> Xlaw */
 static uint8_t g711_linear_to_alaw_flipped[65536];
@@ -196,7 +196,7 @@ void g711_init(void)
 			+ ((i & 64) >> 5)
 			+ ((i & 128) >> 7);
 		g711_alaw_to_linear[i] = g711_alaw_flipped_to_linear[g711_flip[i]];
-		g711_ulaw_to_linear[i] = g711_ulaw_flipped_to_linear[g711_flip[i]];
+		g711_ulaw_flipped_to_linear[i] = g711_ulaw_to_linear[g711_flip[i]];
 	}
 
 	/* linear to alaw tables */
@@ -214,18 +214,18 @@ void g711_init(void)
 	/* linear to ulaw tables */
 	i = j = 0;
 	while(i < 32768) {
-		if (i - 32768 > g711_ulaw_flipped_to_linear[j])
+		if (i - 32768 > g711_ulaw_to_linear[j])
 			j++;
-		g711_linear_to_ulaw_flipped[(i - 32768) & 0xffff] = j;
-		g711_linear_to_ulaw[(i - 32768) & 0xffff] = g711_flip[j];
+		g711_linear_to_ulaw[(i - 32768) & 0xffff] = j;
+		g711_linear_to_ulaw_flipped[(i - 32768) & 0xffff] = g711_flip[j];
 		i++;
 	}
 	j = 255;
 	while(i < 65536) {
-		if (i - 32768 > g711_alaw_flipped_to_linear[j])
+		if (i - 32768 > g711_ulaw_to_linear[j])
 			j--;
-		g711_linear_to_ulaw_flipped[(i - 32768) & 0xffff] = j;
-		g711_linear_to_ulaw[(i - 32768) & 0xffff] = g711_flip[j];
+		g711_linear_to_ulaw[(i - 32768) & 0xffff] = j;
+		g711_linear_to_ulaw_flipped[(i - 32768) & 0xffff] = g711_flip[j];
 		i++;
 	}
 
