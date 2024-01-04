@@ -1,6 +1,8 @@
 
-#define SIM_VERSION_NAME	"Jollys  Telecard"
-#define SIM_VERSION		"2"
+#define SIM_VERSION_NAME	"TelecardVersion"
+#define SIM_VERSION		"3"
+#define JOLLY_NAME		"Jolly"
+#define JOLLY_PHONE		"04644973171"
 #define FUTLN_DEFAULT		"2222001"
 #define SICHERUNG_DEFAULT	"3103"
 #define KARTEN_DEFAULT		"3"

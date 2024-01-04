@@ -1351,6 +1351,10 @@ int sim_init_eeprom(void)
 	encode_directory(dir_data, SIM_VERSION, SIM_VERSION_NAME);
 	save_directory(1, dir_data);
 
+	/* store Jolly's phone number to phone book entry 2 */
+	encode_directory(dir_data, JOLLY_PHONE, JOLLY_NAME);
+	save_directory(2, dir_data);
+
 	/* now write magic characters to identify virgin or initialized EEPROM */
 	eeprom_write(EEPROM_MAGIC + 0, 'C');
 	eeprom_write(EEPROM_MAGIC + 1, '0' + EEPROM_VERSION);
