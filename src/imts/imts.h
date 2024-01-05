@@ -61,7 +61,7 @@ typedef struct imts {
 	int			callref;		/* call reference */
 	char			station_id[11];		/* current station ID (also used for test pattern) */
 	char			dial_number[33];	/* number dialing */
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	int			last_tone;		/* last tone received */
 	double			last_sigtone_amplitude;	/* amplitude of last signaling tone received */
 	double			fast_seize;		/* fast seize: guard-length - roundtrip-delay */

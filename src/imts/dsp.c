@@ -26,8 +26,8 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "imts.h"
 #include "dsp.h"
@@ -111,7 +111,7 @@ void dsp_init(void)
 	int i;
 	double s;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine tables.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine tables.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
 		dsp_sine_tone[i] = s * TX_PEAK_TONE;
@@ -123,7 +123,7 @@ int dsp_init_transceiver(imts_t *imts, double squelch_db, int ptt)
 {
 	int rc = -1;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for Transceiver.\n");
 
 	imts->sample_duration = 1.0 / (double)imts->sender.samplerate;
 
@@ -164,11 +164,11 @@ int dsp_init_transceiver(imts_t *imts, double squelch_db, int ptt)
 
 	/* delay buffer */
 	if (ptt) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Push to talk: Adding delay buffer to remove noise when signal gets lost.\n");
+		LOGP_CHAN(DDSP, LOGL_DEBUG, "Push to talk: Adding delay buffer to remove noise when signal gets lost.\n");
 		imts->delay_max = (int)((double)imts->sender.samplerate * DELAY_TIME);
 		imts->delay_spl = calloc(imts->delay_max, sizeof(*imts->delay_spl));
 		if (!imts->delay_spl) {
-			PDEBUG(DDSP, DEBUG_ERROR, "No mem for delay buffer!\n");
+			LOGP(DDSP, LOGL_ERROR, "No mem for delay buffer!\n");
 			goto error;
 		}
 	}
@@ -186,7 +186,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_transceiver(imts_t *imts)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for Transceiver.\n");
 
 	fm_demod_exit(&imts->demod);
 	if (imts->delay_spl) {
@@ -221,7 +221,7 @@ static int generate_tone(imts_t *imts, sample_t *samples, int length)
 	case TONE_SILENCE:
 		break;
 	default:
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Software error, unsupported tone, please fix!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "Software error, unsupported tone, please fix!\n");
 		return length;
 	}
 
@@ -386,7 +386,7 @@ static void tone_demod(imts_t *imts, sample_t *samples, int length)
 			printf("decoder debug: %s detected, waiting to sustain\n", tone_names[tone]);
 #endif
 			if (imts->demod_sig_tone) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Lost %s (duration %.0f ms)\n", tone_names[imts->demod_current_tone], imts->demod_duration * 1000.0);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Lost %s (duration %.0f ms)\n", tone_names[imts->demod_current_tone], imts->demod_duration * 1000.0);
 				imts_lost_tone(imts, imts->demod_current_tone, imts->demod_duration);
 				imts->demod_sig_tone = 0;
 			}
@@ -406,7 +406,7 @@ static void tone_demod(imts_t *imts, sample_t *samples, int length)
 					amp = amplitude[i];
 					imts->demod_sig_tone = 0;
 				}
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected %s (level %.0f%%)\n", tone_names[imts->demod_current_tone], amp * 100);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected %s (level %.0f%%)\n", tone_names[imts->demod_current_tone], amp * 100);
 				imts_receive_tone(imts, imts->demod_current_tone, imts->demod_duration, amp);
 				imts->demod_last_tone = imts->demod_current_tone;
 				imts->demod_duration = imts->demod_sustain;
@@ -419,7 +419,7 @@ static void tone_demod(imts_t *imts, sample_t *samples, int length)
 					double quality = 1.0 - imts->demod_quality_value / (double)imts->demod_quality_count * 2.0;
 					if (quality < 0)
 						quality = 0;
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Quality: %.0f%%\n", quality * 100.0);
+					LOGP_CHAN(DDSP, LOGL_DEBUG, "Quality: %.0f%%\n", quality * 100.0);
 					display_measurements_update(imts->dmp_tone_quality, quality * 100.0, 0.0);
 				}
 			}	
@@ -465,7 +465,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 		/* FALLTHRU */
 	case SQUELCH_MUTE:
 		if (imts->mode == MODE_MTS && !imts->is_mute) {
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Low RF level, muting.\n");
+			LOGP_CHAN(DDSP, LOGL_INFO, "Low RF level, muting.\n");
 			memset(imts->delay_spl, 0, sizeof(*samples) * imts->delay_max);
 			imts->is_mute = 1;
 		}
@@ -475,7 +475,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 		break;
 	default:
 		if (imts->is_mute) {
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "High RF level, unmuting.\n");
+			LOGP_CHAN(DDSP, LOGL_INFO, "High RF level, unmuting.\n");
 			imts->is_mute = 0;
 		}
 		/* detect signal, if it is steady for a while */
@@ -550,15 +550,15 @@ void imts_set_dsp_mode(imts_t *imts, enum dsp_mode mode, int tone, double durati
 	}
 
 	if (imts->dsp_mode != mode) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", imts_dsp_mode_name(imts->dsp_mode), imts_dsp_mode_name(mode));
+		LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", imts_dsp_mode_name(imts->dsp_mode), imts_dsp_mode_name(mode));
 		imts->dsp_mode = mode;
 	}
 
 	if (mode == DSP_MODE_TONE) {
 		if (duration)
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Start sending %s for %.3f seconds.\n", tone_names[tone], duration);
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "Start sending %s for %.3f seconds.\n", tone_names[tone], duration);
 		else
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Start sending %s continuously.\n", tone_names[tone]);
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "Start sending %s continuously.\n", tone_names[tone]);
 		imts->tone = tone;
 		imts->tone_duration = duration * (double)imts->sender.samplerate;
 	}

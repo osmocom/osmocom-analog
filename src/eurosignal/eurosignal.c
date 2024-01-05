@@ -26,22 +26,22 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "eurosignal.h"
 #include "dsp.h"
 
 /* announcement timers */
-#define ANSWER_TIME		1.0	/* wait after answer */
-#define OOO_TIME		3.8	/* announcement 1.7 s, pause 2.1 s */
-#define UNASSIGNED_TIME1	2.2	/* announcement 2.2 s s */
-#define UNASSIGNED_TIME2	2.9	/* announcement 2.2 s, pause 0.7 s */
-#define DEGRADED_TIME		4.95	/* announcement 2.25 s, pause 2.7 s */
-#define ACKNOWLEDGE_TIME1	2.8	/* announcement 1.7 s, pause 1.1 s */
-#define ACKNOWLEDGE_TIME2	4.6	/* announcement 1.7 s, pause 2.9 s */
-#define BEEP_TIME		4.0	/* beep after answer */
+#define ANSWER_TIME		1,0		/* wait after answer */
+#define OOO_TIME		3,800000	/* announcement 1.7 s, pause 2.1 s */
+#define UNASSIGNED_TIME1	2,200000	/* announcement 2.2 s s */
+#define UNASSIGNED_TIME2	2,900000	/* announcement 2.2 s, pause 0.7 s */
+#define DEGRADED_TIME		4,950000	/* announcement 2.25 s, pause 2.7 s */
+#define ACKNOWLEDGE_TIME1	2,800000	/* announcement 1.7 s, pause 1.1 s */
+#define ACKNOWLEDGE_TIME2	4,600000	/* announcement 1.7 s, pause 2.9 s */
+#define BEEP_TIME		4,000000	/* beep after answer */
 
 /* these calls are not associated with a transmitter */
 euro_call_t *ooo_call_list = NULL;
@@ -149,7 +149,7 @@ static void call_new_state(euro_call_t *call, enum euro_call_state new_state)
 {
 	if (call->state == new_state)
 		return;
-	PDEBUG(DEURO, DEBUG_DEBUG, "State change: %s -> %s\n", call_state_name(call->state), call_state_name(new_state));
+	LOGP(DEURO, LOGL_DEBUG, "State change: %s -> %s\n", call_state_name(call->state), call_state_name(new_state));
 	call->state = new_state;
 	euro_display_status();
 }
@@ -243,29 +243,29 @@ int euro_create(const char *kanal, const char *device, int use_sdr, int samplera
 	int rc;
 
 	if (euro_kanal2freq(kanal, 0) == 0.0) {
-		PDEBUG(DEURO, DEBUG_ERROR, "Channel ('Kanal') number %s invalid, use 'list' to get a list.\n", kanal);
+		LOGP(DEURO, LOGL_ERROR, "Channel ('Kanal') number %s invalid, use 'list' to get a list.\n", kanal);
 		return -EINVAL;
 	}
 
 	euro = calloc(1, sizeof(*euro));
 	if (!euro) {
-		PDEBUG(DEURO, DEBUG_ERROR, "No memory!\n");
+		LOGP(DEURO, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DEURO, DEBUG_DEBUG, "Creating 'Eurosignal' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DEURO, LOGL_DEBUG, "Creating 'Eurosignal' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&euro->sender, kanal, euro_kanal2freq(kanal, fm), euro_kanal2freq(kanal, fm), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DEURO, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DEURO, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(euro, samplerate, fm);
 	if (rc < 0) {
-		PDEBUG(DEURO, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DEURO, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
@@ -279,7 +279,7 @@ int euro_create(const char *kanal, const char *device, int use_sdr, int samplera
 
 	euro_display_status();
 
-	PDEBUG(DEURO, DEBUG_NOTICE, "Created 'Kanal' %s\n", kanal);
+	LOGP(DEURO, LOGL_NOTICE, "Created 'Kanal' %s\n", kanal);
 
 	return 0;
 
@@ -294,7 +294,7 @@ void euro_destroy(sender_t *sender)
 {
 	euro_t *euro = (euro_t *) sender;
 
-	PDEBUG(DEURO, DEBUG_DEBUG, "Destroying 'Eurosignal' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DEURO, LOGL_DEBUG, "Destroying 'Eurosignal' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	while (euro->call_list)
 		euro_call_destroy(euro->call_list);
@@ -308,12 +308,12 @@ static euro_call_t *euro_call_create(euro_t *euro, uint32_t callref, const char 
 {
 	euro_call_t *call, **callp;
 
-	PDEBUG(DEURO, DEBUG_INFO, "Creating call instance to page ID '%s'.\n", id);
+	LOGP(DEURO, LOGL_INFO, "Creating call instance to page ID '%s'.\n", id);
 
 	/* create */
 	call = calloc(1, sizeof(*call));
 	if (!call) {
-		PDEBUG(DEURO, DEBUG_ERROR, "No mem!\n");
+		LOGP(DEURO, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 
@@ -322,8 +322,8 @@ static euro_call_t *euro_call_create(euro_t *euro, uint32_t callref, const char 
 	strcpy(call->station_id, id);
 	if (euro)
 		call->page_count = euro->repeat;
-	timer_init(&call->timer, call_timeout, call);
-	timer_start(&call->timer, ANSWER_TIME);
+	osmo_timer_setup(&call->timer, call_timeout, call);
+	osmo_timer_schedule(&call->timer, ANSWER_TIME);
 
 	/* link */
 	call->euro = euro;
@@ -347,7 +347,7 @@ static void euro_call_destroy(euro_call_t *call)
 	(*callp) = call->next;
 
 	/* cleanup */
-	timer_exit(&call->timer);
+	osmo_timer_del(&call->timer);
 
 	/* destroy */
 	free(call);
@@ -364,12 +364,12 @@ void euro_get_id(euro_t *euro, char *id)
 
 	if (euro->scan_from < euro->scan_to) {
 		sprintf(id, "%06d", euro->scan_from++);
-		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Transmitting ID '%s'.\n", id);
+		LOGP_CHAN(DEURO, LOGL_NOTICE, "Transmitting ID '%s'.\n", id);
 		goto encode;
 	}
 
 	if (euro->sender.loopback) {
-		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Transmitting test ID '123456'.\n");
+		LOGP_CHAN(DEURO, LOGL_NOTICE, "Transmitting test ID '123456'.\n");
 		memcpy(id, "123456", 6);
 		goto encode;
 	}
@@ -377,7 +377,7 @@ void euro_get_id(euro_t *euro, char *id)
 	for (call = euro->call_list; call; call = call->next) {
 		if ((call->state == EURO_CALL_ACKNOWLEDGE || call->state == EURO_CALL_RELEASED) && call->page_count) {
 			call->page_count--;
-			PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Transmitting ID '%s'.\n", call->station_id);
+			LOGP_CHAN(DEURO, LOGL_NOTICE, "Transmitting ID '%s'.\n", call->station_id);
 			memcpy(id, call->station_id, 6);
 			if (call->page_count == 0 && call->state == EURO_CALL_RELEASED)
 				euro_call_destroy(call);
@@ -400,15 +400,15 @@ void euro_get_id(euro_t *euro, char *id)
 		memcpy(id, euro->random_id, 6);
 		euro->random_count--;
 		if (id[0] == 'R') {
-			PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Randomly transmitting Idle sequence.\n");
+			LOGP_CHAN(DEURO, LOGL_NOTICE, "Randomly transmitting Idle sequence.\n");
 			return;
 		}
-		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Randomly transmitting ID '%s'.\n", euro->random_id);
+		LOGP_CHAN(DEURO, LOGL_NOTICE, "Randomly transmitting ID '%s'.\n", euro->random_id);
 		goto encode;
 	}
 
 	if (!call) {
-		PDEBUG_CHAN(DEURO, DEBUG_DEBUG, "Transmitting Idle sequence.\n");
+		LOGP_CHAN(DEURO, LOGL_DEBUG, "Transmitting Idle sequence.\n");
 		memcpy(id, "RIIIII", 6);
 		return;
 	}
@@ -432,7 +432,7 @@ void euro_receive_id(euro_t *euro, char *id)
 	int count = 0;
 
 	if (id[0] == 'R') {
-		PDEBUG_CHAN(DEURO, DEBUG_DEBUG, "Received Idle sequence'\n");
+		LOGP_CHAN(DEURO, LOGL_DEBUG, "Received Idle sequence'\n");
 		return;
 	}
 
@@ -444,7 +444,7 @@ void euro_receive_id(euro_t *euro, char *id)
 
 	/* loopback display */
 	if (euro->sender.loopback) {
-		PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Received ID '%s'\n", id);
+		LOGP_CHAN(DEURO, LOGL_NOTICE, "Received ID '%s'\n", id);
 		return;
 	}
 
@@ -452,12 +452,12 @@ void euro_receive_id(euro_t *euro, char *id)
 	if (id_list) {
 		count = search_id(id);
 		if (!count) {
-			PDEBUG_CHAN(DEURO, DEBUG_INFO, "Received ID '%s' is not for us.\n", id);
+			LOGP_CHAN(DEURO, LOGL_INFO, "Received ID '%s' is not for us.\n", id);
 			return;
 		}
 	}
 
-	PDEBUG_CHAN(DEURO, DEBUG_NOTICE, "Received ID '%s'\n", id);
+	LOGP_CHAN(DEURO, LOGL_NOTICE, "Received ID '%s'\n", id);
 
 	/* we want to send beep via MNCC */
 	if (id_list) {
@@ -475,7 +475,7 @@ void euro_receive_id(euro_t *euro, char *id)
 			return;
 
 		/* create call and send setup */
-		PDEBUG_CHAN(DEURO, DEBUG_INFO, "Sending setup towards network.'\n");
+		LOGP_CHAN(DEURO, LOGL_INFO, "Sending setup towards network.'\n");
 		sprintf(dialing, "%d", count);
 		callref = call_up_setup(call->station_id, dialing, OSMO_CC_NETWORK_EUROSIGNAL_NONE, "");
 		call = euro_call_create(NULL, callref, id);
@@ -557,43 +557,43 @@ static void call_timeout(void *data)
 	case EURO_CALL_ANSWER:
 		/* if no station is linked to the call, we are out-of-order */
 		if (!call->euro) {
-			PDEBUG(DEURO, DEBUG_INFO, "Station is unavailable, playing announcement.\n");
+			LOGP(DEURO, LOGL_INFO, "Station is unavailable, playing announcement.\n");
 			call->announcement_spl = es_ges_spl;
 			call->announcement_size = es_ges_size;
 			call->announcement_index = 0;
-			timer_start(&call->timer, OOO_TIME);
+			osmo_timer_schedule(&call->timer, OOO_TIME);
 			call_new_state(call, EURO_CALL_OUTOFORDER);
 			break;
 		}
 		/* if subcriber list is available, but ID is not found, we are unassigned */
 		if (id_list && !search_id(call->station_id)) {
-			PDEBUG(DEURO, DEBUG_INFO, "Subscriber unknown, playing announcement.\n");
+			LOGP(DEURO, LOGL_INFO, "Subscriber unknown, playing announcement.\n");
 			call->announcement_spl = es_kaudn_spl;
 			call->announcement_size = es_kaudn_size;
 			call->announcement_index = 0;
 			call->announcement_count = 1;
-			timer_start(&call->timer, UNASSIGNED_TIME1);
+			osmo_timer_schedule(&call->timer, UNASSIGNED_TIME1);
 			call_new_state(call, EURO_CALL_UNASSIGNED);
 			break;
 		}
 		/* if station is degraded, play that announcement */
 		if (call->euro->degraded) {
-			PDEBUG(DEURO, DEBUG_INFO, "Station is degraded, playing announcement.\n");
+			LOGP(DEURO, LOGL_INFO, "Station is degraded, playing announcement.\n");
 			call->announcement_spl = es_teilges_spl;
 			call->announcement_size = es_teilges_size;
 			call->announcement_index = 0;
-			timer_start(&call->timer, DEGRADED_TIME);
+			osmo_timer_schedule(&call->timer, DEGRADED_TIME);
 			call_new_state(call, EURO_CALL_DEGRADED);
 			break;
 		}
 	/* fall through */
 	case EURO_CALL_DEGRADED:
-		PDEBUG(DEURO, DEBUG_INFO, "Station acknowledges, playing announcement.\n");
+		LOGP(DEURO, LOGL_INFO, "Station acknowledges, playing announcement.\n");
 		call->announcement_spl = es_mitte_spl;
 		call->announcement_size = es_mitte_size;
 		call->announcement_index = 0;
 		call->announcement_count = 1;
-		timer_start(&call->timer, ACKNOWLEDGE_TIME1);
+		osmo_timer_schedule(&call->timer, ACKNOWLEDGE_TIME1);
 		call_new_state(call, EURO_CALL_ACKNOWLEDGE);
 		break;
 	case EURO_CALL_ACKNOWLEDGE:
@@ -602,22 +602,22 @@ static void call_timeout(void *data)
 			call->announcement_size = es_mitte_size;
 			call->announcement_index = 0;
 			call->announcement_count = 2;
-			timer_start(&call->timer, ACKNOWLEDGE_TIME2);
+			osmo_timer_schedule(&call->timer, ACKNOWLEDGE_TIME2);
 			break;
 		}
 		if (call->page_count) {
-			PDEBUG(DEURO, DEBUG_INFO, "Announcement played, receiver has not been paged yet, releasing call.\n");
+			LOGP(DEURO, LOGL_INFO, "Announcement played, receiver has not been paged yet, releasing call.\n");
 			call_up_release(call->callref, CAUSE_NORMAL);
 			call->callref = 0;
 			call_new_state(call, EURO_CALL_RELEASED);
 			break;
 		}
-		PDEBUG(DEURO, DEBUG_INFO, "Announcement played, receiver has been paged, releasing call.\n");
+		LOGP(DEURO, LOGL_INFO, "Announcement played, receiver has been paged, releasing call.\n");
 		call_up_release(call->callref, CAUSE_NORMAL);
 		euro_call_destroy(call);
 		break;
 	case EURO_CALL_OUTOFORDER:
-		PDEBUG(DEURO, DEBUG_INFO, "Announcement played, releasing call.\n");
+		LOGP(DEURO, LOGL_INFO, "Announcement played, releasing call.\n");
 		call_up_release(call->callref, CAUSE_NORMAL);
 		euro_call_destroy(call);
 		break;
@@ -627,18 +627,18 @@ static void call_timeout(void *data)
 			call->announcement_size = es_kaudn_size;
 			call->announcement_index = 0;
 			call->announcement_count = 2;
-			timer_start(&call->timer, UNASSIGNED_TIME2);
+			osmo_timer_schedule(&call->timer, UNASSIGNED_TIME2);
 			break;
 		}
-		PDEBUG(DEURO, DEBUG_INFO, "Announcement played, playing again.\n");
+		LOGP(DEURO, LOGL_INFO, "Announcement played, playing again.\n");
 		call->announcement_spl = es_kaudn_spl;
 		call->announcement_size = es_kaudn_size;
 		call->announcement_index = 0;
 		call->announcement_count = 1;
-		timer_start(&call->timer, UNASSIGNED_TIME1);
+		osmo_timer_schedule(&call->timer, UNASSIGNED_TIME1);
 		break;
 	case EURO_CALL_BEEPING:
-		PDEBUG(DEURO, DEBUG_INFO, "Beep played, releasing.\n");
+		LOGP(DEURO, LOGL_INFO, "Beep played, releasing.\n");
 		call_up_release(call->callref, CAUSE_NORMAL);
 		call->callref = 0;
 		euro_call_destroy(call);
@@ -670,9 +670,9 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	/* just (ab)use busy signal when no station is available */
 	if (!sender) {
 		if (channel)
-			PDEBUG(DEURO, DEBUG_NOTICE, "Cannot page receiver, because given station not available, rejecting!\n");
+			LOGP(DEURO, LOGL_NOTICE, "Cannot page receiver, because given station not available, rejecting!\n");
 		else
-			PDEBUG(DEURO, DEBUG_NOTICE, "Cannot page receiver, no station not available, rejecting!\n");
+			LOGP(DEURO, LOGL_NOTICE, "Cannot page receiver, no station not available, rejecting!\n");
 		euro = NULL;
 	}
 
@@ -688,19 +688,19 @@ void call_down_answer(int __attribute__((unused)) callref)
 {
 	euro_call_t *call;
 
-	PDEBUG(DEURO, DEBUG_INFO, "Call has been answered by network.\n");
+	LOGP(DEURO, LOGL_INFO, "Call has been answered by network.\n");
 
 	for (call = ooo_call_list; call; call = call->next) {
 		if (call->callref == callref)
 			break;
 	}
 	if (!call) {
-		PDEBUG(DEURO, DEBUG_NOTICE, "Answer from network, but no callref!\n");
+		LOGP(DEURO, LOGL_NOTICE, "Answer from network, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
-	timer_start(&call->timer, BEEP_TIME);
+	osmo_timer_schedule(&call->timer, BEEP_TIME);
 }
 
 static void _release(int callref, int __attribute__((unused)) cause)
@@ -709,7 +709,7 @@ static void _release(int callref, int __attribute__((unused)) cause)
 	euro_t *euro;
 	euro_call_t *call;
 
-	PDEBUG(DEURO, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DEURO, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		euro = (euro_t *) sender;
@@ -727,7 +727,7 @@ static void _release(int callref, int __attribute__((unused)) cause)
 		}
 	}
 	if (!call) {
-		PDEBUG(DEURO, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DEURO, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}

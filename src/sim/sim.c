@@ -23,13 +23,13 @@
 #include <stdint.h>
 #include <errno.h>
 #ifndef ARDUINO
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #endif
 #include "sim.h"
 #include "eeprom.h"
 
 #ifdef ARDUINO
-#define PDEBUG(cat, level, fmt, arg...) while(0)
+#define LOGP(cat, level, fmt, arg...) while(0)
 #define EINVAL 22
 static uint32_t my_strtoul(const char *nptr, char **endptr, int base)
 {
@@ -112,11 +112,11 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	if (futln) {
 		temp = strlen(futln);
 		if (temp < 7 || temp > 8) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given FUTLN '%s' invalid length. (Must be 7 or 8 Digits)\n", futln);
+			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' invalid length. (Must be 7 or 8 Digits)\n", futln);
 			return -EINVAL;
 		}
 		if (futln[0] < '0' || futln[0] > '7') {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given FUTLN '%s' has invalid first digit. (Must be '0' .. '7')\n", futln);
+			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' has invalid first digit. (Must be '0' .. '7')\n", futln);
 			return -EINVAL;
 		}
 		data[0] = (futln[0] - '0') << 5;
@@ -125,7 +125,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 			/* 8 digits */
 			temp = (futln[0] - '0') * 10 + (futln[1] - '0');
 			if (futln[0] < '0' || futln[0] > '9' || futln[1] < '0' || futln[1] > '9' || temp > 31) {
-				PDEBUG(DSIM7, DEBUG_NOTICE, "Given FUTLN '%s' has invalid second and third digit. (Must be '00' .. '31')\n", futln);
+				LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' has invalid second and third digit. (Must be '00' .. '31')\n", futln);
 				return -EINVAL;
 			}
 			data[0] |= temp;
@@ -133,7 +133,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 		} else {
 			/* 7 digits */
 			if (futln[0] < '0' || futln[0] > '9') {
-				PDEBUG(DSIM7, DEBUG_NOTICE, "Given FUTLN '%s' has invalid second digit. (Must be '0' .. '9')\n", futln);
+				LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' has invalid second digit. (Must be '0' .. '9')\n", futln);
 				return -EINVAL;
 			}
 			data[0] |= (futln[0] - '0');
@@ -145,7 +145,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 		}
 		temp = my_strtoul(futln, NULL, 0);
 		if (i < 5 || temp > 65535) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given FUTLN '%s' has invalid last digits. (Must be '00000' .. '65535')\n", futln);
+			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' has invalid last digits. (Must be '00000' .. '65535')\n", futln);
 			return -EINVAL;
 		}
 		data[1] = temp >> 8;
@@ -155,7 +155,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	if (sicherung) {
 		temp = my_strtoul(sicherung, NULL, 0);
 		if (temp > 65535) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given security code '%s' has invalid digits. (Must be '0' .. '65535')\n", sicherung);
+			LOGP(DSIM7, LOGL_NOTICE, "Given security code '%s' has invalid digits. (Must be '0' .. '65535')\n", sicherung);
 			return -EINVAL;
 		}
 		data[3] = temp >> 8;
@@ -165,7 +165,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	if (karten) {
 		temp = my_strtoul(karten, NULL, 0);
 		if (temp > 7) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given card number '%s' has invalid digit. (Must be '0' .. '7')\n", karten);
+			LOGP(DSIM7, LOGL_NOTICE, "Given card number '%s' has invalid digit. (Must be '0' .. '7')\n", karten);
 			return -EINVAL;
 		}
 		data[5] = (data[5] & 0x1f) | ((karten[0] - '0') << 5);
@@ -174,7 +174,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	if (sonder) {
 		temp = my_strtoul(sonder, NULL, 0);
 		if (temp > 8191) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given spacial code '%s' has invalid digits. (Must be '0' .. '8191')\n", sonder);
+			LOGP(DSIM7, LOGL_NOTICE, "Given spacial code '%s' has invalid digits. (Must be '0' .. '8191')\n", sonder);
 			return -EINVAL;
 		}
 		data[5] = (data[5] & 0xe0) | (temp >> 8);
@@ -184,7 +184,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	if (wartung) {
 		temp = my_strtoul(wartung, NULL, 0);
 		if (temp > 65535) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given maintenance code '%s' has invalid digits. (Must be '0' .. '65535')\n", wartung);
+			LOGP(DSIM7, LOGL_NOTICE, "Given maintenance code '%s' has invalid digits. (Must be '0' .. '65535')\n", wartung);
 			return -EINVAL;
 		}
 		data[7] = temp >> 8;
@@ -240,7 +240,7 @@ int save_directory(int location, uint8_t *data)
 
 	size = directory_size();
 	if (location < 1 || location >= size) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "Given location for phone number '%d' is out of range. (Must be '01' .. '%02d')\n", location, size - 1);
+		LOGP(DSIM7, LOGL_NOTICE, "Given location for phone number '%d' is out of range. (Must be '01' .. '%02d')\n", location, size - 1);
 		return -EINVAL;
 	}
 
@@ -278,7 +278,7 @@ int encode_directory(uint8_t *data, const char *number, const char *name)
 
 	len = strlen(number);
 	if (len > 16) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "Given phone number '%s' has too many digits. (Must be <= 16)\n", number);
+		LOGP(DSIM7, LOGL_NOTICE, "Given phone number '%s' has too many digits. (Must be <= 16)\n", number);
 		return -EINVAL;
 	}
 
@@ -286,7 +286,7 @@ int encode_directory(uint8_t *data, const char *number, const char *name)
 	memset(data + 8, ' ', 16);
 	for (i = 0; i < len; i++) {
 		if (number[i] < '0' || number[i] > '9') {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given phone number '%s' has illegal digits. (Must be '0' .. '9')\n", number);
+			LOGP(DSIM7, LOGL_NOTICE, "Given phone number '%s' has illegal digits. (Must be '0' .. '9')\n", number);
 			return -EINVAL;
 		}
 		pos = 16 - len + i;
@@ -370,7 +370,7 @@ static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 		valid = 1;
 		if (data[3] > '0')
 			sim->card = data[3] - '1';
-		PDEBUG(DSIM1, DEBUG_INFO, "System PIN '000%c' entered. Selecting card #%d.\n", data[3], sim->card + 1);
+		LOGP(DSIM1, LOGL_INFO, "System PIN '000%c' entered. Selecting card #%d.\n", data[3], sim->card + 1);
 	}
 
 	/* programming mode */
@@ -379,7 +379,7 @@ static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 		valid = 1;
 		if (data[3] > '0')
 			sim->card = data[3] - '1';
-		PDEBUG(DSIM1, DEBUG_INFO, "Configuration PIN '999%c' entered. Selecting card #%d in configuration mode.\n", data[3], sim->card + 1);
+		LOGP(DSIM1, LOGL_INFO, "Configuration PIN '999%c' entered. Selecting card #%d in configuration mode.\n", data[3], sim->card + 1);
 	}
 
 	/* if not 'program mode' and PIN matches EEPROM */
@@ -390,7 +390,7 @@ static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 		}
 		if (i == length) {
 			valid = 1;
-			PDEBUG(DSIM1, DEBUG_INFO, "Correct PIN was entered. Selecting card #%d.\n", sim->card + 1);
+			LOGP(DSIM1, LOGL_INFO, "Correct PIN was entered. Selecting card #%d.\n", sim->card + 1);
 		}
 	}
 
@@ -405,7 +405,7 @@ static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 			sim->program_mode = 1;
 		return 0;
 	} else {
-		PDEBUG(DSIM1, DEBUG_INFO, "Wrong PIN was entered.\n");
+		LOGP(DSIM1, LOGL_INFO, "Wrong PIN was entered.\n");
 #ifndef ARDUINO
 		/* decrement error counter */
 		if (sim->pin_try) {
@@ -424,7 +424,7 @@ uint8_t *alloc_msg(sim_sim_t *sim, int size)
 {
 	/* we add 4, because we push 4 bytes (ICL and L2 header later) */
 	if (size + 4 > (int)sizeof(sim->block_tx_data))
-		PDEBUG(DSIM1, DEBUG_NOTICE, "TX buffer overflow: size+4=%d > buffer size (%d)\n", size + 4, (int)sizeof(sim->block_tx_data));
+		LOGP(DSIM1, LOGL_NOTICE, "TX buffer overflow: size+4=%d > buffer size (%d)\n", size + 4, (int)sizeof(sim->block_tx_data));
 	return sim->block_tx_data;
 }
 
@@ -463,7 +463,7 @@ static void sl_appl(sim_sim_t *sim, uint8_t *data, int length)
 	uint8_t app;
 
 	if (length < 11) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "SL-APPL too short\n");
+		LOGP(DSIM7, LOGL_NOTICE, "SL-APPL too short\n");
 		return_error(sim);
 		return;
 	}
@@ -473,11 +473,11 @@ static void sl_appl(sim_sim_t *sim, uint8_t *data, int length)
 	app += (data[7] - '0') * 10;
 	app += data[8] - '0';
 
-	PDEBUG(DSIM7, DEBUG_INFO, " SL-APPL app %d\n", app);
+	LOGP(DSIM7, LOGL_INFO, " SL-APPL app %d\n", app);
 
 	/* check and set application */
 	if (app != APP_NETZ_C && app != APP_RUFN_GEBZ) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "SL-APPL invalid app %d\n", sim->app);
+		LOGP(DSIM7, LOGL_NOTICE, "SL-APPL invalid app %d\n", sim->app);
 		return_error(sim);
 		return;
 	}
@@ -499,7 +499,7 @@ static void cl_appl(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " CL-APPL\n");
+	LOGP(DSIM7, LOGL_INFO, " CL-APPL\n");
 
 	/* remove app */
 	sim->app = 0;
@@ -514,7 +514,7 @@ static void sh_appl(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " SH-APPL\n");
+	LOGP(DSIM7, LOGL_INFO, " SH-APPL\n");
 
 	/* respond */
 	data = alloc_msg(sim, 33);
@@ -546,7 +546,7 @@ static void chk_kon(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " CHK-KON\n");
+	LOGP(DSIM7, LOGL_INFO, " CHK-KON\n");
 
 	/* respond */
 	data = alloc_msg(sim, 0);
@@ -558,7 +558,7 @@ static void rd_ebdt(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-EBDT\n");
+	LOGP(DSIM7, LOGL_INFO, " RD-EBDT\n");
 
 	/* respond */
 	data = alloc_msg(sim, 9);
@@ -594,12 +594,12 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 	int size;
 
 	if (length < 1) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "RD_RUFN too short\n");
+		LOGP(DSIM7, LOGL_NOTICE, "RD_RUFN too short\n");
 		return_error(sim);
 		return;
 	}
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-RUFN (loc=%d)\n", rufn);
+	LOGP(DSIM7, LOGL_INFO, " RD-RUFN (loc=%d)\n", rufn);
 
 	/* SERVICE MODE */
 	if (sim->program_mode) {
@@ -619,34 +619,34 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			data[2] = eeprom_read(EEPROM_FUTLN_L + sim->card);
 			decode_ebdt(data, number, NULL, NULL, NULL, NULL);
 			encode_directory(data, number, "FUTLN");
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: FUTLN = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: FUTLN = %s\n", number);
 			break;
 		case 2: /* security code */
 			data[3] = eeprom_read(EEPROM_SICH_H + sim->card);
 			data[4] = eeprom_read(EEPROM_SICH_L + sim->card);
 			decode_ebdt(data, NULL, number, NULL, NULL, NULL);
 			encode_directory(data, number, "Sicherungscode");
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: security = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: security = %s\n", number);
 			break;
 		case 3: /* card ID */
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
 			decode_ebdt(data, NULL, NULL, number, NULL, NULL);
 			encode_directory(data, number, "Kartenkennung");
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: card = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: card = %s\n", number);
 			break;
 		case 4:	/* special key */
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
 			data[6] = eeprom_read(EEPROM_SONDER_L + sim->card);
 			decode_ebdt(data, NULL, NULL, NULL, number, NULL);
 			encode_directory(data, number, "Sonderheitsschl.");
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: special = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: special = %s\n", number);
 			break;
 		case 5: /* maintenance key */
 			data[7] = eeprom_read(EEPROM_WARTUNG_H + sim->card);
 			data[8] = eeprom_read(EEPROM_WARTUNG_L + sim->card);
 			decode_ebdt(data, NULL, NULL, NULL, NULL, number);
 			encode_directory(data, number, "Wartungsschl.");
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: maintenance = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: maintenance = %s\n", number);
 			break;
 		}
 		tx_sdu(sim, 0, data, 24);
@@ -655,9 +655,9 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 
 	size = directory_size();
 	/* first entry (0) is used as allocation map */
-	PDEBUG(DSIM7, DEBUG_INFO, " %d numbers can be stored in EEPROM\n", size - 1);
+	LOGP(DSIM7, LOGL_INFO, " %d numbers can be stored in EEPROM\n", size - 1);
 	if (rufn >= size) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "RD_RUFN entry #%d out of range\n", rufn);
+		LOGP(DSIM7, LOGL_NOTICE, "RD_RUFN entry #%d out of range\n", rufn);
 		return_error(sim);
 		return;
 	}
@@ -674,12 +674,12 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 	uint8_t rufn = data[0];
 	
 	if (length < 25) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "WT_RUFN too short\n");
+		LOGP(DSIM7, LOGL_NOTICE, "WT_RUFN too short\n");
 		return_error(sim);
 		return;
 	}
 
-	PDEBUG(DSIM7, DEBUG_INFO, " WT-RUFN (loc=%d)\n", rufn);
+	LOGP(DSIM7, LOGL_INFO, " WT-RUFN (loc=%d)\n", rufn);
 
 	/* SERVICE MODE */
 	if (sim->program_mode) {
@@ -692,7 +692,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			goto respond;
 		switch (rufn) {
 		case 1: /* FUTLN */
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: FUTLN = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: FUTLN = %s\n", number);
 			rc = encode_ebdt(data, number, NULL, NULL, NULL, NULL);
 			if (rc < 0)
 				break;
@@ -701,7 +701,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			eeprom_write(EEPROM_FUTLN_L + sim->card, data[2]);
 			break;
 		case 2: /* security code */
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: security = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: security = %s\n", number);
 			rc = encode_ebdt(data, NULL, number, NULL, NULL, NULL);
 			if (rc < 0)
 				break;
@@ -709,7 +709,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			eeprom_write(EEPROM_SICH_L + sim->card, data[4]);
 			break;
 		case 3: /* card ID */
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: card = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: card = %s\n", number);
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
 			rc = encode_ebdt(data, NULL, NULL, number, NULL, NULL);
 			if (rc < 0)
@@ -717,7 +717,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			eeprom_write(EEPROM_SONDER_H + sim->card, data[5]);
 			break;
 		case 4:	/* special key */
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: special = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: special = %s\n", number);
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
 			rc = encode_ebdt(data, NULL, NULL, NULL, number, NULL);
 			if (rc < 0)
@@ -726,7 +726,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			eeprom_write(EEPROM_SONDER_L + sim->card, data[6]);
 			break;
 		case 5: /* maintenance key */
-			PDEBUG(DSIM7, DEBUG_INFO, "service mode: maintenance = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "service mode: maintenance = %s\n", number);
 			rc = encode_ebdt(data, NULL, NULL, NULL, NULL, number);
 			if (rc < 0)
 				break;
@@ -739,7 +739,7 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 	}
 
 	if (rufn >= directory_size() || rufn < 1) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "WT_RUFN entry #%d out of range\n", rufn);
+		LOGP(DSIM7, LOGL_NOTICE, "WT_RUFN entry #%d out of range\n", rufn);
 		return_error(sim);
 		return;
 	}
@@ -757,10 +757,10 @@ static void chk_pin(sim_sim_t *sim, uint8_t *data, int length)
 {
 	int rc;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " CHK-PIN\n");
+	LOGP(DSIM7, LOGL_INFO, " CHK-PIN\n");
 
 	if (length < 4 || length > 8) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "SET-PIN wrong length: %d\n", length);
+		LOGP(DSIM7, LOGL_NOTICE, "SET-PIN wrong length: %d\n", length);
 		return_error(sim);
 		return;
 	}
@@ -785,10 +785,10 @@ static void set_pin(sim_sim_t *sim, uint8_t *data, int length)
 	int i;
 	int rc;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " SET-PIN\n");
+	LOGP(DSIM7, LOGL_INFO, " SET-PIN\n");
 
 	if (length < 1) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "SET-PIN too short\n");
+		LOGP(DSIM7, LOGL_NOTICE, "SET-PIN too short\n");
 		return_error(sim);
 		return;
 	}
@@ -798,7 +798,7 @@ static void set_pin(sim_sim_t *sim, uint8_t *data, int length)
 	len_new = length - len_old - 1;
 	pin_new = data + 1 + len_old;
 	if (len_new < 4 || len_new > 8) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "New PIN wrong length %d!\n", len_new);
+		LOGP(DSIM7, LOGL_NOTICE, "New PIN wrong length %d!\n", len_new);
 		return_error(sim);
 		return;
 	}
@@ -826,10 +826,10 @@ static void eh_gebz(sim_sim_t *sim, uint8_t *data, int length)
 {
 	uint32_t gebz;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " EH-GEBZ\n");
+	LOGP(DSIM7, LOGL_INFO, " EH-GEBZ\n");
 
 	if (length < 1) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "EH-GEBZ wrong length: %d\n", length);
+		LOGP(DSIM7, LOGL_NOTICE, "EH-GEBZ wrong length: %d\n", length);
 		return_error(sim);
 		return;
 	}
@@ -853,7 +853,7 @@ static void cl_gebz(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " CL-GEBZ\n");
+	LOGP(DSIM7, LOGL_INFO, " CL-GEBZ\n");
 
 	/* clear counter */
 	eeprom_write(EEPROM_GEBZ_H, 0);
@@ -870,7 +870,7 @@ static void rd_gebz(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-GEBZ\n");
+	LOGP(DSIM7, LOGL_INFO, " RD-GEBZ\n");
 
 	/* respond */
 	data = alloc_msg(sim, 3);
@@ -885,7 +885,7 @@ static void sp_gzrv(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " SP-GZRV\n");
+	LOGP(DSIM7, LOGL_INFO, " SP-GZRV\n");
 
 	sim->gebz_locked = 1;
 	write_flags(sim);
@@ -900,7 +900,7 @@ static void fr_gzrv(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " FR-GZRV\n");
+	LOGP(DSIM7, LOGL_INFO, " FR-GZRV\n");
 
 	sim->gebz_locked = 0;
 	write_flags(sim);
@@ -916,7 +916,7 @@ static void aut_1(sim_sim_t *sim)
 	uint8_t *data;
 	int i;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " AUTH-1\n");
+	LOGP(DSIM7, LOGL_INFO, " AUTH-1\n");
 
 	/* respond */
 	data = alloc_msg(sim, 1);
@@ -930,7 +930,7 @@ static void rd_f4(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-F4\n");
+	LOGP(DSIM7, LOGL_INFO, " RD-F4\n");
 
 	/* respond */
 	data = alloc_msg(sim, 2);
@@ -944,7 +944,7 @@ static void rd_f5(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-F5\n");
+	LOGP(DSIM7, LOGL_INFO, " RD-F5\n");
 
 	/* respond */
 	data = alloc_msg(sim, 0);
@@ -956,7 +956,7 @@ static void rd_04(sim_sim_t *sim)
 {
 	uint8_t *data;
 
-	PDEBUG(DSIM7, DEBUG_INFO, " RD-04\n");
+	LOGP(DSIM7, LOGL_INFO, " RD-04\n");
 
 	/* respond */
 	data = alloc_msg(sim, 25);
@@ -971,13 +971,13 @@ static void rx_sdu(sim_sim_t *sim, uint8_t *data, int length)
 	uint8_t cla, ins, dlng;
 
 	if (length < 3) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "SDU too short\n");
+		LOGP(DSIM7, LOGL_NOTICE, "SDU too short\n");
 		return;
 	}
 
 	/* skip all responses, because we don't send commands */
 	if (*data & CCRC_IDENT) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "Skipping SDU with response\n");
+		LOGP(DSIM7, LOGL_NOTICE, "Skipping SDU with response\n");
 		return;
 	}
 
@@ -989,7 +989,7 @@ static void rx_sdu(sim_sim_t *sim, uint8_t *data, int length)
 
 	/* check length */
 	if (dlng != length) {
-		PDEBUG(DSIM7, DEBUG_NOTICE, "Skipping SDU with invalid length\n");
+		LOGP(DSIM7, LOGL_NOTICE, "Skipping SDU with invalid length\n");
 		return;
 	}
 
@@ -1044,7 +1044,7 @@ static void rx_sdu(sim_sim_t *sim, uint8_t *data, int length)
 	}
 
 	/* unsupported message */
-	PDEBUG(DSIM7, DEBUG_NOTICE, "CLA 0x%02x INS 0x%02x unknown\n", cla, ins);
+	LOGP(DSIM7, LOGL_NOTICE, "CLA 0x%02x INS 0x%02x unknown\n", cla, ins);
 	data = alloc_msg(sim, 0);
 	tx_sdu(sim, CCRC_ERROR, data, 0);
 }
@@ -1075,7 +1075,7 @@ static void rx_pdu(sim_sim_t *sim, uint8_t *data, int length)
 
 	if (length < 1) {
 too_short:
-		PDEBUG(DSIMI, DEBUG_NOTICE, "PDU too short\n");
+		LOGP(DSIMI, LOGL_NOTICE, "PDU too short\n");
 		return;
 	}
 
@@ -1125,24 +1125,24 @@ static void rx_block(sim_sim_t *sim)
 
 	/* NOTE: This procedure is simplified, it does not comply with the specs. */
 
-	PDEBUG(DSIM2, DEBUG_INFO, "RX message\n");
+	LOGP(DSIM2, LOGL_INFO, "RX message\n");
 	sim->addr_src = sim->block_address >> 4;
 	sim->addr_dst = sim->block_address & 0xf;
 	if (sim->block_checksum != 0) {
-		PDEBUG(DSIM2, DEBUG_NOTICE, "Checksum error!\n");
+		LOGP(DSIM2, LOGL_NOTICE, "Checksum error!\n");
 		goto reject;
 	}
 	if ((sim->block_control & 0x11) == 0x00) {
 		ns = (sim->block_control >> 1) & 7;
 		nr = sim->block_control >> 5;
-		PDEBUG(DSIM2, DEBUG_INFO, " control I: N(S)=%d N(R)=%d\n", ns, nr);
+		LOGP(DSIM2, LOGL_INFO, " control I: N(S)=%d N(R)=%d\n", ns, nr);
 		if (ns == sim->vr && nr == sim->vs) {
 			/* receive data */
 			sim->vr = (sim->vr + 1) & 0x7;
 			rx_pdu(sim, sim->block_rx_data, sim->block_rx_length);
 			return;
 		} else {
-			PDEBUG(DSIM2, DEBUG_NOTICE, "Seqeuence error!\n");
+			LOGP(DSIM2, LOGL_NOTICE, "Seqeuence error!\n");
 reject:
 			/* reject (or send resync after 3 times) */
 			data = alloc_msg(sim, 0);
@@ -1158,7 +1158,7 @@ reject:
 	}
 	if ((sim->block_control & 0x1f) == 0x09) {
 		nr = sim->block_control >> 5;
-		PDEBUG(DSIM2, DEBUG_INFO, " control REJ: N(R)=%d\n", nr);
+		LOGP(DSIM2, LOGL_INFO, " control REJ: N(R)=%d\n", nr);
 		/* repeat last message */
 		if (sim->block_tx_length) {
 			tx_block(sim, L2_I, sim->block_tx_data, sim->block_tx_length);
@@ -1170,7 +1170,7 @@ reject:
 		return;
 	}
 	if (sim->block_control == 0xef) {
-		PDEBUG(DSIM2, DEBUG_INFO, " control RES\n");
+		LOGP(DSIM2, LOGL_INFO, " control RES\n");
 		sim->vr = sim->vs = 0;
 		sim->reject_count = 0;
 		if (sim->resync_sent == 0) {
@@ -1201,7 +1201,7 @@ static int rx_char(sim_sim_t *sim, uint8_t c)
 	case BLOCK_STATE_LENGTH:
 		if (c > sizeof(sim->block_rx_data)) {
 			c = sizeof(sim->block_rx_data);
-			PDEBUG(DSIM1, DEBUG_NOTICE, "RX buffer overflow: length=%d > buffer size (%d)\n", c, (int)sizeof(sim->block_rx_data));
+			LOGP(DSIM1, LOGL_NOTICE, "RX buffer overflow: length=%d > buffer size (%d)\n", c, (int)sizeof(sim->block_rx_data));
 		}
 		sim->block_rx_length = c;
 		sim->block_count = 0;
@@ -1225,24 +1225,24 @@ static int rx_char(sim_sim_t *sim, uint8_t c)
 /* create layer 2 message for layer 1 */
 static void tx_block(sim_sim_t *sim, enum l2_cmd cmd, uint8_t __attribute__((unused)) *data, int length)
 {
-	PDEBUG(DSIM2, DEBUG_INFO, "TX response\n");
+	LOGP(DSIM2, LOGL_INFO, "TX response\n");
 
 	/* header */
 	sim->block_address = (sim->addr_dst << 4) | sim->addr_src;
 	switch (cmd) {
 	case L2_I:
-		PDEBUG(DSIM2, DEBUG_INFO, " control I: N(S)=%d N(R)=%d\n", sim->vs, sim->vr);
+		LOGP(DSIM2, LOGL_INFO, " control I: N(S)=%d N(R)=%d\n", sim->vs, sim->vr);
 		sim->block_control = (sim->vr << 5) | (sim->vs << 1);
 		sim->vs = (sim->vs + 1) & 0x7;
 		sim->resync_sent = 0;
 		break;
 	case L2_REJ:
-		PDEBUG(DSIM2, DEBUG_INFO, " control REJ: N(R)=%d\n", sim->vr);
+		LOGP(DSIM2, LOGL_INFO, " control REJ: N(R)=%d\n", sim->vr);
 		sim->block_control = (sim->vr << 5) | 0x09;
 		sim->resync_sent = 0;
 		break;
 	case L2_RES:
-		PDEBUG(DSIM2, DEBUG_INFO, " control RES\n");
+		LOGP(DSIM2, LOGL_INFO, " control RES\n");
 		sim->block_control = 0xef;
 		sim->resync_sent = 1;
 		break;
@@ -1367,7 +1367,7 @@ void sim_reset(sim_sim_t *sim, int reset)
 	int i;
 	char pin[8];
 
-	PDEBUG(DSIM1, DEBUG_INFO, "Reset signal %s\n", (reset) ? "on (low)" : "off (high)");
+	LOGP(DSIM1, LOGL_INFO, "Reset signal %s\n", (reset) ? "on (low)" : "off (high)");
 	memset(sim, 0, sizeof(*sim));
 
 	if (reset)
@@ -1386,10 +1386,10 @@ void sim_reset(sim_sim_t *sim, int reset)
 		sim->pin_required = 0;
 		if (pin[3] > '0')
 			sim->card = pin[3] - '1';
-		PDEBUG(DSIM1, DEBUG_INFO, "Card has disabled PIN (system PIN '000%c') Selecting card #%d.\n", pin[3], sim->card + 1);
+		LOGP(DSIM1, LOGL_INFO, "Card has disabled PIN (system PIN '000%c') Selecting card #%d.\n", pin[3], sim->card + 1);
 	}
 
-	PDEBUG(DSIM1, DEBUG_INFO, "Sending ATR\n");
+	LOGP(DSIM1, LOGL_INFO, "Sending ATR\n");
 	sim->l1_state = L1_STATE_ATR;
 }
 
@@ -1397,7 +1397,7 @@ int sim_rx(sim_sim_t *sim, uint8_t c)
 {
 	int rc = -1;
 
-	PDEBUG(DSIM1, DEBUG_DEBUG, "Serial RX '0x%02x'\n", c);
+	LOGP(DSIM1, LOGL_DEBUG, "Serial RX '0x%02x'\n", c);
 
 	switch (sim->l1_state) {
 	case L1_STATE_IDLE:
@@ -1408,7 +1408,7 @@ int sim_rx(sim_sim_t *sim, uint8_t c)
 		rc = rx_char(sim, c);
 		break;
 	case L1_STATE_COMPLETE:
-		PDEBUG(DSIM1, DEBUG_NOTICE, "Received garbage after message!\n");
+		LOGP(DSIM1, LOGL_NOTICE, "Received garbage after message!\n");
 		sim->l1_state = L1_STATE_GARBAGE;
 	default:
 		break;
@@ -1433,7 +1433,7 @@ int sim_tx(sim_sim_t *sim)
 	}
 
 	if (c >= 0)
-		PDEBUG(DSIM1, DEBUG_DEBUG, "Serial TX '0x%02x'\n", c);
+		LOGP(DSIM1, LOGL_DEBUG, "Serial TX '0x%02x'\n", c);
 
 	return c;
 }
@@ -1442,19 +1442,19 @@ void sim_timeout(sim_sim_t *sim)
 {
 	switch (sim->l1_state) {
 	case L1_STATE_ATR:
-		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout while transmitting ATR!\n");
+		LOGP(DSIM1, LOGL_NOTICE, "Timeout while transmitting ATR!\n");
 		sim->l1_state = L1_STATE_RESET;
 		break;
 	case L1_STATE_RECEIVE:
-		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout while receiving message!\n");
+		LOGP(DSIM1, LOGL_NOTICE, "Timeout while receiving message!\n");
 		sim->block_state = BLOCK_STATE_ADDRESS;
 		break;
 	case L1_STATE_GARBAGE:
-		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout after skipping garbage!\n");
+		LOGP(DSIM1, LOGL_NOTICE, "Timeout after skipping garbage!\n");
 		sim->l1_state = L1_STATE_IDLE;
 		break;
 	case L1_STATE_SEND:
-		PDEBUG(DSIM1, DEBUG_NOTICE, "Timeout while sending message!\n");
+		LOGP(DSIM1, LOGL_NOTICE, "Timeout while sending message!\n");
 		sim->l1_state = L1_STATE_IDLE;
 		break;
 	case L1_STATE_COMPLETE:

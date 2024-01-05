@@ -24,11 +24,11 @@
 #include <time.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "nmt.h"
 
-#define SMS_RECEIVE_TO		5.0
-#define SMS_RELEASE_TO		2.0
+#define SMS_RECEIVE_TO		5,0
+#define SMS_RELEASE_TO		2,0
 
 /* TP-Message-Type-Indicator (TP-MTI) */
 #define	MTI_SMS_DELIVER		0x00 /* SC -> MS */
@@ -99,7 +99,7 @@ static void sms_timeout(void *data);
 /* init instance */
 int sms_init_sender(nmt_t *nmt)
 {
-	timer_init(&nmt->sms_timer, sms_timeout, nmt);
+	osmo_timer_setup(&nmt->sms_timer, sms_timeout, nmt);
 
 	return 0;
 }
@@ -108,7 +108,7 @@ int sms_init_sender(nmt_t *nmt)
 void sms_cleanup_sender(nmt_t *nmt)
 {
 	sms_reset(nmt);
-	timer_exit(&nmt->sms_timer);
+	osmo_timer_del(&nmt->sms_timer);
 }
 
 /*
@@ -130,7 +130,7 @@ static int encode_address(uint8_t *data, const char *address, uint8_t type, uint
 	uint8_t digit;
 	int i, j;
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Encode SC->MS header\n");
+	LOGP(DSMS, LOGL_DEBUG, "Encode SC->MS header\n");
 
 	data[length++] = 0x80 | (type << 4) | plan;
 	j = 0;
@@ -170,7 +170,7 @@ static int encode_time(uint8_t *data, time_t timestamp, int local)
 	uint8_t digit1, digit2;
 	int quarters, sign;
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Encode time stamp '%02d.%02d.%02d %02d:%02d:%02d'\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year % 100, tm->tm_hour, tm->tm_min, tm->tm_sec);
+	LOGP(DSMS, LOGL_DEBUG, "Encode time stamp '%02d.%02d.%02d %02d:%02d:%02d'\n", tm->tm_mday, tm->tm_mon + 1, tm->tm_year % 100, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
 	/* year */
 	digit1 = (tm->tm_year % 100) / 10;
@@ -247,7 +247,7 @@ static int encode_userdata(uint8_t *data, const char *message)
 	uint8_t character;
 	int i, j, pos;
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Encode user data '%s'\n", message);
+	LOGP(DSMS, LOGL_DEBUG, "Encode user data '%s'\n", message);
 
 	j = 0;
 	pos = 0;
@@ -293,17 +293,17 @@ int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_
 	int orig_len;
 	int msg_len;
 
-	PDEBUG(DSMS, DEBUG_INFO, "Delivering SMS from upper layer\n");
+	LOGP(DSMS, LOGL_INFO, "Delivering SMS from upper layer\n");
 
 	orig_len = strlen(orig_address);
 	msg_len = strlen(message);
 
 	if (orig_len > 24) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "Originator Address too long (%d characters)\n", orig_len);
+		LOGP(DSMS, LOGL_NOTICE, "Originator Address too long (%d characters)\n", orig_len);
 		return -EINVAL;
 	}
 	if (msg_len > 140) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "Message too long (%d characters)\n", msg_len);
+		LOGP(DSMS, LOGL_NOTICE, "Message too long (%d characters)\n", msg_len);
 		return -EINVAL;
 	}
 
@@ -326,13 +326,13 @@ int sms_deliver(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_
 
 	/* RP length */
 	*tpdu_length = length - (uint8_t)(tpdu_length - data) - 1;
-	PDEBUG(DSMS, DEBUG_DEBUG, " -> TPDU length = %d\n", *tpdu_length);
+	LOGP(DSMS, LOGL_DEBUG, " -> TPDU length = %d\n", *tpdu_length);
 
 	nmt->sms.mt = 1;
 	dms_send(nmt, data, length, 1);
 
 	/* start timer */
-	timer_start(&nmt->sms_timer, SMS_RECEIVE_TO);
+	osmo_timer_schedule(&nmt->sms_timer, SMS_RECEIVE_TO);
 
 	return 0;
 }
@@ -343,7 +343,7 @@ static void sms_submit_report(nmt_t *nmt, uint8_t ref, int error)
 	uint8_t data[64];
 	int length = 0;
 
-	PDEBUG(DSMS, DEBUG_INFO, "Sending Submit Report (%s)\n", (error) ? "error" : "ok");
+	LOGP(DSMS, LOGL_INFO, "Sending Submit Report (%s)\n", (error) ? "error" : "ok");
 
 	/* HEADER */
 	length = encode_header(data);
@@ -417,7 +417,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 
 	/* do we have originator address length ? */
 	if (length < 2) {
-		PDEBUG(DSMS, DEBUG_DEBUG, "SMS still incomplete, waiting for originator address\n");
+		LOGP(DSMS, LOGL_DEBUG, "SMS still incomplete, waiting for originator address\n");
 		return 0;
 	}
 	orig_data = 2 + data;
@@ -426,7 +426,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	orig_plan = data[1] & 0x0f;
 	orig_len = (orig_digits + 1) >> 1;
 	if (length < 2 + orig_len) {
-		PDEBUG(DSMS, DEBUG_DEBUG, "SMS still incomplete, waiting for originator address digits (got %d of %d)\n", length - 1, orig_len);
+		LOGP(DSMS, LOGL_DEBUG, "SMS still incomplete, waiting for originator address digits (got %d of %d)\n", length - 1, orig_len);
 		return 0;
 	}
 	data += 2 + orig_len;
@@ -434,17 +434,17 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	
 	/* do we have user data IE ? */
 	if (length < 2) {
-		PDEBUG(DSMS, DEBUG_DEBUG, "SMS still incomplete, waiting for user data IE\n");
+		LOGP(DSMS, LOGL_DEBUG, "SMS still incomplete, waiting for user data IE\n");
 		return 0;
 	}
 	if (data[0] != RP_IE_USER_DATA) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "missing user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "missing user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	tpdu_len = data[1];
 	tpdu_data = 2 + data;
 	if (length < 2 + tpdu_len) {
-		PDEBUG(DSMS, DEBUG_DEBUG, "SMS still incomplete, waiting for TPDU to be complete\n");
+		LOGP(DSMS, LOGL_DEBUG, "SMS still incomplete, waiting for TPDU to be complete\n");
 		return 0;
 	}
 	data += 2 + tpdu_len;
@@ -453,7 +453,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* decode orig address */
 	char orig_address[orig_digits + 1];
 	decode_address(orig_data, orig_digits, orig_address);
-	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded originating address: '%s'\n", orig_address);
+	LOGP(DSMS, LOGL_DEBUG, "Decoded originating address: '%s'\n", orig_address);
 
 	/* go into TP */
 	data = tpdu_data;
@@ -461,11 +461,11 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 
 	/* check msg_type */
 	if (length < 1) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	if ((data[0] & MTI_MASK) != MTI_SMS_SUBMIT) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "especting SUBMIT MTI, but got 0x%02x\n", data[0]);
+		LOGP(DSMS, LOGL_NOTICE, "especting SUBMIT MTI, but got 0x%02x\n", data[0]);
 		return -FSC_ERROR_IN_MS;
 	}
 	if ((data[0] & VPF_MASK))
@@ -475,7 +475,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 
 	/* decode msg ref */
 	if (length < 1) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	msg_ref = data[0];
@@ -484,7 +484,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 
 	/* decode dest address */
 	if (length < 2) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	dest_data = 2 + data;
@@ -493,18 +493,18 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	dest_plan = data[1] & 0x0f;
 	dest_len = (dest_digits + 1) >> 1;
 	if (length < 2 + dest_len) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	data += 2 + dest_len;
 	length -= 2 + dest_len;
 	char dest_address[dest_digits + 1];
 	decode_address(dest_data, dest_digits, dest_address);
-	PDEBUG(DSMS, DEBUG_DEBUG, "Decoded destination address: '%s'\n", dest_address);
+	LOGP(DSMS, LOGL_DEBUG, "Decoded destination address: '%s'\n", dest_address);
 
 	/* skip above protocol identifier */
 	if (length < 1) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read above protocol identifier IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read above protocol identifier IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	data++;
@@ -512,17 +512,17 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 
 	/* decode data coding scheme */
 	if (length < 1) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short data coding scheme IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short data coding scheme IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	if (data[0] == 0x00) {
-		PDEBUG(DSMS, DEBUG_DEBUG, "SMS coding is 7 bits (got 0x%02x)\n", data[0]);
+		LOGP(DSMS, LOGL_DEBUG, "SMS coding is 7 bits (got 0x%02x)\n", data[0]);
 		coding = 7;
 	} else if ((data[0] & 0xf0) == 0x30) {
-		PDEBUG(DSMS, DEBUG_DEBUG, "SMS coding is 8 bits (got 0x%02x)\n", data[0]);
+		LOGP(DSMS, LOGL_DEBUG, "SMS coding is 8 bits (got 0x%02x)\n", data[0]);
 		coding = 8;
 	} else {
-		PDEBUG(DSMS, DEBUG_NOTICE, "SMS coding unsupported (got 0x%02x)\n", data[0]);
+		LOGP(DSMS, LOGL_NOTICE, "SMS coding unsupported (got 0x%02x)\n", data[0]);
 		return -FSC_ERROR_IN_MS;
 	}
 	data++;
@@ -531,7 +531,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	/* skip validity period */
 	if (tp_vpf_present) {
 		if (length < 1) {
-			PDEBUG(DSMS, DEBUG_NOTICE, "short read validity period IE\n");
+			LOGP(DSMS, LOGL_NOTICE, "short read validity period IE\n");
 			return -FSC_ERROR_IN_MS;
 		}
 		data++;
@@ -540,7 +540,7 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 
 	/* decode data message text */
 	if (length < 1) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	msg_data = data + 1;
@@ -550,20 +550,20 @@ static int decode_sms_submit(nmt_t *nmt, const uint8_t *data, int length)
 	else
 		msg_len = msg_chars;
 	if (length < 1 + msg_len) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "short read user data IE\n");
+		LOGP(DSMS, LOGL_NOTICE, "short read user data IE\n");
 		return -FSC_ERROR_IN_MS;
 	}
 	char message[msg_chars + 1];
 	if (coding == 7) {
 		decode_message_7(msg_data, msg_len, message);
-		PDEBUG(DSMS, DEBUG_DEBUG, "Decoded message: '%s'\n", message);
+		LOGP(DSMS, LOGL_DEBUG, "Decoded message: '%s'\n", message);
 	} else {
 		memcpy(message, msg_data, msg_len);
 		message[msg_len] = '\0';
-		PDEBUG(DSMS, DEBUG_DEBUG, "Included message: '%s'\n", message);
+		LOGP(DSMS, LOGL_DEBUG, "Included message: '%s'\n", message);
 	}
 
-	PDEBUG(DSMS, DEBUG_INFO, "Submitting SMS to upper layer\n");
+	LOGP(DSMS, LOGL_INFO, "Submitting SMS to upper layer\n");
 
 	rc = sms_submit(nmt, ref, orig_address, orig_type, orig_plan, msg_ref, dest_address, dest_type, dest_plan, message);
 	if (rc < 0)
@@ -584,18 +584,18 @@ static int decode_deliver_report(nmt_t *nmt, const uint8_t *data, int length)
 	if ((data[0] & RP_MTI_MASK) == RP_MT_ERROR) {
 		error = 1;
 		if (length < 4) {
-			PDEBUG(DSMS, DEBUG_DEBUG, "deliver report still incomplete, waiting for cause IE\n");
+			LOGP(DSMS, LOGL_DEBUG, "deliver report still incomplete, waiting for cause IE\n");
 			return 0;
 		}
 		if (length < 4 + data[3]) {
-			PDEBUG(DSMS, DEBUG_DEBUG, "deliver report still incomplete, waiting for cause IE content\n");
+			LOGP(DSMS, LOGL_DEBUG, "deliver report still incomplete, waiting for cause IE content\n");
 			return 0;
 		}
 		if (data[2] == RP_IE_CAUSE && data[3] > 0)
 			cause = data[4];
-		PDEBUG(DSMS, DEBUG_INFO, "Received Delivery report: ERROR, cause=%d\n", cause);
+		LOGP(DSMS, LOGL_INFO, "Received Delivery report: ERROR, cause=%d\n", cause);
 	} else
-		PDEBUG(DSMS, DEBUG_INFO, "Received Delivery report: OK\n");
+		LOGP(DSMS, LOGL_INFO, "Received Delivery report: OK\n");
 
 	sms_deliver_report(nmt, ref, error, cause);
 
@@ -616,21 +616,21 @@ void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int __attribute__(
 	debug_text[length * 5] = '\0';
 
 	/* restart timer */
-	timer_start(&nmt->sms_timer, SMS_RECEIVE_TO);
+	osmo_timer_schedule(&nmt->sms_timer, SMS_RECEIVE_TO);
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Received %d bytes from DMS layer:%s\n", length, debug_text);
+	LOGP(DSMS, LOGL_DEBUG, "Received %d bytes from DMS layer:%s\n", length, debug_text);
 
 	if (sms->mt && !sms->data_sent) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "Ignoring data while we transmit data\n");
+		LOGP(DSMS, LOGL_NOTICE, "Ignoring data while we transmit data\n");
 		return;
 	}
 
 	/* append received data */
 	space = sizeof(sms->rx_buffer) - sms->rx_count;
 	if (space < length) {
-		PDEBUG(DSMS, DEBUG_NOTICE, "Received message exceeds RX buffer, terminating call!\n");
+		LOGP(DSMS, LOGL_NOTICE, "Received message exceeds RX buffer, terminating call!\n");
 release:
-		timer_start(&nmt->sms_timer, SMS_RELEASE_TO);
+		osmo_timer_schedule(&nmt->sms_timer, SMS_RELEASE_TO);
 		return;
 	}
 	memcpy(sms->rx_buffer + sms->rx_count, data, length);
@@ -661,12 +661,12 @@ release:
 		rc = 0;
 		break;
 	case RP_SM_READY_TO_RECEIVE:
-		PDEBUG(DSMS, DEBUG_NOTICE, "Received READY-TO-RECEVIE message.\n");
+		LOGP(DSMS, LOGL_NOTICE, "Received READY-TO-RECEVIE message.\n");
 		data += length;
 		length -= length;
 		break;
 	default:
-		PDEBUG(DSMS, DEBUG_NOTICE, "Received unknown RP message type %d.\n", data[0]);
+		LOGP(DSMS, LOGL_NOTICE, "Received unknown RP message type %d.\n", data[0]);
 		rc = -1;
 	}
 	if (rc)
@@ -689,11 +689,11 @@ void dms_all_sent(nmt_t *nmt)
 
 	if (!sms->data_sent) {
 		if (!sms->mt) {
-			PDEBUG(DSMS, DEBUG_DEBUG, "Done sending submit report, releasing.\n");
-			timer_start(&nmt->sms_timer, SMS_RELEASE_TO);
+			LOGP(DSMS, LOGL_DEBUG, "Done sending submit report, releasing.\n");
+			osmo_timer_schedule(&nmt->sms_timer, SMS_RELEASE_TO);
 		}
 		sms->data_sent = 1;
-		PDEBUG(DSMS, DEBUG_DEBUG, "DMS layer indicates acknowledge of sent data\n");
+		LOGP(DSMS, LOGL_DEBUG, "DMS layer indicates acknowledge of sent data\n");
 	}
 }
 
@@ -701,9 +701,8 @@ void sms_reset(nmt_t *nmt)
 {
 	sms_t *sms = &nmt->sms;
 
-	PDEBUG(DSMS, DEBUG_DEBUG, "Resetting SMS states\n");
-	if (nmt->sms_timer.linked)
-		timer_stop(&nmt->sms_timer);
+	LOGP(DSMS, LOGL_DEBUG, "Resetting SMS states\n");
+	osmo_timer_del(&nmt->sms_timer);
 
 	memset(sms, 0, sizeof(*sms));
 }

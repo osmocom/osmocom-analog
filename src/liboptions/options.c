@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "options.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 
 typedef struct option {
 	struct option *next;
@@ -47,7 +47,7 @@ char *options_strdup(const char *s)
 
 	o = malloc(sizeof(struct options_strdup_entry) + strlen(s));
 	if (!o) {
-		PDEBUG(DOPTIONS, DEBUG_ERROR, "No mem!\n");
+		LOGP(DOPTIONS, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	o->next = options_strdup_list;
@@ -64,19 +64,19 @@ void option_add(int short_option, const char *long_option, int parameter_count)
 	/* check if option already exists or is not allowed */
 	for (option = option_head; option; option = option->next) {
 		if (!strcmp(option->long_option, "config")) {
-			PDEBUG(DOPTIONS, DEBUG_ERROR, "Option '%s' is not allowed to add, please fix!\n", option->long_option);
+			LOGP(DOPTIONS, LOGL_ERROR, "Option '%s' is not allowed to add, please fix!\n", option->long_option);
 			abort();
 		}
 		if (option->short_option == short_option
 		 || !strcmp(option->long_option, long_option)) {
-			PDEBUG(DOPTIONS, DEBUG_ERROR, "Option '%s' added twice, please fix!\n", option->long_option);
+			LOGP(DOPTIONS, LOGL_ERROR, "Option '%s' added twice, please fix!\n", option->long_option);
 			abort();
 		}
 	}
 
 	option = calloc(1, sizeof(*option));
 	if (!option) {
-		PDEBUG(DOPTIONS, DEBUG_ERROR, "No mem!\n");
+		LOGP(DOPTIONS, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 
@@ -115,7 +115,7 @@ int options_config_file(int argc, char *argv[], const char *config_file, int (*h
 	/* open config file */
 	fp = fopen(config, "r");
 	if (!fp) {
-		PDEBUG(DOPTIONS, DEBUG_INFO, "Config file '%s' seems not to exist, using command line options only.\n", config);
+		LOGP(DOPTIONS, LOGL_INFO, "Config file '%s' seems not to exist, using command line options only.\n", config);
 		return 1;
 	}
 
@@ -201,21 +201,21 @@ int options_config_file(int argc, char *argv[], const char *config_file, int (*h
 		/* search option */
 		for (option = option_head; option; option = option->next) {
 			if (opt[0] == option->short_option && opt[1] == '\0') {
-				PDEBUG(DOPTIONS, DEBUG_INFO, "Config file option '%s' ('%s'), parameter%s\n", opt, option->long_option, params);
+				LOGP(DOPTIONS, LOGL_INFO, "Config file option '%s' ('%s'), parameter%s\n", opt, option->long_option, params);
 				break;
 			}
 			if (!strcmp(opt, option->long_option)) {
-				PDEBUG(DOPTIONS, DEBUG_INFO, "Config file option '%s', parameter%s\n", opt, params);
+				LOGP(DOPTIONS, LOGL_INFO, "Config file option '%s', parameter%s\n", opt, params);
 				break;
 			}
 		}
 		if (!option) {
-			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given option '%s' in config file '%s' at line %d is not a valid option, use '-h' for help!\n", opt, config_file, line);
+			LOGP(DOPTIONS, LOGL_ERROR, "Given option '%s' in config file '%s' at line %d is not a valid option, use '-h' for help!\n", opt, config_file, line);
 			rc = -EINVAL;
 			goto done;
 		}
 		if (option->parameter_count != i) {
-			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
+			LOGP(DOPTIONS, LOGL_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
 			return -EINVAL;
 		}
 		rc = handle_options(option->short_option, 0, args);
@@ -242,11 +242,11 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 		/* --config */
 		if (!strcmp(argv[argi], "--config")) {
 			if (argi > 1) {
-				PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' must be the first option specified, use '-h' for help!\n", argv[argi]);
+				LOGP(DOPTIONS, LOGL_ERROR, "Given command line option '%s' must be the first option specified, use '-h' for help!\n", argv[argi]);
 				return -EINVAL;
 			}
 			if (argc <= 2) {
-				PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' requires 1 parameter, use '-h' for help!\n", argv[argi]);
+				LOGP(DOPTIONS, LOGL_ERROR, "Given command line option '%s' requires 1 parameter, use '-h' for help!\n", argv[argi]);
 				return -EINVAL;
 			}
 			argi += 1;
@@ -255,7 +255,7 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 		if (argv[argi][0] == '-') {
 			if (argv[argi][1] != '-') {
 				if (strlen(argv[argi]) != 2) {
-					PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' exceeds one character, use '-h' for help!\n", argv[argi]);
+					LOGP(DOPTIONS, LOGL_ERROR, "Given command line option '%s' exceeds one character, use '-h' for help!\n", argv[argi]);
 					return -EINVAL;
 				}
 				/* -x */
@@ -265,9 +265,9 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 							params[0] = '\0';
 							for (i = 0; i < option->parameter_count; i++)
 								sprintf(strchr(params, '\0'), " '%s'", argv[argi + 1 + i]);
-							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s' ('--%s'), parameter%s\n", argv[argi], option->long_option, params);
+							LOGP(DOPTIONS, LOGL_INFO, "Command line option '%s' ('--%s'), parameter%s\n", argv[argi], option->long_option, params);
 						} else
-							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s' ('--%s')\n", argv[argi], option->long_option);
+							LOGP(DOPTIONS, LOGL_INFO, "Command line option '%s' ('--%s')\n", argv[argi], option->long_option);
 						break;
 					}
 				}
@@ -279,19 +279,19 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 							params[0] = '\0';
 							for (i = 0; i < option->parameter_count; i++)
 								sprintf(strchr(params, '\0'), " '%s'", argv[argi + 1 + i]);
-							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s', parameter%s\n", argv[argi], params);
+							LOGP(DOPTIONS, LOGL_INFO, "Command line option '%s', parameter%s\n", argv[argi], params);
 						} else
-							PDEBUG(DOPTIONS, DEBUG_INFO, "Command line option '%s'\n", argv[argi]);
+							LOGP(DOPTIONS, LOGL_INFO, "Command line option '%s'\n", argv[argi]);
 						break;
 					}
 				}
 			}
 			if (!option) {
-				PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' is not a valid option, use '-h' for help!\n", argv[argi]);
+				LOGP(DOPTIONS, LOGL_ERROR, "Given command line option '%s' is not a valid option, use '-h' for help!\n", argv[argi]);
 				return -EINVAL;
 			}
 			if (argi + option->parameter_count >= argc) {
-				PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' requires %d parameter(s), use '-h' for help!\n", argv[argi], option->parameter_count);
+				LOGP(DOPTIONS, LOGL_ERROR, "Given command line option '%s' requires %d parameter(s), use '-h' for help!\n", argv[argi], option->parameter_count);
 				return -EINVAL;
 			}
 			rc = handle_options(option->short_option, argi + 1, argv);
@@ -306,7 +306,7 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 	/* no more options, so we check if there is an option after a non-option parameter */
 	for (i = argi; i < argc; i++) {
 		if (argv[i][0] == '-') {
-			PDEBUG(DOPTIONS, DEBUG_ERROR, "Given command line option '%s' behind command line parameter '%s' not allowed! Please put all command line options before command line parameter(s).\n", argv[i], argv[argi]);
+			LOGP(DOPTIONS, LOGL_ERROR, "Given command line option '%s' behind command line parameter '%s' not allowed! Please put all command line options before command line parameter(s).\n", argv[i], argv[argi]);
 			return -EINVAL;
 		}
 	}

@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
 #include "amps.h"
@@ -133,7 +133,7 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 		const char *number = amps_min2number(trans->min1, trans->min2);
 		int old_callref = trans->callref;
 		amps_t *old_amps = trans->amps;
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", number);
+		LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", number);
 		destroy_transaction(trans);
 		if (old_amps) /* should be... */
 			amps_go_idle(old_amps);
@@ -143,11 +143,11 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 
 	trans = calloc(1, sizeof(*trans));
 	if (!trans) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DTRANS, LOGL_ERROR, "No memory!\n");
 		return NULL;
 	}
 
-	timer_init(&trans->timer, transaction_timeout, trans);
+	osmo_timer_setup(&trans->timer, transaction_timeout, trans);
 
 	trans_new_state(trans, state);
 	trans->min1 = min1;
@@ -159,7 +159,7 @@ transaction_t *create_transaction(amps_t *amps, enum amps_trans_state state, uin
 	trans->chan = chan;
 
 	const char *number = amps_min2number(trans->min1, trans->min2);
-	PDEBUG(DTRANS, DEBUG_INFO, "Created transaction for subscriber '%s'\n", number);
+	LOGP(DTRANS, LOGL_INFO, "Created transaction for subscriber '%s'\n", number);
 
 	link_transaction(trans, amps);
 
@@ -172,9 +172,9 @@ void destroy_transaction(transaction_t *trans)
 	unlink_transaction(trans);
 	
 	const char *number = amps_min2number(trans->min1, trans->min2);
-	PDEBUG(DTRANS, DEBUG_INFO, "Destroying transaction for subscriber '%s'\n", number);
+	LOGP(DTRANS, LOGL_INFO, "Destroying transaction for subscriber '%s'\n", number);
 
-	timer_exit(&trans->timer);
+	osmo_timer_del(&trans->timer);
 
 	trans_new_state(trans, 0);
 
@@ -187,7 +187,7 @@ void link_transaction(transaction_t *trans, amps_t *amps)
 	transaction_t **transp;
 
 	/* attach to end of list, so first transaction is served first */
-	PDEBUG(DTRANS, DEBUG_DEBUG, "Linking transaction %p to amps %p\n", trans, amps);
+	LOGP(DTRANS, LOGL_DEBUG, "Linking transaction %p to amps %p\n", trans, amps);
 	trans->amps = amps;
 	trans->next = NULL;
 	transp = &amps->trans_list;
@@ -203,12 +203,12 @@ void unlink_transaction(transaction_t *trans)
 	transaction_t **transp;
 
 	/* unlink */
-	PDEBUG(DTRANS, DEBUG_DEBUG, "Unlinking transaction %p from amps %p\n", trans, trans->amps);
+	LOGP(DTRANS, LOGL_DEBUG, "Unlinking transaction %p from amps %p\n", trans, trans->amps);
 	transp = &trans->amps->trans_list;
 	while (*transp && *transp != trans)
 		transp = &((*transp)->next);
 	if (!(*transp)) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "Transaction not in list, please fix!!\n");
+		LOGP(DTRANS, LOGL_ERROR, "Transaction not in list, please fix!!\n");
 		abort();
 	}
 	*transp = trans->next;
@@ -224,7 +224,7 @@ transaction_t *search_transaction_number(amps_t *amps, uint32_t min1, uint16_t m
 		if (trans->min1 == min1
 		 && trans->min2 == min2) {
 			const char *number = amps_min2number(trans->min1, trans->min2);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", number);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", number);
 			return trans;
 		}
 		trans = trans->next;
@@ -243,7 +243,7 @@ transaction_t *search_transaction_callref(amps_t *amps, int callref)
 	while (trans) {
 		if (trans->callref == callref) {
 			const char *number = amps_min2number(trans->min1, trans->min2);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", number);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", number);
 			return trans;
 		}
 		trans = trans->next;
@@ -254,7 +254,7 @@ transaction_t *search_transaction_callref(amps_t *amps, int callref)
 
 void trans_new_state(transaction_t *trans, int state)
 {
-	PDEBUG(DTRANS, DEBUG_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));
+	LOGP(DTRANS, LOGL_INFO, "Transaction state %s -> %s\n", trans_state_name(trans->state), trans_state_name(state));
 	trans->state = state;
 	amps_display_status();
 }
@@ -263,12 +263,12 @@ void amps_flush_other_transactions(amps_t *amps, transaction_t *trans)
 {
 	/* flush after this very trans */
 	while (trans->next) {
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Kicking other pending transaction\n");
+		LOGP(DTRANS, LOGL_NOTICE, "Kicking other pending transaction\n");
 		destroy_transaction(trans->next);
 	}
 	/* flush before this very trans */
 	while (amps->trans_list != trans) {
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Kicking other pending transaction\n");
+		LOGP(DTRANS, LOGL_NOTICE, "Kicking other pending transaction\n");
 		destroy_transaction(amps->trans_list);
 	}
 }

@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "fuenf.h"
 #include "dsp.h"
@@ -106,7 +106,7 @@ int dsp_init_sender(fuenf_t *fuenf, int samplerate, double max_deviation, double
 	sample_t *spl;
 	int len;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for transceiver.\n");
 
 	/* set modulation parameters */
 	sender_set_fm(&fuenf->sender, max_deviation, MAX_MODULATION, signal_deviation, MAX_DISPLAY);
@@ -129,7 +129,7 @@ int dsp_init_sender(fuenf_t *fuenf, int samplerate, double max_deviation, double
 	len = (int)(8000.0 * (1.0 / RX_TOL_TONE_FREQ) + 0.5);
 	spl = calloc(1, len * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDSP, LOGL_ERROR, "No memory!\n");
 		goto error;
 	}
 	fuenf->rx_tone_filter_spl = spl;
@@ -154,7 +154,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(fuenf_t *fuenf)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for transceiver.\n");
 
 	/* free tone buffers */
 	if (fuenf->rx_tone_filter_spl)
@@ -228,7 +228,7 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 				break;
 			/* check if we have enought silence */
 			if (fuenf->rx_digit_count == RX_MIN_PREAMBLE) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected silence, waiting for digits.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected silence, waiting for digits.\n");
 				fuenf->rx_state = RX_STATE_IDLE;
 				break;
 			}
@@ -237,7 +237,7 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 			/* wait for digit */
 			if (d < 0)
 				break;
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "We have some tone, start receiving digits.\n");
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "We have some tone, start receiving digits.\n");
 			fuenf->rx_callsign_count = 0;
 			fuenf->rx_callsign[fuenf->rx_callsign_count] = d;
 			fuenf->rx_state = RX_STATE_DIGIT;
@@ -247,18 +247,18 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 			if (!change) {
 				if (fuenf->rx_digit_count == RX_LEN_DIGIT_TH) {
 					if (d < 0) {
-						PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Not enough digits received, waiting for next transmission.\n");
+						LOGP_CHAN(DDSP, LOGL_DEBUG, "Not enough digits received, waiting for next transmission.\n");
 						fuenf->rx_function = 0;
 						fuenf->rx_function_count = 0;
 						fuenf->rx_state = RX_STATE_RESET;
 						break;
 					}
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected digit #%d (amplitude = %.0f%%)\n", d + 1, sqrt(a) * 100.0);
+					LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected digit #%d (amplitude = %.0f%%)\n", d + 1, sqrt(a) * 100.0);
 					display_measurements_update(fuenf->dmp_digit_level, sqrt(a) * 100.0, 0.0);
 					break;
 				}
 				if (fuenf->rx_digit_count == RX_LEN_DIGIT_MAX) {
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected digit too long, waiting for next transmission.\n");
+					LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected digit too long, waiting for next transmission.\n");
 					fuenf->rx_state = RX_STATE_RESET;
 					break;
 				}
@@ -272,7 +272,7 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 			}
 			/* if counter (when changed) was too low */
 			if (change_count < RX_LEN_DIGIT_MIN) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected digit too short, waiting for next transmission.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected digit too short, waiting for next transmission.\n");
 				fuenf->rx_state = RX_STATE_RESET;
 				break;
 			}
@@ -284,7 +284,7 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 				for (i = 0; i < 5; i++) {
 					if (fuenf->rx_callsign[i] == REPEAT_DIGIT) {
 						if (i == 0) {
-							PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "First digit is a repeat digit, this is not allowed, waiting for next transmission.\n");
+							LOGP_CHAN(DDSP, LOGL_DEBUG, "First digit is a repeat digit, this is not allowed, waiting for next transmission.\n");
 							fuenf->rx_state = RX_STATE_RESET;
 							break;
 						}
@@ -298,7 +298,7 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 				fuenf->rx_callsign[i] = '\0';
 				if (i < 5)
 					break;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Complete call sign '%s' received, waiting for signal tone(s).\n", fuenf->rx_callsign);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Complete call sign '%s' received, waiting for signal tone(s).\n", fuenf->rx_callsign);
 				fuenf_rx_callsign(fuenf, fuenf->rx_callsign);
 				fuenf->rx_function_count = 0; /* must reset, so we can detect timeout */
 				fuenf->rx_state = RX_STATE_WAIT_SIGNAL;
@@ -362,7 +362,7 @@ static void tone_decode(fuenf_t *fuenf, sample_t *samples, int length)
 		/* wait for signal */
 		if (!funktion) {
 			if (fuenf->rx_function_count >= RX_WAIT_TONE_MAX) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "There is no double tone, waiting for next transmission.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "There is no double tone, waiting for next transmission.\n");
 				fuenf->rx_state = RX_STATE_RESET;
 				break;
 			}
@@ -376,13 +376,13 @@ static void tone_decode(fuenf_t *fuenf, sample_t *samples, int length)
 	case RX_STATE_SIGNAL:
 		/* if signal ceases too early */
 		if (funktion != fuenf->rx_function) {
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signal tones ceased to early, waiting for next transmission.\n");
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "Signal tones ceased to early, waiting for next transmission.\n");
 			fuenf->rx_state = RX_STATE_RESET;
 			break;
 		}
 		if (fuenf->rx_function_count >= RX_LEN_TONE_MIN) {
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected tones %.0f+%.0f Hz (amplitude = %.0f%%+%.0f%%)\n", tone_freq[tone1], tone_freq[tone2], fuenf->rx_tone_levels[tone1] * 100.0, fuenf->rx_tone_levels[tone2] * 100.0);
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signal tones detected, done, waiting for next transmission.\n");
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected tones %.0f+%.0f Hz (amplitude = %.0f%%+%.0f%%)\n", tone_freq[tone1], tone_freq[tone2], fuenf->rx_tone_levels[tone1] * 100.0, fuenf->rx_tone_levels[tone2] * 100.0);
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "Signal tones detected, done, waiting for next transmission.\n");
 			fuenf_rx_function(fuenf, fuenf->rx_function);
 			fuenf->rx_state = RX_STATE_RESET;
 			break;
@@ -435,11 +435,11 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 	fuenf->tx_seq_length = 0;
 
 	if (strlen(rufzeichen) != 5) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Given call sign has invalid length.\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "Given call sign has invalid length.\n");
 		return -EINVAL;
 	}
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Generating sequence for call sign '%s' and function code '%d'.\n", rufzeichen, funktion);
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Generating sequence for call sign '%s' and function code '%d'.\n", rufzeichen, funktion);
 
 	/* add preamble */
 	seq[index].phasestep1 = 0;
@@ -451,7 +451,7 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 	tone_index = index;
 	for (i = 0; rufzeichen[i]; i++) {
 		if (rufzeichen[i] < '0' || rufzeichen[i] > '9') {
-			PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Given call sign has invalid digit '%c'.\n", rufzeichen[i]);
+			LOGP_CHAN(DDSP, LOGL_ERROR, "Given call sign has invalid digit '%c'.\n", rufzeichen[i]);
 			return -EINVAL;
 		}
 		if (rufzeichen[i] == '0')
@@ -461,9 +461,9 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 		/* use repeat digit, if two subsequent digits are the same */
 		if (i > 0 && seq[index - 1].phasestep1 == seq[index].phasestep1) {
 			seq[index].phasestep1 = 2.0 * M_PI * digit_freq[REPEAT_DIGIT] * fuenf->sample_duration;
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " -> Adding digit '%c' as tone with %.0f Hz.\n", rufzeichen[i], digit_freq[REPEAT_DIGIT]);
+			LOGP_CHAN(DDSP, LOGL_DEBUG, " -> Adding digit '%c' as tone with %.0f Hz.\n", rufzeichen[i], digit_freq[REPEAT_DIGIT]);
 		} else
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " -> Adding digit '%c' as tone with %.0f Hz.\n", rufzeichen[i], digit_freq[rufzeichen[i] - '0']);
+			LOGP_CHAN(DDSP, LOGL_DEBUG, " -> Adding digit '%c' as tone with %.0f Hz.\n", rufzeichen[i], digit_freq[rufzeichen[i] - '0']);
 		seq[index].phasestep2 = 0;
 		seq[index].duration = TX_LEN_DIGIT;
 		index++;
@@ -493,7 +493,7 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 
 #ifndef DEBUG
 	if (funktion == FUENF_FUNKTION_RUF) {
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " -> Adding call signal of %.0f Hz.\n", digit_freq[REPEAT_DIGIT]);
+		LOGP_CHAN(DDSP, LOGL_DEBUG, " -> Adding call signal of %.0f Hz.\n", digit_freq[REPEAT_DIGIT]);
 		for (i = 0; i < TX_NUM_KANAL; i++) {
 			/* add tone (double volume) */
 			seq[index].phasestep1 = 2.0 * M_PI * digit_freq[REPEAT_DIGIT] * fuenf->sample_duration;
@@ -522,7 +522,7 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 			if (signals[i].funktion == funktion)
 				break;
 		}
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, " -> Adding call signal of %.0f Hz and %.0f Hz.\n", tone_freq[signals[i].tone1], tone_freq[signals[i].tone2]);
+		LOGP_CHAN(DDSP, LOGL_DEBUG, " -> Adding call signal of %.0f Hz and %.0f Hz.\n", tone_freq[signals[i].tone1], tone_freq[signals[i].tone2]);
 		seq[index].phasestep1 = 2.0 * M_PI * tone_freq[signals[i].tone1] * fuenf->sample_duration;
 		seq[index].phasestep2 = 2.0 * M_PI * tone_freq[signals[i].tone2] * fuenf->sample_duration;
 		seq[index].duration = TX_LEN_SIGNAL;
@@ -532,7 +532,7 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 
 	/* check array overflow, if it did not already crashed before */
 	if (index > (int)(sizeof(fuenf->tx_seq) / sizeof(fuenf->tx_seq[0]))) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Array size of tx_seq too small, please fix!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "Array size of tx_seq too small, please fix!\n");
 		abort();
 	}
 

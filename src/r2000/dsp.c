@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "r2000.h"
 #include "dsp.h"
 
@@ -78,20 +78,20 @@ int dsp_init_sender(r2000_t *r2000)
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
 	setup_compandor(&r2000->cstate, 8000, 3.0, 13.5);
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* set modulation parameters */
 	sender_set_fm(&r2000->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f\n", TX_PEAK_FSK);
+	LOGP(DDSP, LOGL_DEBUG, "Using FSK level of %.3f\n", TX_PEAK_FSK);
 
 	/* init fsk */
 	if (fsk_mod_init(&r2000->fsk_mod, r2000, fsk_send_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, TX_PEAK_FSK, 1, 0) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (fsk_demod_init(&r2000->fsk_demod, r2000, fsk_receive_bit, r2000->sender.samplerate, FSK_BIT_RATE, FSK_F0, FSK_F1, FSK_BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (r2000->sender.loopback)
@@ -101,11 +101,11 @@ int dsp_init_sender(r2000_t *r2000)
 
 	/* init supervisorty fsk */
 	if (fsk_mod_init(&r2000->super_fsk_mod, r2000, super_send_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, TX_PEAK_SUPER, 0, 0) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (fsk_demod_init(&r2000->super_fsk_demod, r2000, super_receive_bit, r2000->sender.samplerate, SUPER_BIT_RATE, SUPER_F0, SUPER_F1, SUPER_BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 
@@ -129,7 +129,7 @@ int dsp_init_sender(r2000_t *r2000)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for Transceiver.\n");
 
 	fsk_mod_cleanup(&r2000->fsk_mod);
 	fsk_demod_cleanup(&r2000->fsk_demod);
@@ -309,7 +309,7 @@ static int fsk_send_bit(void *inst)
 		frame = r2000_get_frame(r2000);
 		if (!frame) {
 			r2000->tx_frame_length = 0;
-			PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
+			LOGP_CHAN(DDSP, LOGL_DEBUG, "Stop sending frames.\n");
 			return -1;
 		}
 		memcpy(r2000->tx_frame, frame, 208);
@@ -416,9 +416,9 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 		r2000->super_tx_word = 0x40101 | ((super & 0x7f) << 1);
 		/* clear pending data in rx word */
 		r2000->super_rx_word = 0x00000;
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s (super = 0x%05x)\n", r2000_dsp_mode_name(r2000->dsp_mode), r2000_dsp_mode_name(mode), r2000->super_tx_word);
+		LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s (super = 0x%05x)\n", r2000_dsp_mode_name(r2000->dsp_mode), r2000_dsp_mode_name(mode), r2000->super_tx_word);
 	} else if (r2000->dsp_mode != mode)
-		PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", r2000_dsp_mode_name(r2000->dsp_mode), r2000_dsp_mode_name(mode));
+		LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", r2000_dsp_mode_name(r2000->dsp_mode), r2000_dsp_mode_name(mode));
 
 	r2000->dsp_mode = mode;
 }

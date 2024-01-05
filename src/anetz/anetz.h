@@ -24,7 +24,7 @@ typedef struct anetz {
 	enum anetz_state	state;			/* current sender's state */
 	int			callref;		/* call reference */
 	char			station_id[8];		/* current station ID */
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 
 	/* display measurements */
 	dispmeasparam_t		*dmp_tone_level;

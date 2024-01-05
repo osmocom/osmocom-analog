@@ -27,7 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
@@ -259,6 +259,7 @@ fail:
 		fuenf_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 	fuenf_exit();
 

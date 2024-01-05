@@ -45,7 +45,7 @@
 #include <SoapySDR/Device.h>
 #include <SoapySDR/Formats.h>
 #include "soapy.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 
 extern int sdr_rx_overflow;
@@ -72,7 +72,7 @@ static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 		key = args_string;
 		val = strchr(key, '=');
 		if (!val) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Error parsing SDR args: No '=' after key\n");
+			LOGP(DSOAPY, LOGL_ERROR, "Error parsing SDR args: No '=' after key\n");
 			soapy_close();
 			return -EIO;
 		}
@@ -80,7 +80,7 @@ static int parse_args(SoapySDRKwargs *args, const char *_args_string)
 		args_string = strchr(val, ',');
 		if (args_string)
 			*args_string++ = '\0';
-		PDEBUG(DSOAPY, DEBUG_DEBUG, "SDR device args: key='%s' value='%s'\n", key, val);
+		LOGP(DSOAPY, LOGL_DEBUG, "SDR device args: key='%s' value='%s'\n", key, val);
 		SoapySDRKwargs_set(args, key, val);
 	}
 
@@ -99,22 +99,22 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 	use_time_stamps = timestamps;
 	if (use_time_stamps && (1000000000LL % (long long)rate)) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "The given sample duration is not a multiple of a nano second. I.e. we can't divide 10^9 by sample rate of %.0f. Please choose a different sample rate for time stamp support!\n", rate);
+		LOGP(DSOAPY, LOGL_ERROR, "The given sample duration is not a multiple of a nano second. I.e. we can't divide 10^9 by sample rate of %.0f. Please choose a different sample rate for time stamp support!\n", rate);
 		use_time_stamps = 0;
 	}
 	Ns_per_sample = 1000000000LL / (long long)rate;
 	samplerate = rate;
 
 	/* parsing ARGS */
-	PDEBUG(DSOAPY, DEBUG_INFO, "Using device args \"%s\"\n", _device_args);
+	LOGP(DSOAPY, LOGL_INFO, "Using device args \"%s\"\n", _device_args);
 	rc = parse_args(&device_args, _device_args);
 	if (rc < 0)
 		return rc;
-	PDEBUG(DSOAPY, DEBUG_INFO, "Using stream args \"%s\"\n", _stream_args);
+	LOGP(DSOAPY, LOGL_INFO, "Using stream args \"%s\"\n", _stream_args);
 	rc = parse_args(&stream_args, _stream_args);
 	if (rc < 0)
 		return rc;
-	PDEBUG(DSOAPY, DEBUG_INFO, "Using tune args \"%s\"\n", _tune_args);
+	LOGP(DSOAPY, LOGL_INFO, "Using tune args \"%s\"\n", _tune_args);
 	rc = parse_args(&tune_args, _tune_args);
 	if (rc < 0)
 		return rc;
@@ -129,7 +129,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	/* create SoapySDR device */
 	sdr = SoapySDRDevice_make(&device_args);
 	if (!sdr) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to create SoapySDR\n");
+		LOGP(DSOAPY, LOGL_ERROR, "Failed to create SoapySDR\n");
 		soapy_close();
 		return -EIO;
 	}
@@ -142,29 +142,29 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 			int i;
 			clocks = SoapySDRDevice_listClockSources(sdr, &clocks_length);
 			if (!clocks) {
-				PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to request list of clock sources!\n");
+				LOGP(DSOAPY, LOGL_ERROR, "Failed to request list of clock sources!\n");
 				soapy_close();
 				return -EIO;
 			}
 			if (clocks_length) {
 				for (i = 0; i < (int)clocks_length; i++)
-					PDEBUG(DSOAPY, DEBUG_NOTICE, "Clock source: '%s'\n", clocks[i]);
+					LOGP(DSOAPY, LOGL_NOTICE, "Clock source: '%s'\n", clocks[i]);
 				got_clock = SoapySDRDevice_getClockSource(sdr);
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Default clock source: '%s'\n", got_clock);
+				LOGP(DSOAPY, LOGL_NOTICE, "Default clock source: '%s'\n", got_clock);
 			} else
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "There are no clock sources configurable for this device.\n");
+				LOGP(DSOAPY, LOGL_NOTICE, "There are no clock sources configurable for this device.\n");
 			soapy_close();
 			return 1;
 		}
 
 		if (SoapySDRDevice_setClockSource(sdr, clock_source) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set clock source to '%s'\n", clock_source);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set clock source to '%s'\n", clock_source);
 			soapy_close();
 			return -EIO;
 		}
 		got_clock = SoapySDRDevice_getClockSource(sdr);
 		if (!!strcasecmp(clock_source, got_clock)) {
-			PDEBUG(DSOAPY, DEBUG_NOTICE, "Given clock source '%s' was accepted, but driver claims to use '%s'\n", clock_source, got_clock);
+			LOGP(DSOAPY, LOGL_NOTICE, "Given clock source '%s' was accepted, but driver claims to use '%s'\n", clock_source, got_clock);
 			soapy_close();
 			return -EINVAL;
 		}
@@ -173,9 +173,9 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	if (rx_frequency) {
 		/* get number of channels and check if requested channel is in range */
 		num_channels = SoapySDRDevice_getNumChannels(sdr, SOAPY_SDR_RX);
-		PDEBUG(DSOAPY, DEBUG_DEBUG, "We have %d RX channel, selecting channel #%d\n", (int)num_channels, (int)channel);
+		LOGP(DSOAPY, LOGL_DEBUG, "We have %d RX channel, selecting channel #%d\n", (int)num_channels, (int)channel);
 		if (channel >= num_channels) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Requested channel #%d (capable of RX) does not exist. Please select channel %d..%d!\n", (int)channel, 0, (int)num_channels - 1);
+			LOGP(DSOAPY, LOGL_ERROR, "Requested channel #%d (capable of RX) does not exist. Please select channel %d..%d!\n", (int)channel, 0, (int)num_channels - 1);
 			soapy_close();
 			return -EIO;
 		}
@@ -188,26 +188,26 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 				int i;
 				antennas = SoapySDRDevice_listAntennas(sdr, SOAPY_SDR_RX, channel, &antennas_length);
 				if (!antennas) {
-					PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to request list of RX antennas!\n");
+					LOGP(DSOAPY, LOGL_ERROR, "Failed to request list of RX antennas!\n");
 					soapy_close();
 					return -EIO;
 				}
 				for (i = 0; i < (int)antennas_length; i++)
-					PDEBUG(DSOAPY, DEBUG_NOTICE, "RX Antenna: '%s'\n", antennas[i]);
+					LOGP(DSOAPY, LOGL_NOTICE, "RX Antenna: '%s'\n", antennas[i]);
 				got_antenna = SoapySDRDevice_getAntenna(sdr, SOAPY_SDR_RX, channel);
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Default RX Antenna: '%s'\n", got_antenna);
+				LOGP(DSOAPY, LOGL_NOTICE, "Default RX Antenna: '%s'\n", got_antenna);
 				soapy_close();
 				return 1;
 			}
 
 			if (SoapySDRDevice_setAntenna(sdr, SOAPY_SDR_RX, channel, rx_antenna) != 0) {
-				PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX antenna to '%s'\n", rx_antenna);
+				LOGP(DSOAPY, LOGL_ERROR, "Failed to set RX antenna to '%s'\n", rx_antenna);
 				soapy_close();
 				return -EIO;
 			}
 			got_antenna = SoapySDRDevice_getAntenna(sdr, SOAPY_SDR_RX, channel);
 			if (!!strcasecmp(rx_antenna, got_antenna)) {
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Given RX antenna '%s' was accepted, but driver claims to use '%s'\n", rx_antenna, got_antenna);
+				LOGP(DSOAPY, LOGL_NOTICE, "Given RX antenna '%s' was accepted, but driver claims to use '%s'\n", rx_antenna, got_antenna);
 				soapy_close();
 				return -EINVAL;
 			}
@@ -215,7 +215,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 		/* set rate */
 		if (SoapySDRDevice_setSampleRate(sdr, SOAPY_SDR_RX, channel, rate) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
 			soapy_close();
 			return -EIO;
 		}
@@ -223,7 +223,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* see what rate actually is */
 		got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_RX, channel);
 		if (fabs(got_rate - rate) > 1.0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Given RX rate %.3f Hz is not supported, try %.3f Hz\n", rate, got_rate);
+			LOGP(DSOAPY, LOGL_ERROR, "Given RX rate %.3f Hz is not supported, try %.3f Hz\n", rate, got_rate);
 			soapy_close();
 			return -EINVAL;
 		}
@@ -231,7 +231,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		if (rx_gain) {
 			/* set gain */
 			if (SoapySDRDevice_setGain(sdr, SOAPY_SDR_RX, channel, rx_gain) != 0) {
-				PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
+				LOGP(DSOAPY, LOGL_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
 				soapy_close();
 				return -EIO;
 			}
@@ -239,7 +239,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 			/* see what gain actually is */
 			got_gain = SoapySDRDevice_getGain(sdr, SOAPY_SDR_RX, channel);
 			if (fabs(got_gain - rx_gain) > 0.001) {
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
+				LOGP(DSOAPY, LOGL_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
 				rx_gain = got_gain;
 			}
 		}
@@ -250,7 +250,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 		/* set frequency */
 		if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_RX, channel, rx_frequency, &tune_args) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
 			soapy_close();
 			return -EIO;
 		}
@@ -258,14 +258,14 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* see what frequency actually is */
 		got_frequency = SoapySDRDevice_getFrequency(sdr, SOAPY_SDR_RX, channel);
 		if (fabs(got_frequency - rx_frequency) > 100.0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %.0f Hz\n", rx_frequency, got_frequency);
+			LOGP(DSOAPY, LOGL_ERROR, "Given RX frequency %.0f Hz is not supported, try %.0f Hz\n", rx_frequency, got_frequency);
 			soapy_close();
 			return -EINVAL;
 		}
 
 		/* set bandwidth */
 		if (SoapySDRDevice_setBandwidth(sdr, SOAPY_SDR_RX, channel, bandwidth) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
 			soapy_close();
 			return -EIO;
 		}
@@ -273,7 +273,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* see what bandwidth actually is */
 		got_bandwidth = SoapySDRDevice_getBandwidth(sdr, SOAPY_SDR_RX, channel);
 		if (fabs(got_bandwidth - bandwidth) > 100.0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
+			LOGP(DSOAPY, LOGL_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
 			soapy_close();
 			return -EINVAL;
 		}
@@ -285,7 +285,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		if (SoapySDRDevice_setupStream(sdr, &rxStream, SOAPY_SDR_RX, SOAPY_SDR_CF32, &channel, 1, &stream_args) != 0)
 #endif
 		{
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set RX streamer args\n");
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set RX streamer args\n");
 			soapy_close();
 			return -EIO;
 		}
@@ -293,7 +293,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* get buffer sizes */
 		rx_samps_per_buff = SoapySDRDevice_getStreamMTU(sdr, rxStream);
 		if (rx_samps_per_buff == 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to get RX streamer sample buffer\n");
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to get RX streamer sample buffer\n");
 			soapy_close();
 			return -EIO;
 		}
@@ -302,9 +302,9 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	if (tx_frequency) {
 		/* get number of channels and check if requested channel is in range */
 		num_channels = SoapySDRDevice_getNumChannels(sdr, SOAPY_SDR_TX);
-		PDEBUG(DSOAPY, DEBUG_DEBUG, "We have %d TX channel, selecting channel #%d\n", (int)num_channels, (int)channel);
+		LOGP(DSOAPY, LOGL_DEBUG, "We have %d TX channel, selecting channel #%d\n", (int)num_channels, (int)channel);
 		if (channel >= num_channels) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Requested channel #%d (capable of TX) does not exist. Please select channel %d..%d!\n", (int)channel, 0, (int)num_channels - 1);
+			LOGP(DSOAPY, LOGL_ERROR, "Requested channel #%d (capable of TX) does not exist. Please select channel %d..%d!\n", (int)channel, 0, (int)num_channels - 1);
 			soapy_close();
 			return -EIO;
 		}
@@ -317,26 +317,26 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 				int i;
 				antennas = SoapySDRDevice_listAntennas(sdr, SOAPY_SDR_TX, channel, &antennas_length);
 				if (!antennas) {
-					PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to request list of TX antennas!\n");
+					LOGP(DSOAPY, LOGL_ERROR, "Failed to request list of TX antennas!\n");
 					soapy_close();
 					return -EIO;
 				}
 				for (i = 0; i < (int)antennas_length; i++)
-					PDEBUG(DSOAPY, DEBUG_NOTICE, "TX Antenna: '%s'\n", antennas[i]);
+					LOGP(DSOAPY, LOGL_NOTICE, "TX Antenna: '%s'\n", antennas[i]);
 				got_antenna = SoapySDRDevice_getAntenna(sdr, SOAPY_SDR_TX, channel);
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Default TX Antenna: '%s'\n", got_antenna);
+				LOGP(DSOAPY, LOGL_NOTICE, "Default TX Antenna: '%s'\n", got_antenna);
 				soapy_close();
 				return 1;
 			}
 
 			if (SoapySDRDevice_setAntenna(sdr, SOAPY_SDR_TX, channel, tx_antenna) != 0) {
-				PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set TX antenna to '%s'\n", tx_antenna);
+				LOGP(DSOAPY, LOGL_ERROR, "Failed to set TX antenna to '%s'\n", tx_antenna);
 				soapy_close();
 				return -EIO;
 			}
 			got_antenna = SoapySDRDevice_getAntenna(sdr, SOAPY_SDR_TX, channel);
 			if (!!strcasecmp(tx_antenna, got_antenna)) {
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Given TX antenna '%s' was accepted, but driver claims to use '%s'\n", tx_antenna, got_antenna);
+				LOGP(DSOAPY, LOGL_NOTICE, "Given TX antenna '%s' was accepted, but driver claims to use '%s'\n", tx_antenna, got_antenna);
 				soapy_close();
 				return -EINVAL;
 			}
@@ -344,7 +344,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 
 		/* set rate */
 		if (SoapySDRDevice_setSampleRate(sdr, SOAPY_SDR_TX, channel, rate) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
 			soapy_close();
 			return -EIO;
 		}
@@ -352,7 +352,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* see what rate actually is */
 		got_rate = SoapySDRDevice_getSampleRate(sdr, SOAPY_SDR_TX, channel);
 		if (fabs(got_rate - rate) > 1.0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Given TX rate %.3f Hz is not supported, try %.3f Hz\n", rate, got_rate);
+			LOGP(DSOAPY, LOGL_ERROR, "Given TX rate %.3f Hz is not supported, try %.3f Hz\n", rate, got_rate);
 			soapy_close();
 			return -EINVAL;
 		}
@@ -360,7 +360,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		if (tx_gain) {
 			/* set gain */
 			if (SoapySDRDevice_setGain(sdr, SOAPY_SDR_TX, channel, tx_gain) != 0) {
-				PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
+				LOGP(DSOAPY, LOGL_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
 				soapy_close();
 				return -EIO;
 			}
@@ -368,14 +368,14 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 			/* see what gain actually is */
 			got_gain = SoapySDRDevice_getGain(sdr, SOAPY_SDR_TX, channel);
 			if (fabs(got_gain - tx_gain) > 0.001) {
-				PDEBUG(DSOAPY, DEBUG_NOTICE, "Given TX gain %.3f is not supported, we use %.3f\n", tx_gain, got_gain);
+				LOGP(DSOAPY, LOGL_NOTICE, "Given TX gain %.3f is not supported, we use %.3f\n", tx_gain, got_gain);
 				tx_gain = got_gain;
 			}
 		}
 
 		/* set frequency */
 		if (SoapySDRDevice_setFrequency(sdr, SOAPY_SDR_TX, channel, tx_frequency, &tune_args) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
 			soapy_close();
 			return -EIO;
 		}
@@ -383,14 +383,14 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* see what frequency actually is */
 		got_frequency = SoapySDRDevice_getFrequency(sdr, SOAPY_SDR_TX, channel);
 		if (fabs(got_frequency - tx_frequency) > 100.0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %.0f Hz\n", tx_frequency, got_frequency);
+			LOGP(DSOAPY, LOGL_ERROR, "Given TX frequency %.0f Hz is not supported, try %.0f Hz\n", tx_frequency, got_frequency);
 			soapy_close();
 			return -EINVAL;
 		}
 
 		/* set bandwidth */
 		if (SoapySDRDevice_setBandwidth(sdr, SOAPY_SDR_TX, channel, bandwidth) != 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
 			soapy_close();
 			return -EIO;
 		}
@@ -398,7 +398,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* see what bandwidth actually is */
 		got_bandwidth = SoapySDRDevice_getBandwidth(sdr, SOAPY_SDR_TX, channel);
 		if (fabs(got_bandwidth - bandwidth) > 100.0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
+			LOGP(DSOAPY, LOGL_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
 			soapy_close();
 			return -EINVAL;
 		}
@@ -410,7 +410,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		if (SoapySDRDevice_setupStream(sdr, &txStream, SOAPY_SDR_TX, SOAPY_SDR_CF32, &channel, 1, &stream_args) != 0)
 #endif
 		{
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to set TX streamer args\n");
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to set TX streamer args\n");
 			soapy_close();
 			return -EIO;
 		}
@@ -418,7 +418,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 		/* get buffer sizes */
 		tx_samps_per_buff = SoapySDRDevice_getStreamMTU(sdr, txStream);
 		if (tx_samps_per_buff == 0) {
-			PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to get TX streamer sample buffer\n");
+			LOGP(DSOAPY, LOGL_ERROR, "Failed to get TX streamer sample buffer\n");
 			soapy_close();
 			return -EIO;
 		}
@@ -427,7 +427,7 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	/* create mutex for time stamp protection */
 	rc = pthread_mutex_init(&timestamp_mutex, NULL);
 	if (rc < 0) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "Mutex init failed!\n");
+		LOGP(DSOAPY, LOGL_ERROR, "Mutex init failed!\n");
 		return rc;
 	}
 
@@ -439,13 +439,13 @@ int soapy_start(void)
 {
 	/* enable rx stream */
 	if (SoapySDRDevice_activateStream(sdr, rxStream, 0, 0, 0) != 0) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to issue RX stream command\n");
+		LOGP(DSOAPY, LOGL_ERROR, "Failed to issue RX stream command\n");
 		return -EIO;
 	}
 
 	/* enable tx stream */
 	if (SoapySDRDevice_activateStream(sdr, txStream, 0, 0, 0) != 0) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "Failed to issue TX stream command\n");
+		LOGP(DSOAPY, LOGL_ERROR, "Failed to issue TX stream command\n");
 		return -EIO;
 	}
 	return 0;
@@ -453,7 +453,7 @@ int soapy_start(void)
 
 void soapy_close(void)
 {
-	PDEBUG(DSOAPY, DEBUG_DEBUG, "Clean up SoapySDR\n");
+	LOGP(DSOAPY, LOGL_DEBUG, "Clean up SoapySDR\n");
 	if (txStream) {
 		SoapySDRDevice_deactivateStream(sdr, txStream, 0, 0);
 		SoapySDRDevice_closeStream(sdr, txStream);
@@ -488,12 +488,12 @@ int soapy_send(float *buff, int num)
 			flags |= SOAPY_SDR_HAS_TIME;
 		count = SoapySDRDevice_writeStream(sdr, txStream, buffs_ptr, chunk, &flags, tx_timeNs, 1000000);
 		if (count <= 0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamer (error=%d)\n", count);
+			LOGP(DUHD, LOGL_ERROR, "Failed to write to TX streamer (error=%d)\n", count);
 			break;
 		}
 		/* process TX time stamp */
 		if (!tx_valid)
-			PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX: tosend() was not called before, prease fix!\n");
+			LOGP(DSOAPY, LOGL_ERROR, "SDR TX: tosend() was not called before, prease fix!\n");
 		else {
 			pthread_mutex_lock(&timestamp_mutex);
 			tx_timeNs += count * Ns_per_sample;
@@ -528,7 +528,7 @@ int soapy_receive(float *buff, int max)
 		if (count > 0) {
 			if (!use_time_stamps || !(flags & SOAPY_SDR_HAS_TIME)) {
 				if (use_time_stamps) {
-					PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX: No time stamps available. This may cause little gaps and problems with time slot based networks, like C-Netz.\n");
+					LOGP(DSOAPY, LOGL_ERROR, "SDR RX: No time stamps available. This may cause little gaps and problems with time slot based networks, like C-Netz.\n");
 					use_time_stamps = 0;
 				}
 				timeNs = rx_timeNs;
@@ -540,7 +540,7 @@ int soapy_receive(float *buff, int max)
 			}
 			pthread_mutex_lock(&timestamp_mutex);
 			if (rx_timeNs != timeNs)
-				PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX overflow, seems we are too slow. Use lower SDR sample rate, if this happens too often.\n");
+				LOGP(DSOAPY, LOGL_ERROR, "SDR RX overflow, seems we are too slow. Use lower SDR sample rate, if this happens too often.\n");
 			rx_timeNs = timeNs + count * Ns_per_sample;
 			pthread_mutex_unlock(&timestamp_mutex);
 			/* commit received data to buffer */
@@ -579,7 +579,7 @@ int soapy_get_tosend(int buffer_size)
 
 	/* in case of underrun */
 	if (tosend > buffer_size) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
+		LOGP(DSOAPY, LOGL_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
 		tosend = buffer_size;
 	}
 

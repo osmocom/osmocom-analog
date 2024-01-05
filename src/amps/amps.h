@@ -1,6 +1,6 @@
 #include "../libgoertzel/goertzel.h"
 #include "../libmobile/sender.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #include "../libcompandor/compandor.h"
 typedef struct amps amps_t;
 #include "sysinfo.h"

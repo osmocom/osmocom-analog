@@ -27,8 +27,8 @@
 #include <math.h>
 
 #include "../libsample/sample.h"
-#include "../libtimer/timer.h"
-#include "../libdebug/debug.h"
+#include <osmocom/core/timer.h>
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "jolly.h"
 #include "dsp.h"
@@ -63,7 +63,7 @@ void dsp_init(void)
 	int i;
 	double s;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine tables.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine tables.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * M_PI);
 		dsp_info_tone[i] = s * TX_INFO_TONE;
@@ -92,7 +92,7 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	 * also we allow a minimum of -30 dB for each tone. */
 	rc = dtmf_decode_init(&jolly->dtmf, jolly, jolly_receive_dtmf, 8000, db2level(6.0), db2level(-30.0));
 	if (rc < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to init DTMF decoder!\n");
+		LOGP(DDSP, LOGL_ERROR, "Failed to init DTMF decoder!\n");
 		goto error;
 	}
 
@@ -106,7 +106,7 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	jolly->delay_max = (int)((double)jolly->sender.samplerate * DELAY_TIME);
 	jolly->delay_spl = calloc(jolly->delay_max, sizeof(*jolly->delay_spl));
 	if (!jolly->delay_spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No mem for delay buffer!\n");
+		LOGP(DDSP, LOGL_ERROR, "No mem for delay buffer!\n");
 		goto error;
 	}
 
@@ -115,7 +115,7 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	jolly->repeater_max = (int)((double)jolly->sender.samplerate * REPEATER_TIME);
 	rc = jitter_create(&jolly->repeater_dejitter, "repeater", jolly->sender.samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
 	if (rc < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to create and init repeater buffer!\n");
+		LOGP(DDSP, LOGL_ERROR, "Failed to create and init repeater buffer!\n");
 		goto error;
 	}
 
@@ -174,25 +174,25 @@ again:
 		spl = jolly_voice.spl[10];
 		size = jolly_voice.size[10];
 		if (!jolly->speech_pos)
-			PDEBUG(DDSP, DEBUG_DEBUG, "speaking 'incoming'.\n");
+			LOGP(DDSP, LOGL_DEBUG, "speaking 'incoming'.\n");
 		break;
 	case 'o':
 		spl = jolly_voice.spl[11];
 		size = jolly_voice.size[11];
 		if (!jolly->speech_pos)
-			PDEBUG(DDSP, DEBUG_DEBUG, "speaking 'outgoing'.\n");
+			LOGP(DDSP, LOGL_DEBUG, "speaking 'outgoing'.\n");
 		break;
 	case 'r':
 		spl = jolly_voice.spl[12];
 		size = jolly_voice.size[12];
 		if (!jolly->speech_pos)
-			PDEBUG(DDSP, DEBUG_DEBUG, "speaking 'released'.\n");
+			LOGP(DDSP, LOGL_DEBUG, "speaking 'released'.\n");
 		break;
 	case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
 		spl = jolly_voice.spl[jolly->speech_string[jolly->speech_digit] - '0'];
 		size = jolly_voice.size[jolly->speech_string[jolly->speech_digit] - '0'];
 		if (!jolly->speech_pos)
-			PDEBUG(DDSP, DEBUG_DEBUG, "speaking digit '%c'.\n", jolly->speech_string[jolly->speech_digit]);
+			LOGP(DDSP, LOGL_DEBUG, "speaking digit '%c'.\n", jolly->speech_string[jolly->speech_digit]);
 		break;
 	default:
 		jolly->speech_digit++;
@@ -292,7 +292,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 	case SQUELCH_LOSS:
 	case SQUELCH_MUTE:
 		if (!jolly->is_mute) {
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Low RF level, muting.\n");
+			LOGP_CHAN(DDSP, LOGL_INFO, "Low RF level, muting.\n");
 			jolly->ack_count = jolly->ack_max;
 			jolly->repeater_count = jolly->repeater_max;
 		}
@@ -301,7 +301,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 		break;
 	default:
 		if (jolly->is_mute)
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "High RF level, unmuting; turning transmitter on.\n");
+			LOGP_CHAN(DDSP, LOGL_INFO, "High RF level, unmuting; turning transmitter on.\n");
 		jolly->is_mute = 0;
 		break;
 	}
@@ -355,7 +355,7 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 			if (jolly->repeater_count) {
 				jolly->repeater_count -= length;
 				if (jolly->repeater_count < 0) {
-					PDEBUG_CHAN(DDSP, DEBUG_INFO, "turning transmitter off.\n");
+					LOGP_CHAN(DDSP, LOGL_INFO, "turning transmitter off.\n");
 					jolly->repeater_count = 0;
 				}
 			}

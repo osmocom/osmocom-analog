@@ -1,7 +1,5 @@
 dnl Process this file with autoconf to produce a configure script
-AC_INIT([abcnetz],
-	m4_esyscmd([./git-version-gen .tarball-version]),
-	[jolly@eversberg.eu])
+AC_INIT([abcnetz],[m4_esyscmd(./git-version-gen .tarball-version)],[jolly@eversberg.eu])
 
 AM_INIT_AUTOMAKE([dist-bzip2])
 
@@ -17,15 +15,15 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-dnl checks for header files
-AC_HEADER_STDC
-
 dnl Checks for typedefs, structures and compiler characteristics
 
 AC_CANONICAL_HOST
 
 AC_CHECK_LIB([m], [main], [], [echo "Failed to find lib!" ; exit -1])
 AC_CHECK_LIB([pthread], [main], [], [echo "Failed to find lib!" ; exit -1])
+
+PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 1.6.0)
+PKG_CHECK_MODULES(LIBOSMOCC, libosmocc >= 1.0.0)
 
 with_sdr=no
 soapy_0_8_0_or_higher=
@@ -60,9 +58,8 @@ AS_IF([test "x$with_alsa" != "xyes" -a "x$with_sdr" != "xyes"],[AC_MSG_NOTICE( W
 
 SOAPY_CFLAGS="$soapy_0_8_0_or_higher"
 
-AC_OUTPUT(
+AC_CONFIG_FILES([src/liblogging/Makefile
     src/liboptions/Makefile
-    src/libdebug/Makefile
     src/libmobile/Makefile
     src/libdisplay/Makefile
     src/libimage/Makefile
@@ -73,9 +70,6 @@ AC_OUTPUT(
     src/libsquelch/Makefile
     src/libhagelbarger/Makefile
     src/libdtmf/Makefile
-    src/libtimer/Makefile
-    src/libselect/Makefile
-    src/libph_socket/Makefile
     src/libsamplerate/Makefile
     src/libscrambler/Makefile
     src/libemphasis/Makefile
@@ -92,8 +86,6 @@ AC_OUTPUT(
     src/libserial/Makefile
     src/libv27/Makefile
     src/libmtp/Makefile
-    src/libosmocc/Makefile
-    src/libg711/Makefile
     src/libaaimage/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
@@ -119,6 +111,7 @@ AC_OUTPUT(
     src/test/Makefile
     src/Makefile
     extra/Makefile
-    Makefile)
+    Makefile])
+AC_OUTPUT
 
 

@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <inttypes.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libhagelbarger/hagelbarger.h"
 #include "frame.h"
 
@@ -208,11 +208,11 @@ static void print_element(char element, uint64_t value, int dir, int debug)
 	decoder = (dir == REL_TO_SM) ? r2000_element[i].decoder_rel : r2000_element[i].decoder_sm;
 
 	if (!r2000_element[i].element)
-		PDEBUG(DFRAME, debug, "Element '%c' %" PRIu64 " [Unknown]\n", element, value);
+		LOGP(DFRAME, debug, "Element '%c' %" PRIu64 " [Unknown]\n", element, value);
 	else if (!decoder)
-		PDEBUG(DFRAME, debug, "Element '%c' %" PRIu64 " [%s]\n", element, value, r2000_element[i].name);
+		LOGP(DFRAME, debug, "Element '%c' %" PRIu64 " [%s]\n", element, value, r2000_element[i].name);
 	else
-		PDEBUG(DFRAME, debug, "Element '%c' %" PRIu64 "=%s [%s]\n", element, value, decoder(value), r2000_element[i].name);
+		LOGP(DFRAME, debug, "Element '%c' %" PRIu64 "=%s [%s]\n", element, value, decoder(value), r2000_element[i].name);
 }
 
 static void store_element(frame_t *frame, char element, uint64_t value)
@@ -413,17 +413,17 @@ static void display_bits(const char *def, const uint8_t *message, int num, int d
 	char dispbits[num + 1];
 	int i;
 
-	if (debuglevel > debug)
+	if (loglevel > debug)
 		return;
 
 	/* display bits */
 	if (def)
-		PDEBUG(DFRAME, debug, "%s\n", def);
+		LOGP(DFRAME, debug, "%s\n", def);
 	for (i = 0; i < num; i++) {
 		dispbits[i] = ((message[i / 8] >> (7 - (i & 7))) & 1) + '0';
 	}
 	dispbits[i] = '\0';
-	PDEBUG(DFRAME, debug, "%s\n", dispbits);
+	LOGP(DFRAME, debug, "%s\n", dispbits);
 }
 
 static int dissassemble_frame(frame_t *frame, const uint8_t *message, int num)
@@ -438,12 +438,12 @@ static int dissassemble_frame(frame_t *frame, const uint8_t *message, int num)
 	frame->message = message[2] & 0x1f;
 	def = get_frame_def(frame->message, dir);
 	if (!def) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received unknown message type %d (maybe radio noise)\n", frame->message);
-		display_bits(NULL, message, num, DEBUG_NOTICE);
+		LOGP(DFRAME, LOGL_NOTICE, "Received unknown message type %d (maybe radio noise)\n", frame->message);
+		display_bits(NULL, message, num, LOGL_NOTICE);
 		return -EINVAL;
 	}
 
-	PDEBUG(DFRAME, DEBUG_DEBUG, "Decoding frame %s %s\n", r2000_dir_name(dir), r2000_frame_name(frame->message, dir));
+	LOGP(DFRAME, LOGL_DEBUG, "Decoding frame %s %s\n", r2000_dir_name(dir), r2000_frame_name(frame->message, dir));
 
 	/* disassemble elements elements */
 	value = 0;
@@ -451,14 +451,14 @@ static int dissassemble_frame(frame_t *frame, const uint8_t *message, int num)
 		value = (value << 1) | ((message[i / 8] >> (7 - (i & 7))) & 1);
 		if (def[i + 1] != def[i]) {
 			if (def[i] != '-') {
-				print_element(def[i], value, dir, DEBUG_DEBUG);
+				print_element(def[i], value, dir, LOGL_DEBUG);
 				store_element(frame, def[i], value);
 			}
 			value = 0;
 		}
 	}
 
-	display_bits(def, message, num, DEBUG_DEBUG);
+	display_bits(def, message, num, LOGL_DEBUG);
 
 	return 0;
 }
@@ -473,13 +473,13 @@ static int assemble_frame(frame_t *frame, uint8_t *message, int num, int debug)
 
 	def = get_frame_def(frame->message, dir);
 	if (!def) {
-		PDEBUG(DFRAME, DEBUG_ERROR, "Cannot assemble unknown message type %d, please define/fix!\n", frame->message);
+		LOGP(DFRAME, LOGL_ERROR, "Cannot assemble unknown message type %d, please define/fix!\n", frame->message);
 		abort();
 	}
 	memset(message, 0, (num + 7) / 8);
 
 	if (debug)
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Ccoding frame %s %s\n", r2000_dir_name(dir), r2000_frame_name(frame->message, dir));
+		LOGP(DFRAME, LOGL_DEBUG, "Ccoding frame %s %s\n", r2000_dir_name(dir), r2000_frame_name(frame->message, dir));
 
 	/* assemble elements elements */
 	element = 0;
@@ -505,11 +505,11 @@ static int assemble_frame(frame_t *frame, uint8_t *message, int num, int debug)
 		for (i = 0; i < num; i++) {
 			if (def[i + 1] != def[i] && def[i] != '-' && def[i] != '+') {
 				value = fetch_element(frame, def[i]);
-					print_element(def[i], value, dir, DEBUG_DEBUG);
+					print_element(def[i], value, dir, LOGL_DEBUG);
 			}
 		}
 
-		display_bits(def, message, num, DEBUG_DEBUG);
+		display_bits(def, message, num, LOGL_DEBUG);
 	}
 
 	return 0;

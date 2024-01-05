@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
@@ -247,6 +247,7 @@ fail:
 		euro_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 	euro_exit();
 

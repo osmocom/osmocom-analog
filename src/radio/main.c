@@ -31,7 +31,7 @@ enum paging_signal;
 #include <termios.h>
 #include <unistd.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
 #include "../liboptions/options.h"
@@ -299,7 +299,8 @@ int main(int argc, char *argv[])
 	int c;
 	int buffer_size;
 
-	debuglevel = 0;
+	loglevel = LOGL_DEBUG;
+	logging_init();
 
 	sdr_config_init(DEFAULT_LO_OFFSET);
 
@@ -527,4 +528,6 @@ error:
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 

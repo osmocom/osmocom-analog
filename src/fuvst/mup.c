@@ -23,7 +23,8 @@
 #include <string.h>
 #include <time.h>
 #include <inttypes.h>
-#include "../libdebug/debug.h"
+#include <osmocom/core/utils.h>
+#include "../liblogging/logging.h"
 #include "mup.h"
 #include "systemmeldungen.h"
 
@@ -291,7 +292,7 @@ static const char *futln_cause(uint8_t Y)
 void decode_swaf(uint8_t *data, int len, uint8_t *V, uint8_t *N, uint8_t *U, uint8_t *F, uint8_t *C, uint8_t *B)
 {
 	if (len < 6) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -302,7 +303,7 @@ void decode_swaf(uint8_t *data, int len, uint8_t *V, uint8_t *N, uint8_t *U, uin
 	*C = data[4];
 	*B = data[5];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SWAF) Wiederanlauf der BS: version=%d (%s) FuFSt=%d,%d,%d chip=%d (%s) beacon=%d (%s)\n", *V, version_string(*V), *N, *U, *F, *C, chip_string(*C), *B, beacon_string(*B));
+	LOGP(DMUP, LOGL_INFO, "(BS SWAF) Wiederanlauf der BS: version=%d (%s) FuFSt=%d,%d,%d chip=%d (%s) beacon=%d (%s)\n", *V, version_string(*V), *N, *U, *F, *C, chip_string(*C), *B, beacon_string(*B));
 }
 
 /* ack to base station boot */
@@ -310,7 +311,7 @@ int encode_swqu(uint8_t *opcode, uint8_t **data, uint8_t A)
 {
 	static uint8_t buffer[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SWQU) Wiederanlaufquittung des MSC: aktivdatei=%d (%s)\n", A, aktivdatei_string(A));
+	LOGP(DMUP, LOGL_INFO, "(MSC SWQU) Wiederanlaufquittung des MSC: aktivdatei=%d (%s)\n", A, aktivdatei_string(A));
 
 	*opcode = OPCODE_SWQU;
 	buffer[0] = A;
@@ -323,7 +324,7 @@ int encode_swqu(uint8_t *opcode, uint8_t **data, uint8_t A)
 void decode_suaf(uint8_t *data, int len, uint8_t *V, uint8_t *N, uint8_t *U, uint8_t *F, uint8_t *C, uint8_t *B)
 {
 	if (len < 6) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -334,7 +335,7 @@ void decode_suaf(uint8_t *data, int len, uint8_t *V, uint8_t *N, uint8_t *U, uin
 	*C = data[4];
 	*B = data[5];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SUAF) Datum-Uhrzeit-Anforderung der BS: version=%d (%s) FuFSt=%d,%d,%d chip=%d (%s) beacon=%d (%s)\n", *V, version_string(*V), *N, *U, *F, *C, chip_string(*C), *B, beacon_string(*B));
+	LOGP(DMUP, LOGL_INFO, "(BS SUAF) Datum-Uhrzeit-Anforderung der BS: version=%d (%s) FuFSt=%d,%d,%d chip=%d (%s) beacon=%d (%s)\n", *V, version_string(*V), *N, *U, *F, *C, chip_string(*C), *B, beacon_string(*B));
 }
 
 /* ack to time request */
@@ -355,7 +356,7 @@ int encode_suqu(uint8_t *opcode, uint8_t **data, uint8_t Q, uint8_t N, time_t no
 	m = tm->tm_min;
 	s = tm->tm_sec;
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SUQU) Datum-Uhrzeit-Quittung des MSC: Q=%d (%s) Widerholung=%d (%s) Wochentag=%d (%s) Datum: %d.%d.%d %d:%02d:%02d\n", Q, qualitaet_string(Q), N, wiederholung_string(N), W, woche_string(W), D, M, J, h, m, s);
+	LOGP(DMUP, LOGL_INFO, "(MSC SUQU) Datum-Uhrzeit-Quittung des MSC: Q=%d (%s) Widerholung=%d (%s) Wochentag=%d (%s) Datum: %d.%d.%d %d:%02d:%02d\n", Q, qualitaet_string(Q), N, wiederholung_string(N), W, woche_string(W), D, M, J, h, m, s);
 
 	*opcode = OPCODE_SUQU;
 	buffer[0] = Q | (N << 1) | (R << 2);
@@ -380,7 +381,7 @@ void decode_sssaf(uint8_t *data, int len)
 	int i, start_i = 0, stop_i = 0;
 
 	if (len < 11) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -388,9 +389,9 @@ void decode_sssaf(uint8_t *data, int len)
 	A = data[1] | (data[2] << 8);
 	E = data[3] | (data[4] << 8);
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SSSAF) Sprechkanal-Sammel-Sperrauftrag der BS: Liste-Ende=%d Anfang=%d Ende=%d\n", E_, A, E);
+	LOGP(DMUP, LOGL_INFO, "(BS SSSAF) Sprechkanal-Sammel-Sperrauftrag der BS: Liste-Ende=%d Anfang=%d Ende=%d\n", E_, A, E);
 	if (E - A + 1 > 6 * 8) {
-		PDEBUG(DMUP, DEBUG_INFO, " -> Bereich zu gross für Nachricht!\n");
+		LOGP(DMUP, LOGL_INFO, " -> Bereich zu gross für Nachricht!\n");
 		return;
 	}
 	if ((int)E - (int)A < 0)
@@ -411,9 +412,9 @@ void decode_sssaf(uint8_t *data, int len)
 		if (i > 0 && S != last_S) {
 end:
 			if (start_i == stop_i)
-				PDEBUG(DMUP, DEBUG_INFO, " -> SpK #%d=%d (%s)\n", start_i + A, last_S, (last_S) ? "gesperrt" : "frei");
+				LOGP(DMUP, LOGL_INFO, " -> SpK #%d=%d (%s)\n", start_i + A, last_S, (last_S) ? "gesperrt" : "frei");
 			else
-				PDEBUG(DMUP, DEBUG_INFO, " -> SpK #%d..%d=%d (%s)\n", start_i + A, stop_i + A, last_S, (last_S) ? "gesperrt" : "frei");
+				LOGP(DMUP, LOGL_INFO, " -> SpK #%d..%d=%d (%s)\n", start_i + A, stop_i + A, last_S, (last_S) ? "gesperrt" : "frei");
 			/* new start */
 			start_i = stop_i = i;
 		}
@@ -425,20 +426,20 @@ end:
 void encode_sssqu(uint8_t *opcode)
 {
 	*opcode = OPCODE_SSSQU;
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SSSQU) Sprechkanal-Sammel-Sperrquittung des MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC SSSQU) Sprechkanal-Sammel-Sperrquittung des MSC\n");
 }
 
 /* base station locks a voice channel */
 void decode_ssaf(uint8_t *data, int len, uint8_t *S)
 {
 	if (len < 1) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
 	*S = data[0];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SSAF) Sprechkanal-Sperr-Auftrag der BS: SPK=%d\n", *S);
+	LOGP(DMUP, LOGL_INFO, "(BS SSAF) Sprechkanal-Sperr-Auftrag der BS: SPK=%d\n", *S);
 }
 
 /* ack to lockeed voice channel */
@@ -446,7 +447,7 @@ int encode_ssqu(uint8_t *opcode, uint8_t **data, uint8_t S)
 {
 	static uint8_t buffer[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SSQU) Sprechkanal-Sperr-Quittung von der MSC: SPK=%d\n", S);
+	LOGP(DMUP, LOGL_INFO, "(MSC SSQU) Sprechkanal-Sperr-Quittung von der MSC: SPK=%d\n", S);
 
 	*opcode = OPCODE_SSQU;
 	buffer[0] = S;
@@ -459,13 +460,13 @@ int encode_ssqu(uint8_t *opcode, uint8_t **data, uint8_t S)
 void decode_sfaf(uint8_t *data, int len, uint8_t *S)
 {
 	if (len < 1) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
 	*S = data[0];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SFAF) Sprechkanal-Freigabe-Auftrag der BS: SPK=%d\n", *S);
+	LOGP(DMUP, LOGL_INFO, "(BS SFAF) Sprechkanal-Freigabe-Auftrag der BS: SPK=%d\n", *S);
 }
 
 /* ack to unlockeed voice channel */
@@ -473,7 +474,7 @@ int encode_sfqu(uint8_t *opcode, uint8_t **data, uint8_t S)
 {
 	static uint8_t buffer[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SFQU) Sprechkanal-Freigabe-Quittung von der MSC: SPK=%d\n", S);
+	LOGP(DMUP, LOGL_INFO, "(MSC SFQU) Sprechkanal-Freigabe-Quittung von der MSC: SPK=%d\n", S);
 
 	*opcode = OPCODE_SFQU;
 	buffer[0] = S;
@@ -485,13 +486,13 @@ int encode_sfqu(uint8_t *opcode, uint8_t **data, uint8_t S)
 /* base station ready */
 void decode_svaf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SVAF) Vermittlungsfaehig-Auftrag der BS\n");
+	LOGP(DMUP, LOGL_INFO, "(BS SVAF) Vermittlungsfaehig-Auftrag der BS\n");
 }
 
 /* ack to base station ready */
 int encode_svqu(uint8_t *opcode, uint8_t **data)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SVQU) Vermittlungsfaehig-Quittung des MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC SVQU) Vermittlungsfaehig-Quittung des MSC\n");
 
 	*opcode = OPCODE_SVQU;
 	*data = NULL;
@@ -501,13 +502,13 @@ int encode_svqu(uint8_t *opcode, uint8_t **data)
 /* base station requests alarm messages */
 void decode_ylsaf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS YLSAF) Systemmeldungsanforderung an MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(BS YLSAF) Systemmeldungsanforderung an MSC\n");
 }
 
 /* ack to base stations alarm request */
 int encode_ylsmu(uint8_t *opcode, uint8_t **data)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC YLSMU) Systemmeldungsbestaetigung vom MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC YLSMU) Systemmeldungsbestaetigung vom MSC\n");
 
 	*opcode = OPCODE_YLSMU;
 	*data = NULL;
@@ -518,7 +519,7 @@ int encode_ylsmu(uint8_t *opcode, uint8_t **data)
 void decode_ylsmf(uint8_t *data, int len, uint8_t *N, uint8_t *C, struct SysMeld *SM)
 {
 	if (len < 9) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -578,7 +579,7 @@ void decode_ylsmf(uint8_t *data, int len, uint8_t *N, uint8_t *C, struct SysMeld
 		indizien[strlen(indizien)] = ' ';
 	}
 
-	PDEBUG(DMUP, DEBUG_INFO, "SM: %03d %02d.%02d %02d:%02d %s%02d  %c  H\"%04X  %02d H\"%sH\"%02X%02X%02X%02X\n", *C,
+	LOGP(DMUP, LOGL_INFO, "SM: %03d %02d.%02d %02d:%02d %s%02d  %c  H\"%04X  %02d H\"%sH\"%02X%02X%02X%02X\n", *C,
 		SM->Monat, SM->Tag, SM->Stunde, SM->Minute,
 		einrichtrungstyp_string(SM->Einrichtungstyp), SM->Einrichtungsnr,
 		SM->ASCII_Typ ? : '0', SM->Systemmeldungsnr,
@@ -590,13 +591,13 @@ void decode_ylsmf(uint8_t *data, int len, uint8_t *N, uint8_t *C, struct SysMeld
 /* base station ends list of alarm messages */
 void decode_ylsef(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS YLSEF) Systemmeldungsuebertragungsende an MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(BS YLSEF) Systemmeldungsuebertragungsende an MSC\n");
 }
 
 /* base station requests billing info */
 void decode_stdaf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS STDAF) Tarifdatenauftrag der BS\n");
+	LOGP(DMUP, LOGL_INFO, "(BS STDAF) Tarifdatenauftrag der BS\n");
 }
 
 /* reply to billing info */
@@ -606,7 +607,7 @@ int encode_xgtau(uint8_t *opcode, uint8_t **data, uint8_t Z, uint32_t T, uint8_t
 	// Example from UeLE-ROM = { 0xff, 0x00, 0x01, 0xec, 0x3f, 0x01, 0x31, 0x1c, 0x03 };
 	//                         { 0xff, 0x00, 0x01, 0xec, 0x3f, 0x01, 0x41, 0x1c, 0x03 };
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC XGTAU) Tarifdatensignalisierung vom MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC XGTAU) Tarifdatensignalisierung vom MSC\n");
 
 	*opcode = OPCODE_XGTAU;
 	buffer[0] = 0xff;
@@ -627,7 +628,7 @@ int encode_xgtau(uint8_t *opcode, uint8_t **data, uint8_t Z, uint32_t T, uint8_t
 void decode_ebaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, uint16_t *s, uint8_t *u, uint8_t *b, uint8_t *l)
 {
 	if (len < 6) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -639,13 +640,13 @@ void decode_ebaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, ui
 	*b = (data[5] >> 6) & 0x1;
 	*l = data[5] >> 7;
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS EBAF) Einbuchauftrag: FuTln=%d,%d,%d (0161-%d%d%05d)\n", *N, *U, *T, *N, *U, *T);
+	LOGP(DMUP, LOGL_INFO, "(BS EBAF) Einbuchauftrag: FuTln=%d,%d,%d (0161-%d%d%05d)\n", *N, *U, *T, *N, *U, *T);
 }
 
 /* ack to inscription */
 int encode_ebpqu(uint8_t *opcode, uint8_t **data)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC EBPQU) Einbuchungs-Positiv-Quittiung vom MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC EBPQU) Einbuchungs-Positiv-Quittiung vom MSC\n");
 
 	*opcode = OPCODE_EBPQU;
 	*data = NULL;
@@ -656,7 +657,7 @@ int encode_ebpqu(uint8_t *opcode, uint8_t **data)
 void decode_abaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N)
 {
 	if (len < 3) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -664,7 +665,7 @@ void decode_abaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N)
 	*U = data[2] & 0x1f;
 	*N = data[2] >> 5;
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS ABAF) Ausbuchung-Auftrag der BS: FuTln=%d,%d,%d (0161-%d%d%05d)\n", *N, *U, *T, *N, *U, *T);
+	LOGP(DMUP, LOGL_INFO, "(BS ABAF) Ausbuchung-Auftrag der BS: FuTln=%d,%d,%d (0161-%d%d%05d)\n", *N, *U, *T, *N, *U, *T);
 }
 
 static char digit2char[16] = "0123456789a*#bcd";
@@ -675,7 +676,7 @@ void _decode_outgoing(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *
 	int i;
 
 	if (len < 11) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -709,14 +710,14 @@ void decode_gvaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, ch
 {
 	_decode_outgoing(data, len, T, U , N, number);
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS GVAF) Gehender Verbindungs-Auftrag der BS: FuTln=%d,%d,%d (0161-%d%d%05d) number=%s\n", *N, *U, *T, *N, *U, *T, number);
+	LOGP(DMUP, LOGL_INFO, "(BS GVAF) Gehender Verbindungs-Auftrag der BS: FuTln=%d,%d,%d (0161-%d%d%05d) number=%s\n", *N, *U, *T, *N, *U, *T, number);
 }
 
 void decode_gvwaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, char *number)
 {
 	_decode_outgoing(data, len, T, U , N, number);
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS GVWAF) Gehender Verbindungs-Warteschlange-Auftrag der BS: FuTln=%d,%d,%d (0161-%d%d%05d) number=%s\n", *N, *U, *T, *N, *U, *T, number);
+	LOGP(DMUP, LOGL_INFO, "(BS GVWAF) Gehender Verbindungs-Warteschlange-Auftrag der BS: FuTln=%d,%d,%d (0161-%d%d%05d) number=%s\n", *N, *U, *T, *N, *U, *T, number);
 }
 
 /* ack to MO call */
@@ -724,7 +725,7 @@ int encode_gvpqu(uint8_t *opcode, uint8_t **data, uint8_t P, uint8_t e)
 {
 	static uint8_t buffer[2];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC GVPQU) Verbindungs-Positiv-Quittiung vom MSC: Prio=%d (%s) AP-Pruefung=%d\n", P, prio_string(P), e);
+	LOGP(DMUP, LOGL_INFO, "(MSC GVPQU) Verbindungs-Positiv-Quittiung vom MSC: Prio=%d (%s) AP-Pruefung=%d\n", P, prio_string(P), e);
 
 	*opcode = OPCODE_GVNQU;
 	buffer[0] = P;
@@ -739,7 +740,7 @@ int encode_gvnqu(uint8_t *opcode, uint8_t **data, uint8_t X, uint8_t Y)
 {
 	static uint8_t buffer[2];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC GVNQU) Verbindungs-Negativ-Quittiung vom MSC: Grund=%d (%s) Grund(FuTlg)=%d (%s)\n", X, fufst_cause(X), Y, futln_cause(Y));
+	LOGP(DMUP, LOGL_INFO, "(MSC GVNQU) Verbindungs-Negativ-Quittiung vom MSC: Grund=%d (%s) Grund(FuTlg)=%d (%s)\n", X, fufst_cause(X), Y, futln_cause(Y));
 
 	*opcode = OPCODE_GVNQU;
 	buffer[0] = X;
@@ -754,7 +755,7 @@ int encode_kvau(uint8_t *opcode, uint8_t **data, uint16_t T, uint8_t U, uint8_t 
 {
 	static uint8_t buffer[5];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC KVAU) Kommender Verbindungs-Auftrag vom MSC: FuTln=%d,%d,%d (0161-%d%d%05d) Rufzeitbegrenzung=%d (%s) AP-Pruefung=%d\n", N, U, T, N, U, T, F, rufzeit_string(F), e);
+	LOGP(DMUP, LOGL_INFO, "(MSC KVAU) Kommender Verbindungs-Auftrag vom MSC: FuTln=%d,%d,%d (0161-%d%d%05d) Rufzeitbegrenzung=%d (%s) AP-Pruefung=%d\n", N, U, T, N, U, T, F, rufzeit_string(F), e);
 
 	*opcode = OPCODE_KVAU;
 	buffer[0] = T;
@@ -770,20 +771,20 @@ int encode_kvau(uint8_t *opcode, uint8_t **data, uint16_t T, uint8_t U, uint8_t 
 /* ack to MT call on queue */
 void decode_kvwqf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS KVWQF) Kommende Verbindungs-Warteschalngen-Quittung der BS\n");
+	LOGP(DMUP, LOGL_INFO, "(BS KVWQF) Kommende Verbindungs-Warteschalngen-Quittung der BS\n");
 }
 
 /* answer of MT call */
 void decode_kvbaf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS KVBAF) Kommende Verbindungs-Beginn-Auftrag der BS\n");
+	LOGP(DMUP, LOGL_INFO, "(BS KVBAF) Kommende Verbindungs-Beginn-Auftrag der BS\n");
 }
 
 /* loop test request */
 void decode_staf(uint8_t *data, int len, uint8_t *Q, uint8_t *V, uint8_t *e, uint64_t *n)
 {
 	if (len < 10) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -799,7 +800,7 @@ void decode_staf(uint8_t *data, int len, uint8_t *Q, uint8_t *V, uint8_t *e, uin
 	*n |= (uint64_t)data[8] << 48;
 	*n |= (uint64_t)data[9] << 56;
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS STAF) Schleifentest-Auftrag der BS: SPK=%d Typ=%d (%s) AP-Pruefung=%d Random=0x%016" PRIx64 "\n", *Q, *V, typ_string(*V), *e, *n);
+	LOGP(DMUP, LOGL_INFO, "(BS STAF) Schleifentest-Auftrag der BS: SPK=%d Typ=%d (%s) AP-Pruefung=%d Random=0x%016" PRIx64 "\n", *Q, *V, typ_string(*V), *e, *n);
 }
 
 /* loop test positive */
@@ -807,7 +808,7 @@ int encode_stpqu(uint8_t *opcode, uint8_t **data, uint8_t Q, uint8_t A, uint8_t 
 {
 	static uint8_t buffer[7];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC STPQU) Schleifentest-Positiv-Quittiung vom MSC: SPK=%d\n", Q);
+	LOGP(DMUP, LOGL_INFO, "(MSC STPQU) Schleifentest-Positiv-Quittiung vom MSC: SPK=%d\n", Q);
 
 	*opcode = OPCODE_STPQU;
 	buffer[0] = Q;
@@ -827,7 +828,7 @@ int encode_stnqu(uint8_t *opcode, uint8_t **data, uint8_t Q)
 {
 	static uint8_t buffer[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC STNQU) Schleifentest-Negativ-Quittiung vom MSC: SPK=%d\n", Q);
+	LOGP(DMUP, LOGL_INFO, "(MSC STNQU) Schleifentest-Negativ-Quittiung vom MSC: SPK=%d\n", Q);
 
 	*opcode = OPCODE_STNQU;
 	buffer[0] = Q;
@@ -840,7 +841,7 @@ int encode_stnqu(uint8_t *opcode, uint8_t **data, uint8_t Q)
 void decode_apf(uint8_t *data, int len, uint8_t *Q, uint64_t *a)
 {
 	if (len < 9) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -854,7 +855,7 @@ void decode_apf(uint8_t *data, int len, uint8_t *Q, uint64_t *a)
 	*a |= (uint64_t)data[7] << 48;
 	*a |= (uint64_t)data[8] << 56;
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS APF) Autorisierunsparameter FUKO: SPK=%d AP=0x%016" PRIx64 "\n", *Q, *a);
+	LOGP(DMUP, LOGL_INFO, "(BS APF) Autorisierunsparameter FUKO: SPK=%d AP=0x%016" PRIx64 "\n", *Q, *a);
 }
 
 /* start metering pulses (answer to call) */
@@ -862,7 +863,7 @@ int encode_gstau(uint8_t *opcode, uint8_t **data, uint8_t Q, uint16_t G, uint8_t
 {
 	static uint8_t buffer[6];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC GSTAU) Gebuehren-Start-Auftrag vom MSC: SPK=%d\n", Q);
+	LOGP(DMUP, LOGL_INFO, "(MSC GSTAU) Gebuehren-Start-Auftrag vom MSC: SPK=%d\n", Q);
 
 	*opcode = OPCODE_GSTAU;
 	buffer[0] = Q;
@@ -879,26 +880,26 @@ int encode_gstau(uint8_t *opcode, uint8_t **data, uint8_t Q, uint16_t G, uint8_t
 /* MCID */
 void decode_faf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS FAF) Fang-Auftrag der BS\n");
+	LOGP(DMUP, LOGL_INFO, "(BS FAF) Fang-Auftrag der BS\n");
 }
 
 /* release by base station (before SPK assignment) */
 void decode_naf(uint8_t *data, int len, uint8_t *X)
 {
 	if (len < 1) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
 	*X = data[0];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS AAF) Negativ-Auftrag der BS: Grund=%d (%s)\n", *X, fufst_cause(*X));
+	LOGP(DMUP, LOGL_INFO, "(BS AAF) Negativ-Auftrag der BS: Grund=%d (%s)\n", *X, fufst_cause(*X));
 }
 
 /* release by base station ack (before SPK assignment) */
 int encode_equ(uint8_t *opcode, uint8_t **data)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC AQU) Ende-Quittung vom MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC AQU) Ende-Quittung vom MSC\n");
 
 	*opcode = OPCODE_EQU;
 	*data = NULL;
@@ -909,14 +910,14 @@ int encode_equ(uint8_t *opcode, uint8_t **data)
 void decode_aaf(uint8_t *data, int len, uint8_t *Q, uint8_t *X)
 {
 	if (len < 2) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
 	*Q = data[0];
 	*X = data[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS AAF) Ausloese-Auftrag der BS: SPK=%d, Grund=%d (%s)\n", *Q, *X, fufst_cause(*X));
+	LOGP(DMUP, LOGL_INFO, "(BS AAF) Ausloese-Auftrag der BS: SPK=%d, Grund=%d (%s)\n", *Q, *X, fufst_cause(*X));
 }
 
 /* release by base station ack (after SPK assignment) */
@@ -924,7 +925,7 @@ int encode_aqu(uint8_t *opcode, uint8_t **data, uint8_t Q)
 {
 	static uint8_t buffer[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC AQU) Ausloese-Quittung vom MSC: SPK=%d\n", Q);
+	LOGP(DMUP, LOGL_INFO, "(MSC AQU) Ausloese-Quittung vom MSC: SPK=%d\n", Q);
 
 	*opcode = OPCODE_AQU;
 	buffer[0] = Q;
@@ -938,7 +939,7 @@ int encode_nau(uint8_t *opcode, uint8_t **data, uint8_t X, uint8_t Y)
 {
 	static uint8_t buffer[2];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC NAU) Negativ-Auftrag vom MSC: Grund=%d (%s) Grund(FuTlg)=%d (%s)\n", X, fufst_cause(X), Y, futln_cause(Y));
+	LOGP(DMUP, LOGL_INFO, "(MSC NAU) Negativ-Auftrag vom MSC: Grund=%d (%s) Grund(FuTlg)=%d (%s)\n", X, fufst_cause(X), Y, futln_cause(Y));
 
 	*opcode = OPCODE_NAU;
 	buffer[0] = X;
@@ -951,7 +952,7 @@ int encode_nau(uint8_t *opcode, uint8_t **data, uint8_t X, uint8_t Y)
 /* release by network ack (before SPK assignment) */
 void decode_eqf(uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
-	PDEBUG(DMUP, DEBUG_INFO, "(BS EQF) Ende-Quittung der BS\n");
+	LOGP(DMUP, LOGL_INFO, "(BS EQF) Ende-Quittung der BS\n");
 }
 
 /* release by network (after SPK assignment) */
@@ -959,7 +960,7 @@ int encode_aau(uint8_t *opcode, uint8_t **data, uint8_t Q, uint8_t X, uint8_t Y)
 {
 	static uint8_t buffer[3];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC AAU) Ausloese-Auftrag vom MSC: SPK=%d, Grund=%d (%s) Grund(FuTlg)=%d (%s)\n", Q, X, fufst_cause(X), Y, futln_cause(Y));
+	LOGP(DMUP, LOGL_INFO, "(MSC AAU) Ausloese-Auftrag vom MSC: SPK=%d, Grund=%d (%s) Grund(FuTlg)=%d (%s)\n", Q, X, fufst_cause(X), Y, futln_cause(Y));
 
 	*opcode = OPCODE_AAU;
 	buffer[0] = Q;
@@ -974,20 +975,20 @@ int encode_aau(uint8_t *opcode, uint8_t **data, uint8_t Q, uint8_t X, uint8_t Y)
 void decode_aqf(uint8_t *data, int len, uint8_t *Q)
 {
 	if (len < 1) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
 	*Q = data[0];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS AQF) Ausloese-Quittung der BS: SPK=%d\n", *Q);
+	LOGP(DMUP, LOGL_INFO, "(BS AQF) Ausloese-Quittung der BS: SPK=%d\n", *Q);
 }
 
 /* request data base block */
 void decode_xadbf(uint8_t *data, int len, uint8_t *PJ, uint16_t *D, uint16_t *L)
 {
 	if (len < 6) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -995,7 +996,7 @@ void decode_xadbf(uint8_t *data, int len, uint8_t *PJ, uint16_t *D, uint16_t *L)
 	*D = data[2] | (data[3] << 8);
 	*L = data[4] | (data[5] << 8);
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS XADBF) Auftragssign. Anfordern BS-DB-Datenblock am MSC: job=%d, offset=0x%02x length=0x%02x\n", *PJ, *D, *L);
+	LOGP(DMUP, LOGL_INFO, "(BS XADBF) Auftragssign. Anfordern BS-DB-Datenblock am MSC: job=%d, offset=0x%02x length=0x%02x\n", *PJ, *D, *L);
 }
 
 /* transfer data base block */
@@ -1003,7 +1004,7 @@ int encode_xedbu_1(uint8_t *opcode, uint8_t **data, uint8_t R, uint8_t PJ, uint1
 {
 	static uint8_t buffer[4];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (header): return=%d job=%d frames=%d\n", R, PJ, A);
+	LOGP(DMUP, LOGL_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (header): return=%d job=%d frames=%d\n", R, PJ, A);
 
 	*opcode = OPCODE_XEDBU;
 	buffer[0] = R;
@@ -1018,10 +1019,10 @@ int encode_xedbu_2(uint8_t *opcode, uint8_t **data, uint8_t S, uint8_t PJ, uint8
 {
 	static uint8_t buffer[11];
 
-	if (debuglevel == DEBUG_DEBUG)
-		PDEBUG(DMUP, DEBUG_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (data): count=%d job=%d data=%s\n", S, PJ, debug_hex(P, 9));
+	if (loglevel == LOGL_DEBUG)
+		LOGP(DMUP, LOGL_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (data): count=%d job=%d data=%s\n", S, PJ, osmo_hexdump(P, 9));
 	else if (S == 1)
-		PDEBUG(DMUP, DEBUG_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (data): Messages are not shown, due to heavy debug output!\n");
+		LOGP(DMUP, LOGL_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (data): Messages are not shown, due to heavy debug output!\n");
 
 	*opcode = OPCODE_XEDBU;
 	buffer[0] = S;
@@ -1035,7 +1036,7 @@ int encode_xedbu_3(uint8_t *opcode, uint8_t **data, uint8_t S, uint8_t PJ, uint1
 {
 	static uint8_t buffer[9];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (footer): count=%d job=%d offset=0x%02x length=0x%02x checksum=0x%06x\n", S, PJ, D, L, CS);
+	LOGP(DMUP, LOGL_INFO, "(MSC XEDBU) Ergebnissignal. Transfer BS-DB-Datenblock (footer): count=%d job=%d offset=0x%02x length=0x%02x checksum=0x%06x\n", S, PJ, D, L, CS);
 
 	*opcode = OPCODE_XEDBU;
 	buffer[0] = S;
@@ -1057,7 +1058,7 @@ int encode_yaaau(uint8_t *opcode, uint8_t **data, uint8_t J)
 {
 	static uint8_t buffer[2];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC YAAAU) Auftrag Initialisieren BS des MSC: job=%d\n", J);
+	LOGP(DMUP, LOGL_INFO, "(MSC YAAAU) Auftrag Initialisieren BS des MSC: job=%d\n", J);
 
 	*opcode = OPCODE_YAAAU;
 	buffer[0] = 0xff;
@@ -1072,7 +1073,7 @@ int encode_swau(uint8_t *opcode, uint8_t **data, uint8_t V)
 {
 	static uint8_t buffer[1];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SWAU) Wiederanlaufauftrag des MSC: version=%d (%s)\n", V, version_string(V));
+	LOGP(DMUP, LOGL_INFO, "(MSC SWAU) Wiederanlaufauftrag des MSC: version=%d (%s)\n", V, version_string(V));
 
 	*opcode = OPCODE_SWAU;
 	buffer[0] = V;
@@ -1085,7 +1086,7 @@ int encode_swau(uint8_t *opcode, uint8_t **data, uint8_t V)
 void decode_swqf(uint8_t *data, int len, uint8_t *V, uint8_t *N, uint8_t *U, uint8_t *F, uint8_t *C, uint8_t *B)
 {
 	if (len < 6) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return;
 	}
 
@@ -1096,14 +1097,14 @@ void decode_swqf(uint8_t *data, int len, uint8_t *V, uint8_t *N, uint8_t *U, uin
 	*C = data[4];
 	*B = data[5];
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SWQF) Wiederanlauf-Quittung der BS: version=%d (%s) FuFSt=%d,%d,%d chip=%d (%s) beacon=%d (%s)\n", *V, version_string(*V), *N, *U, *F, *C, chip_string(*C), *B, beacon_string(*B));
+	LOGP(DMUP, LOGL_INFO, "(BS SWQF) Wiederanlauf-Quittung der BS: version=%d (%s) FuFSt=%d,%d,%d chip=%d (%s) beacon=%d (%s)\n", *V, version_string(*V), *N, *U, *F, *C, chip_string(*C), *B, beacon_string(*B));
 }
 
 /* request "Aktivdatei" (inscripted substribers) */
 void encode_sadau(uint8_t *opcode)
 {
 	*opcode = OPCODE_SADAU;
-	PDEBUG(DMUP, DEBUG_INFO, "(MSC SADAU) Aktivdatei-Auftrag vom MSC\n");
+	LOGP(DMUP, LOGL_INFO, "(MSC SADAU) Aktivdatei-Auftrag vom MSC\n");
 }
 
 /* ack "Aktivdatei" */
@@ -1112,7 +1113,7 @@ int decode_sadqf(uint8_t *data, int len, uint16_t *S, uint8_t *E, uint8_t *l, ui
 	int i, n = 0;
 
 	if (len < 11) {
-		PDEBUG(DMUP, DEBUG_NOTICE, "Message too short!\n");
+		LOGP(DMUP, LOGL_NOTICE, "Message too short!\n");
 		return 0;
 	}
 
@@ -1127,9 +1128,9 @@ int decode_sadqf(uint8_t *data, int len, uint16_t *S, uint8_t *E, uint8_t *l, ui
 			n++;
 	}
 
-	PDEBUG(DMUP, DEBUG_INFO, "(BS SADQF) Aktivdateiquittung der BS:\n");
+	LOGP(DMUP, LOGL_INFO, "(BS SADQF) Aktivdateiquittung der BS:\n");
 	for (i = 0; i < n; i++)
-		PDEBUG(DMUP, DEBUG_INFO, " %d: FuTln=%d,%d,%d (0161-%d%d%05d)\n", i + 1, N[i], U[i], T[i], N[i], U[i], T[i]);
+		LOGP(DMUP, LOGL_INFO, " %d: FuTln=%d,%d,%d (0161-%d%d%05d)\n", i + 1, N[i], U[i], T[i], N[i], U[i], T[i]);
 
 	return n;
 }

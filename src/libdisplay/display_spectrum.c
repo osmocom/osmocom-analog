@@ -24,7 +24,7 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libfft/fft.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libdisplay/display.h"
 
 #define HEIGHT	20
@@ -101,14 +101,16 @@ void display_spectrum_on(int on)
 	if (spectrum_on) {
 		memset(&screen, ' ', sizeof(screen));
 		memset(&buffer_hold, 0, sizeof(buffer_hold));
-		lock_debug();
+		lock_logging();
+		enable_limit_scroll(false);
 		printf("\0337\033[H");
 		for (j = 0; j < HEIGHT; j++) {
 			screen[j][w] = '\0';
 			puts(screen[j]);
 		}
 		printf("\0338"); fflush(stdout);
-		unlock_debug();
+		enable_limit_scroll(true);
+		unlock_logging();
 	}
 
 	if (on < 0) {
@@ -118,9 +120,9 @@ void display_spectrum_on(int on)
 		spectrum_on = on;
 
 	if (spectrum_on)
-		debug_limit_scroll = HEIGHT;
+		logging_limit_scroll_top(HEIGHT);
 	else
-		debug_limit_scroll = 0;
+		logging_limit_scroll_top(0);
 }
 
 /*
@@ -141,8 +143,6 @@ void display_spectrum(float *samples, int length)
 
 	if (!spectrum_on)
 		return;
-
-	lock_debug();
 
 	get_win_size(&width, &h);
 	if (width > MAX_DISPLAY_WIDTH - 1)
@@ -390,6 +390,8 @@ void display_spectrum(float *samples, int length)
 			screen_color[0][j-1] = 7;
 			screen_color[0][j+1] = 7;
 			/* display buffer */
+			lock_logging();
+			enable_limit_scroll(false);
 			printf("\0337\033[H");
 			for (j = 0; j < HEIGHT; j++) {
 				for (k = 0; k < width; k++) {
@@ -403,12 +405,11 @@ void display_spectrum(float *samples, int length)
 			}
 			/* reset color and position */
 			printf("\033[0;39m\0338"); fflush(stdout);
+			enable_limit_scroll(true);
+			unlock_logging();
 		}
 	}
 
 	disp.interval_pos = pos;
-
-	unlock_debug();
 }
-
 

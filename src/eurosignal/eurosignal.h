@@ -1,6 +1,6 @@
 #include "../libfm/fm.h"
 #include "../libmobile/sender.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 
 /* current state of transmitter */
 enum euro_health_state {
@@ -30,7 +30,7 @@ typedef struct euro_call {
 	int			callref;		/* call reference */
 	char			station_id[7];		/* current station ID */
 	int			page_count;		/* number of transmissions left */
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	enum euro_call_state	state;			/* current state */
 	int			announcement_count;	/* used to replay annoucements */
 	int16_t			*announcement_spl;	/* current sample */

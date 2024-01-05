@@ -67,7 +67,7 @@ typedef struct am791x {
 	int		f0_rx, f1_rx;
 
 	/* timers */
-	struct timer	tx_timer, rx_timer;
+	struct osmo_timer_list	tx_timer, rx_timer;
 	double		t_rcon;
 	double		t_rcoff;
 	double		t_brcon;

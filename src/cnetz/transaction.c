@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
 #include "cnetz.h"
@@ -54,7 +54,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 		if ((trans->state & state & (TRANS_EM | TRANS_UM | TRANS_VWG | TRANS_ATQ_IDLE))) {
 			if (!isnan(trans->rf_level_db) && !isnan(rf_level_db) && trans->cnetz->kanal != cnetz->kanal) {
 				if (rf_level_db > trans->rf_level_db) {
-					PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is stronger, so we move to that channel!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
+					LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is stronger, so we move to that channel!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
 					trans->rf_level_db = rf_level_db;
 					unlink_transaction(trans);
 					link_transaction(trans, cnetz);
@@ -62,14 +62,14 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 					return trans;
 				}
 				if (rf_level_db < trans->rf_level_db) {
-					PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is weaker, so we ignore that channel!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
+					LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is weaker, so we ignore that channel!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
 					return trans;
 				}
 			}
-			PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is also received. Try to avoid multiple OgK channels!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
+			LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s' on channel #%d, but this message on channel #%d is also received. Try to avoid multiple OgK channels!\n", rufnummer, trans->cnetz->kanal, cnetz->kanal);
 			return trans;
 		}
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", rufnummer);
+		LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s', deleting!\n", rufnummer);
 		destroy_transaction(trans);
 		if (old_cnetz) /* should be... */
 			cnetz_go_idle(old_cnetz);
@@ -79,11 +79,11 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 
 	trans = calloc(1, sizeof(*trans));
 	if (!trans) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DTRANS, LOGL_ERROR, "No memory!\n");
 		return NULL;
 	}
 
-	timer_init(&trans->timer, transaction_timeout, trans);
+	osmo_timer_setup(&trans->timer, transaction_timeout, trans);
 
 	trans_new_state(trans, state);
 	trans->futln_nat = futln_nat;
@@ -96,7 +96,7 @@ transaction_t *create_transaction(cnetz_t *cnetz, uint64_t state, uint8_t futln_
 		trans->mt_call = 1;
 
 	const char *rufnummer = transaction2rufnummer(trans);
-	PDEBUG(DTRANS, DEBUG_INFO, "Created transaction for subscriber '%s'\n", rufnummer);
+	LOGP(DTRANS, LOGL_INFO, "Created transaction for subscriber '%s'\n", rufnummer);
 
 	link_transaction(trans, cnetz);
 
@@ -119,9 +119,9 @@ void destroy_transaction(transaction_t *trans)
 	unlink_transaction(trans);
 	
 	const char *rufnummer = transaction2rufnummer(trans);
-	PDEBUG(DTRANS, DEBUG_INFO, "Destroying transaction for subscriber '%s'\n", rufnummer);
+	LOGP(DTRANS, LOGL_INFO, "Destroying transaction for subscriber '%s'\n", rufnummer);
 
-	timer_exit(&trans->timer);
+	osmo_timer_del(&trans->timer);
 
 	trans_new_state(trans, 0);
 
@@ -134,7 +134,7 @@ void link_transaction(transaction_t *trans, cnetz_t *cnetz)
 	transaction_t **transp;
 
 	/* attach to end of list, so first transaction is served first */
-	PDEBUG(DTRANS, DEBUG_DEBUG, "Linking transaction %p to cnetz %p\n", trans, cnetz);
+	LOGP(DTRANS, LOGL_DEBUG, "Linking transaction %p to cnetz %p\n", trans, cnetz);
 	trans->cnetz = cnetz;
 	trans->next = NULL;
 	transp = &cnetz->trans_list;
@@ -150,12 +150,12 @@ void unlink_transaction(transaction_t *trans)
 	transaction_t **transp;
 
 	/* unlink */
-	PDEBUG(DTRANS, DEBUG_DEBUG, "Unlinking transaction %p from cnetz %p\n", trans, trans->cnetz);
+	LOGP(DTRANS, LOGL_DEBUG, "Unlinking transaction %p from cnetz %p\n", trans, trans->cnetz);
 	transp = &trans->cnetz->trans_list;
 	while (*transp && *transp != trans)
 		transp = &((*transp)->next);
 	if (!(*transp)) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "Transaction not in list, please fix!!\n");
+		LOGP(DTRANS, LOGL_ERROR, "Transaction not in list, please fix!!\n");
 		abort();
 	}
 	*transp = trans->next;
@@ -170,7 +170,7 @@ transaction_t *search_transaction(cnetz_t *cnetz, uint64_t state_mask)
 	while (trans) {
 		if ((trans->state & state_mask)) {
 			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
 			return trans;
 		}
 		trans = trans->next;
@@ -188,7 +188,7 @@ transaction_t *search_transaction_number(cnetz_t *cnetz, uint8_t futln_nat, uint
 		 && trans->futln_fuvst == futln_fuvst
 		 && trans->futln_rest == futln_rest) {
 			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
 			return trans;
 		}
 		trans = trans->next;
@@ -224,7 +224,7 @@ transaction_t *search_transaction_callref(cnetz_t *cnetz, int callref)
 	while (trans) {
 		if (trans->callref == callref) {
 			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
 			return trans;
 		}
 		trans = trans->next;
@@ -262,7 +262,7 @@ transaction_t *search_transaction_queue(void)
 
 	if (found) {
 		const char *rufnummer = transaction2rufnummer(found);
-		PDEBUG(DTRANS, DEBUG_DEBUG, "Found oldest transaction in queue for subscriber '%s'\n", rufnummer);
+		LOGP(DTRANS, LOGL_DEBUG, "Found oldest transaction in queue for subscriber '%s'\n", rufnummer);
 		return found;
 	}
 
@@ -386,7 +386,7 @@ const char *trans_short_state_name(uint64_t state)
 
 void trans_new_state(transaction_t *trans, uint64_t state)
 {
-	PDEBUG(DTRANS, DEBUG_INFO, "Transaction (%s) state %s -> %s\n", transaction2rufnummer(trans), trans_state_name(trans->state), trans_state_name(state));
+	LOGP(DTRANS, LOGL_INFO, "Transaction (%s) state %s -> %s\n", transaction2rufnummer(trans), trans_state_name(trans->state), trans_state_name(state));
 	trans->state = state;
 	/* in case of a queue, set new positon */
 	if (!trans->queue_position && (state == TRANS_MO_QUEUE || state == TRANS_MT_QUEUE))
@@ -398,12 +398,12 @@ void cnetz_flush_other_transactions(cnetz_t *cnetz, transaction_t *trans)
 {
 	/* flush after this very trans */
 	while (trans->next) {
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Kicking other pending transaction\n");
+		LOGP(DTRANS, LOGL_NOTICE, "Kicking other pending transaction\n");
 		destroy_transaction(trans->next);
 	}
 	/* flush before this very trans */
 	while (cnetz->trans_list != trans) {
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Kicking other pending transaction\n");
+		LOGP(DTRANS, LOGL_NOTICE, "Kicking other pending transaction\n");
 		destroy_transaction(cnetz->trans_list);
 	}
 }

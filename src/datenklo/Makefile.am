@@ -12,15 +12,15 @@ datenklo_SOURCES = \
 datenklo_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/liboptions/liboptions.a \
-	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libfsk/libfsk.a \
-	$(top_builddir)/src/libtimer/libtimer.a \
 	$(top_builddir)/src/libfm/libfm.a \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libsound/libsound.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libsample/libsample.a \
+	$(top_builddir)/src/liblogging/liblogging.a \
+	$(LIBOSMOCORE_LIBS) \
 	$(ALSA_LIBS) \
 	$(FUSE_LIBS) \
 	-lm

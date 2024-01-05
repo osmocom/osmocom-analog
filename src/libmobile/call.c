@@ -26,19 +26,20 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
-#include "../libselect/select.h"
-#include "../libosmocc/endpoint.h"
-#include "../libosmocc/helper.h"
-#include "../libg711/g711.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
+#include <osmocom/core/select.h>
+#include <osmocom/cc/endpoint.h>
+#include <osmocom/cc/helper.h>
+#include <osmocom/cc/g711.h>
+#include <osmocom/cc/rtp.h>
 #include "cause.h"
 #include "sender.h"
 #include "call.h"
 #include "main_mobile.h"
 #include "console.h"
 
-#define DISC_TIMEOUT	30
+#define DISC_TIMEOUT	30, 0
 
 //#define DEBUG_LEVEL
 
@@ -254,7 +255,7 @@ typedef struct process {
 	enum audio_pattern pattern;
 	int audio_pos;
 	uint8_t cause;
-	struct timer timer;
+	struct osmo_timer_list timer;
 	osmo_cc_session_t *session;
 	osmo_cc_session_codec_t *codec; /* codec to send */
 } process_t;
@@ -270,10 +271,10 @@ static process_t *create_process(int callref, enum process_state state)
 
 	process = calloc(sizeof(*process), 1);
 	if (!process) {
-		PDEBUG(DCALL, DEBUG_ERROR, "No memory!\n");
+		LOGP(DCALL, LOGL_ERROR, "No memory!\n");
 		abort();
 	}
-	timer_init(&process->timer, process_timeout, process);
+	osmo_timer_setup(&process->timer, process_timeout, process);
 	process->next = process_head;
 	process_head = process;
 
@@ -291,7 +292,7 @@ static void destroy_process(int callref)
 	while (process) {
 		if (process->callref == callref) {
 			*process_p = process->next;
-			timer_exit(&process->timer);
+			osmo_timer_del(&process->timer);
 			if (process->session)
 				osmo_cc_free_session(process->session);
 			free(process);
@@ -300,7 +301,7 @@ static void destroy_process(int callref)
 		process_p = &process->next;
 		process = process->next;
 	}
-	PDEBUG(DCALL, DEBUG_ERROR, "Process with callref %d not found!\n", callref);
+	LOGP(DCALL, LOGL_ERROR, "Process with callref %d not found!\n", callref);
 }
 
 static process_t *get_process(int callref)
@@ -320,10 +321,10 @@ static void new_state_process(int callref, enum process_state state)
 	process_t *process = get_process(callref);
 
 	if (!process) {
-		PDEBUG(DCALL, DEBUG_ERROR, "Process with callref %d not found!\n", callref);
+		LOGP(DCALL, LOGL_ERROR, "Process with callref %d not found!\n", callref);
 		return;
 	}
-	PDEBUG(DCALL, DEBUG_DEBUG, "Changing state for callref %d  %d->%d\n", callref, process->state, state);
+	LOGP(DCALL, LOGL_DEBUG, "Changing state for callref %d  %d->%d\n", callref, process->state, state);
 	process->state = state;
 }
 
@@ -332,7 +333,7 @@ static void set_pattern_process(int callref, enum audio_pattern pattern)
 	process_t *process = get_process(callref);
 
 	if (!process) {
-		PDEBUG(DCALL, DEBUG_ERROR, "Process with callref %d not found!\n", callref);
+		LOGP(DCALL, LOGL_ERROR, "Process with callref %d not found!\n", callref);
 		return;
 	}
 	process->pattern = pattern;
@@ -345,14 +346,14 @@ static void disconnect_process(int callref, int cause)
 	process_t *process = get_process(callref);
 
 	if (!process) {
-		PDEBUG(DCALL, DEBUG_ERROR, "Process with callref %d not found!\n", callref);
+		LOGP(DCALL, LOGL_ERROR, "Process with callref %d not found!\n", callref);
 		return;
 	}
 	process->pattern = cause2pattern(cause);
 	process->audio_disconnected = 1;
 	process->audio_pos = 0;
 	process->cause = cause;
-	timer_start(&process->timer, DISC_TIMEOUT);
+	osmo_timer_schedule(&process->timer, DISC_TIMEOUT);
 }
 
 static void get_process_patterns(process_t *process, int16_t *samples, int length)
@@ -382,7 +383,7 @@ static void process_timeout(void *data)
 	{
 		/* announcement timeout */
 		if (process->state == PROCESS_DISCONNECT) {
-			PDEBUG(DCALL, DEBUG_INFO, "Call released toward mobile network (after timeout)\n");
+			LOGP(DCALL, LOGL_INFO, "Call released toward mobile network (after timeout)\n");
 			call_down_release(process->callref, process->cause);
 		}
 		indicate_disconnect_release(process->callref, process->cause, OSMO_CC_MSG_REL_IND);
@@ -425,7 +426,7 @@ static void indicate_setup(process_t *process, const char *callerid, const char 
 	/* sdp offer */
 	process->session = osmo_cc_helper_audio_offer(&ep->session_config, process, codecs + no_l16, down_audio, msg, 1);
 
-	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC setup towards fixed network\n");
+	LOGP(DCALL, LOGL_INFO, "Indicate OSMO-CC setup towards fixed network\n");
 	osmo_cc_ll_msg(ep, process->callref, msg);
 }
 
@@ -441,7 +442,7 @@ static void indicate_proceeding(int callref, const char *sdp)
 	/* progress information */
 	osmo_cc_add_ie_progress(msg, OSMO_CC_CODING_ITU_T, OSMO_CC_LOCATION_BEYOND_INTERWORKING, OSMO_CC_PROGRESS_INBAND_INFO_AVAILABLE);
 
-	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC call confirm towards fixed network\n");
+	LOGP(DCALL, LOGL_INFO, "Indicate OSMO-CC call confirm towards fixed network\n");
 	osmo_cc_ll_msg(ep, callref, msg);
 }
 
@@ -451,7 +452,7 @@ static void indicate_alerting(int callref)
 
 	msg = osmo_cc_new_msg(OSMO_CC_MSG_ALERT_IND);
 
-	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC alerting towards fixed network\n");
+	LOGP(DCALL, LOGL_INFO, "Indicate OSMO-CC alerting towards fixed network\n");
 	osmo_cc_ll_msg(ep, callref, msg);
 }
 
@@ -468,7 +469,7 @@ static void indicate_answer(int callref, const char *sdp, const char *connectid)
 	if (sdp)
 		osmo_cc_add_ie_sdp(msg, sdp);
 
-	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC answer towards fixed network\n");
+	LOGP(DCALL, LOGL_INFO, "Indicate OSMO-CC answer towards fixed network\n");
 	osmo_cc_ll_msg(ep, callref, msg);
 }
 
@@ -478,7 +479,7 @@ static void indicate_answer_ack(int callref)
 
 	msg = osmo_cc_new_msg(OSMO_CC_MSG_SETUP_COMP_IND);
 
-	PDEBUG(DCALL, DEBUG_INFO, "Indicate OSMO-CC setup complete towards fixed network\n");
+	LOGP(DCALL, LOGL_INFO, "Indicate OSMO-CC setup complete towards fixed network\n");
 	osmo_cc_ll_msg(ep, callref, msg);
 }
 
@@ -495,7 +496,7 @@ static void indicate_disconnect_release(int callref, int cause, uint8_t msg_type
 	if (msg_type == OSMO_CC_MSG_DISC_IND)
 		osmo_cc_add_ie_progress(msg, OSMO_CC_CODING_ITU_T, OSMO_CC_LOCATION_BEYOND_INTERWORKING, OSMO_CC_PROGRESS_INBAND_INFO_AVAILABLE);
 
-	PDEBUG(DCALL, DEBUG_INFO, "%s OSMO-CC %s towards fixed network\n", (msg_type == OSMO_CC_MSG_REL_CNF) ? "Confirm" : "Indicated", (msg_type == OSMO_CC_MSG_DISC_IND) ? "disconnect" : "release");
+	LOGP(DCALL, LOGL_INFO, "%s OSMO-CC %s towards fixed network\n", (msg_type == OSMO_CC_MSG_REL_CNF) ? "Confirm" : "Indicated", (msg_type == OSMO_CC_MSG_DISC_IND) ? "disconnect" : "release");
 	osmo_cc_ll_msg(ep, callref, msg);
 }
 
@@ -505,9 +506,9 @@ int call_up_setup(const char *callerid, const char *dialing, uint8_t network, co
 	osmo_cc_call_t *call;
 	process_t *process;
 
-	PDEBUG(DCALL, DEBUG_INFO, "Incoming call from '%s' to '%s'\n", callerid ? : "unknown", dialing);
+	LOGP(DCALL, LOGL_INFO, "Incoming call from '%s' to '%s'\n", callerid ? : "unknown", dialing);
 	if (!strcmp(dialing, "010"))
-		PDEBUG(DCALL, DEBUG_INFO, " -> Call to Operator '%s'\n", dialing);
+		LOGP(DCALL, LOGL_INFO, " -> Call to Operator '%s'\n", dialing);
 
 	call = osmo_cc_call_new(ep);
 
@@ -522,11 +523,11 @@ int call_up_setup(const char *callerid, const char *dialing, uint8_t network, co
 void call_up_alerting(int callref)
 {
 	if (!callref) {
-		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring alerting, because callref not set. (not for us)\n");
+		LOGP(DCALL, LOGL_DEBUG, "Ignoring alerting, because callref not set. (not for us)\n");
 		return;
 	}
 
-	PDEBUG(DCALL, DEBUG_INFO, "Call is alerting\n");
+	LOGP(DCALL, LOGL_INFO, "Call is alerting\n");
 
 	if (!connect_on_setup)
 		indicate_alerting(callref);
@@ -544,11 +545,11 @@ void call_up_early(int callref)
 void call_up_answer(int callref, const char *connect_id)
 {
 	if (!callref) {
-		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring answer, because callref not set. (not for us)\n");
+		LOGP(DCALL, LOGL_DEBUG, "Ignoring answer, because callref not set. (not for us)\n");
 		return;
 	}
 
-	PDEBUG(DCALL, DEBUG_INFO, "Call has been answered by '%s'\n", connect_id);
+	LOGP(DCALL, LOGL_INFO, "Call has been answered by '%s'\n", connect_id);
 
 	if (!connect_on_setup)
 		indicate_answer(callref, NULL, connect_id);
@@ -562,11 +563,11 @@ void call_up_release(int callref, int cause)
 	process_t *process;
 
 	if (!callref) {
-		PDEBUG(DCALL, DEBUG_DEBUG, "Ignoring release, because callref not set. (not for us)\n");
+		LOGP(DCALL, LOGL_DEBUG, "Ignoring release, because callref not set. (not for us)\n");
 		return;
 	}
 
-	PDEBUG(DCALL, DEBUG_INFO, "Call has been released with cause=%d\n", cause);
+	LOGP(DCALL, LOGL_INFO, "Call has been released with cause=%d\n", cause);
 
 	process = get_process(callref);
 	if (process) {
@@ -673,7 +674,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		else {
 			/* release collisions is not forbidden */
 			if (msg->type != OSMO_CC_MSG_REL_REQ)
-				PDEBUG(DCALL, DEBUG_ERROR, "No process!\n");
+				LOGP(DCALL, LOGL_ERROR, "No process!\n");
 			osmo_cc_free_msg(msg);
 			return;
 		}
@@ -685,8 +686,8 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 			rc = osmo_cc_get_ie_cause(msg, 0, &location, &isdn_cause, &sip_cause, &socket_cause);
 			if (rc < 0)
 				isdn_cause = OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR;
-			PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC disconnect from fixed network with cause %d\n", isdn_cause);
-			PDEBUG(DCALL, DEBUG_INFO, "Call disconnected, releasing!\n");
+			LOGP(DCALL, LOGL_INFO, "Received OSMO-CC disconnect from fixed network with cause %d\n", isdn_cause);
+			LOGP(DCALL, LOGL_INFO, "Call disconnected, releasing!\n");
 			destroy_process(callref);
 			indicate_disconnect_release(callref, isdn_cause, OSMO_CC_MSG_REL_IND);
 		break;
@@ -694,8 +695,8 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 			rc = osmo_cc_get_ie_cause(msg, 0, &location, &isdn_cause, &sip_cause, &socket_cause);
 			if (rc < 0)
 				isdn_cause = OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR;
-			PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC release from fixed network with cause %d\n", isdn_cause);
-			PDEBUG(DCALL, DEBUG_INFO, "Call released\n");
+			LOGP(DCALL, LOGL_INFO, "Received OSMO-CC release from fixed network with cause %d\n", isdn_cause);
+			LOGP(DCALL, LOGL_INFO, "Call released\n");
 			destroy_process(callref);
 			indicate_disconnect_release(callref, isdn_cause, OSMO_CC_MSG_REL_CNF);
 			break;
@@ -744,14 +745,14 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		rc = osmo_cc_get_ie_called(msg, 0, &type, &plan, number, sizeof(number));
 		if (rc < 0)
 			number[0] = '\0';
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC call from fixed network '%s' to mobile '%s'\n", caller_id, number);
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC call from fixed network '%s' to mobile '%s'\n", caller_id, number);
 		if (!connect_on_setup)
 			indicate_proceeding(callref, sdp);
 		else {
-			PDEBUG(DCALL, DEBUG_DEBUG, "Early connecting after setup\n");
+			LOGP(DCALL, LOGL_DEBUG, "Early connecting after setup\n");
 			indicate_answer(callref, sdp, number);
 		}
-		PDEBUG(DCALL, DEBUG_INFO, "Outgoing call from '%s' to '%s'\n", caller_id, number);
+		LOGP(DCALL, LOGL_INFO, "Outgoing call from '%s' to '%s'\n", caller_id, number);
 
 		/* insert '+' for international dialing */
 		if (type == OSMO_CC_TYPE_INTERNATIONAL && number[0] != '+') {
@@ -765,10 +766,10 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		/* check suffix length */
 		invalid = mobile_number_check_length(suffix);
 		if (invalid) {
-			PDEBUG(DCALL, DEBUG_NOTICE, "Mobile number '%s' has invalid length: %s\n", suffix, invalid);
+			LOGP(DCALL, LOGL_NOTICE, "Mobile number '%s' has invalid length: %s\n", suffix, invalid);
 			disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 			if (!connect_on_setup) {
-				PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+				LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 				indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
 			}
 			break;
@@ -777,10 +778,10 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		/* check suffix digits */
 		invalid = mobile_number_check_digits(suffix);
 		if (invalid) {
-			PDEBUG(DCALL, DEBUG_NOTICE, "Mobile number '%s' has invalid digit: %s.\n", suffix, invalid);
+			LOGP(DCALL, LOGL_NOTICE, "Mobile number '%s' has invalid digit: %s.\n", suffix, invalid);
 			disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 			if (!connect_on_setup) {
-				PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+				LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 				indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
 			}
 			break;
@@ -790,10 +791,10 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		if (mobile_number_check_valid) {
 			invalid = mobile_number_check_valid(suffix);
 			if (invalid) {
-				PDEBUG(DCALL, DEBUG_NOTICE, "Mobile number '%s' is invalid for this network: %s\n", suffix, invalid);
+				LOGP(DCALL, LOGL_NOTICE, "Mobile number '%s' is invalid for this network: %s\n", suffix, invalid);
 				disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 				if (!connect_on_setup) {
-					PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+					LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 					indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
 				}
 				break;
@@ -803,9 +804,9 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		/* setup call */
 		rc = call_down_setup(callref, caller_id, caller_type, suffix);
 		if (rc < 0) {
-			PDEBUG(DCALL, DEBUG_NOTICE, "Call rejected, cause %d\n", -rc);
+			LOGP(DCALL, LOGL_NOTICE, "Call rejected, cause %d\n", -rc);
 			if (!connect_on_setup) {
-				PDEBUG(DCALL, DEBUG_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", -rc);
+				LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", -rc);
 				indicate_disconnect_release(callref, -rc, OSMO_CC_MSG_DISC_IND);
 			}
 			disconnect_process(callref, -rc);
@@ -814,44 +815,44 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		break;
 	    }
 	case OSMO_CC_MSG_SETUP_ACK_REQ:
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC overlap from fixed network\n");
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC overlap from fixed network\n");
 		rc = osmo_cc_helper_audio_negotiate(msg, &process->session, &process->codec);
 		if (rc < 0) {
 			nego_failed:
-			PDEBUG(DCALL, DEBUG_INFO, "Releasing, because codec negotiation failed.\n");
+			LOGP(DCALL, LOGL_INFO, "Releasing, because codec negotiation failed.\n");
 			destroy_process(callref);
 			indicate_disconnect_release(callref, 47, OSMO_CC_MSG_REL_IND);
-			PDEBUG(DCALL, DEBUG_INFO, "Call released toward mobile network\n");
+			LOGP(DCALL, LOGL_INFO, "Call released toward mobile network\n");
 			call_down_release(callref, 47);
 			break;
 		}
 		break;
 	case OSMO_CC_MSG_PROC_REQ:
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC proceeding from fixed network\n");
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC proceeding from fixed network\n");
 		rc = osmo_cc_helper_audio_negotiate(msg, &process->session, &process->codec);
 		if (rc < 0)
 			goto nego_failed;
 		break;
 	case OSMO_CC_MSG_PROGRESS_REQ:
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC progress from fixed network\n");
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC progress from fixed network\n");
 		rc = osmo_cc_helper_audio_negotiate(msg, &process->session, &process->codec);
 		if (rc < 0)
 			goto nego_failed;
 		break;
 	case OSMO_CC_MSG_ALERT_REQ:
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC alerting from fixed network\n");
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC alerting from fixed network\n");
 		rc = osmo_cc_helper_audio_negotiate(msg, &process->session, &process->codec);
 		if (rc < 0)
 			goto nego_failed;
 		new_state_process(callref, PROCESS_ALERTING_RO);
 		break;
 	case OSMO_CC_MSG_SETUP_RSP:
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC answer from fixed network\n");
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC answer from fixed network\n");
 		rc = osmo_cc_helper_audio_negotiate(msg, &process->session, &process->codec);
 		if (rc < 0)
 			goto nego_failed;
 		new_state_process(callref, PROCESS_CONNECT);
-		PDEBUG(DCALL, DEBUG_INFO, "Call answered\n");
+		LOGP(DCALL, LOGL_INFO, "Call answered\n");
 		call_down_answer(callref);
 		indicate_answer_ack(callref);
 		break;
@@ -865,22 +866,22 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		rc = osmo_cc_get_ie_progress(msg, 0, &coding, &location, &progress);
 		if (rc < 0)
 			progress = 0;
-		PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC disconnect from fixed network with cause %d\n", isdn_cause);
+		LOGP(DCALL, LOGL_INFO, "Received OSMO-CC disconnect from fixed network with cause %d\n", isdn_cause);
 		if (release_on_disconnect || (progress != 1 && progress != 8)) {
-			PDEBUG(DCALL, DEBUG_INFO, "Releasing, because we don't send disconnect tones to mobile phone\n");
+			LOGP(DCALL, LOGL_INFO, "Releasing, because we don't send disconnect tones to mobile phone\n");
 			destroy_process(callref);
 			indicate_disconnect_release(callref, isdn_cause, OSMO_CC_MSG_REL_IND);
-			PDEBUG(DCALL, DEBUG_INFO, "Call released toward mobile network\n");
+			LOGP(DCALL, LOGL_INFO, "Call released toward mobile network\n");
 			call_down_release(callref, isdn_cause);
 			break;
 		}
 		new_state_process(callref, PROCESS_DISCONNECT);
-		PDEBUG(DCALL, DEBUG_INFO, "Call disconnected\n");
+		LOGP(DCALL, LOGL_INFO, "Call disconnected\n");
 		call_down_disconnect(callref, isdn_cause);
 		/* we might get released during disconnect handling!!! */
 		process = get_process(callref);
 		if (process && process->state == PROCESS_DISCONNECT)
-			timer_start(&process->timer, DISC_TIMEOUT);
+			osmo_timer_schedule(&process->timer, DISC_TIMEOUT);
 		break;
 	case OSMO_CC_MSG_REJ_REQ:
 	case OSMO_CC_MSG_REL_REQ:
@@ -889,11 +890,11 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 			isdn_cause = OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR;
 		destroy_process(callref);
 		if (msg->type == OSMO_CC_MSG_REL_REQ) {
-			PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC release from fixed network with cause %d\n", isdn_cause);
+			LOGP(DCALL, LOGL_INFO, "Received OSMO-CC release from fixed network with cause %d\n", isdn_cause);
 			indicate_disconnect_release(callref, isdn_cause, OSMO_CC_MSG_REL_CNF);
 		} else
-			PDEBUG(DCALL, DEBUG_INFO, "Received OSMO-CC reject from fixed network with cause %d\n", isdn_cause);
-		PDEBUG(DCALL, DEBUG_INFO, "Call released toward mobile network\n");
+			LOGP(DCALL, LOGL_INFO, "Received OSMO-CC reject from fixed network with cause %d\n", isdn_cause);
+		LOGP(DCALL, LOGL_INFO, "Call released toward mobile network\n");
 		call_down_release(callref, isdn_cause);
 		break;
 	}

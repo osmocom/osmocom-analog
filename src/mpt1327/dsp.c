@@ -27,8 +27,8 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libmobile/call.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "mpt1327.h"
 #include "dsp.h"
 #include "message.h"
@@ -61,7 +61,7 @@ int dsp_init_sender(mpt1327_t *mpt1327, double squelch_db)
 {
 	int rc;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* init squelch */
 	squelch_init(&mpt1327->squelch, mpt1327->sender.kanal, squelch_db, MUTE_TIME, MUTE_TIME);
@@ -69,15 +69,15 @@ int dsp_init_sender(mpt1327_t *mpt1327, double squelch_db)
 	/* set modulation parameters */
 	sender_set_fm(&mpt1327->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation)\n", TX_PEAK_FSK, SPEECH_DEVIATION * TX_PEAK_FSK / 1e3);
+	LOGP(DDSP, LOGL_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation)\n", TX_PEAK_FSK, SPEECH_DEVIATION * TX_PEAK_FSK / 1e3);
 
 	/* init fsk */
 	if (fsk_mod_init(&mpt1327->fsk_mod, mpt1327, fsk_send_bit, mpt1327->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1, 0) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (fsk_demod_init(&mpt1327->fsk_demod, mpt1327, fsk_receive_bit, mpt1327->sender.samplerate, BIT_RATE, F0, F1, BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 
@@ -87,7 +87,7 @@ int dsp_init_sender(mpt1327_t *mpt1327, double squelch_db)
 	/* repeater */
 	rc = jitter_create(&mpt1327->repeater_dejitter, "repeater", mpt1327->sender.samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
 	if (rc < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to create and init repeater buffer!\n");
+		LOGP(DDSP, LOGL_ERROR, "Failed to create and init repeater buffer!\n");
 		goto error;
 	}
 	return 0;
@@ -100,7 +100,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(mpt1327_t *mpt1327)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for Transceiver.\n");
 
 	fsk_mod_cleanup(&mpt1327->fsk_mod);
 	fsk_demod_cleanup(&mpt1327->fsk_demod);
@@ -163,7 +163,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 
 	/* check parity */
 	if (mpt1327_checkbits(mpt1327->rx_bits, NULL) != (mpt1327->rx_bits & 0xffff)) {
-		PDEBUG(DDSP, DEBUG_NOTICE, "Received corrupt codeword or noise.\n");
+		LOGP(DDSP, LOGL_NOTICE, "Received corrupt codeword or noise.\n");
 		mpt1327->rx_in_sync = 0;
 		mpt1327->rx_mute = 0;
 		return;
@@ -339,7 +339,7 @@ void mpt1327_set_dsp_mode(mpt1327_t *mpt1327, enum dsp_mode mode, int repeater)
 		jitter_reset(&mpt1327->repeater_dejitter);
 	mpt1327->repeater = repeater;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", mpt1327_dsp_mode_name(mpt1327->dsp_mode), mpt1327_dsp_mode_name(mode));
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", mpt1327_dsp_mode_name(mpt1327->dsp_mode), mpt1327_dsp_mode_name(mode));
 	mpt1327->dsp_mode = mode;
 }
 

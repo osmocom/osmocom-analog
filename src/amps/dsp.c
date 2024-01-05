@@ -82,8 +82,9 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
+#include "../libmobile/get_time.h"
 #include "amps.h"
 #include "frame.h"
 #include "dsp.h"
@@ -146,7 +147,7 @@ void dsp_init(void)
 	int i;
 	double s;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for SAT signal.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine table for SAT signal.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
 		dsp_sine_sat[i] = s * ((!tacs) ? AMPS_SAT_DEVIATION : TACS_SAT_DEVIATION);
@@ -171,7 +172,7 @@ static void dsp_init_ramp(amps_t *amps)
 	double c;
         int i;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating smooth ramp table.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating smooth ramp table.\n");
 	for (i = 0; i < 256; i++) {
 		c = cos((double)i / 256.0 * PI);
 #if 0
@@ -198,7 +199,7 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	/* attack (3ms) and recovery time (13.5ms) according to amps specs */
 	setup_compandor(&amps->cstate, 8000, 3.0, 13.5);
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for transceiver.\n");
 
 	/* set modulation parameters */
 	sender_set_fm(&amps->sender,
@@ -208,18 +209,18 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 		(!tacs) ? AMPS_MAX_DISPLAY : TACS_MAX_DISPLAY);
 
 	if (amps->sender.samplerate < 96000) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 96000 Hz to process FSK and SAT signals.\n");
+		LOGP(DDSP, LOGL_ERROR, "Sample rate must be at least 96000 Hz to process FSK and SAT signals.\n");
 		return -EINVAL;
 	}
 
 	amps->fsk_bitduration = (double)amps->sender.samplerate / (double)((!tacs) ? AMPS_BITRATE : TACS_BITRATE);
 	amps->fsk_bitstep = 1.0 / amps->fsk_bitduration;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Use %.4f samples for full bit duration @ %d.\n", amps->fsk_bitduration, amps->sender.samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Use %.4f samples for full bit duration @ %d.\n", amps->fsk_bitduration, amps->sender.samplerate);
 
 	amps->fsk_tx_buffer_size = amps->fsk_bitduration + 10; /* 10 extra to avoid overflow due to rounding */
 	spl = calloc(sizeof(*spl), amps->fsk_tx_buffer_size);
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDSP, LOGL_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -230,12 +231,12 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->fsk_rx_window_begin = half >> 1;
 	amps->fsk_rx_window_half = half;
 	amps->fsk_rx_window_end = amps->fsk_rx_window_length - (half >> 1);
-	PDEBUG(DDSP, DEBUG_DEBUG, "Bit window length: %d\n", amps->fsk_rx_window_length);
-	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level left of edge: %d..%d\n", amps->fsk_rx_window_begin, amps->fsk_rx_window_half - 1);
-	PDEBUG(DDSP, DEBUG_DEBUG, " -> Samples in window to analyse level right of edge: %d..%d\n", amps->fsk_rx_window_half, amps->fsk_rx_window_end - 1);
+	LOGP(DDSP, LOGL_DEBUG, "Bit window length: %d\n", amps->fsk_rx_window_length);
+	LOGP(DDSP, LOGL_DEBUG, " -> Samples in window to analyse level left of edge: %d..%d\n", amps->fsk_rx_window_begin, amps->fsk_rx_window_half - 1);
+	LOGP(DDSP, LOGL_DEBUG, " -> Samples in window to analyse level right of edge: %d..%d\n", amps->fsk_rx_window_half, amps->fsk_rx_window_end - 1);
 	spl = calloc(sizeof(*amps->fsk_rx_window), amps->fsk_rx_window_length);
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDSP, LOGL_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -252,10 +253,10 @@ int dsp_init_sender(amps_t *amps, int tolerant)
 	amps->sat_samples = (int)((double)amps->sender.samplerate * (1.0 / (SAT_BANDWIDTH / 2.0)) + 0.5);
 	spl = calloc(sizeof(*spl), amps->sat_samples);
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDSP, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
-	PDEBUG(DDSP, DEBUG_DEBUG, "Sat detection interval is %d ms.\n", amps->sat_samples * 1000 / amps->sender.samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Sat detection interval is %d ms.\n", amps->sat_samples * 1000 / amps->sender.samplerate);
 	amps->sat_filter_spl = spl;
 
 	/* count SAT tones */
@@ -289,7 +290,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(amps_t *amps)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for treansceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for treansceiver.\n");
 
 	if (amps->fsk_tx_buffer)
 		free(amps->fsk_tx_buffer);
@@ -770,7 +771,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 
 	/* debug SAT */
 	if (++amps->sat_print == SAT_PRINT) {
-		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "SAT level %.2f%% quality %.0f%%\n", sat_level * 100.0, sat_quality * 100.0);
+		LOGP_CHAN(DDSP, LOGL_NOTICE, "SAT level %.2f%% quality %.0f%%\n", sat_level * 100.0, sat_quality * 100.0);
 		amps->sat_print = 0;
 	}
 
@@ -779,8 +780,8 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 	display_measurements_update(amps->dmp_sat_quality, sat_quality * 100.0, 0.0);
 
 	/* debug signaling tone */
-	if (amps->sender.loopback || debuglevel == DEBUG_DEBUG) {
-		PDEBUG_CHAN(DDSP, debuglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", sig_level * 100.0, sig_quality * 100.0);
+	if (amps->sender.loopback || loglevel == LOGL_DEBUG) {
+		LOGP_CHAN(DDSP, loglevel, "Signaling Tone level %.2f%% quality %.0f%%\n", sig_level * 100.0, sig_quality * 100.0);
 	}
 
 	/* mute if SAT quality or level is below threshold */
@@ -796,7 +797,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 			if (amps->sat_detect_count == SAT_DETECT_COUNT) {
 				amps->sat_detected = 1;
 				amps->sat_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT signal detected with level=%.0f%%, quality=%.0f%%.\n", sat_level * 100.0, sat_quality * 100.0);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "SAT signal detected with level=%.0f%%, quality=%.0f%%.\n", sat_level * 100.0, sat_quality * 100.0);
 				amps_rx_sat(amps, 1, sat_quality);
 			}
 		} else
@@ -807,7 +808,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 			if (amps->sat_detect_count == SAT_LOST_COUNT) {
 				amps->sat_detected = 0;
 				amps->sat_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT signal lost.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "SAT signal lost.\n");
 				amps_rx_sat(amps, 0, 0.0);
 			}
 		} else
@@ -821,7 +822,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 			if (amps->sig_detect_count == SIG_DETECT_COUNT) {
 				amps->sig_detected = 1;
 				amps->sig_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", sig_level * 100.0, sig_quality * 100.0);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Signaling Tone detected with level=%.0f%%, quality=%.0f%%.\n", sig_level * 100.0, sig_quality * 100.0);
 				amps_rx_signaling_tone(amps, 1, sig_quality);
 			}
 		} else
@@ -832,7 +833,7 @@ static void sat_decode(amps_t *amps, sample_t *samples, int length)
 			if (amps->sig_detect_count == SIG_LOST_COUNT) {
 				amps->sig_detected = 0;
 				amps->sig_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Signaling Tone lost.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Signaling Tone lost.\n");
 				amps_rx_signaling_tone(amps, 0, 0.0);
 			}
 		} else
@@ -918,7 +919,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 /* Reset SAT detection states, so ongoing tone will be detected again. */
 static void sat_reset(amps_t *amps, const char *reason)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "SAT detector reset: %s.\n", reason);
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "SAT detector reset: %s.\n", reason);
 	amps->sat_detected = 0;
 	amps->sat_detect_count = 0;
 	amps->sig_detected = 0;
@@ -935,28 +936,28 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 	if (mode == DSP_MODE_FRAME_RX_FRAME_TX) {
 		/* reset SAT detection */
 		sat_reset(amps, "Change to FOCC");
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode to FOCC\n");
+		LOGP_CHAN(DDSP, LOGL_INFO, "Change mode to FOCC\n");
 		amps->tx_focc_debugged = 0;
 	}
 	if (amps->dsp_mode == DSP_MODE_FRAME_RX_FRAME_TX
 	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX || mode == DSP_MODE_AUDIO_RX_SILENCE_TX)) {
 		/* reset SAT detection */
 		sat_reset(amps, "Change from FOCC to FVC");
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from FOCC to FVC\n");
+		LOGP_CHAN(DDSP, LOGL_INFO, "Change mode from FOCC to FVC\n");
 	}
 	if (amps->dsp_mode == DSP_MODE_OFF
 	 && (mode == DSP_MODE_AUDIO_RX_AUDIO_TX || mode == DSP_MODE_AUDIO_RX_FRAME_TX || mode == DSP_MODE_AUDIO_RX_SILENCE_TX)) {
 		/* reset SAT detection */
 		sat_reset(amps, "Enable FVC");
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from OFF to FVC\n");
+		LOGP_CHAN(DDSP, LOGL_INFO, "Change mode from OFF to FVC\n");
 	}
 	if (mode == DSP_MODE_OFF) {
 		/* reset SAT detection */
 		sat_reset(amps, "Disable FVC");
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Change mode from FVC to OFF\n");
+		LOGP_CHAN(DDSP, LOGL_INFO, "Change mode from FVC to OFF\n");
 	}
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Reset FSK frame transmitter, due to setting dsp mode.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Reset FSK frame transmitter, due to setting dsp mode.\n");
 
 	amps->dsp_mode = mode;
 	if (frame_length)

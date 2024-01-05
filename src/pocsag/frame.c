@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "pocsag.h"
 #include "frame.h"
 
@@ -103,29 +103,29 @@ static uint32_t pocsag_parity(uint32_t word)
 static int debug_word(uint32_t word, int slot)
 {
 	if (pocsag_crc(word >> 11) != ((word >> 1) & 0x3ff)) {
-		PDEBUG(DPOCSAG, DEBUG_NOTICE, "CRC error in codeword 0x%08x.\n", word);
+		LOGP(DPOCSAG, LOGL_NOTICE, "CRC error in codeword 0x%08x.\n", word);
 		return -EINVAL;
 	}
 
 	if (pocsag_parity(word)) {
-		PDEBUG(DPOCSAG, DEBUG_NOTICE, "Parity error in codeword 0x%08x.\n", word);
+		LOGP(DPOCSAG, LOGL_NOTICE, "Parity error in codeword 0x%08x.\n", word);
 		return -EINVAL;
 	}
 
 	if (word == CODEWORD_SYNC) {
-		PDEBUG(DPOCSAG, DEBUG_DEBUG, "-> valid sync word\n");
+		LOGP(DPOCSAG, LOGL_DEBUG, "-> valid sync word\n");
 		return 0;
 	}
 
 	if (word == CODEWORD_IDLE) {
-		PDEBUG(DPOCSAG, DEBUG_DEBUG, "-> valid idle word\n");
+		LOGP(DPOCSAG, LOGL_DEBUG, "-> valid idle word\n");
 		return 0;
 	}
 
 	if (!(word & 0x80000000)) {
-		PDEBUG(DPOCSAG, DEBUG_DEBUG, "-> valid address word: RIC = '%d', function = '%d' (%s)\n", ((word >> 10) & 0x1ffff8) + slot, (word >> 11) & 0x3, pocsag_function_name[(word >> 11) & 0x3]);
+		LOGP(DPOCSAG, LOGL_DEBUG, "-> valid address word: RIC = '%d', function = '%d' (%s)\n", ((word >> 10) & 0x1ffff8) + slot, (word >> 11) & 0x3, pocsag_function_name[(word >> 11) & 0x3]);
 	} else {
-		PDEBUG(DPOCSAG, DEBUG_DEBUG, "-> valid message word: message = '0x%05x'\n", (word >> 11) & 0xfffff);
+		LOGP(DPOCSAG, LOGL_DEBUG, "-> valid message word: message = '0x%05x'\n", (word >> 11) & 0xfffff);
 	}
 
 	return 0;
@@ -303,9 +303,9 @@ int64_t get_codeword(pocsag_t *pocsag)
 		return -1;
 	case POCSAG_PREAMBLE:
 		if (!pocsag->word_count)
-			PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, "Sending preamble.\n");
+			LOGP_CHAN(DPOCSAG, LOGL_INFO, "Sending preamble.\n");
 		/* transmit preamble */
-		PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Sending 32 bits of preamble pattern 0x%08x.\n", CODEWORD_PREAMBLE);
+		LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Sending 32 bits of preamble pattern 0x%08x.\n", CODEWORD_PREAMBLE);
 		if (++pocsag->word_count == PREAMBLE_COUNT) {
 			pocsag_new_state(pocsag, POCSAG_MESSAGE);
 			pocsag->word_count = 0; 
@@ -315,10 +315,10 @@ int64_t get_codeword(pocsag_t *pocsag)
 		break;
 	case POCSAG_MESSAGE:
 		if (!pocsag->word_count)
-			PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, "Sending batch.\n");
+			LOGP_CHAN(DPOCSAG, LOGL_INFO, "Sending batch.\n");
 		/* send sync */
 		if (pocsag->word_count == 0) {
-			PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Sending 32 bits of sync pattern 0x%08x.\n", CODEWORD_SYNC);
+			LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Sending 32 bits of sync pattern 0x%08x.\n", CODEWORD_SYNC);
 			/* count codewords */
 			++pocsag->word_count;
 			word = CODEWORD_SYNC;
@@ -352,7 +352,7 @@ int64_t get_codeword(pocsag_t *pocsag)
 			}
 			/* prevent 'use-after-free' from this point on */
 			msg = NULL;
-			PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Sending 32 bits of message codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
+			LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Sending 32 bits of message codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
 			/* count codewords */
 			if (++pocsag->word_count == 17)
 				pocsag->word_count = 0;
@@ -365,7 +365,7 @@ int64_t get_codeword(pocsag_t *pocsag)
 				break;
 		}
 		if (msg) {
-			PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, "Sending message to RIC '%d' / function '%d' (%s)\n", msg->ric, msg->function, pocsag_function_name[msg->function]);
+			LOGP_CHAN(DPOCSAG, LOGL_INFO, "Sending message to RIC '%d' / function '%d' (%s)\n", msg->ric, msg->function, pocsag_function_name[msg->function]);
 			/* reset idle counter */
 			pocsag->idle_count = 0;
 			/* encode address */
@@ -375,7 +375,7 @@ int64_t get_codeword(pocsag_t *pocsag)
 				char text[msg->data_length + 1];
 				memcpy(text, msg->data, msg->data_length);
 				text[msg->data_length] = '\0';
-				PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, " -> Message text is \"%s\".\n", text);
+				LOGP_CHAN(DPOCSAG, LOGL_INFO, " -> Message text is \"%s\".\n", text);
 				pocsag->current_msg = msg;
 				msg->data_index = 0;
 				msg->bit_index = 0;
@@ -390,21 +390,21 @@ int64_t get_codeword(pocsag_t *pocsag)
 				/* prevent 'use-after-free' from this point on */
 				msg = NULL;
 			}
-			PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Sending 32 bits of address codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
+			LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Sending 32 bits of address codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
 			/* count codewords */
 			if (++pocsag->word_count == 17)
 				pocsag->word_count = 0;
 			break;
 		}
 		/* no message, so we send idle pattern */
-		PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Sending 32 bits of idle pattern 0x%08x (frame %d.%d).\n", CODEWORD_IDLE, slot, subslot);
+		LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Sending 32 bits of idle pattern 0x%08x (frame %d.%d).\n", CODEWORD_IDLE, slot, subslot);
 		/* count codewords */
 		if (++pocsag->word_count == 17) {
 			pocsag->word_count = 0;
 			/* if no message has been scheduled during transmission and idle counter is reached, stop transmitter */
 			if (!pocsag->msg_list && pocsag->idle_count++ == IDLE_BATCHES) {
-				PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, "Transmission done.\n");
-				PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Reached %d of idle batches, turning transmitter off.\n", IDLE_BATCHES);
+				LOGP_CHAN(DPOCSAG, LOGL_INFO, "Transmission done.\n");
+				LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Reached %d of idle batches, turning transmitter off.\n", IDLE_BATCHES);
 				pocsag_new_state(pocsag, POCSAG_IDLE);
 			}
 		}
@@ -425,7 +425,7 @@ static void done_rx_msg(pocsag_t *pocsag)
 
 	pocsag->rx_msg_valid = 0;
 
-	PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, "Received message from RIC '%d' / function '%d' (%s)\n", pocsag->rx_msg_ric, pocsag->rx_msg_function, pocsag_function_name[pocsag->rx_msg_function]);
+	LOGP_CHAN(DPOCSAG, LOGL_INFO, "Received message from RIC '%d' / function '%d' (%s)\n", pocsag->rx_msg_ric, pocsag->rx_msg_function, pocsag_function_name[pocsag->rx_msg_function]);
 	{
 		char text[pocsag->rx_msg_data_length * 5 + 1];
 		int i, j;
@@ -442,7 +442,7 @@ static void done_rx_msg(pocsag_t *pocsag)
 		}
 		text[j] = '\0';
 		if ((pocsag->rx_msg_function == POCSAG_FUNCTION_NUMERIC || pocsag->rx_msg_function == POCSAG_FUNCTION_ALPHA) && text[0])
-			PDEBUG_CHAN(DPOCSAG, DEBUG_INFO, " -> Message text is \"%s\".\n", text);
+			LOGP_CHAN(DPOCSAG, LOGL_INFO, " -> Message text is \"%s\".\n", text);
 		pocsag_msg_receive(pocsag->language, pocsag->sender.kanal, pocsag->rx_msg_ric, pocsag->rx_msg_function, text);
 	}
 }
@@ -452,17 +452,17 @@ void put_codeword(pocsag_t *pocsag, uint32_t word, int8_t slot, int8_t subslot)
 	int rc;
 
 	if (slot < 0 && word == CODEWORD_SYNC) {
-		PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Received 32 bits of sync pattern 0x%08x.\n", CODEWORD_SYNC);
+		LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Received 32 bits of sync pattern 0x%08x.\n", CODEWORD_SYNC);
 		return;
 	}
 
 	if (word == CODEWORD_IDLE) {
-		PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Received 32 bits of idle pattern 0x%08x.\n", CODEWORD_IDLE);
+		LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Received 32 bits of idle pattern 0x%08x.\n", CODEWORD_IDLE);
 	} else
 	if (!(word & 0x80000000))
-		PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Received 32 bits of address codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
+		LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Received 32 bits of address codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
 	else
-		PDEBUG_CHAN(DPOCSAG, DEBUG_DEBUG, "Received 32 bits of message codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
+		LOGP_CHAN(DPOCSAG, LOGL_DEBUG, "Received 32 bits of message codeword 0x%08x (frame %d.%d).\n", word, slot, subslot);
 	rc = debug_word(word, slot);
 	if (rc < 0) {
 		done_rx_msg(pocsag);

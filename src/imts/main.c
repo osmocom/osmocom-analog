@@ -25,8 +25,8 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../liboptions/options.h"
 #include "../amps/tones.h"
@@ -279,6 +279,7 @@ fail:
 		imts_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	options_free();

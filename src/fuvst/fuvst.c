@@ -35,12 +35,14 @@
 #include <time.h>
 #include <inttypes.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libtimer/timer.h"
-#include "../libosmocc/message.h"
+#include "../libmobile/get_time.h"
+#include <osmocom/core/timer.h>
+#include <osmocom/core/utils.h>
+#include <osmocom/cc/message.h>
 #include "fuvst.h"
 
 /* digital loopback test */
@@ -120,21 +122,21 @@ int config_file(const char *filename)
 	uint8_t byte;
 
 	if (!fp) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "Failed to open data base file: '%s'\n", filename);
+		LOGP(DTRANS, LOGL_ERROR, "Failed to open data base file: '%s'\n", filename);
 		return -EIO;
 	}
 
 	rc = fread(conf.data, 1, sizeof(conf.data), fp);
 	if (rc < (int)sizeof(conf.data)) {
 		fclose(fp);
-		PDEBUG(DTRANS, DEBUG_ERROR, "Data base file shorter than %d bytes. This seems not to be a valid config file.\n", (int)sizeof(conf.data));
+		LOGP(DTRANS, LOGL_ERROR, "Data base file shorter than %d bytes. This seems not to be a valid config file.\n", (int)sizeof(conf.data));
 		return -EIO;
 	}
 
 	rc = fread(&byte, 1, 1, fp);
 	if (rc == 1) {
 		fclose(fp);
-		PDEBUG(DTRANS, DEBUG_ERROR, "Data base file larger than %d bytes. (Don't use the EEPROM config format, use the MSC config format.)\n", (int)sizeof(conf.data));
+		LOGP(DTRANS, LOGL_ERROR, "Data base file larger than %d bytes. (Don't use the EEPROM config format, use the MSC config format.)\n", (int)sizeof(conf.data));
 		return -EIO;
 	}
 
@@ -156,10 +158,10 @@ static void config_send(uint8_t ident, uint8_t job, uint16_t offset, uint16_t le
 	uint32_t checksum = 0;
 	uint8_t rc = 1; /* Auftrag angenommen */
 
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "MSC requests data base block. (offset=%d, length=%d)\n", offset, length);
+	LOGP(DCNETZ, LOGL_NOTICE, "MSC requests data base block. (offset=%d, length=%d)\n", offset, length);
 
 	if (!conf.loaded) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "MSC requests data base, but no file name given. Please give file name!\n");
+		LOGP(DCNETZ, LOGL_ERROR, "MSC requests data base, but no file name given. Please give file name!\n");
 error:
 		/* return error */
 		len = encode_xedbu_1(&opcode, &data, 16, job, 0);
@@ -168,7 +170,7 @@ error:
 	}
 
 	if (offset + length > sizeof(conf.data)) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Requested date out of range!\n");
+		LOGP(DCNETZ, LOGL_ERROR, "Requested date out of range!\n");
 		goto error;
 	}
 
@@ -262,7 +264,7 @@ void add_emergency(const char *number)
 
 	emerg = calloc(1, sizeof(*emerg));
 	if (!emerg) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DTRANS, LOGL_ERROR, "No memory!\n");
 		return;
 	}
 
@@ -288,7 +290,7 @@ static int check_emerg(const char *number)
 	if (!emerg)
 		return 0;
 
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "Emergency call, matching prefix '%s' in list of emergency numbers.\n", emerg->number);
+	LOGP(DCNETZ, LOGL_NOTICE, "Emergency call, matching prefix '%s' in list of emergency numbers.\n", emerg->number);
 
 	return 1;
 }
@@ -337,12 +339,12 @@ static void remove_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_res
 	while (*dbp && *dbp != db)
 		dbp = &((*dbp)->next);
 	if (!(*dbp)) {
-		PDEBUG(DDB, DEBUG_ERROR, "Subscriber not in list, please fix!!\n");
+		LOGP(DDB, LOGL_ERROR, "Subscriber not in list, please fix!!\n");
 		abort();
 	}
 	*dbp = db->next;
 
-	PDEBUG(DDB, DEBUG_INFO, "Removing subscriber '%d,%d,%d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	LOGP(DDB, LOGL_INFO, "Removing subscriber '%d,%d,%d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 
 	/* remove */
 	free(db);
@@ -353,7 +355,7 @@ static void flush_db(void)
         cnetz_db_t *db;
 
 	while ((db = cnetz_db_head)) {
-		PDEBUG(DDB, DEBUG_INFO, "Removing subscriber '%d,%d,%d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		LOGP(DDB, LOGL_INFO, "Removing subscriber '%d,%d,%d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		cnetz_db_head = db->next;
 		free(db);
 	}
@@ -370,7 +372,7 @@ static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, 
 	/* add */
 	db = calloc(1, sizeof(*db));
 	if (!db) {
-		PDEBUG(DDB, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDB, LOGL_ERROR, "No memory!\n");
 		return;
 	}
 	db->futln_nat = futln_nat;
@@ -378,7 +380,7 @@ static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, 
 	db->futln_rest = futln_rest;
 	db->chip = chip;
 
-	PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	LOGP(DDB, LOGL_INFO, "Adding subscriber '%d,%d,%d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 
 	/* attach to end of list */
 	dbp = &cnetz_db_head;
@@ -392,7 +394,7 @@ static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, 
  */
 
 /* Release timeout */
-#define RELEASE_TO 3.0
+#define RELEASE_TO 3,0
 
 /* BSC originated Ident-Numbers */
 #define IDENT_BSC_FROM 0x9f
@@ -425,7 +427,7 @@ typedef struct transaction {
 	fuvst_t			*spk;			/* assigned SPK */
 	char			number[17];		/* dialed by mobile */
 	int			sonderruf;		/* an emergency call */
-	struct timer		timer;			/* release timer */
+	struct osmo_timer_list		timer;			/* release timer */
 } transaction_t;
 
 transaction_t *trans_list = NULL;
@@ -500,7 +502,7 @@ static void new_call_state(transaction_t *trans, enum call_state new_state)
 {
 	if (trans->state == new_state)
 		return;
-	PDEBUG(DTRANS, DEBUG_INFO, "State change: %s -> %s\n", state_name(trans->state), state_name(new_state));
+	LOGP(DTRANS, LOGL_INFO, "State change: %s -> %s\n", state_name(trans->state), state_name(new_state));
 	trans->state = new_state;
 	display_status();
 }
@@ -514,7 +516,7 @@ transaction_t *search_transaction_number(uint8_t futln_nat, uint8_t futln_fuvst,
 		 && trans->futln_fuvst == futln_fuvst
 		 && trans->futln_rest == futln_rest) {
 			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
 			return trans;
 		}
 		trans = trans->next;
@@ -530,7 +532,7 @@ transaction_t *search_transaction_ident(uint8_t ident)
 	while (trans) {
 		if (trans->ident == ident) {
 			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
 			return trans;
 		}
 		trans = trans->next;
@@ -549,7 +551,7 @@ transaction_t *search_transaction_callref(int callref)
 	while (trans) {
 		if (trans->callref == callref) {
 			const char *rufnummer = transaction2rufnummer(trans);
-			PDEBUG(DTRANS, DEBUG_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
+			LOGP(DTRANS, LOGL_DEBUG, "Found transaction for subscriber '%s'\n", rufnummer);
 			return trans;
 		}
 		trans = trans->next;
@@ -564,9 +566,9 @@ static void destroy_transaction(transaction_t *trans)
 	transaction_t **transp;
 
 	const char *rufnummer = transaction2rufnummer(trans);
-	PDEBUG(DTRANS, DEBUG_INFO, "Destroying transaction for subscriber '%s'\n", rufnummer);
+	LOGP(DTRANS, LOGL_INFO, "Destroying transaction for subscriber '%s'\n", rufnummer);
 
-	timer_exit(&trans->timer);
+	osmo_timer_del(&trans->timer);
 
 	/* check for old callref (before removal) then detach SPK
 	 * if SPK has been reused by BS, our old callref will not match,
@@ -580,7 +582,7 @@ static void destroy_transaction(transaction_t *trans)
 	while (*transp && *transp != trans)
 		transp = &((*transp)->next);
 	if (!(*transp)) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "Transaction not in list, please fix!!\n");
+		LOGP(DTRANS, LOGL_ERROR, "Transaction not in list, please fix!!\n");
 		abort();
 	}
 	*transp = trans->next;
@@ -595,7 +597,7 @@ void trans_timeout(void *data)
 {
 	transaction_t *trans = data;
 
-	PDEBUG(DTRANS, DEBUG_NOTICE, "Releasing transaction due to timeout.\n");
+	LOGP(DTRANS, LOGL_NOTICE, "Releasing transaction due to timeout.\n");
 	if (trans->callref)
 		call_up_release(trans->callref, CAUSE_NORMAL);
 	trans->callref = 0;
@@ -611,7 +613,7 @@ static transaction_t *create_transaction(uint8_t ident, uint8_t futln_nat, uint8
 	trans = search_transaction_number(futln_nat, futln_fuvst, futln_rest);
 	if (trans && mo) {
 		const char *rufnummer = transaction2rufnummer(trans);
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', dropping that!\n", rufnummer);
+		LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s', dropping that!\n", rufnummer);
 		if (trans->callref)
 			call_up_release(trans->callref, CAUSE_NORMAL);
 		trans->callref = 0;
@@ -620,13 +622,13 @@ static transaction_t *create_transaction(uint8_t ident, uint8_t futln_nat, uint8
 	}
 	if (trans) {
 		const char *rufnummer = transaction2rufnummer(trans);
-		PDEBUG(DTRANS, DEBUG_NOTICE, "Found already pending transaction for subscriber '%s', we are busy!\n", rufnummer);
+		LOGP(DTRANS, LOGL_NOTICE, "Found already pending transaction for subscriber '%s', we are busy!\n", rufnummer);
 		return NULL;
 	}
 
 	trans = calloc(1, sizeof(*trans));
 	if (!trans) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DTRANS, LOGL_ERROR, "No memory!\n");
 		return NULL;
 	}
 
@@ -636,10 +638,10 @@ static transaction_t *create_transaction(uint8_t ident, uint8_t futln_nat, uint8
 	trans->futln_fuvst = futln_fuvst;
 	trans->futln_rest = futln_rest;
 
-	timer_init(&trans->timer, trans_timeout, trans);
+	osmo_timer_setup(&trans->timer, trans_timeout, trans);
 
 	const char *rufnummer = transaction2rufnummer(trans);
-	PDEBUG(DTRANS, DEBUG_INFO, "Creating transaction for subscriber '%s'\n", rufnummer);
+	LOGP(DTRANS, LOGL_INFO, "Creating transaction for subscriber '%s'\n", rufnummer);
 
 	/* attach to end of list, so first transaction is served first */
 	transp = &trans_list;
@@ -763,14 +765,14 @@ static int message_send(uint8_t ident, uint8_t opcode, uint8_t *data, int len)
 	if (!zzk)
 		zzk = get_zzk(0);
 	if (!zzk) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "No ZZK or link down!\n");
+		LOGP(DCNETZ, LOGL_ERROR, "No ZZK or link down!\n");
 		return -EIO;
 	}
 
 	uint8_t buffer[len + 2];
 
-	if (debuglevel == DEBUG_DEBUG || opcode != OPCODE_XEDBU)
-		PDEBUG(DCNETZ, DEBUG_INFO, "TX Message to BS: link=%s ident=0x%02x OP=%02XH %s\n", zzk->sender.kanal, ident, opcode, debug_hex(data, len));
+	if (loglevel == LOGL_DEBUG || opcode != OPCODE_XEDBU)
+		LOGP(DCNETZ, LOGL_INFO, "TX Message to BS: link=%s ident=0x%02x OP=%02XH %s\n", zzk->sender.kanal, ident, opcode, osmo_hexdump(data, len));
 
 	/* assemble Ident, swap Opcode and add data */
 	slc = ident & 0xf;
@@ -808,25 +810,25 @@ static void release_for_emergency(void)
 
 	/* found idle channel */
 	if (sender) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Emergency call received. We have a free channel available.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Emergency call received. We have a free channel available.\n");
 		return;
 	}
 
 	/* found no normal call (no emergency) */
 	if (!last_trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Emergency call received. We cannot free a channel, because there is no non-emergency call.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Emergency call received. We cannot free a channel, because there is no non-emergency call.\n");
 		return;
 	}
 
 	/* releasing the last call in list */
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "Emergency call received. We free a channel.\n");
+	LOGP(DCNETZ, LOGL_NOTICE, "Emergency call received. We free a channel.\n");
 
 	len = encode_aau(&opcode, &data, trans->spk_nr, 0, cnetz_cause2futln(CAUSE_NORMAL));
 	message_send(trans->ident, opcode, data, len);
 	call_up_release(trans->callref, CAUSE_NORMAL);
 	trans->callref = 0;
 	new_call_state(trans, STATE_RELEASE);
-	timer_start(&trans->timer, RELEASE_TO);
+	osmo_timer_schedule(&trans->timer, RELEASE_TO);
 }
 
 /* MTP data message from lower layer */
@@ -851,8 +853,8 @@ static void message_receive(fuvst_t *zzk, uint8_t ident, uint8_t opcode, uint8_t
 	int i, num;
 	char number[17];
 
-	if (debuglevel == DEBUG_DEBUG || opcode != OPCODE_YLSMF)
-		PDEBUG(DCNETZ, DEBUG_INFO, "RX Message from BS: link=%s ident=0x%02x OP=%02XH %s\n", zzk->sender.kanal, ident, opcode, debug_hex(data, len));
+	if (loglevel == LOGL_DEBUG || opcode != OPCODE_YLSMF)
+		LOGP(DCNETZ, LOGL_INFO, "RX Message from BS: link=%s ident=0x%02x OP=%02XH %s\n", zzk->sender.kanal, ident, opcode, osmo_hexdump(data, len));
 
 	switch (opcode) {
 	case OPCODE_SWAF: /* BS restarts */
@@ -866,7 +868,7 @@ static void message_receive(fuvst_t *zzk, uint8_t ident, uint8_t opcode, uint8_t
 		message_send(5, opcode, NULL, 0);
 #endif
 		if (warmstart) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Forcing a warm start and load the config...\n");
+			LOGP(DCNETZ, LOGL_NOTICE, "Forcing a warm start and load the config...\n");
 			warmstart = 0;
 			len = encode_yaaau(&opcode, &data, 42);
 			message_send(0, opcode, data, len);
@@ -932,11 +934,11 @@ static void message_receive(fuvst_t *zzk, uint8_t ident, uint8_t opcode, uint8_t
 		break;
 	case OPCODE_GVAF: /* MO call */
 		decode_gvaf(data, len, &T, &U, &N, number);
-		PDEBUG(DCNETZ, DEBUG_INFO, "Call from mobile.\n");
+		LOGP(DCNETZ, LOGL_INFO, "Call from mobile.\n");
 		goto outgoing;
 	case OPCODE_GVWAF: /* MO call (queue) */
 		decode_gvaf(data, len, &T, &U, &N, number);
-		PDEBUG(DCNETZ, DEBUG_INFO, "Call from mobile (queue).\n");
+		LOGP(DCNETZ, LOGL_INFO, "Call from mobile (queue).\n");
 outgoing:
 		trans = create_transaction(ident, N, U, T, 1);
 		if (!trans) {
@@ -958,7 +960,7 @@ outgoing:
 		trans = search_transaction_ident(ident);
 		if (!trans)
 			break;
-		PDEBUG(DCNETZ, DEBUG_INFO, "Call to mobile is alerting (queue).\n");
+		LOGP(DCNETZ, LOGL_INFO, "Call to mobile is alerting (queue).\n");
 		new_call_state(trans, STATE_MT_QUEUE);
 		if (trans->callref)
 			call_up_alerting(trans->callref);
@@ -968,7 +970,7 @@ outgoing:
 		trans = search_transaction_ident(ident);
 		if (!trans)
 			break;
-		PDEBUG(DCNETZ, DEBUG_INFO, "Call to mobile has been answered.\n");
+		LOGP(DCNETZ, LOGL_INFO, "Call to mobile has been answered.\n");
 		new_call_state(trans, STATE_MT_CONNECT);
 		if (trans->callref)
 			call_up_answer(trans->callref, transaction2rufnummer(trans));
@@ -986,7 +988,7 @@ outgoing:
 		trans->spk_nr = Q;
 		/* SPK not exist, release */
 		if (!trans->spk) {
-			PDEBUG(DCNETZ, DEBUG_ERROR, "SpK '%d' requested by BS not configured, please configure all SpK that base station has available!\n", Q);
+			LOGP(DCNETZ, LOGL_ERROR, "SpK '%d' requested by BS not configured, please configure all SpK that base station has available!\n", Q);
 			len = encode_stnqu(&opcode, &data, Q);
 			message_send(ident, opcode, data, len);
 			if (trans->callref)
@@ -1002,22 +1004,22 @@ outgoing:
 		message_send(ident, opcode, data, len);
 		/* no callref == outgoing call */
 		if (!trans->callref) {
-			PDEBUG(DCNETZ, DEBUG_INFO, "Setup call to network. (Ident = %d, FuTln=%s, number=%s)\n", ident, transaction2rufnummer(trans), trans->number);
+			LOGP(DCNETZ, LOGL_INFO, "Setup call to network. (Ident = %d, FuTln=%s, number=%s)\n", ident, transaction2rufnummer(trans), trans->number);
 			trans->callref = trans->old_callref = call_up_setup(transaction2rufnummer(trans), trans->number, OSMO_CC_NETWORK_CNETZ_NONE, "");
 		} else {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "Call to mobile is alerting.\n");
+			LOGP(DCNETZ, LOGL_NOTICE, "Call to mobile is alerting.\n");
 			new_call_state(trans, STATE_MT_ALERTING);
 			call_up_alerting(trans->callref);
 		}
 		trans->spk->callref = trans->callref;
-		PDEBUG(DCNETZ, DEBUG_INFO, "Assigned SpK %d to call.\n", trans->spk_nr);
+		LOGP(DCNETZ, LOGL_INFO, "Assigned SpK %d to call.\n", trans->spk_nr);
 		break;
 	case OPCODE_APF: /* auth response */
 		decode_apf(data, len, &Q, &a);
 		break;
 	case OPCODE_FAF: /* MCID request */
 		decode_faf(data, len);
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Fangen (MCID) was activated by BS.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Fangen (MCID) was activated by BS.\n");
 		break;
 	case OPCODE_NAF: /* incoming release (before SPK assignment) */
 		decode_naf(data, len, &X);
@@ -1027,7 +1029,7 @@ outgoing:
 		trans = search_transaction_ident(ident);
 		if (!trans)
 			break;
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Call released by BS.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Call released by BS.\n");
 		new_call_state(trans, STATE_RELEASE);
 		if (trans->callref)
 			call_up_release(trans->callref, cnetz_fufst2cause(X));
@@ -1057,7 +1059,7 @@ outgoing:
 		message_send(ident, opcode, data, len);
 		if (trans->callref)
 			call_up_release(trans->callref, cnetz_fufst2cause(X));
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Call released by BS.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Call released by BS.\n");
 		new_call_state(trans, STATE_RELEASE);
 		trans->callref = 0;
 		destroy_transaction(trans);
@@ -1087,7 +1089,7 @@ outgoing:
 		message_send(ident, opcode, data, len);
 		break;
 	default:
-		PDEBUG(DCNETZ, DEBUG_INFO, "RX Message from BS with unknown OPcode: %02XH\n", opcode);
+		LOGP(DCNETZ, LOGL_INFO, "RX Message from BS with unknown OPcode: %02XH\n", opcode);
 	}
 }
 
@@ -1123,25 +1125,25 @@ static void mtp_receive(void *inst, enum mtp_prim prim, uint8_t slc, uint8_t *da
 		default:
 			cause_text =  "MTP link '%s' failed! Trying again.\n";
 		}
-		PDEBUG(DCNETZ, DEBUG_NOTICE, cause_text, zzk->sender.kanal);
+		LOGP(DCNETZ, LOGL_NOTICE, cause_text, zzk->sender.kanal);
 		mtp_send(&zzk->mtp, MTP_PRIM_START, 0, NULL, 0);
 		zzk->link = 0;
 		display_status();
 		break;
 	case MTP_PRIM_IN_SERVICE:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Link '%s' established.\n", zzk->sender.kanal);
+		LOGP(DCNETZ, LOGL_NOTICE, "Link '%s' established.\n", zzk->sender.kanal);
 		zzk->link = 1;
 		display_status();
 		break;
 	case MTP_PRIM_REMOTE_PROCESSOR_OUTAGE:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Link '%s' indicates remote processor outage.\n", zzk->sender.kanal);
+		LOGP(DCNETZ, LOGL_NOTICE, "Link '%s' indicates remote processor outage.\n", zzk->sender.kanal);
 		break;
 	case MTP_PRIM_REMOTE_PROCESSOR_RECOVERED:
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Link '%s' indicates remote processor outage is recovered.\n", zzk->sender.kanal);
+		LOGP(DCNETZ, LOGL_NOTICE, "Link '%s' indicates remote processor outage is recovered.\n", zzk->sender.kanal);
 		break;
 	case MTP_PRIM_DATA:
 		if (len < 2) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "No Opcode, message too short!\n");
+			LOGP(DCNETZ, LOGL_NOTICE, "No Opcode, message too short!\n");
 			return;
 		}
 
@@ -1172,17 +1174,17 @@ int fuvst_create(const char *kanal, enum fuvst_chan_type chan_type, const char *
 
 	fuvst = calloc(1, sizeof(fuvst_t));
 	if (!fuvst) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "No memory!\n");
+		LOGP(DCNETZ, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'C-Netz' instance for 'Kanal' = %s (sample rate %d).\n", chan_name, samplerate);
+	LOGP(DCNETZ, LOGL_DEBUG, "Creating 'C-Netz' instance for 'Kanal' = %s (sample rate %d).\n", chan_name, samplerate);
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by fuvst code, not by common sender code */
 	rc = sender_create(&fuvst->sender, options_strdup(chan_name), 0, 0, audiodev, 0, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DCNETZ, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DCNETZ, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 	fuvst->chan_num = atoi(kanal);
@@ -1208,7 +1210,7 @@ int fuvst_create(const char *kanal, enum fuvst_chan_type chan_type, const char *
 			goto error;
 	}
 
-	PDEBUG(DCNETZ, DEBUG_NOTICE, "Created 'Kanal' %s\n", chan_name);
+	LOGP(DCNETZ, LOGL_NOTICE, "Created 'Kanal' %s\n", chan_name);
 
 	display_status();
 
@@ -1225,7 +1227,7 @@ void fuvst_destroy(sender_t *sender)
 {
 	fuvst_t *fuvst = (fuvst_t *) sender;
 
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Destroying 'C-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DCNETZ, LOGL_DEBUG, "Destroying 'C-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	if (fuvst->chan_type == CHAN_TYPE_ZZK) {
 		mtp_exit(&fuvst->mtp);
@@ -1325,19 +1327,19 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 
 	/* 2. base station ready? */
 	if (!base_station_ready) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call not possible, base station not ready, rejecting!\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Outgoing call not possible, base station not ready, rejecting!\n");
 		return -CAUSE_TEMPFAIL;
 	}
 
 	/* 3. create transaction */
 	ident = get_free_ident();
 	if (!ident) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call not possible, no free Ident code?? What the hack?\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Outgoing call not possible, no free Ident code?? What the hack?\n");
 		return -CAUSE_TEMPFAIL;
 	}
 	trans = create_transaction(ident, futln_nat, futln_fuvst, futln_rest, 0);
 	if (!trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing call not possible, Transaction already exists: Subscriber busy!\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Outgoing call not possible, Transaction already exists: Subscriber busy!\n");
 		return -CAUSE_BUSY;
 	}
 	trans->callref = trans->old_callref = callref;
@@ -1345,7 +1347,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	/* 4. start call */
 	len = encode_kvau(&opcode, &data, futln_rest, futln_fuvst, futln_nat, 0, authentication);
 	message_send(trans->ident, opcode, data, len);
-	PDEBUG(DCNETZ, DEBUG_INFO, "Send call for mobile towards BS. (Ident = %d, FuTln=%s)\n", ident, transaction2rufnummer(trans));
+	LOGP(DCNETZ, LOGL_INFO, "Send call for mobile towards BS. (Ident = %d, FuTln=%s)\n", ident, transaction2rufnummer(trans));
 	new_call_state(trans, STATE_MT);
 
 	return 0;
@@ -1359,7 +1361,7 @@ void call_down_answer(int callref)
 
 	trans = search_transaction_callref(callref);
 	if (!trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Answer to unknown callref.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Answer to unknown callref.\n");
 		return;
 	}
 
@@ -1387,7 +1389,7 @@ static void _disconnect_release(transaction_t *trans, int callref, int cause)
 		call_up_release(callref, cause);
 	trans->callref = 0;
 	new_call_state(trans, STATE_RELEASE);
-	timer_start(&trans->timer, RELEASE_TO);
+	osmo_timer_schedule(&trans->timer, RELEASE_TO);
 }
 
 /* Call control sends disconnect (with tones).
@@ -1398,11 +1400,11 @@ void call_down_disconnect(int callref, int cause)
 {
 	transaction_t *trans;
 
-	PDEBUG(DCNETZ, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DCNETZ, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	trans = search_transaction_callref(callref);
 	if (!trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing disconnect to unknown callref.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Outgoing disconnect to unknown callref.\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1422,11 +1424,11 @@ void call_down_release(int callref, int cause)
 {
 	transaction_t *trans;
 
-	PDEBUG(DCNETZ, DEBUG_INFO, "Call has been released by network.\n");
+	LOGP(DCNETZ, LOGL_INFO, "Call has been released by network.\n");
 
 	trans = search_transaction_callref(callref);
 	if (!trans) {
-		PDEBUG(DCNETZ, DEBUG_NOTICE, "Outgoing released to unknown callref.\n");
+		LOGP(DCNETZ, LOGL_NOTICE, "Outgoing released to unknown callref.\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1438,14 +1440,14 @@ void dump_info(void)
 {
 	cnetz_db_t *db = cnetz_db_head;
 
-	PDEBUG(DDB, DEBUG_NOTICE, "Dump of subscriber database:\n");
+	LOGP(DDB, LOGL_NOTICE, "Dump of subscriber database:\n");
 	if (!db) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - No subscribers attached!\n");
+		LOGP(DDB, LOGL_NOTICE, " - No subscribers attached!\n");
 		return;
 	}
 
 	while (db) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - Subscriber '%d,%d,%d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		LOGP(DDB, LOGL_NOTICE, " - Subscriber '%d,%d,%d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 		db = db->next;
 	}
 }

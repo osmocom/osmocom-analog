@@ -26,7 +26,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <math.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "dcf77.h"
 #include "weather.h"
 
@@ -380,7 +380,7 @@ dcf77_t *dcf77_create(int samplerate, int use_tx, int use_rx, int test_tone)
 
 	dcf77 = calloc(1, sizeof(*dcf77));
 	if (!dcf77) {
-		PDEBUG(DDCF77, DEBUG_ERROR, "No mem!\n");
+		LOGP(DDCF77, LOGL_ERROR, "No mem!\n");
 		return NULL;
 	}
 	tx = &dcf77->tx;
@@ -429,7 +429,7 @@ dcf77_t *dcf77_create(int samplerate, int use_tx, int use_rx, int test_tone)
 		rx->delay_size = ceil((double)SAMPLE_CLOCK * 0.1);
 		rx->delay_buffer = calloc(rx->delay_size, sizeof(*rx->delay_buffer));
 		if (!rx->delay_buffer) {
-			PDEBUG(DDCF77, DEBUG_ERROR, "No mem!\n");
+			LOGP(DDCF77, LOGL_ERROR, "No mem!\n");
 			return NULL;
 		}
 
@@ -444,9 +444,9 @@ dcf77_t *dcf77_create(int samplerate, int use_tx, int use_rx, int test_tone)
 	}
 
 	if (tx->enable)
-		PDEBUG(DDCF77, DEBUG_INFO, "DCF77 transmitter has been created.\n");
+		LOGP(DDCF77, LOGL_INFO, "DCF77 transmitter has been created.\n");
 	if (rx->enable)
-		PDEBUG(DDCF77, DEBUG_INFO, "DCF77 receiver has been created.\n");
+		LOGP(DDCF77, LOGL_INFO, "DCF77 receiver has been created.\n");
 
 #if 0
 	void rx_frame_test(dcf77_t *dcf77, const char *string);
@@ -467,7 +467,7 @@ void dcf77_destroy(dcf77_t *dcf77)
 		free(dcf77);
 	}
 
-	PDEBUG(DDCF77, DEBUG_INFO, "DCF77 has been destroyed.\n");
+	LOGP(DDCF77, LOGL_INFO, "DCF77 has been destroyed.\n");
 }
 
 static void display_weather_temperature(const char *desc, uint32_t weather)
@@ -512,7 +512,7 @@ time_t dcf77_start_weather(time_t timestamp, int region, int offset)
 		hour = (19 + (region - 60) / 20) % 24;
 	}
 	min = (region % 20) * 3;
-	PDEBUG(DDCF77, DEBUG_INFO, "Setting UTC time for region %d to %02d:%02d minutes.\n", region, hour, min);
+	LOGP(DDCF77, LOGL_INFO, "Setting UTC time for region %d to %02d:%02d minutes.\n", region, hour, min);
 
 	/* reset to 0:00 UTC at same day */
 	timestamp -= (timestamp % 86400);
@@ -521,7 +521,7 @@ time_t dcf77_start_weather(time_t timestamp, int region, int offset)
 	timestamp += hour * 3600 + min * 60;
 
 	/* substract offset */
-	PDEBUG(DDCF77, DEBUG_INFO, "Setting timestamp offset to %d minutes.\n", offset);
+	LOGP(DDCF77, LOGL_INFO, "Setting timestamp offset to %d minutes.\n", offset);
 	timestamp -= 60 * offset;
 
 	return timestamp;
@@ -576,7 +576,7 @@ static uint64_t generate_weather(time_t timestamp, int minute, int utc_hour, int
 	/* generate weather data */
 	timestamp -= 120;
 	weather = 0;
-	PDEBUG(DFRAME, DEBUG_INFO, "Encoding weather for dataset %d/480\n", dataset);
+	LOGP(DFRAME, LOGL_INFO, "Encoding weather for dataset %d/480\n", dataset);
 	printf("Peparing Weather INFO\n");
 	printf("---------------------\n");
 	printf("Time (UTC):          %02d:%02d\n", (int)(timestamp / 3600) % 24, (int)(timestamp / 60) % 60);
@@ -694,14 +694,14 @@ static uint16_t tx_weather(dcf77_tx_t *tx, time_t timestamp, int minute, int hou
 			utc_hour += 24;
 		/* in index 0 we transmit minute + 1 (next minute), so we substract 1 */
 		tx->weather_cipher = generate_weather(timestamp, (minute + 59) % 60, utc_hour, tx->weather_day, tx->weather_night, tx->extreme, tx->rain, tx->wind_dir, tx->wind_bft, tx->temperature_day, tx->temperature_night);
-		PDEBUG(DFRAME, DEBUG_INFO, "Transmitting first chunk of weather info.\n");
+		LOGP(DFRAME, LOGL_INFO, "Transmitting first chunk of weather info.\n");
 		chunk = (tx->weather_cipher & 0x3f) << 1; /* bit 2-7 */
 		chunk |= (tx->weather_cipher & 0x0fc0) << 2; /* bit 9-14 */
 		tx->weather_cipher >>= 12;
 		return chunk;
 	}
 
-	PDEBUG(DFRAME, DEBUG_INFO, "Transmitting %s chunk of weather info.\n", (index == 1) ? "second" : "third");
+	LOGP(DFRAME, LOGL_INFO, "Transmitting %s chunk of weather info.\n", (index == 1) ? "second" : "third");
 	chunk = tx->weather_cipher & 0x3fff;
 	tx->weather_cipher >>= 14;
 	return chunk;
@@ -759,7 +759,7 @@ static char tx_symbol(dcf77_t *dcf77, time_t timestamp, int second)
 		else
 			zone = 2;
 
-		PDEBUG(DDCF77, DEBUG_NOTICE, "The time transmitting: %s %s %d %02d:%02d:%02d %s %02d\n", week_day[wday], month_name[tm->tm_mon + 1], tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, time_zone[zone], tm->tm_year + 1900);
+		LOGP(DDCF77, LOGL_NOTICE, "The time transmitting: %s %s %d %02d:%02d:%02d %s %02d\n", week_day[wday], month_name[tm->tm_mon + 1], tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, time_zone[zone], tm->tm_year + 1900);
 
 		if ((tm->tm_isdst > 0) != (isdst_next_hour > 0))
 			frame |= (uint64_t)1 << 16;
@@ -808,9 +808,9 @@ static char tx_symbol(dcf77_t *dcf77, time_t timestamp, int second)
 			tx->data_string[j++] = '0' + ((frame >> i) & 1);
 		}
 		tx->data_string[j] = '\0';
-		PDEBUG(DDSP, DEBUG_INFO, "Start transmission of frame:\n");
-		PDEBUG(DDSP, DEBUG_INFO, "0 Wetterdaten    Info 1 Minute P StundeP Tag    WoT Monat Jahr    P\n");
-		PDEBUG(DDSP, DEBUG_INFO, "%s\n", tx->data_string);
+		LOGP(DDSP, LOGL_INFO, "Start transmission of frame:\n");
+		LOGP(DDSP, LOGL_INFO, "0 Wetterdaten    Info 1 Minute P StundeP Tag    WoT Monat Jahr    P\n");
+		LOGP(DDSP, LOGL_INFO, "%s\n", tx->data_string);
 	}
 
 	if (second == 59)
@@ -818,7 +818,7 @@ static char tx_symbol(dcf77_t *dcf77, time_t timestamp, int second)
 	else
 		symbol = ((tx->data_frame >> second) & 1) + '0';
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Trasmitting symbol '%c' (Bit %d)\n", symbol, second);
+	LOGP(DDSP, LOGL_DEBUG, "Trasmitting symbol '%c' (Bit %d)\n", symbol, second);
 
 	return symbol;
 }
@@ -910,7 +910,7 @@ static void display_weather(uint32_t weather, int minute, int utc_hour)
 	int dataset = ((utc_hour + 2) % 24) * 20 + (minute / 3); /* data sets since 22:00 UTC */
 	int value;
 
-	PDEBUG(DFRAME, DEBUG_INFO, "Decoding weather for dataset %d/480\n", dataset);
+	LOGP(DFRAME, LOGL_INFO, "Decoding weather for dataset %d/480\n", dataset);
 	printf("Received Weather INFO\n");
 	printf("---------------------\n");
 	printf("Time (UTC):          %02d:%02d\n", utc_hour, minute);
@@ -985,7 +985,7 @@ static void rx_weather(dcf77_rx_t *rx, int minute, int hour, int zone, uint64_t 
 	int32_t weather;
 
 	if (rx->weather_index == 0 && index != 0) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Skipping weather info chunk, waiting for new start of weather info.\n");
+		LOGP(DFRAME, LOGL_INFO, "Skipping weather info chunk, waiting for new start of weather info.\n");
 		return;
 	}
 
@@ -995,15 +995,15 @@ static void rx_weather(dcf77_rx_t *rx, int minute, int hour, int zone, uint64_t 
 		rx->weather_cipher |= (frame >> 3) & 0x0fc0; /* bit 9-14 */
 		rx->weather_index++;
 		if (((frame & 0x0002)) || ((frame & 0x0100)) || !rx->weather_cipher) {
-			PDEBUG(DFRAME, DEBUG_INFO, "There is no weather info in this received minute.\n");
+			LOGP(DFRAME, LOGL_INFO, "There is no weather info in this received minute.\n");
 			rx_weather_reset(rx);
 			return;
 		}
-		PDEBUG(DFRAME, DEBUG_INFO, "Got first chunk of weather info.\n");
+		LOGP(DFRAME, LOGL_INFO, "Got first chunk of weather info.\n");
 		return;
 	}
 	if (rx->weather_index == 1 && index == 1) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Got second chunk of weather info.\n");
+		LOGP(DFRAME, LOGL_INFO, "Got second chunk of weather info.\n");
 		rx->weather_cipher |= (frame << 11) & 0x3fff000; /* bit 1-14 */
 		rx->weather_key |= (frame >> 21) & 0x7f;
 		rx->weather_key |= ((frame >> 29) & 0x3f) << 8;
@@ -1015,11 +1015,11 @@ static void rx_weather(dcf77_rx_t *rx, int minute, int hour, int zone, uint64_t 
 		return;
 	}
 	if (rx->weather_index == 2 && index == 2) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Got third chunk of weather info.\n");
+		LOGP(DFRAME, LOGL_INFO, "Got third chunk of weather info.\n");
 		rx->weather_cipher |= (frame << 25) & 0xfffc000000; /* bit 1-14 */
 		weather = weather_decode(rx->weather_cipher, rx->weather_key);
 		if (weather < 0)
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Failed to decrypt weather info, checksum error.\n");
+			LOGP(DFRAME, LOGL_NOTICE, "Failed to decrypt weather info, checksum error.\n");
 		else {
 			/* convert hour to UTC */
 			utc_hour = hour - 1;
@@ -1035,7 +1035,7 @@ static void rx_weather(dcf77_rx_t *rx, int minute, int hour, int zone, uint64_t 
 	}
 
 	rx_weather_reset(rx);
-	PDEBUG(DFRAME, DEBUG_INFO, "Got weather info chunk out of order, waiting for new start of weather info.\n");
+	LOGP(DFRAME, LOGL_INFO, "Got weather info chunk out of order, waiting for new start of weather info.\n");
 }
 
 /* decode time from received data */
@@ -1050,14 +1050,14 @@ static void rx_frame(dcf77_rx_t *rx, uint64_t frame)
 	int year_one, year_ten, year = -1;
 	uint64_t p;
 
-	PDEBUG(DFRAME, DEBUG_INFO, "Bit 0 is '0'?    : %s\n", ((frame >> 0) & 1) ? "no" : "yes");
-	PDEBUG(DFRAME, DEBUG_INFO, "Bits 1..14       : 0x%04x\n", (int)(frame >> 1) & 0x3fff);
-	PDEBUG(DFRAME, DEBUG_INFO, "Call Bit         : %d\n", (int)(frame >> 15) & 1);
-	PDEBUG(DFRAME, DEBUG_INFO, "Change Time Zone : %s\n", ((frame >> 16) & 1) ? "yes" : "no");
+	LOGP(DFRAME, LOGL_INFO, "Bit 0 is '0'?    : %s\n", ((frame >> 0) & 1) ? "no" : "yes");
+	LOGP(DFRAME, LOGL_INFO, "Bits 1..14       : 0x%04x\n", (int)(frame >> 1) & 0x3fff);
+	LOGP(DFRAME, LOGL_INFO, "Call Bit         : %d\n", (int)(frame >> 15) & 1);
+	LOGP(DFRAME, LOGL_INFO, "Change Time Zone : %s\n", ((frame >> 16) & 1) ? "yes" : "no");
 	zone = ((frame >> 17) & 3);
-	PDEBUG(DFRAME, DEBUG_INFO, "Time Zone        : %s\n", time_zone[zone]);
-	PDEBUG(DFRAME, DEBUG_INFO, "Add Leap Second  : %s\n", ((frame >> 19) & 1) ? "yes" : "no");
-	PDEBUG(DFRAME, DEBUG_INFO, "Bit 20 is '1'?   : %s\n", ((frame >> 20) & 1) ? "yes" : "no");
+	LOGP(DFRAME, LOGL_INFO, "Time Zone        : %s\n", time_zone[zone]);
+	LOGP(DFRAME, LOGL_INFO, "Add Leap Second  : %s\n", ((frame >> 19) & 1) ? "yes" : "no");
+	LOGP(DFRAME, LOGL_INFO, "Bit 20 is '1'?   : %s\n", ((frame >> 20) & 1) ? "yes" : "no");
 
 	minute_one = (frame >> 21 & 0xf);
 	minute_ten = ((frame >> 25) & 0x7);
@@ -1066,10 +1066,10 @@ static void rx_frame(dcf77_rx_t *rx, uint64_t frame)
 	p = p ^ (p >> 2);
 	p = p ^ (p >> 1);
 	if (minute_one > 9 || minute_ten > 5 || (p & 1))
-		PDEBUG(DFRAME, DEBUG_INFO, "Minute           : ???\n");
+		LOGP(DFRAME, LOGL_INFO, "Minute           : ???\n");
 	else {
 		minute = minute_ten * 10 + minute_one;
-		PDEBUG(DFRAME, DEBUG_INFO, "Minute           : %02d\n", minute);
+		LOGP(DFRAME, LOGL_INFO, "Minute           : %02d\n", minute);
 	}
 
 	hour_one = (frame >> 29 & 0xf);
@@ -1079,10 +1079,10 @@ static void rx_frame(dcf77_rx_t *rx, uint64_t frame)
 	p = p ^ (p >> 2);
 	p = p ^ (p >> 1);
 	if (hour_one > 9 || hour_ten > 2 || (hour_ten == 2 && hour_one > 3) || (p & 1))
-		PDEBUG(DFRAME, DEBUG_INFO, "Hour             : ???\n");
+		LOGP(DFRAME, LOGL_INFO, "Hour             : ???\n");
 	else {
 		hour = hour_ten * 10 + hour_one;
-		PDEBUG(DFRAME, DEBUG_INFO, "Hour             : %02d\n", hour);
+		LOGP(DFRAME, LOGL_INFO, "Hour             : %02d\n", hour);
 	}
 
 	day_one = (frame >> 36 & 0xf);
@@ -1099,34 +1099,34 @@ static void rx_frame(dcf77_rx_t *rx, uint64_t frame)
 	p = p ^ (p >> 2);
 	p = p ^ (p >> 1);
 	if (day_one > 9 || day_ten > 3 || (day_ten == 3 && day_one > 1) || (day_ten == 0 && day_one == 0) || (p & 1))
-		PDEBUG(DFRAME, DEBUG_INFO, "Day              : ???\n");
+		LOGP(DFRAME, LOGL_INFO, "Day              : ???\n");
 	else {
 		day = day_ten * 10 + day_one;
-		PDEBUG(DFRAME, DEBUG_INFO, "Day              : %d\n", day);
+		LOGP(DFRAME, LOGL_INFO, "Day              : %d\n", day);
 	}
 	if (wday < 1 || wday > 7 || (p & 1)) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Week Day         : ???\n");
+		LOGP(DFRAME, LOGL_INFO, "Week Day         : ???\n");
 		wday = -1;
 	} else
-		PDEBUG(DFRAME, DEBUG_INFO, "Week Day         : %s\n", week_day[wday]);
+		LOGP(DFRAME, LOGL_INFO, "Week Day         : %s\n", week_day[wday]);
 	if (month_one > 9 || month_ten > 1 || (month_ten == 1 && month_one > 2) || (month_ten == 0 && month_one == 0) || (p & 1))
-		PDEBUG(DFRAME, DEBUG_INFO, "Month            : ???\n");
+		LOGP(DFRAME, LOGL_INFO, "Month            : ???\n");
 	else {
 		month = month_ten * 10 + month_one;
-		PDEBUG(DFRAME, DEBUG_INFO, "Month            : %d\n", month);
+		LOGP(DFRAME, LOGL_INFO, "Month            : %d\n", month);
 	}
 	if (year_one > 9 || year_ten > 9 || (p & 1))
-		PDEBUG(DFRAME, DEBUG_INFO, "Year             : ???\n");
+		LOGP(DFRAME, LOGL_INFO, "Year             : ???\n");
 	else {
 		year = year_ten * 10 + year_one;
-		PDEBUG(DFRAME, DEBUG_INFO, "Year             : %02d\n", year);
+		LOGP(DFRAME, LOGL_INFO, "Year             : %02d\n", year);
 	}
 
 	if (minute >= 0 && hour >= 0 && day >= 0 && wday >= 0 && month >= 0 && year >= 0) {
-		PDEBUG(DDCF77, DEBUG_NOTICE, "The received time is: %s %s %d %02d:%02d:00 %s 20%02d\n", week_day[wday], month_name[month], day, hour, minute, time_zone[zone], year);
+		LOGP(DDCF77, LOGL_NOTICE, "The received time is: %s %s %d %02d:%02d:00 %s 20%02d\n", week_day[wday], month_name[month], day, hour, minute, time_zone[zone], year);
 		rx_weather(rx, minute, hour, zone, frame);
 	} else {
-		PDEBUG(DDCF77, DEBUG_NOTICE, "The received time is invalid!\n");
+		LOGP(DDCF77, LOGL_NOTICE, "The received time is invalid!\n");
 		rx_weather_reset(rx);
 	}
 }
@@ -1151,11 +1151,11 @@ static void rx_symbol(dcf77_t *dcf77, char symbol)
 	dcf77_rx_t *rx = &dcf77->rx;
 	double second = -NAN;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Received symbol '%c'\n", symbol);
+	LOGP(DDSP, LOGL_DEBUG, "Received symbol '%c'\n", symbol);
 
 	if (!rx->data_receive) {
 		if (symbol == 'm') {
-			PDEBUG(DDSP, DEBUG_INFO, "Reception of frame has started\n");
+			LOGP(DDSP, LOGL_INFO, "Reception of frame has started\n");
 			rx->data_receive = 1;
 			rx->data_index = 0;
 			rx->string_index = 0;
@@ -1167,20 +1167,20 @@ static void rx_symbol(dcf77_t *dcf77, char symbol)
 				rx->data_string[rx->string_index] = '\0';
 				rx->data_index = 0;
 				rx->string_index = 0;
-				PDEBUG(DDSP, DEBUG_INFO, "Received complete frame:\n");
-				PDEBUG(DDSP, DEBUG_INFO, "0 Wetterdaten    Info 1 Minute P StundeP Tag    WoT Monat Jahr    P\n");
-				PDEBUG(DDSP, DEBUG_INFO, "%s\n", rx->data_string);
+				LOGP(DDSP, LOGL_INFO, "Received complete frame:\n");
+				LOGP(DDSP, LOGL_INFO, "0 Wetterdaten    Info 1 Minute P StundeP Tag    WoT Monat Jahr    P\n");
+				LOGP(DDSP, LOGL_INFO, "%s\n", rx->data_string);
 				rx_frame(rx, rx->data_frame);
 				second = 0;
 			} else {
-				PDEBUG(DDSP, DEBUG_INFO, "Short read, frame too short\n");
+				LOGP(DDSP, LOGL_INFO, "Short read, frame too short\n");
 				rx->data_index = 0;
 				rx->string_index = 0;
 				rx_weather_reset(rx);
 			}
 		} else {
 			if (rx->data_index == 59) {
-				PDEBUG(DDSP, DEBUG_INFO, "Long read, frame too long\n");
+				LOGP(DDSP, LOGL_INFO, "Long read, frame too long\n");
 				rx->data_receive = 0;
 				rx_weather_reset(rx);
 			} else {
@@ -1311,6 +1311,4 @@ void dcf77_decode(dcf77_t *dcf77, sample_t *samples, int length)
 		}
 	}
 }
-
-
 

@@ -1,5 +1,5 @@
 #include "../libcompandor/compandor.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/sender.h"
 #include "../libscrambler/scrambler.h"
 typedef struct cnetz cnetz_t;
@@ -40,9 +40,9 @@ enum cnetz_state {
 #define N_AFKT		6		/* number of release frames to send during concentrated signaling */
 #define N_AFV		4		/* number of release frames to send during distributed signaling */
 #define N		3		/* now many times we repeat a message on OgK */
-#define T_VAG2		180		/* time on outgoing queue */
-#define T_VAK		60		/* time on incoming queue */
-#define T_AP		750		/* Time to wait for SIM card's authentication reply */
+#define T_VAG2		180,0		/* time on outgoing queue */
+#define T_VAK		60,0		/* time on incoming queue */
+#define T_AP		0,750000	/* Time to wait for SIM card's authentication reply */
 
 /* clear causes */
 #define CNETZ_CAUSE_GASSENBESETZT	0	/* network congested */

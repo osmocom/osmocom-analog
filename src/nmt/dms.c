@@ -22,7 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
+#include "../libmobile/get_time.h"
 #include "nmt.h"
 
 #define MUTE_DURATION		0.300	/* 200ms, and about 95ms for the frame itself */
@@ -110,7 +111,7 @@ void link_dms_frame(nmt_t *nmt, struct dms_frame *frame)
 	dms_t *dms = &nmt->dms;
 	struct dms_frame **framep;
 
-	PDEBUG(DDMS, DEBUG_DEBUG, "link DMS frame\n");
+	LOGP(DDMS, LOGL_DEBUG, "link DMS frame\n");
 
 	/* attach to end of list */
 	framep = &dms->state.frame_list;
@@ -125,14 +126,14 @@ void unlink_dms_frame(nmt_t *nmt, struct dms_frame *frame)
 	dms_t *dms = &nmt->dms;
 	struct dms_frame **framep;
 
-	PDEBUG(DDMS, DEBUG_DEBUG, "unlink DMS frame\n");
+	LOGP(DDMS, LOGL_DEBUG, "unlink DMS frame\n");
 
 	/* unlink */
 	framep = &dms->state.frame_list;
 	while (*framep && *framep != frame)
 		framep = &((*framep)->next);
 	if (!(*framep)) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "Frame not in list, please fix!!\n");
+		LOGP(DTRANS, LOGL_ERROR, "Frame not in list, please fix!!\n");
 		abort();
 	}
 	*framep = frame->next;
@@ -146,7 +147,7 @@ static void dms_frame_add(nmt_t *nmt, int s, const uint8_t *data)
 
 	dms_frame = calloc(1, sizeof(*dms_frame));
 	if (!dms_frame) {
-		PDEBUG(DDMS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDMS, LOGL_ERROR, "No memory!\n");
 			return;
 	}
 
@@ -155,7 +156,7 @@ static void dms_frame_add(nmt_t *nmt, int s, const uint8_t *data)
 	dms->state.n_count = (dms->state.n_count + 1) & 7;
 	memcpy(dms_frame->data, data, 8);
 
-	PDEBUG(DDMS, DEBUG_DEBUG, "add DMS %cT(%d) frame to queue\n", dms_frame->s + 'C', dms_frame->n);
+	LOGP(DDMS, LOGL_DEBUG, "add DMS %cT(%d) frame to queue\n", dms_frame->s + 'C', dms_frame->n);
 
 	link_dms_frame(nmt, dms_frame);
 }
@@ -163,7 +164,7 @@ static void dms_frame_add(nmt_t *nmt, int s, const uint8_t *data)
 /* delete DMS frame from list of TX frames */
 static void dms_frame_delete(nmt_t *nmt, struct dms_frame *dms_frame)
 {
-	PDEBUG(DDMS, DEBUG_DEBUG, "delete DMS frame %cT(%d) from queue\n", dms_frame->s + 'C', dms_frame->n);
+	LOGP(DDMS, LOGL_DEBUG, "delete DMS frame %cT(%d) from queue\n", dms_frame->s + 'C', dms_frame->n);
 
 	unlink_dms_frame(nmt, dms_frame);
 
@@ -248,7 +249,7 @@ static void dms_encode_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *
 	uint16_t crc;
 	int i, j;
 
-	PDEBUG(DDMS, DEBUG_INFO, "Sending DMS frame: %s\n", print_ct_dt(s, n, _data, dms->state.eight_bits));
+	LOGP(DDMS, LOGL_INFO, "Sending DMS frame: %s\n", print_ct_dt(s, n, _data, dms->state.eight_bits));
 
 	/* generate label */
 	data[0] = (d << 6) | (s << 5) | (3 << 3) | n;
@@ -354,7 +355,7 @@ void trigger_frame_transmission(nmt_t *nmt)
 
 	/* check for RR first, because high priority */
 	if (dms->state.send_rr) {
-		PDEBUG(DDMS, DEBUG_DEBUG, "Found pending RR(%d) frame, sending.\n", dms->state.n_r);
+		LOGP(DDMS, LOGL_DEBUG, "Found pending RR(%d) frame, sending.\n", dms->state.n_r);
 		dms->state.send_rr = 0;
 		dms_encode_rr(nmt, dms->state.dir ^ 1, 1, dms->state.n_r);
 		return;
@@ -374,7 +375,7 @@ void trigger_frame_transmission(nmt_t *nmt)
 
 	/* check if outstanding frame */
 	if (!dms_frame) {
-		PDEBUG(DDMS, DEBUG_DEBUG, "No pending RR/CT/DT frame found.\n");
+		LOGP(DDMS, LOGL_DEBUG, "No pending RR/CT/DT frame found.\n");
 		if (dms->state.tx_pending) {
 			dms->state.tx_pending = 0;
 			dms_all_sent(nmt);
@@ -382,7 +383,7 @@ void trigger_frame_transmission(nmt_t *nmt)
 		return;
 	}
 
-	PDEBUG(DDMS, DEBUG_DEBUG, "Found pending %cT(%d) frame, sending.\n", dms_frame->s + 'C', dms_frame->n);
+	LOGP(DDMS, LOGL_DEBUG, "Found pending %cT(%d) frame, sending.\n", dms_frame->s + 'C', dms_frame->n);
 
 	/* sent next send state to next frame in buffer.
 	 * if there is no next frame, set it to the first frame (cycle).
@@ -390,19 +391,19 @@ void trigger_frame_transmission(nmt_t *nmt)
 	 */
 	if (!dms_frame->next) {
 		dms->state.n_s = dms->state.frame_list->n;
-		PDEBUG(DDMS, DEBUG_DEBUG, " -> Next sequence number is %d, because this was the last frame in queue.\n", dms->state.n_s);
+		LOGP(DDMS, LOGL_DEBUG, " -> Next sequence number is %d, because this was the last frame in queue.\n", dms->state.n_s);
 	} else if (!dms->state.established && dms_frame->next->s == 1) {
 		dms->state.n_s = dms->state.frame_list->n;
-		PDEBUG(DDMS, DEBUG_DEBUG, " -> Next sequence number is %d, because this was the last frame before DT queue, and RAND has not been acked yet.\n", dms->state.n_s);
+		LOGP(DDMS, LOGL_DEBUG, " -> Next sequence number is %d, because this was the last frame before DT queue, and RAND has not been acked yet.\n", dms->state.n_s);
 	} else if (i == 3) {
 		dms->state.n_s = dms->state.frame_list->n;
-		PDEBUG(DDMS, DEBUG_DEBUG, " -> Next sequence number is %d, because we reached max number of unacknowledged frames.\n", dms->state.n_s);
+		LOGP(DDMS, LOGL_DEBUG, " -> Next sequence number is %d, because we reached max number of unacknowledged frames.\n", dms->state.n_s);
 	} else if (!dms->state.established && dms_frame->next->s == 0) {
 		dms->state.n_s = dms_frame->next->n;
-		PDEBUG(DDMS, DEBUG_DEBUG, " -> Next sequence number is %d, because this is the next CT frame in queue.\n", dms->state.n_s);
+		LOGP(DDMS, LOGL_DEBUG, " -> Next sequence number is %d, because this is the next CT frame in queue.\n", dms->state.n_s);
 	} else {
 		dms->state.n_s = dms_frame->next->n;
-		PDEBUG(DDMS, DEBUG_DEBUG, " -> Next sequence number is %d, because this is the next frame in queue.\n", dms->state.n_s);
+		LOGP(DDMS, LOGL_DEBUG, " -> Next sequence number is %d, because this is the next frame in queue.\n", dms->state.n_s);
 	}
 
 	dms_encode_dt(nmt, dms->state.dir ^ 1, dms_frame->s, dms_frame->n, dms_frame->data);
@@ -438,7 +439,7 @@ static void dms_rx_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *data
 
 	/* start transfer */
 	if (!dms->state.started) {
-		PDEBUG(DDMS, DEBUG_INFO, "Starting DMS transfer (mobile originated)\n");
+		LOGP(DDMS, LOGL_INFO, "Starting DMS transfer (mobile originated)\n");
 		dms->state.started = 1;
 		dms->state.established = 0;
 		dms->state.dir = d;
@@ -451,15 +452,15 @@ static void dms_rx_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *data
 
 	if (dms->state.dir != d && !dms_allow_loopback) {
 		/* drop frames with wrong direction indicator */
-		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator mismatch!\n");
+		LOGP(DDMS, LOGL_INFO, "DMS frame ignored, direction indicator mismatch!\n");
 		return;
 	}
 
 	if (dms->state.n_r != n) {
 		/* ignore out of sequence frames */
-		PDEBUG(DDMS, DEBUG_DEBUG, "DMS frame number mismatch (due to resending)\n");
+		LOGP(DDMS, LOGL_DEBUG, "DMS frame number mismatch (due to resending)\n");
 	} else {
-		PDEBUG(DDMS, DEBUG_INFO, "Received valid DMS frame: %s\n", print_ct_dt(s, n, data, dms->state.eight_bits));
+		LOGP(DDMS, LOGL_INFO, "Received valid DMS frame: %s\n", print_ct_dt(s, n, data, dms->state.eight_bits));
 
 		/* cycle sequence */
 		dms->state.n_r = (n + 1) % 8;
@@ -470,7 +471,7 @@ static void dms_rx_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *data
 			case 73: /* ID */
 				break;
 			case 82: /* RAND */
-				PDEBUG(DDMS, DEBUG_DEBUG, "RAND frame has been received, so we can send/receive DT frame\n");
+				LOGP(DDMS, LOGL_DEBUG, "RAND frame has been received, so we can send/receive DT frame\n");
 				/* when we sent RAND, we do not resend it again, this would be wrong */
 				if (!dms->state.rand_sent) {
 					dms_frame_add_rand(nmt, data[7]);
@@ -484,7 +485,7 @@ static void dms_rx_dt(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n, uint8_t *data
 			}
 		} else {
 			if (!dms->state.established)
-				PDEBUG(DDMS, DEBUG_NOTICE, "Received DT frame, but RAND frame has not been received yet\n");
+				LOGP(DDMS, LOGL_NOTICE, "Received DT frame, but RAND frame has not been received yet\n");
 			else {
 				if (!dms->state.eight_bits)
 					length = 8;
@@ -526,7 +527,7 @@ static void dms_rx_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 
 	if (dms->state.dir != d && !dms_allow_loopback) {
 		/* drop frames with wrong direction indicator */
-		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator mismatch!\n");
+		LOGP(DDMS, LOGL_INFO, "DMS frame ignored, direction indicator mismatch!\n");
 		return;
 	}
 
@@ -541,17 +542,17 @@ static void dms_rx_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 
 	/* if we don't find a frame, it must have been already acked, so we ignore RR */
 	if (!dms_frame || i == 4) {
-		PDEBUG(DDMS, DEBUG_DEBUG, "Received already acked DMS frame: RR(%d) (s = %d), ignoring\n", n, s);
+		LOGP(DDMS, LOGL_DEBUG, "Received already acked DMS frame: RR(%d) (s = %d), ignoring\n", n, s);
 		return;
 	}
 
-	PDEBUG(DDMS, DEBUG_INFO, "Received valid DMS frame: RR(%d) (s = %d)\n", n, s);
+	LOGP(DDMS, LOGL_INFO, "Received valid DMS frame: RR(%d) (s = %d)\n", n, s);
 
 	/* flush all acked frames. */
 	dms_frame = dms->state.frame_list;
 	for (j = 0; j <= i; j++) {
 		if (dms_frame->data[0] == 82) { /* RAND */
-			PDEBUG(DDMS, DEBUG_DEBUG, "RAND frame has been acknowledged, so we can continue to send DT frame\n");
+			LOGP(DDMS, LOGL_DEBUG, "RAND frame has been acknowledged, so we can continue to send DT frame\n");
 			dms->state.established = 1;
 		}
 		/* increment ack counter */
@@ -559,9 +560,9 @@ static void dms_rx_rr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 		/* raise send counter if required */
 		if (dms->state.n_s == dms_frame->n) {
 			dms->state.n_s = dms->state.n_a;
-			PDEBUG(DDMS, DEBUG_DEBUG, "Raising next frame to send to #%d\n", dms->state.n_s);
+			LOGP(DDMS, LOGL_DEBUG, "Raising next frame to send to #%d\n", dms->state.n_s);
 		}
-		PDEBUG(DDMS, DEBUG_DEBUG, "Removing acked frame #%d\n", dms_frame->n);
+		LOGP(DDMS, LOGL_DEBUG, "Removing acked frame #%d\n", dms_frame->n);
 		dms_frame_next = dms_frame->next;
 		dms_frame_delete(nmt, dms_frame);
 		dms_frame = dms_frame_next;
@@ -581,11 +582,11 @@ static void dms_rx_nr(nmt_t *nmt, uint8_t d, uint8_t s, uint8_t n)
 
 	if (dms->state.dir != d && !dms_allow_loopback) {
 		/* drop frames with wrong direction indicator */
-		PDEBUG(DDMS, DEBUG_INFO, "DMS frame ignored, direction indicator mismatch!\n");
+		LOGP(DDMS, LOGL_INFO, "DMS frame ignored, direction indicator mismatch!\n");
 		return;
 	}
 
-	PDEBUG(DDMS, DEBUG_INFO, "Received valid DMS frame: NR(%d) (s = %d)\n", n, s);
+	LOGP(DDMS, LOGL_INFO, "Received valid DMS frame: NR(%d) (s = %d)\n", n, s);
 
 	// FIXME: support NR
 
@@ -624,7 +625,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 		if (quality < 0.65)
 			return;
 
-		PDEBUG(DDSP, DEBUG_DEBUG, "DMS sync  RX Level: %.0f%% Quality=%.0f\n", level * 100.0 + 0.5, quality * 100.0 + 0.5);
+		LOGP(DDSP, LOGL_DEBUG, "DMS sync  RX Level: %.0f%% Quality=%.0f\n", level * 100.0 + 0.5, quality * 100.0 + 0.5);
 
 		/* rest sync register */
 		dms->rx_sync = 0;
@@ -657,10 +658,10 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			dms->rx_label.s = (dms->rx_frame[0] >> 5) & 0x1;
 			dms->rx_label.p = (dms->rx_frame[0] >> 3) & 0x3;
 			dms->rx_label.n = dms->rx_frame[0] & 0x7;
-			PDEBUG(DDMS, DEBUG_DEBUG, "Got DMS label (d = %d, s = %d, p = %d, n = %d)\n", dms->rx_label.d,dms->rx_label.s,dms->rx_label.p,dms->rx_label.n);
+			LOGP(DDMS, LOGL_DEBUG, "Got DMS label (d = %d, s = %d, p = %d, n = %d)\n", dms->rx_label.d,dms->rx_label.s,dms->rx_label.p,dms->rx_label.n);
 			dms->rx_frame_count++;
 			if (dms->rx_label.p == 0) {
-				PDEBUG(DDMS, DEBUG_DEBUG, "Spare prefix '00' ignoring!\n");
+				LOGP(DDMS, LOGL_DEBUG, "Spare prefix '00' ignoring!\n");
 				dms->rx_in_sync = 0;
 			}
 		}
@@ -673,7 +674,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			if (dms->rx_bit_count == 9) {
 				dms->rx_bit_count = 0;
 				uint8_t c = dms->rx_frame[dms->rx_frame_count];
-				PDEBUG(DDMS, DEBUG_DEBUG, "Got DMS word 0x%02x (%c)\n", c, (c >= 32 && c <= 126) ? c : '.');
+				LOGP(DDMS, LOGL_DEBUG, "Got DMS word 0x%02x (%c)\n", c, (c >= 32 && c <= 126) ? c : '.');
 				dms->rx_frame_count++;
 			}
 			return;
@@ -681,7 +682,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 		if (dms->rx_frame_count <= 10) {
 			if (dms->rx_bit_count == 9) {
 				dms->rx_bit_count = 0;
-				PDEBUG(DDMS, DEBUG_DEBUG, "Got DMS CRC 0x%02x\n", dms->rx_frame[dms->rx_frame_count]);
+				LOGP(DDMS, LOGL_DEBUG, "Got DMS CRC 0x%02x\n", dms->rx_frame[dms->rx_frame_count]);
 				dms->rx_frame_count++;
 			}
 			return;
@@ -691,7 +692,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			uint8_t bits[63 + 16];
 			int i, j;
 			dms->rx_bit_count = 0;
-			PDEBUG(DDMS, DEBUG_DEBUG, "Got DMS CRC 0x%x\n", dms->rx_frame[dms->rx_frame_count]);
+			LOGP(DDMS, LOGL_DEBUG, "Got DMS CRC 0x%x\n", dms->rx_frame[dms->rx_frame_count]);
 			crc_got = (dms->rx_frame[9] << 9) | (dms->rx_frame[10] << 2) | dms->rx_frame[11];
 			for (i = 0; i < 9; i++) {
 				for (j = 0; j < 7; j++)
@@ -700,7 +701,7 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			for (i = 0; i < 16; i++)
 				bits[63 + i] = 0;
 			crc_calc = crc16(bits, 63 + 16);
-			PDEBUG(DDMS, DEBUG_DEBUG, "DMS CRC = 0x%04x %s\n", crc_got, (crc_calc == crc_got) ? "(OK)" : "(CRC error)");
+			LOGP(DDMS, LOGL_DEBUG, "DMS CRC = 0x%04x %s\n", crc_got, (crc_calc == crc_got) ? "(OK)" : "(CRC error)");
 			if (crc_calc == crc_got)
 				dms_rx_dt(nmt, dms->rx_label.d, dms->rx_label.s, dms->rx_label.n, dms->rx_frame + 1);
 			dms->rx_in_sync = 0;
@@ -713,12 +714,12 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			if (dms->rx_bit_count == 9) {
 				dms->rx_bit_count = 0;
 				if (dms->rx_frame[0] != dms->rx_frame[1]) {
-					PDEBUG(DDMS, DEBUG_DEBUG, "Repeated DMS label mismatches!\n");
+					LOGP(DDMS, LOGL_DEBUG, "Repeated DMS label mismatches!\n");
 					dms->rx_in_sync = 0;
 					return;
 				}
 				dms->rx_frame_count++;
-				PDEBUG(DDMS, DEBUG_DEBUG, "Repeated label matches\n");
+				LOGP(DDMS, LOGL_DEBUG, "Repeated label matches\n");
 			}
 			return;
 		}
@@ -727,13 +728,13 @@ void fsk_receive_bit_dms(nmt_t *nmt, int bit, double quality, double level)
 			int i;
 			dms->rx_bit_count = 0;
 			parity_got = dms->rx_frame[2];
-			PDEBUG(DDMS, DEBUG_DEBUG, "Got DMS parity 0x%x\n", dms->rx_frame[dms->rx_frame_count]);
+			LOGP(DDMS, LOGL_DEBUG, "Got DMS parity 0x%x\n", dms->rx_frame[dms->rx_frame_count]);
 			for (i = 0; i < 7; i++) {
 				bit = (dms->rx_frame[0] >> i) & 1;
 				if (bit)
 					parity_calc ^= 0x3;
 			}
-			PDEBUG(DDMS, DEBUG_DEBUG, "DMS parity %s\n", (parity_calc == parity_got) ? "(OK)" : "(parity error)");
+			LOGP(DDMS, LOGL_DEBUG, "DMS parity %s\n", (parity_calc == parity_got) ? "(OK)" : "(parity error)");
 			if (parity_calc == parity_got) {
 				if (dms->rx_label.p == 1)
 					dms_rx_rr(nmt, dms->rx_label.d, dms->rx_label.s, dms->rx_label.n);
@@ -758,18 +759,18 @@ void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 	uint8_t frame[8];
 	int i, copied;
 
-	PDEBUG(DDMS, DEBUG_DEBUG, "Received message with %d digits of %d bits\n", length, (eight_bits) ? 8 : 7);
+	LOGP(DDMS, LOGL_DEBUG, "Received message with %d digits of %d bits\n", length, (eight_bits) ? 8 : 7);
 
 	/* active connection */
 	if (dms->state.started) {
 		if (dms->state.eight_bits != eight_bits) {
-			PDEBUG(DDMS, DEBUG_ERROR, "DMS session active, but upper layer sends wrong bit format!\n");
+			LOGP(DDMS, LOGL_ERROR, "DMS session active, but upper layer sends wrong bit format!\n");
 			return;
 		}
 	}
 
 	if (!dms->state.started) {
-		PDEBUG(DDMS, DEBUG_DEBUG, "Transfer not started, so we send ID + RAND first\n");
+		LOGP(DDMS, LOGL_DEBUG, "Transfer not started, so we send ID + RAND first\n");
 		dms->state.started = 1;
 		dms->state.established = 0;
 		dms->state.eight_bits = eight_bits;
@@ -783,7 +784,7 @@ void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 		dms->state.rand_sent = 1;
 	}
 
-	PDEBUG(DDMS, DEBUG_DEBUG, "Queueing message data as DT frames...\n");
+	LOGP(DDMS, LOGL_DEBUG, "Queueing message data as DT frames...\n");
 	while (length) {
 		if (eight_bits) {
 			/* copy what we have */
@@ -837,7 +838,7 @@ void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 void dms_reset(nmt_t *nmt)
 {
 	dms_t *dms = &nmt->dms;
-	PDEBUG(DDMS, DEBUG_DEBUG, "Resetting DMS states\n");
+	LOGP(DDMS, LOGL_DEBUG, "Resetting DMS states\n");
 
 	dms->rx_in_sync = 0;
 	memset(&dms->state, 0, sizeof(dms->state));

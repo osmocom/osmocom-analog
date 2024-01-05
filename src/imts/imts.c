@@ -39,11 +39,12 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include "../libmobile/get_time.h"
+#include <osmocom/cc/message.h>
 #include "imts.h"
 #include "dsp.h"
 
@@ -127,37 +128,37 @@ void imts_list_channels(void)
 }
 
 /* Timers */
-#define PAGING_TO	4.0	/* Time to wait for the phone to respond */
-#define RINGING_TO	45.0	/* Time to wait for the mobile user to answer */
-#define SEIZE_TO	1.0	/* Time to wait for the phone to seize (Connect tone) */
-#define ANI_TO		1.000	/* Time to wait for first / next digit */
-#define DIALTONE_TO	10.0	/* Time to wait until dialing must be performed */
-#define DIALING_TO	3.0	/* Time to wait until number is recognized as complete */
-#define RELEASE_TO	0.350	/* Time to turn off transmitter before going idle ".. for about 300 ms .." */
-#define ANI_PULSE_TO	0.100	/* Time to detect end of digit */
-#define DIAL_PULSE_TO	0.200	/* Time to detect end of digit */
-#define DISC_PULSE_TO	0.100	/* Time until aborting disconnect detection */
-#define PAGE_PULSE_TO	0.200	/* Time to detect end of digit */
+#define PAGING_TO	4,0		/* Time to wait for the phone to respond */
+#define RINGING_TO	45,0		/* Time to wait for the mobile user to answer */
+#define SEIZE_TO	1,0		/* Time to wait for the phone to seize (Connect tone) */
+#define ANI_TO		1,0		/* Time to wait for first / next digit */
+#define DIALTONE_TO	10,0		/* Time to wait until dialing must be performed */
+#define DIALING_TO	3,0		/* Time to wait until number is recognized as complete */
+#define RELEASE_TO	0,350000	/* Time to turn off transmitter before going idle ".. for about 300 ms .." */
+#define ANI_PULSE_TO	0,100000	/* Time to detect end of digit */
+#define DIAL_PULSE_TO	0,200000	/* Time to detect end of digit */
+#define DISC_PULSE_TO	0.1		/* Time until aborting disconnect detection */
+#define PAGE_PULSE_TO	0.2		/* Time to detect end of digit */
 
 /* Counters */
-#define DISC_COUNT	2	/* Number of pulses to detect disconnect (100 ms) */
-#define RING_PULSES	40	/* 2 seconds ringer on */
+#define DISC_COUNT	2		/* Number of pulses to detect disconnect (100 ms) */
+#define RING_PULSES	40		/* 2 seconds ringer on */
 
 /* Durations */
-#define IDLE_DETECT	0.500	/* Time to detect Idle signal (loopback) */
-#define PAGE_SEIZE	0.400	/* Time to seize channel until start paging pulses FIXME */
-#define PAGE_PAUSE	0.225	/* Time to pause after each digit */
-#define PAGE_MARK	0.050	/* Mark duration of page pulse */
-#define PAGE_SPACE	0.050	/* Space duration of page pulse */
-#define PAGE_PULSE	0.100	/* Duration of a complete pulse (MTS) */
-#define RING_MARK	0.025	/* Mark duration of ring pulse */
-#define RING_SPACE	0.025	/* Space duration of ring pulse */
-#define RING_OFF	4.0	/* 4 seconds ringer off */
-#define GUARD_TIME	0.200	/* Time until detecting Guard tone from mobile */
-#define SEIZE_TIME	0.300	/* Time until sending Seize tone >= 250 */
-#define SEIZE_LENGTH	0.250	/* Length of Seize */
-#define RECEIVE_TIME	0.200	/* Time until detecting receive signal (Guard tone) from mobile */
-#define ANSWER_TIME	0.200	/* Time until detecting answer signal (Connect tone) from mobile */
+#define IDLE_DETECT	0,500000	/* Time to detect Idle signal (loopback) */
+#define PAGE_SEIZE	0.400		/* Time to seize channel until start paging pulses FIXME */
+#define PAGE_PAUSE	0.225		/* Time to pause after each digit */
+#define PAGE_MARK	0.050		/* Mark duration of page pulse */
+#define PAGE_SPACE	0.050		/* Space duration of page pulse */
+#define PAGE_PULSE	0.100		/* Duration of a complete pulse (MTS) */
+#define RING_MARK	0.025		/* Mark duration of ring pulse */
+#define RING_SPACE	0.025		/* Space duration of ring pulse */
+#define RING_OFF	4.0		/* 4 seconds ringer off */
+#define GUARD_TIME	0.200		/* Time until detecting Guard tone from mobile */
+#define SEIZE_TIME	0,300000	/* Time until sending Seize tone >= 250 */
+#define SEIZE_LENGTH	0.250		/* Length of Seize */
+#define RECEIVE_TIME	0.200		/* Time until detecting receive signal (Guard tone) from mobile */
+#define ANSWER_TIME	0.200		/* Time until detecting answer signal (Connect tone) from mobile */
 
 const char *imts_state_name(enum imts_state state)
 {
@@ -213,7 +214,7 @@ static void imts_new_state(imts_t *imts, enum imts_state new_state)
 {
 	if (imts->state == new_state)
 		return;
-	PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "State change: %s -> %s\n", imts_state_name(imts->state), imts_state_name(new_state));
+	LOGP_CHAN(DIMTS, LOGL_DEBUG, "State change: %s -> %s\n", imts_state_name(imts->state), imts_state_name(new_state));
 	imts->state = new_state;
 	imts_display_status();
 }
@@ -295,34 +296,34 @@ int imts_create(const char *kanal, const char *device, int use_sdr, int samplera
 	int rc;
 
 	if (imts_channel2freq(kanal, 0) == 0.0) {
-		PDEBUG(DIMTS, DEBUG_ERROR, "Channel number %s invalid.\n", kanal);
+		LOGP(DIMTS, LOGL_ERROR, "Channel number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
 	if (imts_is_canada_only(kanal)) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "*******************************************************************************\n");
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Given channel '%s' was only available in Canada with Canadian phones.\n", kanal);
-		PDEBUG(DIMTS, DEBUG_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' was only available in Canada with Canadian phones.\n", kanal);
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 	}
 	if (mode == MODE_IMTS && imts_channel2band(kanal) == VHF_LOW) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "*******************************************************************************\n");
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Given channel '%s' was only available at MTS network.\n", kanal);
-		PDEBUG(DIMTS, DEBUG_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' was only available at MTS network.\n", kanal);
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 		return -EINVAL;
 	}
 	if (mode == MODE_MTS && imts_channel2band(kanal) == UHF) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "*******************************************************************************\n");
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Given channel '%s' was only available at IMTS network.\n", kanal);
-		PDEBUG(DIMTS, DEBUG_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' was only available at IMTS network.\n", kanal);
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 		return -EINVAL;
 	}
 
 	imts = calloc(1, sizeof(imts_t));
 	if (!imts) {
-		PDEBUG(DIMTS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DIMTS, LOGL_ERROR, "No memory!\n");
 		return -EIO;
 	}
 
-	PDEBUG(DIMTS, DEBUG_DEBUG, "Creating 'IMTS' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DIMTS, LOGL_DEBUG, "Creating 'IMTS' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
 	imts->fast_seize = fast_seize;
 	imts->mode = mode;
@@ -333,18 +334,18 @@ int imts_create(const char *kanal, const char *device, int use_sdr, int samplera
 	/* do not enable emphasis, since it is done by imts code, not by common sender code */
 	rc = sender_create(&imts->sender, kanal, imts_channel2freq(kanal, 0), imts_channel2freq(kanal, 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DIMTS, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
+		LOGP(DIMTS, LOGL_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_transceiver(imts, squelch_db, ptt);
 	if (rc < 0) {
-		PDEBUG(DIMTS, DEBUG_ERROR, "Failed to init signal processing!\n");
+		LOGP(DIMTS, LOGL_ERROR, "Failed to init signal processing!\n");
 		goto error;
 	}
 
-	timer_init(&imts->timer, imts_timeout, imts);
+	osmo_timer_setup(&imts->timer, imts_timeout, imts);
 
 	imts->pre_emphasis = pre_emphasis;
 	imts->de_emphasis = de_emphasis;
@@ -363,7 +364,7 @@ int imts_create(const char *kanal, const char *device, int use_sdr, int samplera
 		imts_go_idle(imts);
 	}
 
-	PDEBUG(DIMTS, DEBUG_NOTICE, "Created channel #%s\n", kanal);
+	LOGP(DIMTS, LOGL_NOTICE, "Created channel #%s\n", kanal);
 
 	return 0;
 
@@ -378,9 +379,9 @@ void imts_destroy(sender_t *sender)
 {
 	imts_t *imts = (imts_t *) sender;
 
-	PDEBUG(DIMTS, DEBUG_DEBUG, "Destroying 'IMTS' instance for channel = %s.\n", sender->kanal);
+	LOGP(DIMTS, LOGL_DEBUG, "Destroying 'IMTS' instance for channel = %s.\n", sender->kanal);
 
-	timer_exit(&imts->timer);
+	osmo_timer_del(&imts->timer);
 	dsp_cleanup_transceiver(imts);
 	sender_destroy(&imts->sender);
 	free(sender);
@@ -392,7 +393,7 @@ static void imts_go_idle(imts_t *imts)
 	sender_t *sender;
 	imts_t *idle;
 
-	timer_stop(&imts->timer);
+	osmo_timer_del(&imts->timer);
 	imts->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 
 	for (sender = sender_head; sender; sender = sender->next) {
@@ -403,17 +404,17 @@ static void imts_go_idle(imts_t *imts)
 			break;
 	}
 	if (sender) {
-		PDEBUG(DIMTS, DEBUG_INFO, "Entering IDLE state on channel %s, turning transmitter off.\n", imts->sender.kanal);
+		LOGP(DIMTS, LOGL_INFO, "Entering IDLE state on channel %s, turning transmitter off.\n", imts->sender.kanal);
 		imts_new_state(imts, IMTS_OFF);
 		imts_set_dsp_mode(imts, DSP_MODE_OFF, 0, 0.0, 0);
 	} else {
 		if (imts->mode == MODE_IMTS) {
-			PDEBUG(DIMTS, DEBUG_INFO, "Entering IDLE state on channel %s, sending 2000 Hz tone.\n", imts->sender.kanal);
+			LOGP(DIMTS, LOGL_INFO, "Entering IDLE state on channel %s, sending 2000 Hz tone.\n", imts->sender.kanal);
 			imts_new_state(imts, IMTS_IDLE);
 			/* also reset detector, so if there is a new call it is answered */
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, 0.0, 1);
 		} else {
-			PDEBUG(DIMTS, DEBUG_INFO, "Entering IDLE state on channel %s, sending 600 Hz tone.\n", imts->sender.kanal);
+			LOGP(DIMTS, LOGL_INFO, "Entering IDLE state on channel %s, sending 600 Hz tone.\n", imts->sender.kanal);
 			imts_new_state(imts, IMTS_IDLE);
 			/* also reset detector, so if there is a new call it is answered */
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_600, 0.0, 1);
@@ -435,13 +436,13 @@ static void imts_activate_idle(void)
 	if (sender)
 		imts_go_idle(idle);
 	else
-		PDEBUG(DIMTS, DEBUG_INFO, "All channels are busy now, cannot activate any other channel.\n");
+		LOGP(DIMTS, LOGL_INFO, "All channels are busy now, cannot activate any other channel.\n");
 }
 
 /* Release connection towards mobile station by sending pause for a while. */
 static void imts_release(imts_t *imts)
 {
-	timer_stop(&imts->timer);
+	osmo_timer_del(&imts->timer);
 	/* remove station ID before state change, so status is shown correctly */
 	imts->station_id[0] = '\0';
 
@@ -455,22 +456,22 @@ static void imts_release(imts_t *imts)
 			tone = TONE_600;
 		else
 			tone = TONE_1500;
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Sending pulse to stop ringing of the phone.\n");
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Sending pulse to stop ringing of the phone.\n");
 		imts_new_state(imts, IMTS_RELEASE);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, tone, PAGE_PAUSE, 0);
 	} else {
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Turing transmitter off.\n");
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Turing transmitter off.\n");
 		if (imts->state != IMTS_RELEASE)
 			imts_new_state(imts, IMTS_RELEASE);
 		imts_set_dsp_mode(imts, DSP_MODE_OFF, 0, 0.0, 0);
-		timer_start(&imts->timer, RELEASE_TO);
+		osmo_timer_schedule(&imts->timer, RELEASE_TO);
 	}
 }
 
 /* Enter detector test state */
 static void imts_detector_test(imts_t *imts, double length_1, double length_2, double length_3)
 {
-	PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Entering detector test state, sending test sequence.\n");
+	LOGP_CHAN(DIMTS, LOGL_INFO, "Entering detector test state, sending test sequence.\n");
 	imts->detector_test_length_1 = length_1;
 	imts->detector_test_length_2 = length_2;
 	imts->detector_test_length_3 = length_3;
@@ -483,12 +484,12 @@ static void imts_detector_test(imts_t *imts, double length_1, double length_2, d
 static void imts_paging(imts_t *imts, const char *dial_string, int loopback)
 {
 	/* stop timer, since it may be running while measuring Guard tone at IDLE state */
-	timer_stop(&imts->timer);
+	osmo_timer_del(&imts->timer);
 
 	if (loopback)
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Entering paging test state, sending digits %s.\n", dial_string);
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Entering paging test state, sending digits %s.\n", dial_string);
 	else
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Entering paging state, sending phone's ID '%s'.\n", dial_string);
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Entering paging state, sending phone's ID '%s'.\n", dial_string);
 	/* set station ID before state change, so status is shown correctly */
 	strncpy(imts->station_id, dial_string, sizeof(imts->station_id) - 1);
 	imts->tx_page_index = 0;
@@ -509,18 +510,18 @@ static void imts_paging(imts_t *imts, const char *dial_string, int loopback)
 /* Enter ringing state */
 static void imts_ringing(imts_t *imts)
 {
-	PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received response from mobile phone, ringing.\n");
+	LOGP_CHAN(DIMTS, LOGL_INFO, "Received response from mobile phone, ringing.\n");
 	imts->tx_ring_pulse = 0;
 	imts_new_state(imts, IMTS_RINGING);
 	imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, RING_MARK, 0);
-	timer_start(&imts->timer, RINGING_TO);
+	osmo_timer_schedule(&imts->timer, RINGING_TO);
 }
 
 /* Enter conversation state */
 static void imts_answer(imts_t *imts)
 {
-	PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received answer from mobile phone, conversation started.\n");
-	timer_stop(&imts->timer);
+	LOGP_CHAN(DIMTS, LOGL_INFO, "Received answer from mobile phone, conversation started.\n");
+	osmo_timer_del(&imts->timer);
 	imts_new_state(imts, IMTS_CONVERSATION);
 	imts_set_dsp_mode(imts, DSP_MODE_AUDIO, 0, 0.0, 0);
 	imts->rx_disc_pulse = 0;
@@ -531,10 +532,10 @@ void imts_loss_indication(imts_t *imts, double loss_time)
 {
 	/* stop timer */
 	if (imts->mode == MODE_MTS && (imts->state == IMTS_IDLE || imts->state == IMTS_RINGING))
-		timer_stop(&imts->timer);
+		osmo_timer_del(&imts->timer);
 
 	if (!imts->ptt && imts->state == IMTS_CONVERSATION) {
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Detected loss of signal after %.1f seconds, releasing.\n", loss_time);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Detected loss of signal after %.1f seconds, releasing.\n", loss_time);
 		imts_release(imts);
 		call_up_release(imts->callref, CAUSE_TEMPFAIL);
 		imts->callref = 0;
@@ -546,7 +547,7 @@ void imts_signal_indication(imts_t *imts)
 {
 	/* setup a call from mobile to base station */
 	if (imts->mode == MODE_MTS && imts->state == IMTS_IDLE) {
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Detects RF signal in IDLE mode, calling the opterator at '%s'.\n", imts->operator);
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Detects RF signal in IDLE mode, calling the opterator at '%s'.\n", imts->operator);
 		imts->callref = call_up_setup(NULL, imts->operator, OSMO_CC_NETWORK_MTS_NONE, "");
 		imts_new_state(imts, IMTS_CONVERSATION);
 		imts_set_dsp_mode(imts, DSP_MODE_AUDIO, 0, 0.0, 0);
@@ -554,7 +555,7 @@ void imts_signal_indication(imts_t *imts)
 
 	/* answer a call from base station to mobile */
 	if (imts->mode == MODE_MTS && imts->state == IMTS_RINGING) {
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Detected RF signal, mobile is now transmitting.\n");
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Detected RF signal, mobile is now transmitting.\n");
 		call_up_answer(imts->callref, imts->station_id);
 		imts_answer(imts);
 	}
@@ -564,26 +565,26 @@ void imts_signal_indication(imts_t *imts)
 static void imts_receive_seize(imts_t *imts, int tone)
 {
 	/* other tone stops IDLE / GUARD timer */
-	timer_stop(&imts->timer);
+	osmo_timer_del(&imts->timer);
 
 	switch (tone) {
 	case TONE_IDLE:
 	case TONE_600:
-		timer_start(&imts->timer, IDLE_DETECT);
+		osmo_timer_schedule(&imts->timer, IDLE_DETECT);
 		break;
 	case TONE_GUARD:
 		imts->rx_guard_timestamp = get_time();
 		if (imts->fast_seize)
-			timer_start(&imts->timer, imts->fast_seize);
+			osmo_timer_schedule(&imts->timer, 0,imts->fast_seize * 1000000);
 		break;
 	case TONE_CONNECT:
 		if (imts->last_tone == TONE_GUARD && imts->rx_guard_duration >= GUARD_TIME) {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received seize (Guard + Connect tone) from mobile phone.\n");
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, " -> Guard tone duration: %.0f ms (level %.0f%%)\n", (get_time() - imts->rx_guard_timestamp) * 1000.0, imts->last_sigtone_amplitude * 100.0);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Received seize (Guard + Connect tone) from mobile phone.\n");
+			LOGP_CHAN(DIMTS, LOGL_INFO, " -> Guard tone duration: %.0f ms (level %.0f%%)\n", (get_time() - imts->rx_guard_timestamp) * 1000.0, imts->last_sigtone_amplitude * 100.0);
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SILENCE, 0.0, 0);
 			imts_new_state(imts, IMTS_SEIZE);
 			imts_activate_idle(); /* must activate another channel right after station is not idle anymore */
-			timer_start(&imts->timer, SEIZE_TIME);
+			osmo_timer_schedule(&imts->timer, SEIZE_TIME);
 		}
 		break;
 	default:
@@ -604,34 +605,34 @@ static void imts_receive_ani(imts_t *imts, int tone)
 		imts->rx_ani_pulse++;
 		imts->rx_ani_totpulses++;
 		if (imts->rx_ani_pulse > 10) {
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received too many pulses, releasing!\n");
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received too many pulses, releasing!\n");
 			imts_release(imts);
 			break;
 		}
-		PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Detected ANI pulse #%d.\n", imts->rx_ani_pulse);
-		timer_start(&imts->timer, ANI_PULSE_TO);
+		LOGP_CHAN(DIMTS, LOGL_DEBUG, "Detected ANI pulse #%d.\n", imts->rx_ani_pulse);
+		osmo_timer_schedule(&imts->timer, ANI_PULSE_TO);
 		break;
 	case TONE_GUARD:
 		/* even pulse completed */
 		if ((imts->rx_ani_totpulses & 1)) {
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Parity error: Received Guard tone after %d (odd) pulses, releasing!\n", imts->rx_ani_totpulses);
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Parity error: Received Guard tone after %d (odd) pulses, releasing!\n", imts->rx_ani_totpulses);
 			imts_release(imts);
 			break;
 		}
-		timer_start(&imts->timer, ANI_PULSE_TO);
+		osmo_timer_schedule(&imts->timer, ANI_PULSE_TO);
 		break;
 	case TONE_SILENCE:
 		/* odd pulse completed */
 		if (!(imts->rx_ani_totpulses & 1)) {
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Parity error: Received silence after %d (even) pulses, releasing!\n", imts->rx_ani_totpulses);
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Parity error: Received silence after %d (even) pulses, releasing!\n", imts->rx_ani_totpulses);
 			imts_release(imts);
 			break;
 		}
-		timer_start(&imts->timer, ANI_PULSE_TO);
+		osmo_timer_schedule(&imts->timer, ANI_PULSE_TO);
 		break;
 	default:
 		/* received noise */
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received noise while dialing, releasing!\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received noise while dialing, releasing!\n");
 		imts_release(imts);
 	}
 }
@@ -647,23 +648,23 @@ static void imts_receive_dialing(imts_t *imts, int tone)
 		/* pulse detected */
 		imts->rx_dial_pulse++;
 		if (imts->rx_dial_pulse > 10) {
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received too many pulses, releasing!\n");
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received too many pulses, releasing!\n");
 			imts_release(imts);
 			break;
 		}
-		PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Detected dialing pulse #%d.\n", imts->rx_dial_pulse);
-		timer_start(&imts->timer, DIAL_PULSE_TO);
+		LOGP_CHAN(DIMTS, LOGL_DEBUG, "Detected dialing pulse #%d.\n", imts->rx_dial_pulse);
+		osmo_timer_schedule(&imts->timer, DIAL_PULSE_TO);
 		break;
 	case TONE_GUARD:
 		/* pulse completed */
 		if (imts->rx_dial_pulse)
-			timer_start(&imts->timer, DIAL_PULSE_TO);
+			osmo_timer_schedule(&imts->timer, DIAL_PULSE_TO);
 		break;
 	default:
 		;
 #if 0
 		/* received noise */
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received noise while dialing, releasing!\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received noise while dialing, releasing!\n");
 		imts_release(imts);
 #endif
 	}
@@ -675,7 +676,7 @@ static void imts_receive_disconnect(imts_t *imts, int tone, double elapsed, doub
 	/* reset disc counter on timeout */
 	if (elapsed > DISC_PULSE_TO) {
 		if (imts->rx_disc_pulse) {
-			PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Timeout Disconnect sequence\n");
+			LOGP_CHAN(DIMTS, LOGL_DEBUG, "Timeout Disconnect sequence\n");
 			imts->rx_disc_pulse = 0;
 		}
 		return;
@@ -684,11 +685,11 @@ static void imts_receive_disconnect(imts_t *imts, int tone, double elapsed, doub
 	switch (tone) {
 	case TONE_DISCONNECT:
 		imts->rx_disc_pulse++;
-		PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Detected Disconnect pulse #%d.\n", imts->rx_disc_pulse);
+		LOGP_CHAN(DIMTS, LOGL_DEBUG, "Detected Disconnect pulse #%d.\n", imts->rx_disc_pulse);
 		break;
 	case TONE_GUARD:
 		if (imts->rx_disc_pulse == DISC_COUNT) {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received disconnect sequence from mobile phone (level %.0f%%).\n", amplitude * 100.0);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Received disconnect sequence from mobile phone (level %.0f%%).\n", amplitude * 100.0);
 			if (imts->state == IMTS_SEIZE
 			 || imts->state == IMTS_ANI
 			 || imts->state == IMTS_DIALING
@@ -704,7 +705,7 @@ static void imts_receive_disconnect(imts_t *imts, int tone, double elapsed, doub
 		break;
 	default:
 		if (imts->rx_disc_pulse) {
-			PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Disconnect sequence not detected anymore\n");
+			LOGP_CHAN(DIMTS, LOGL_DEBUG, "Disconnect sequence not detected anymore\n");
 			imts->rx_disc_pulse = 0;
 		}
 	}
@@ -717,15 +718,15 @@ static void receive_page_imts(imts_t *imts, int tone)
 	case TONE_IDLE:
 		/* pulse detected */
 		imts->rx_page_pulse++;
-		PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Detected page test pulse #%d.\n", imts->rx_page_pulse);
+		LOGP_CHAN(DIMTS, LOGL_DEBUG, "Detected page test pulse #%d.\n", imts->rx_page_pulse);
 		if (imts->rx_page_pulse > 10) {
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received too many pulses!\n");
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received too many pulses!\n");
 		}
-		timer_start(&imts->timer, PAGE_PULSE_TO); // use for page test timeout
+		osmo_timer_schedule(&imts->timer, 0,PAGE_PULSE_TO * 1000000); // use for page test timeout
 		break;
 	case TONE_SEIZE:
 		/* pulse completed */
-		timer_start(&imts->timer, PAGE_PULSE_TO); // use for page test timeout
+		osmo_timer_schedule(&imts->timer, 0,PAGE_PULSE_TO * 1000000); // use for page test timeout
 		break;
 	default:
 		;
@@ -738,11 +739,11 @@ static void receive_page_mts(imts_t *imts, int tone)
 	if (tone == TONE_600 || tone == TONE_1500) {
 		/* pulse detected */
 		imts->rx_page_pulse++;
-		PDEBUG_CHAN(DIMTS, DEBUG_DEBUG, "Detected page test pulse #%d.\n", imts->rx_page_pulse);
+		LOGP_CHAN(DIMTS, LOGL_DEBUG, "Detected page test pulse #%d.\n", imts->rx_page_pulse);
 		if (imts->rx_page_pulse > 10) {
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received too many pulses!\n");
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received too many pulses!\n");
 		}
-		timer_start(&imts->timer, PAGE_PULSE_TO); // use for page test timeout
+		osmo_timer_schedule(&imts->timer, 0,PAGE_PULSE_TO * 1000000); // use for page test timeout
 	}
 }
 
@@ -784,12 +785,12 @@ void imts_lost_tone(imts_t *imts, int tone, double elapsed)
 {
 	switch (imts->state) {
 	case IMTS_IDLE:
-		timer_stop(&imts->timer);
+		osmo_timer_del(&imts->timer);
 		imts->rx_guard_duration = elapsed;
 		break;
 	case IMTS_PAGING:
-		if (elapsed >= 0.300 && tone == TONE_GUARD && timer_running(&imts->timer)) {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received acknowledge (Guard tone) from mobile phone (level %.0f%%).\n", imts->last_sigtone_amplitude * 100.0);
+		if (elapsed >= 0.300 && tone == TONE_GUARD && osmo_timer_pending(&imts->timer)) {
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Received acknowledge (Guard tone) from mobile phone (level %.0f%%).\n", imts->last_sigtone_amplitude * 100.0);
 			call_up_alerting(imts->callref);
 			imts_ringing(imts);
 			break;
@@ -797,7 +798,7 @@ void imts_lost_tone(imts_t *imts, int tone, double elapsed)
 		break;
 	case IMTS_RINGING:
 		if (elapsed >= 0.190 && tone == TONE_CONNECT) {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received answer (Connect tone) from mobile phone (level %.0f%%).\n", imts->last_sigtone_amplitude * 100.0);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Received answer (Connect tone) from mobile phone (level %.0f%%).\n", imts->last_sigtone_amplitude * 100.0);
 			call_up_answer(imts->callref, imts->station_id);
 			imts_answer(imts);
 			break;
@@ -818,30 +819,30 @@ static void ani_after_digit(imts_t *imts)
 			imts->rx_ani_pulse = 0;
 		imts->station_id[imts->rx_ani_index] = imts->rx_ani_pulse + '0';
 		imts->rx_ani_pulse = 0;
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received ANI digit '%c' from mobile phone (level %.0f%%).\n", imts->station_id[imts->rx_ani_index], imts->last_sigtone_amplitude * 100.0);
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Received ANI digit '%c' from mobile phone (level %.0f%%).\n", imts->station_id[imts->rx_ani_index], imts->last_sigtone_amplitude * 100.0);
 		imts->station_id[++imts->rx_ani_index] = '\0';
 		/* update status while receiving station ID */
 		imts_display_status();
 		/* if all digits have been received */
 		if (imts->rx_ani_index == 7) {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "ANI '%s' complete, sending dial tone.\n", imts->station_id);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "ANI '%s' complete, sending dial tone.\n", imts->station_id);
 dt:
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_DIALTONE, 0.0, 0);
-			timer_start(&imts->timer, DIALTONE_TO);
+			osmo_timer_schedule(&imts->timer, DIALTONE_TO);
 			imts->dial_number[0] = '\0';
 			imts->rx_dial_index = 0;
 			imts->rx_dial_pulse = 0;
 			imts_new_state(imts, IMTS_DIALING);
 			return;
 		}
-		timer_start(&imts->timer, ANI_TO);
+		osmo_timer_schedule(&imts->timer, ANI_TO);
 	} else {
 		/* if only 5 digits have been received */
 		if (imts->rx_ani_index == 5) {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "ANI '%s' (5 digits) complete, sending dial tone.\n", imts->station_id);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "ANI '%s' (5 digits) complete, sending dial tone.\n", imts->station_id);
 			goto dt;
 		}
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Timeout receiving ANI from mobile phone, releasing!\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Timeout receiving ANI from mobile phone, releasing!\n");
 		imts_release(imts);
 	}
 }
@@ -850,7 +851,7 @@ static void dial_after_digit(imts_t *imts)
 {
 	/* special case where nothing happens after dial tone */
 	if (!imts->rx_dial_pulse && !imts->rx_dial_index) {
-		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Mobile phone does not start dialing, releasing!\n");
+		LOGP_CHAN(DANETZ, LOGL_NOTICE, "Mobile phone does not start dialing, releasing!\n");
 		imts_release(imts);
 		return;
 	}
@@ -860,7 +861,7 @@ static void dial_after_digit(imts_t *imts)
 	 */
 	if (imts->rx_dial_pulse) {
 		if (imts->rx_dial_index == sizeof(imts->dial_number) - 1) {
-			PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Mobile phone dials too many digits, releasing!\n");
+			LOGP_CHAN(DANETZ, LOGL_NOTICE, "Mobile phone dials too many digits, releasing!\n");
 			imts_release(imts);
 			return;
 		}
@@ -868,11 +869,11 @@ static void dial_after_digit(imts_t *imts)
 			imts->rx_dial_pulse = 0;
 		imts->dial_number[imts->rx_dial_index] = imts->rx_dial_pulse + '0';
 		imts->rx_dial_pulse = 0;
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received dial digit '%c' from mobile phone. (level %.0f%%)\n", imts->dial_number[imts->rx_dial_index], imts->last_sigtone_amplitude * 100.0);
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Received dial digit '%c' from mobile phone. (level %.0f%%)\n", imts->dial_number[imts->rx_dial_index], imts->last_sigtone_amplitude * 100.0);
 		imts->dial_number[++imts->rx_dial_index] = '\0';
-		timer_start(&imts->timer, DIALING_TO);
+		osmo_timer_schedule(&imts->timer, DIALING_TO);
 	} else {
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Timeout receiving dialing from mobile phone, number complete.\n");
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Timeout receiving dialing from mobile phone, number complete.\n");
 		imts->callref = call_up_setup(imts->station_id, imts->dial_number, OSMO_CC_NETWORK_IMTS_NONE, "");
 		imts_new_state(imts, IMTS_CONVERSATION);
 		imts_set_dsp_mode(imts, DSP_MODE_AUDIO, 0, 0.0, 0);
@@ -892,7 +893,7 @@ static void page_after_digit(imts_t *imts)
 				imts->rx_page_pulse = 0;
 			digit = imts->rx_page_pulse + '0';
 			delay = get_time() - imts->tx_page_timestamp - PAGE_PULSE_TO;
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Received paging test digit '%c' (level %.0f%%  delay %.0f ms).\n", digit, imts->last_sigtone_amplitude * 100.0, delay * 1000.0);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Received paging test digit '%c' (level %.0f%%  delay %.0f ms).\n", digit, imts->last_sigtone_amplitude * 100.0, delay * 1000.0);
 		}
 		imts->rx_page_pulse = 0;
 	}
@@ -907,29 +908,29 @@ static void imts_timeout(void *data)
 	case IMTS_IDLE:
 		switch (imts->last_tone) {
 		case TONE_IDLE:
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received idle tone (level of %.0f%%), loopback?\n", imts->last_sigtone_amplitude * 100.0);
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received idle tone (level of %.0f%%), loopback?\n", imts->last_sigtone_amplitude * 100.0);
 			/* trigger reset of decoder to force detection again and again */
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, 0.0, 1);
 			break;
 		case TONE_600:
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received 600 Hz tone with level of %.0f%%, loopback?\n", imts->last_sigtone_amplitude * 100.0);
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received 600 Hz tone with level of %.0f%%, loopback?\n", imts->last_sigtone_amplitude * 100.0);
 			/* trigger reset of decoder to force detection again and again */
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_600, 0.0, 1);
 			break;
 		case TONE_GUARD:
-			PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Received Guard tone, turning off IDLE tone\n");
+			LOGP_CHAN(DIMTS, LOGL_NOTICE, "Received Guard tone, turning off IDLE tone\n");
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SILENCE, 0.5, 0);
 			break;
 		}
 		break;
 	case IMTS_PAGING:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "No response from mobile phone.\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "No response from mobile phone.\n");
 		imts_go_idle(imts);
 		call_up_release(imts->callref, CAUSE_OUTOFORDER);
 		imts->callref = 0;
 		break;
 	case IMTS_RINGING:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "No answer from mobile phone's user, releasing.\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "No answer from mobile phone's user, releasing.\n");
 		imts_release(imts);
 		call_up_release(imts->callref, CAUSE_NOANSWER);
 		imts->callref = 0;
@@ -938,9 +939,9 @@ static void imts_timeout(void *data)
 		imts_go_idle(imts);
 		break;
 	case IMTS_SEIZE:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending Seize to mobile phone.\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending Seize to mobile phone.\n");
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SEIZE, SEIZE_LENGTH, 0);
-		timer_start(&imts->timer, SEIZE_LENGTH + ANI_TO);
+		osmo_timer_schedule(&imts->timer, SEIZE_LENGTH + ANI_TO);
 		imts->station_id[0] = '\0';
 		imts->rx_ani_index = 0;
 		imts->rx_ani_pulse = 0;
@@ -973,7 +974,7 @@ static void paging_pulses_imts(imts_t *imts, int tone)
 
 	if (tone == TONE_SEIZE) {
 		if (imts->tx_page_pulse == 0)
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Sending paging digit '%c' as pulses.\n", imts->station_id[imts->tx_page_index]);
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Sending paging digit '%c' as pulses.\n", imts->station_id[imts->tx_page_index]);
 		/* send mark (pulse start) */
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, PAGE_MARK, 0);
 		imts->tx_page_pulse++;
@@ -993,7 +994,7 @@ static void paging_pulses_imts(imts_t *imts, int tone)
 					duration = PAGE_PAUSE;
 				else {
 					duration = 0;
-					timer_start(&imts->timer, PAGING_TO);
+					osmo_timer_schedule(&imts->timer, PAGING_TO);
 				}
 			}
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SEIZE, duration, 0);
@@ -1015,7 +1016,7 @@ static void paging_pulses_mts(imts_t *imts, int tone)
 		tone = TONE_1500;
 
 	if (imts->tx_page_pulse == 0) {
-		PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Sending paging digit '%c' as pulses.\n", imts->station_id[imts->tx_page_index]);
+		LOGP_CHAN(DIMTS, LOGL_INFO, "Sending paging digit '%c' as pulses.\n", imts->station_id[imts->tx_page_index]);
 	}
 	imts->tx_page_pulse++;
 	if (imts->tx_page_pulse < pulses)
@@ -1030,7 +1031,7 @@ static void paging_pulses_mts(imts_t *imts, int tone)
 		if (imts->station_id[imts->tx_page_index])
 			duration = PAGE_PAUSE;
 		else {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Digits complete, assuming the phone is ringing.\n");
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Digits complete, assuming the phone is ringing.\n");
 			duration = 0;
 			imts_new_state(imts, IMTS_RINGING);
 			call_up_alerting(imts->callref);
@@ -1044,7 +1045,7 @@ static void ringing_pulses(imts_t *imts, int tone)
 {
 	if (tone == TONE_IDLE) {
 		if (imts->tx_ring_pulse == 0)
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Sending ringing signal as pulses.\n");
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Sending ringing signal as pulses.\n");
 		/* send space (pulse end) */
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SEIZE, RING_SPACE, 0);
 		imts->tx_ring_pulse++;
@@ -1053,7 +1054,7 @@ static void ringing_pulses(imts_t *imts, int tone)
 			/* send mark (pulse start) */
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, RING_MARK, 0);
 		} else {
-			PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Sending pause after ringing.\n");
+			LOGP_CHAN(DIMTS, LOGL_INFO, "Sending pause after ringing.\n");
 			/* send long space after last pulse */
 			imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SEIZE, RING_OFF, 0);
 			imts->tx_ring_pulse = 0;
@@ -1077,21 +1078,21 @@ static void detector_test_imts(imts_t *imts, int tone)
 tone_idle:
 		if (imts->detector_test_length_1 <= 0)
 			goto tone_seize;
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending %.3fs IDLE tone.\n", imts->detector_test_length_1);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending %.3fs IDLE tone.\n", imts->detector_test_length_1);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, imts->detector_test_length_1, 0);
 		break;
 	case TONE_IDLE:
 tone_seize:
 		if (imts->detector_test_length_2 <= 0)
 			goto tone_silence;
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending %.3fs SEIZE tone.\n", imts->detector_test_length_2);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending %.3fs SEIZE tone.\n", imts->detector_test_length_2);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SEIZE, imts->detector_test_length_2, 0);
 		break;
 	case TONE_SEIZE:
 tone_silence:
 		if (imts->detector_test_length_3 <= 0)
 			goto tone_idle;
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending %.3fs SILENCE.\n", imts->detector_test_length_3);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending %.3fs SILENCE.\n", imts->detector_test_length_3);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SILENCE, imts->detector_test_length_3, 0);
 		break;
 	}
@@ -1103,21 +1104,21 @@ static void detector_test_mts(imts_t *imts, int tone)
 tone_idle:
 		if (imts->detector_test_length_1 <= 0)
 			goto tone_seize;
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending %.3fs 600 Hz tone.\n", imts->detector_test_length_1);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending %.3fs 600 Hz tone.\n", imts->detector_test_length_1);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_600, imts->detector_test_length_1, 0);
 		break;
 	case TONE_600:
 tone_seize:
 		if (imts->detector_test_length_2 <= 0)
 			goto tone_silence;
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending %.3fs 1500 Hz tone.\n", imts->detector_test_length_2);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending %.3fs 1500 Hz tone.\n", imts->detector_test_length_2);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_1500, imts->detector_test_length_2, 0);
 		break;
 	case TONE_1500:
 tone_silence:
 		if (imts->detector_test_length_3 <= 0)
 			goto tone_idle;
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Sending %.3fs SILENCE.\n", imts->detector_test_length_3);
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Sending %.3fs SILENCE.\n", imts->detector_test_length_3);
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_SILENCE, imts->detector_test_length_3, 0);
 		break;
 	}
@@ -1128,7 +1129,7 @@ void imts_tone_sent(imts_t *imts, int tone)
 {
 	switch (imts->state) {
 	case IMTS_IDLE:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "No Seize tone after Guard tone, turning on IDLE tone\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "No Seize tone after Guard tone, turning on IDLE tone\n");
 		imts_set_dsp_mode(imts, DSP_MODE_TONE, TONE_IDLE, 0.0, 0);
 		break;
 	case IMTS_ANI:
@@ -1172,7 +1173,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (sender) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
@@ -1183,7 +1184,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
@@ -1195,7 +1196,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	}
 
 	/* 4. trying to page mobile station */
-	PDEBUG_CHAN(DIMTS, DEBUG_INFO, "Call to mobile station, paging number: %s\n", dialing);
+	LOGP_CHAN(DIMTS, LOGL_INFO, "Call to mobile station, paging number: %s\n", dialing);
 	imts->callref = callref;
 	imts_paging(imts, dialing, 0);
 
@@ -1215,7 +1216,7 @@ void call_down_disconnect(int callref, int cause)
 	sender_t *sender;
 	imts_t *imts;
 
-	PDEBUG(DIMTS, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DIMTS, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		imts = (imts_t *) sender;
@@ -1223,7 +1224,7 @@ void call_down_disconnect(int callref, int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1234,7 +1235,7 @@ void call_down_disconnect(int callref, int cause)
 	switch (imts->state) {
 	case IMTS_PAGING:
 	case IMTS_RINGING:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Outgoing disconnect, during paging/alerting, releasing!\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Outgoing disconnect, during paging/alerting, releasing!\n");
 	 	imts_release(imts);
 		break;
 	default:
@@ -1253,7 +1254,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 	sender_t *sender;
 	imts_t *imts;
 
-	PDEBUG(DIMTS, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DIMTS, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		imts = (imts_t *) sender;
@@ -1261,7 +1262,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DIMTS, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
@@ -1270,12 +1271,12 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 
 	switch (imts->state) {
 	case IMTS_CONVERSATION:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Outgoing release, during call, releasing!\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Outgoing release, during call, releasing!\n");
 	 	imts_release(imts);
 		break;
 	case IMTS_PAGING:
 	case IMTS_RINGING:
-		PDEBUG_CHAN(DIMTS, DEBUG_NOTICE, "Outgoing release, during paging/alerting, releasing!\n");
+		LOGP_CHAN(DIMTS, LOGL_NOTICE, "Outgoing release, during paging/alerting, releasing!\n");
 	 	imts_release(imts);
 		break;
 	default:

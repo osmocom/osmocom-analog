@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "nmt.h"
 #include "frame.h"
@@ -432,6 +432,7 @@ fail:
 		nmt_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	options_free();

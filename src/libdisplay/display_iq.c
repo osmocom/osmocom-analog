@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libdisplay/display.h"
 
 /* must be odd value! */
@@ -60,14 +60,16 @@ void display_iq_on(int on)
 	if (iq_on) {
 		memset(&screen, ' ', sizeof(screen));
 		memset(&screen_history, 0, sizeof(screen_history));
-		lock_debug();
+		lock_logging();
+		enable_limit_scroll(false);
 		printf("\0337\033[H");
 		for (j = 0; j < SIZE; j++) {
 			screen[j][w] = '\0';
 			puts(screen[j]);
 		}
 		printf("\0338"); fflush(stdout);
-		unlock_debug();
+		enable_limit_scroll(true);
+		unlock_logging();
 	}
 
 	if (on < 0) {
@@ -77,9 +79,9 @@ void display_iq_on(int on)
 		iq_on = on;
 
 	if (iq_on)
-		debug_limit_scroll = SIZE;
+		logging_limit_scroll_top(SIZE);
 	else
-		debug_limit_scroll = 0;
+		logging_limit_scroll_top(0);
 }
 
 /*
@@ -115,8 +117,6 @@ void display_iq(float *samples, int length)
 
 	if (!iq_on)
 		return;
-
-	lock_debug();
 
 	get_win_size(&width, &h);
 	if (width > MAX_DISPLAY_WIDTH - 1)
@@ -235,6 +235,8 @@ cont:
 			else
 				sprintf(screen[0], "(IQ log %.0f dB", db);
 			*strchr(screen[0], '\0') = ')';
+			lock_logging();
+			enable_limit_scroll(false);
 			printf("\0337\033[H");
 			for (j = 0; j < SIZE; j++) {
 				for (k = 0; k < width; k++) {
@@ -271,12 +273,12 @@ cont:
 			}
 			/* reset color and position */
 			printf("\033[0;39m\0338"); fflush(stdout);
+			enable_limit_scroll(true);
+			unlock_logging();
 		}
 	}
 
 	disp.interval_pos = pos;
-
-	unlock_debug();
 }
 
 

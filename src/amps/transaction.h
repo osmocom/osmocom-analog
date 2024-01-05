@@ -39,7 +39,7 @@ typedef struct transaction {
 	char			caller_id[33];		/* id of calling phone */
 	char			dialing[33];		/* number dialed by the phone */
 	enum amps_trans_state	state;			/* state of transaction */
-	struct timer		timer;			/* for varous timeouts */
+	struct osmo_timer_list		timer;			/* for varous timeouts */
 	int			sat_detected;		/* state if we detected SAT */
 	int			dtx;			/* if set, DTX is used with this call */
 } transaction_t;

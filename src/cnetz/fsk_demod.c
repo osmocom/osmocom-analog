@@ -132,7 +132,7 @@ static int debug = 0;
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "cnetz.h"
 #include "dsp.h"
 #include "telegramm.h"
@@ -143,7 +143,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 	memset(fsk, 0, sizeof(*fsk));
 	if (samplerate < 48000) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Sample rate must be at least 48000 Hz!\n");
+		LOGP(DDSP, LOGL_ERROR, "Sample rate must be at least 48000 Hz!\n");
 		return -1;
 	}
 
@@ -152,13 +152,13 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 
 	switch (demod) {
 	case FSK_DEMOD_SLOPE:
-		PDEBUG(DDSP, DEBUG_INFO, "Detecting level change by looking at slope (good for sound cards)\n");
+		LOGP(DDSP, LOGL_INFO, "Detecting level change by looking at slope (good for sound cards)\n");
 		break;
 	case FSK_DEMOD_LEVEL:
-		PDEBUG(DDSP, DEBUG_INFO, "Detecting level change by looking zero crosssing (good for SDR)\n");
+		LOGP(DDSP, LOGL_INFO, "Detecting level change by looking zero crosssing (good for SDR)\n");
 		break;
 	default:
-		PDEBUG(DDSP, DEBUG_ERROR, "Wrong demod type, please fix!\n");
+		LOGP(DDSP, LOGL_ERROR, "Wrong demod type, please fix!\n");
 		abort();
 	}
 
@@ -166,7 +166,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 	half = (int)((double)samplerate / bitrate / 2.0 + 0.5);
 	fsk->bit_buffer_spl = calloc(sizeof(fsk->bit_buffer_spl[0]), len);
 	if (!fsk->bit_buffer_spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No mem!\n");
+		LOGP(DDSP, LOGL_ERROR, "No mem!\n");
 		goto error;
 	}
 
@@ -177,7 +177,7 @@ int fsk_fm_init(fsk_fm_demod_t *fsk, cnetz_t *cnetz, int samplerate, double bitr
 	fsk->speech_size = samplerate * 60 / bitrate + 10; /* 60 bits duration, add 10 to be safe */
 	fsk->speech_buffer = calloc(sizeof(fsk->speech_buffer[0]), fsk->speech_size);
 	if (!fsk->speech_buffer) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No mem!\n");
+		LOGP(DDSP, LOGL_ERROR, "No mem!\n");
 		goto error;
 	}
 

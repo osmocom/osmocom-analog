@@ -24,14 +24,16 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <sys/param.h>
 #include "../libsample/sample.h"
 #include "../libsamplerate/samplerate.h"
 #include "../libjitter/jitter.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
-#include "../libselect/select.h"
-#include "../libosmocc/endpoint.h"
-#include "../libosmocc/helper.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
+#include <osmocom/core/select.h>
+#include <osmocom/cc/endpoint.h>
+#include <osmocom/cc/helper.h>
+#include <osmocom/cc/rtp.h>
 #include "testton.h"
 #include "../libmobile/main_mobile.h"
 #include "console.h"
@@ -127,7 +129,7 @@ static void get_test_patterns(int16_t *samples, int length)
 
 static void console_new_state(enum console_state state)
 {
-	PDEBUG(DCC, DEBUG_DEBUG, "Call state '%s' -> '%s'\n", console_state_name[console.state], console_state_name[state]);
+	LOGP(DCALL, LOGL_DEBUG, "Call state '%s' -> '%s'\n", console_state_name[console.state], console_state_name[state]);
 	console.state = state;
 	console.test_audio_pos = 0;
 }
@@ -227,7 +229,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 	int rc;
 
 	if (msg->type != OSMO_CC_MSG_SETUP_IND && console.callref != call->callref) {
-		PDEBUG(DCC, DEBUG_ERROR, "invalid call ref %u (msg=0x%02x).\n", call->callref, msg->type);
+		LOGP(DCALL, LOGL_ERROR, "invalid call ref %u (msg=0x%02x).\n", call->callref, msg->type);
 		request_disconnect_release_reject(call->callref, CAUSE_INVALCALLREF, OSMO_CC_MSG_REL_REQ);
 		osmo_cc_free_msg(msg);
 		return;
@@ -244,10 +246,10 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		rc = osmo_cc_get_ie_called(msg, 0, &type, &plan, number, sizeof(number));
 		if (rc < 0)
 			number[0] = '\0';
-		PDEBUG(DCC, DEBUG_INFO, "Incoming call from '%s'\n", caller_id);
+		LOGP(DCALL, LOGL_INFO, "Incoming call from '%s'\n", caller_id);
 		/* setup is also allowed on disconnected call */
 		if (console.state == CONSOLE_DISCONNECT_RO) {
-			PDEBUG(DCC, DEBUG_INFO, "Releasing pending disconnected call\n");
+			LOGP(DCALL, LOGL_INFO, "Releasing pending disconnected call\n");
 			if (console.callref) {
 				request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REL_REQ);
 				free_console();
@@ -255,7 +257,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 			console_new_state(CONSOLE_IDLE);
 		}
 		if (console.state != CONSOLE_IDLE) {
-			PDEBUG(DCC, DEBUG_NOTICE, "We are busy, rejecting.\n");
+			LOGP(DCALL, LOGL_NOTICE, "We are busy, rejecting.\n");
 			request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REJ_REQ);
 			osmo_cc_free_msg(msg);
 			return;
@@ -264,7 +266,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		/* sdp accept */
 		sdp = osmo_cc_helper_audio_accept(&ep->session_config, NULL, codecs, up_audio, msg, &console.session, &console.codec, 0);
 		if (!sdp) {
-			PDEBUG(DCC, DEBUG_NOTICE, "Cannot accept codec, rejecting.\n");
+			LOGP(DCALL, LOGL_NOTICE, "Cannot accept codec, rejecting.\n");
 			request_disconnect_release_reject(console.callref, CAUSE_RESOURCE_UNAVAIL, OSMO_CC_MSG_REJ_REQ);
 			osmo_cc_free_msg(msg);
 			return;
@@ -276,7 +278,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		strncpy(console.dialing, number, sizeof(console.dialing) - 1);
 		console.dialing[sizeof(console.dialing) - 1] = '\0';
 		console_new_state(CONSOLE_CONNECT);
-		PDEBUG(DCC, DEBUG_INFO, "Call automatically answered\n");
+		LOGP(DCALL, LOGL_INFO, "Call automatically answered\n");
 		request_answer(console.callref, number, sdp);
 		break;
 	    }
@@ -285,7 +287,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		break;
 	case OSMO_CC_MSG_ALERT_IND:
-		PDEBUG(DCC, DEBUG_INFO, "Call alerting\n");
+		LOGP(DCALL, LOGL_INFO, "Call alerting\n");
 		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		console_new_state(CONSOLE_ALERTING_RT);
 		break;
@@ -295,7 +297,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		rc = osmo_cc_get_ie_calling(msg, 0, &type, &plan, &present, &screen, caller_id, sizeof(caller_id));
 		if (rc < 0)
 			caller_id[0] = '\0';
-		PDEBUG(DCC, DEBUG_INFO, "Call connected to '%s'\n", caller_id);
+		LOGP(DCALL, LOGL_INFO, "Call connected to '%s'\n", caller_id);
 		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		console_new_state(CONSOLE_CONNECT);
 		if (caller_id[0]) {
@@ -314,11 +316,11 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		rc = osmo_cc_get_ie_progress(msg, 0, &coding, &location, &progress);
 		osmo_cc_helper_audio_negotiate(msg, &console.session, &console.codec);
 		if (rc >= 0 && (progress == 1 || progress == 8)) {
-			PDEBUG(DCC, DEBUG_INFO, "Call disconnected with audio (%s)\n", cause_name(isdn_cause));
+			LOGP(DCALL, LOGL_INFO, "Call disconnected with audio (%s)\n", cause_name(isdn_cause));
 			console_new_state(CONSOLE_DISCONNECT_RO);
 			console.disc_cause = isdn_cause;
 		} else {
-			PDEBUG(DCC, DEBUG_INFO, "Call disconnected without audio (%s)\n", cause_name(isdn_cause));
+			LOGP(DCALL, LOGL_INFO, "Call disconnected without audio (%s)\n", cause_name(isdn_cause));
 			request_disconnect_release_reject(console.callref, isdn_cause, OSMO_CC_MSG_REL_REQ);
 			console_new_state(CONSOLE_IDLE);
 			free_console();
@@ -329,7 +331,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 		rc = osmo_cc_get_ie_cause(msg, 0, &location, &isdn_cause, &sip_cause, &socket_cause);
 		if (rc < 0)
 			isdn_cause = OSMO_CC_ISDN_CAUSE_NORM_CALL_CLEAR;
-		PDEBUG(DCC, DEBUG_INFO, "Call released (%s)\n", cause_name(isdn_cause));
+		LOGP(DCALL, LOGL_INFO, "Call released (%s)\n", cause_name(isdn_cause));
 		console_new_state(CONSOLE_IDLE);
 		free_console();
 		break;
@@ -338,28 +340,7 @@ void console_msg(osmo_cc_call_t *call, osmo_cc_msg_t *msg)
 }
 
 static char console_text[256];
-static char console_clear[256];
 static int console_len = 0;
-
-static void _clear_console_text(void)
-{
-	if (!console_len)
-		return;
-
-	fwrite(console_clear, console_len, 1, stdout);
-	// note: fflused by user of this function
-	console_len = 0;
-}
-
-static void _print_console_text(void)
-{
-	if (!console_len)
-		return;
-
-	printf("\033[1;37m");
-	fwrite(console_text, console_len, 1, stdout);
-	printf("\033[0;39m");
-}
 
 int console_init(const char *audiodev, int samplerate, int buffer, int loopback, int echo_test, const char *digits, const struct number_lengths *lengths, const char *station_id)
 {
@@ -368,8 +349,8 @@ int console_init(const char *audiodev, int samplerate, int buffer, int loopback,
 
 	init_testton();
 
-	clear_console_text = _clear_console_text;
-	print_console_text = _print_console_text;
+	/* Put scrolling window one line above bottom. */
+	logging_limit_scroll_bottom(1);
 
 	memset(&console, 0, sizeof(console));
 	strncpy(console.audiodev, audiodev, sizeof(console.audiodev) - 1);
@@ -393,13 +374,13 @@ int console_init(const char *audiodev, int samplerate, int buffer, int loopback,
 
 	rc = init_samplerate(&console.srstate, 8000.0, (double)samplerate, 3300.0);
 	if (rc < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to init sample rate conversion!\n");
+		LOGP(DSENDER, LOGL_ERROR, "Failed to init sample rate conversion!\n");
 		goto error;
 	}
 
 	rc = jitter_create(&console.dejitter, "console", 8000, sizeof(sample_t), 0.050, 0.200, JITTER_FLAG_NONE);
 	if (rc < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init dejitter buffer!\n");
+		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init dejitter buffer!\n");
 		goto error;
 	}
 
@@ -420,11 +401,11 @@ int console_open_audio(int __attribute__((unused)) buffer_size, double __attribu
 	/* use factor 1.4 of speech level for complete range of sound card */
 	console.sound = sound_open(console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, buffer_size, interval, 1.4, 4000.0, 2.0);
 	if (!console.sound) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "No sound device!\n");
+		LOGP(DSENDER, LOGL_ERROR, "No sound device!\n");
 		return -EIO;
 	}
 #else
-	PDEBUG(DSENDER, DEBUG_ERROR, "No sound card support compiled in!\n");
+	LOGP(DSENDER, LOGL_ERROR, "No sound card support compiled in!\n");
 	return -ENOTSUP;
 #endif
 
@@ -468,7 +449,7 @@ void console_cleanup(void)
 static void process_ui(int c)
 {
 	char text[256] = "";
-	int len;
+	int len, w, h;
 	int i;
 
 	switch (console.state) {
@@ -491,7 +472,7 @@ dial_after_hangup:
 					break;
 			}
 			if (c == 'd' && console.number_lengths[i].usage) {
-				PDEBUG(DCC, DEBUG_INFO, "Outgoing call to '%s'\n", console.station_id);
+				LOGP(DCALL, LOGL_INFO, "Outgoing call to '%s'\n", console.station_id);
 				console.dialing[0] = '\0';
 				console_new_state(CONSOLE_SETUP_RT);
 				console.callref = osmo_cc_new_callref();
@@ -506,11 +487,11 @@ dial_after_hangup:
 		}
 		if (console.number_lengths[i].usage) {
 			if (console.number_lengths[i + 1].usage)
-				sprintf(strchr(text, '\0'), "(enter digits %s or press d=dial)\r", console.digits);
+				sprintf(strchr(text, '\0'), "(enter digits %s or press d=dial)", console.digits);
 			else
-				sprintf(strchr(text, '\0'), "(press d=dial)\r");
+				sprintf(strchr(text, '\0'), "(press d=dial)");
 		} else
-			sprintf(strchr(text, '\0'), "(enter digits %s)\r", console.digits);
+			sprintf(strchr(text, '\0'), "(enter digits %s)", console.digits);
 		break;
 	case CONSOLE_SETUP_RO:
 	case CONSOLE_SETUP_RT:
@@ -520,7 +501,7 @@ dial_after_hangup:
 	case CONSOLE_DISCONNECT_RO:
 		if (c > 0) {
 			if (c == 'h' || (c == 'd' && console.state == CONSOLE_DISCONNECT_RO)) {
-				PDEBUG(DCC, DEBUG_INFO, "Call hangup\n");
+				LOGP(DCALL, LOGL_INFO, "Call hangup\n");
 				if (console.callref) {
 					if (console.state == CONSOLE_SETUP_RO)
 						request_disconnect_release_reject(console.callref, CAUSE_NORMAL, OSMO_CC_MSG_REJ_REQ);
@@ -534,32 +515,46 @@ dial_after_hangup:
 			}
 		}
 		if (console.state == CONSOLE_SETUP_RT)
-			sprintf(text, "call setup: %s (press h=hangup)\r", console.station_id);
+			sprintf(text, "call setup: %s (press h=hangup)", console.station_id);
 		if (console.state == CONSOLE_ALERTING_RT)
-			sprintf(text, "call ringing: %s (press h=hangup)\r", console.station_id);
+			sprintf(text, "call ringing: %s (press h=hangup)", console.station_id);
 		if (console.state == CONSOLE_CONNECT) {
 			if (console.dialing[0])
-				sprintf(text, "call active: %s->%s (press h=hangup)\r", console.station_id, console.dialing);
+				sprintf(text, "call active: %s->%s (press h=hangup)", console.station_id, console.dialing);
 			else
-				sprintf(text, "call active: %s (press h=hangup)\r", console.station_id);
+				sprintf(text, "call active: %s (press h=hangup)", console.station_id);
 		}
 		if (console.state == CONSOLE_DISCONNECT_RO)
-			sprintf(text, "call disconnected: %s (press h=hangup d=redial)\r", cause_name(console.disc_cause));
+			sprintf(text, "call disconnected: %s (press h=hangup d=redial)", cause_name(console.disc_cause));
 		break;
 	}
 	/* skip if nothing has changed */
 	len = strlen(text);
 	if (console_len == len && !memcmp(console_text, text, len))
 		return;
-	clear_console_text();
+	/* lock logging */
+	lock_logging();
+	/* disable window */
+	enable_limit_scroll(false);
+	/* geht height */
+	get_win_size(&w, &h);
+	/* save cursor go to bottom, use white color */
+	printf("\0337\033[%d;1H\033[1;37m", h);
+	/* copy text and pad with spaces */
 	console_len = len;
-	memcpy(console_text, text, len);
-	if (len) {
-		memset(console_clear, ' ', len - 1);
-		console_clear[len - 1] = '\r';
-	}
-	print_console_text();
+	memcpy(console_text, text, console_len);
+	if (console_len < (int)MIN(sizeof(console_text), w))
+		memset(console_text + console_len, ' ', MIN(sizeof(console_text), w) - console_len);
+	/* write text */
+	fwrite(console_text, MIN(sizeof(console_text), w), 1, stdout);
+	/* reset color, go back to previous line, flush */
+	printf("\033[0;39m\0338");
+	/* flush output */
 	fflush(stdout);
+	/* enable window */
+	enable_limit_scroll(true);
+	/* unlock logging */
+	unlock_logging();
 }
 
 /* get keys from keyboard to control call via console
@@ -581,9 +576,9 @@ void process_console(int c)
 
 	count = sound_get_tosend(console.sound, console.buffer_size);
 	if (count < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
+		LOGP(DSENDER, LOGL_ERROR, "Failed to get samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE)
-			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
+			LOGP(DSENDER, LOGL_ERROR, "Trying to recover.\n");
 		return;
 	}
 	if (count > 0) {
@@ -596,18 +591,18 @@ void process_console(int c)
 		power_list[0] = NULL;
 		rc = sound_write(console.sound, samples_list, power_list, count, NULL, NULL, 1);
 		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
+			LOGP(DSENDER, LOGL_ERROR, "Failed to write TX data to sound device (rc = %d)\n", rc);
 			if (rc == -EPIPE)
-				PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
+				LOGP(DSENDER, LOGL_ERROR, "Trying to recover.\n");
 			return;
 		}
 	}
 	samples_list[0] = samples;
 	count = sound_read(console.sound, samples_list, console.buffer_size, 1, NULL);
 	if (count < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
+		LOGP(DSENDER, LOGL_ERROR, "Failed to read from sound device (rc = %d)!\n", count);
 		if (count == -EPIPE)
-			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover.\n");
+			LOGP(DSENDER, LOGL_ERROR, "Trying to recover.\n");
 		return;
 	}
 	if (count) {

@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libsound/sound.h"
 #include "../libclipper/clipper.h"
 #include "radio.h"
@@ -75,7 +75,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->signal_bandwidth = bandwidth;
 		break;
 	case MODULATION_NONE:
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong modulation, please fix!\n");
+		LOGP(DRADIO, LOGL_ERROR, "Wrong modulation, please fix!\n");
 		goto error;
 	}
 
@@ -85,12 +85,12 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->tx_audio_channels = 0;
 		rc = wave_create_playback(&radio->wave_tx_play, tx_wave_file, &_samplerate, &radio->tx_audio_channels, 1.0);
 		if (rc < 0) {
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			LOGP(DRADIO, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 			goto error;
 		}
 		if (radio->tx_audio_channels != 1 && radio->tx_audio_channels != 2)
 		{
-			PDEBUG(DRADIO, DEBUG_ERROR, "WAVE file must have one or two channels!\n");
+			LOGP(DRADIO, LOGL_ERROR, "WAVE file must have one or two channels!\n");
 			goto error;
 		}
 		radio->tx_audio_samplerate = _samplerate;
@@ -103,7 +103,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->tx_sound = sound_open(tx_audiodev, NULL, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
 		if (!radio->tx_sound) {
 			rc = -EIO;
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
+			LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
 			goto error;
 		}
 		jitter_create(&radio->tx_dejitter[0], "left", radio->tx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
@@ -111,7 +111,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->tx_audio_mode = AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
-		PDEBUG(DRADIO, DEBUG_ERROR, "No sound card support compiled in!\n");
+		LOGP(DRADIO, LOGL_ERROR, "No sound card support compiled in!\n");
 		goto error;
 #endif
 	} else {
@@ -124,7 +124,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->testtone[0] = calloc(radio->testtone_length * 2, sizeof(sample_t));
 		if (!radio->testtone[0]) {
 			rc = -ENOMEM;
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to allocate test sound buffer!\n");
+			LOGP(DRADIO, LOGL_ERROR, "Failed to allocate test sound buffer!\n");
 			goto error;
 		}
 		radio->testtone[1] = radio->testtone[0] + radio->testtone_length;
@@ -153,7 +153,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->rx_audio_channels = (radio->stereo) ? 2 : 1;
 		rc = wave_create_record(&radio->wave_rx_rec, rx_wave_file, radio->rx_audio_samplerate, radio->rx_audio_channels, 1.0);
 		if (rc < 0) {
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to create WAVE record instance!\n");
+			LOGP(DRADIO, LOGL_ERROR, "Failed to create WAVE record instance!\n");
 			goto error;
 		}
 		radio->rx_audio_mode |= AUDIO_MODE_WAVEFILE;
@@ -170,7 +170,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 			radio->rx_sound = sound_open(rx_audiodev, NULL, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
 		if (!radio->rx_sound) {
 			rc = -EIO;
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
+			LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
 			goto error;
 		}
 		jitter_create(&radio->rx_dejitter[0], "left", radio->rx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
@@ -178,7 +178,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->rx_audio_mode |= AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
-		PDEBUG(DRADIO, DEBUG_ERROR, "No sound card support compiled in!\n");
+		LOGP(DRADIO, LOGL_ERROR, "No sound card support compiled in!\n");
 		goto error;
 #endif
 	}
@@ -191,20 +191,20 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 	/* check if sample rate is too low */
 	if (radio->tx_audio_samplerate > radio->signal_samplerate) {
 		rc = -EINVAL;
-		PDEBUG(DRADIO, DEBUG_ERROR, "You have selected a signal processing sample rate of %.0f. Your audio sample rate is %.0f.\n", radio->signal_samplerate, radio->tx_audio_samplerate);
-		PDEBUG(DRADIO, DEBUG_ERROR, "Please select a sample rate that is higher or equal the audio sample rate!\n");
+		LOGP(DRADIO, LOGL_ERROR, "You have selected a signal processing sample rate of %.0f. Your audio sample rate is %.0f.\n", radio->signal_samplerate, radio->tx_audio_samplerate);
+		LOGP(DRADIO, LOGL_ERROR, "Please select a sample rate that is higher or equal the audio sample rate!\n");
 		goto error;
 	}
 	if (radio->rx_audio_samplerate > radio->signal_samplerate) {
 		rc = -EINVAL;
-		PDEBUG(DRADIO, DEBUG_ERROR, "You have selected a signal processing sample rate of %.0f. Your audio sample rate is %.0f.\n", radio->signal_samplerate, radio->rx_audio_samplerate);
-		PDEBUG(DRADIO, DEBUG_ERROR, "Please select a sample rate that is higher or equal the audio sample rate!\n");
+		LOGP(DRADIO, LOGL_ERROR, "You have selected a signal processing sample rate of %.0f. Your audio sample rate is %.0f.\n", radio->signal_samplerate, radio->rx_audio_samplerate);
+		LOGP(DRADIO, LOGL_ERROR, "Please select a sample rate that is higher or equal the audio sample rate!\n");
 		goto error;
 	}
 	if (radio->signal_samplerate < radio->signal_bandwidth * 2 / 0.75) {
 		rc = -EINVAL;
-		PDEBUG(DRADIO, DEBUG_ERROR, "You have selected a signal processing sample rate of %.0f. Your signal's bandwidth %.0f.\n", radio->signal_samplerate, radio->signal_bandwidth);
-		PDEBUG(DRADIO, DEBUG_ERROR, "Your signal processing sample rate must be at least one third greater than the signal's double bandwidth. Use at least %.0f.\n", radio->signal_bandwidth * 2.0 / 0.75);
+		LOGP(DRADIO, LOGL_ERROR, "You have selected a signal processing sample rate of %.0f. Your signal's bandwidth %.0f.\n", radio->signal_samplerate, radio->signal_bandwidth);
+		LOGP(DRADIO, LOGL_ERROR, "Your signal processing sample rate must be at least one third greater than the signal's double bandwidth. Use at least %.0f.\n", radio->signal_bandwidth * 2.0 / 0.75);
 		goto error;
 	}
 
@@ -244,7 +244,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		if (time_constant_us > 0.0) {
 			radio->emphasis = 1;
 			/* time constant */
-			PDEBUG(DRADIO, DEBUG_INFO, "Using emphasis cut-off at %.0f Hz.\n", timeconstant2cutoff(time_constant_us));
+			LOGP(DRADIO, LOGL_INFO, "Using emphasis cut-off at %.0f Hz.\n", timeconstant2cutoff(time_constant_us));
 			rc = init_emphasis(&radio->fm_emphasis[0], radio->signal_samplerate, timeconstant2cutoff(time_constant_us), DC_CUTOFF, radio->audio_bandwidth);
 			if (rc < 0)
 				goto error;
@@ -296,21 +296,21 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 	}
 	
 	if (radio->tx_audio_mode)
-		PDEBUG(DRADIO, DEBUG_INFO, "Bandwidth of audio source is %.0f Hz.\n", radio->tx_audio_samplerate / 2.0);
+		LOGP(DRADIO, LOGL_INFO, "Bandwidth of audio source is %.0f Hz.\n", radio->tx_audio_samplerate / 2.0);
 	if (radio->rx_audio_mode)
-		PDEBUG(DRADIO, DEBUG_INFO, "Bandwidth of audio sink is %.0f Hz.\n", radio->rx_audio_samplerate / 2.0);
-	PDEBUG(DRADIO, DEBUG_INFO, "Bandwidth of audio signal is %.0f Hz.\n", radio->audio_bandwidth);
-	PDEBUG(DRADIO, DEBUG_INFO, "Bandwidth of modulated signal is %.0f Hz.\n", radio->signal_bandwidth);
+		LOGP(DRADIO, LOGL_INFO, "Bandwidth of audio sink is %.0f Hz.\n", radio->rx_audio_samplerate / 2.0);
+	LOGP(DRADIO, LOGL_INFO, "Bandwidth of audio signal is %.0f Hz.\n", radio->audio_bandwidth);
+	LOGP(DRADIO, LOGL_INFO, "Bandwidth of modulated signal is %.0f Hz.\n", radio->signal_bandwidth);
 	if (radio->tx_audio_mode)
-		PDEBUG(DRADIO, DEBUG_INFO, "Sample rate of audio source is %.0f Hz.\n", radio->tx_audio_samplerate);
+		LOGP(DRADIO, LOGL_INFO, "Sample rate of audio source is %.0f Hz.\n", radio->tx_audio_samplerate);
 	if (radio->rx_audio_mode)
-		PDEBUG(DRADIO, DEBUG_INFO, "Sample rate of audio sink is %.0f Hz.\n", radio->rx_audio_samplerate);
-	PDEBUG(DRADIO, DEBUG_INFO, "Sample rate of signal is %.0f Hz.\n", radio->signal_samplerate);
+		LOGP(DRADIO, LOGL_INFO, "Sample rate of audio sink is %.0f Hz.\n", radio->rx_audio_samplerate);
+	LOGP(DRADIO, LOGL_INFO, "Sample rate of signal is %.0f Hz.\n", radio->signal_samplerate);
 
 	/* one or two audio channels */
 	if (radio->tx_audio_channels != 1 && radio->tx_audio_channels != 2)
 	{
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong number of audio channels, please fix!\n");
+		LOGP(DRADIO, LOGL_ERROR, "Wrong number of audio channels, please fix!\n");
 		goto error;
 	}
 
@@ -323,7 +323,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->audio_buffer_size = rx_size;
 	radio->audio_buffer = calloc(radio->audio_buffer_size * 2, sizeof(*radio->audio_buffer));
 	if (!radio->audio_buffer) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "No memory!!\n");
+		LOGP(DRADIO, LOGL_ERROR, "No memory!!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -333,7 +333,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 	radio->signal_buffer = calloc(radio->signal_buffer_size * 3, sizeof(*radio->signal_buffer));
 	radio->signal_power_buffer = calloc(radio->signal_buffer_size, sizeof(*radio->signal_power_buffer));
 	if (!radio->signal_buffer || !radio->signal_power_buffer) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "No memory!!\n");
+		LOGP(DRADIO, LOGL_ERROR, "No memory!!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -343,7 +343,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 	radio->Q_buffer = calloc(buffer_size, sizeof(*radio->Q_buffer));
 	radio->carrier_buffer = calloc(buffer_size, sizeof(*radio->carrier_buffer));
 	if (!radio->I_buffer || !radio->Q_buffer || !radio->carrier_buffer) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "No memory!!\n");
+		LOGP(DRADIO, LOGL_ERROR, "No memory!!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -444,14 +444,14 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	uint8_t *signal_power;
 
 	if (signal_num > radio->buffer_size) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > buffer_size, please fix!.\n");
+		LOGP(DRADIO, LOGL_ERROR, "signal_num > buffer_size, please fix!.\n");
 		abort();
 	}
 
 	/* audio buffers: how many sample for audio (rounded down) */
 	audio_num = (int)((double)signal_num / radio->tx_resampler[0].factor);
 	if (audio_num > radio->audio_buffer_size) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "audio_num > audio_buffer_size, please fix!.\n");
+		LOGP(DRADIO, LOGL_ERROR, "audio_num > audio_buffer_size, please fix!.\n");
 		abort();
 	}
 	audio_samples[0] = radio->audio_buffer;
@@ -460,7 +460,7 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	/* signal buffers: a bit more samples to be safe */
 	signal_num = (int)((double)audio_num * radio->tx_resampler[0].factor + 0.5) + 10;
 	if (signal_num > radio->signal_buffer_size) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > signal_buffer_size, please fix!.\n");
+		LOGP(DRADIO, LOGL_ERROR, "signal_num > signal_buffer_size, please fix!.\n");
 		abort();
 	}
 	signal_samples[0] = radio->signal_buffer;
@@ -479,7 +479,7 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 			wave_destroy_playback(&radio->wave_tx_play);
 			rc = wave_create_playback(&radio->wave_tx_play, radio->tx_wave_file, &_samplerate, &radio->tx_audio_channels, 1.0);
 			if (rc < 0) {
-				PDEBUG(DRADIO, DEBUG_ERROR, "Failed to re-open wave file.\n");
+				LOGP(DRADIO, LOGL_ERROR, "Failed to re-open wave file.\n");
 				return rc;
 			}
 		}
@@ -488,9 +488,9 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	case AUDIO_MODE_AUDIODEV:
 		rc = sound_read(radio->tx_sound, audio_samples, radio->audio_buffer_size, radio->tx_audio_channels, NULL);
 		if (rc < 0) {
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to read from sound device (rc = %d)!\n", audio_num);
+			LOGP(DRADIO, LOGL_ERROR, "Failed to read from sound device (rc = %d)!\n", audio_num);
 			if (rc == -EPIPE)
-				PDEBUG(DRADIO, DEBUG_ERROR, "Trying to recover.\n");
+				LOGP(DRADIO, LOGL_ERROR, "Trying to recover.\n");
 			else
 				return 0;
 		}
@@ -510,7 +510,7 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 		}
 		break;
 	default:
-		PDEBUG(DRADIO, DEBUG_ERROR, "Wrong audio mode, please fix!\n");
+		LOGP(DRADIO, LOGL_ERROR, "Wrong audio mode, please fix!\n");
 		return -EINVAL;
 	}
 
@@ -618,12 +618,12 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 	double p;
 
 	if (signal_num > radio->buffer_size) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > buffer_size, please fix!.\n");
+		LOGP(DRADIO, LOGL_ERROR, "signal_num > buffer_size, please fix!.\n");
 		abort();
 	}
 
 	if (signal_num > radio->signal_buffer_size) {
-		PDEBUG(DRADIO, DEBUG_ERROR, "signal_num > signal_buffer_size, please fix!.\n");
+		LOGP(DRADIO, LOGL_ERROR, "signal_num > signal_buffer_size, please fix!.\n");
 		abort();
 	}
 	samples[0] = radio->signal_buffer;
@@ -737,9 +737,9 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 			jitter_load(&radio->rx_dejitter[1], samples[1], audio_num);
 		audio_num = sound_write(radio->rx_sound, samples, NULL, audio_num, NULL, NULL, radio->rx_audio_channels);
 		if (audio_num < 0) {
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to write to sound device (rc = %d)!\n", audio_num);
+			LOGP(DRADIO, LOGL_ERROR, "Failed to write to sound device (rc = %d)!\n", audio_num);
 			if (audio_num == -EPIPE)
-				PDEBUG(DRADIO, DEBUG_ERROR, "Trying to recover.\n");
+				LOGP(DRADIO, LOGL_ERROR, "Trying to recover.\n");
 			else
 				return 0;
 		}

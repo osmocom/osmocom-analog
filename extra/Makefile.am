@@ -7,6 +7,7 @@ cnetz_memory_card_generator_SOURCES = \
 	main.c
 cnetz_memory_card_generator_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/libdebug/libdebug.a \
-	$(top_builddir)/src/liboptions/liboptions.a
+	$(top_builddir)/src/liboptions/liboptions.a \
+	$(top_builddir)/src/liblogging/liblogging.a \
+	$(LIBOSMOCORE_LIBS)
 

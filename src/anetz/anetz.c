@@ -25,17 +25,17 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "anetz.h"
 #include "dsp.h"
 
 /* Timers */
-#define PAGING_TO	30	/* Nach dieser Zeit ist der Operator genervt... */
-#define RELEASE_TO	3	/* Release time, so station keeps blocked for a while */
+#define PAGING_TO	30,0	/* Nach dieser Zeit ist der Operator genervt... */
+#define RELEASE_TO	3,0	/* Release time, so station keeps blocked for a while */
 
 const char *anetz_state_name(enum anetz_state state)
 {
@@ -77,7 +77,7 @@ static void anetz_new_state(anetz_t *anetz, enum anetz_state new_state)
 {
 	if (anetz->state == new_state)
 		return;
-	PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "State change: %s -> %s\n", anetz_state_name(anetz->state), anetz_state_name(new_state));
+	LOGP_CHAN(DANETZ, LOGL_DEBUG, "State change: %s -> %s\n", anetz_state_name(anetz->state), anetz_state_name(new_state));
 	anetz->state = new_state;
 	anetz_display_status();
 }
@@ -141,7 +141,7 @@ static double *anetz_nummer2freq(const char *nummer)
 
 	/* get decade */
 	dekade =  anetz_gruppenkennziffer[*nummer - '0'].dekade;
-	PDEBUG(DANETZ, DEBUG_DEBUG, "Dekaden: %d %d %d %d\n", dekade[0], dekade[1], dekade[2], dekade[3]);
+	LOGP(DANETZ, LOGL_DEBUG, "Dekaden: %d %d %d %d\n", dekade[0], dekade[1], dekade[2], dekade[3]);
 	nummer++;
 
 	/* get 4 frequencies out of decades */
@@ -161,7 +161,7 @@ static double *anetz_nummer2freq(const char *nummer)
 		}
 	}
 
-	PDEBUG(DANETZ, DEBUG_DEBUG, "Frequencies: F%d=%.1f F%d=%.1f F%d=%.1f F%d=%.1f\n", f[0], freq[0], f[1], freq[1], f[2], freq[2], f[3], freq[3]);
+	LOGP(DANETZ, LOGL_DEBUG, "Frequencies: F%d=%.1f F%d=%.1f F%d=%.1f F%d=%.1f\n", f[0], freq[0], f[1], freq[1], f[2], freq[2], f[3], freq[3]);
 
 	return freq;
 }
@@ -196,40 +196,40 @@ int anetz_create(const char *kanal, const char *device, int use_sdr, int sampler
 	int rc;
 
 	if (atoi(kanal) < 30 || atoi(kanal) > 63) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
+		LOGP(DANETZ, LOGL_ERROR, "Channel ('Kanal') number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
 
 	anetz = calloc(1, sizeof(anetz_t));
 	if (!anetz) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "No memory!\n");
+		LOGP(DANETZ, LOGL_ERROR, "No memory!\n");
 		return -EIO;
 	}
 
 	anetz->operator = operator;
 
-	PDEBUG(DANETZ, DEBUG_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DANETZ, LOGL_DEBUG, "Creating 'A-Netz' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&anetz->sender, kanal, anetz_kanal2freq(atoi(kanal), 0), anetz_kanal2freq(atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
+		LOGP(DANETZ, LOGL_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(anetz, page_gain, page_sequence, squelch_db);
 	if (rc < 0) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
+		LOGP(DANETZ, LOGL_ERROR, "Failed to init signal processing!\n");
 		goto error;
 	}
 
-	timer_init(&anetz->timer, anetz_timeout, anetz);
+	osmo_timer_setup(&anetz->timer, anetz_timeout, anetz);
 
 	/* go into idle state */
 	anetz_go_idle(anetz);
 
-	PDEBUG(DANETZ, DEBUG_NOTICE, "Created 'Kanal' #%s\n", kanal);
+	LOGP(DANETZ, LOGL_NOTICE, "Created 'Kanal' #%s\n", kanal);
 
 	return 0;
 
@@ -244,9 +244,9 @@ void anetz_destroy(sender_t *sender)
 {
 	anetz_t *anetz = (anetz_t *) sender;
 
-	PDEBUG(DANETZ, DEBUG_DEBUG, "Destroying 'A-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DANETZ, LOGL_DEBUG, "Destroying 'A-Netz' instance for 'Kanal' = %s.\n", sender->kanal);
 
-	timer_exit(&anetz->timer);
+	osmo_timer_del(&anetz->timer);
 	dsp_cleanup_sender(anetz);
 	sender_destroy(&anetz->sender);
 	free(sender);
@@ -255,9 +255,9 @@ void anetz_destroy(sender_t *sender)
 /* Abort connection towards mobile station by sending idle tone. */
 static void anetz_go_idle(anetz_t *anetz)
 {
-	timer_stop(&anetz->timer);
+	osmo_timer_del(&anetz->timer);
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Entering IDLE state on channel %s, sending 2280 Hz tone.\n", anetz->sender.kanal);
+	LOGP(DANETZ, LOGL_INFO, "Entering IDLE state on channel %s, sending 2280 Hz tone.\n", anetz->sender.kanal);
 	anetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_FREI);
 	/* also reset detector, so if there is a new call it is answered */
@@ -267,31 +267,31 @@ static void anetz_go_idle(anetz_t *anetz)
 /* Release connection towards mobile station by sending idle tone for a while. */
 static void anetz_release(anetz_t *anetz)
 {
-	timer_stop(&anetz->timer);
+	osmo_timer_del(&anetz->timer);
 
-	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Sending 2280 Hz release tone.\n");
+	LOGP_CHAN(DANETZ, LOGL_INFO, "Sending 2280 Hz release tone.\n");
 	anetz->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_AUSLOESEN);
 	anetz_set_dsp_mode(anetz, DSP_MODE_TONE, 0);
-	timer_start(&anetz->timer, RELEASE_TO);
+	osmo_timer_schedule(&anetz->timer, RELEASE_TO);
 }
 
 /* Enter paging state and transmit 4 paging tones. */
 static void anetz_page(anetz_t *anetz, const char *dial_string, double *freq)
 {
-	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Entering paging state, sending 'Selektivruf' to '%s'.\n", dial_string);
+	LOGP_CHAN(DANETZ, LOGL_INFO, "Entering paging state, sending 'Selektivruf' to '%s'.\n", dial_string);
 	strcpy(anetz->station_id, dial_string); /* set station ID before state change, so status is shown correctly */
 	anetz_new_state(anetz, ANETZ_ANRUF);
 	anetz_set_dsp_mode(anetz, DSP_MODE_PAGING, 0);
 	dsp_set_paging(anetz, freq);
-	timer_start(&anetz->timer, PAGING_TO);
+	osmo_timer_schedule(&anetz->timer, PAGING_TO);
 }
 
 /* Loss of signal was detected, release active call. */
 void anetz_loss_indication(anetz_t *anetz, double loss_time)
 {
 	if (anetz->state == ANETZ_GESPRAECH) {
-		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Detected loss of signal after %.1f seconds, releasing.\n", loss_time);
+		LOGP_CHAN(DANETZ, LOGL_NOTICE, "Detected loss of signal after %.1f seconds, releasing.\n", loss_time);
 		anetz_release(anetz);
 		call_up_release(anetz->callref, CAUSE_TEMPFAIL);
 		anetz->callref = 0;
@@ -302,9 +302,9 @@ void anetz_loss_indication(anetz_t *anetz, double loss_time)
 void anetz_receive_tone(anetz_t *anetz, int tone)
 {
 	if (tone >= 0)
-		PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "Received contiuous %d Hz tone.\n", (tone) ? 1750 : 2280);
+		LOGP_CHAN(DANETZ, LOGL_DEBUG, "Received contiuous %d Hz tone.\n", (tone) ? 1750 : 2280);
 	else
-		PDEBUG_CHAN(DANETZ, DEBUG_DEBUG, "Continuous tone is gone.\n");
+		LOGP_CHAN(DANETZ, LOGL_DEBUG, "Continuous tone is gone.\n");
 
 	/* skip any handling in loopback mode */
 	if (anetz->sender.loopback)
@@ -318,7 +318,7 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 	case ANETZ_FREI:
 		/* initiate call on calling tone */
 		if (tone == 1) {
-			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz calling signal from mobile station, removing idle signal.\n");
+			LOGP_CHAN(DANETZ, LOGL_INFO, "Received 1750 Hz calling signal from mobile station, removing idle signal.\n");
 			strcpy(anetz->station_id, "unknown"); /* set station ID before state change, so status is shown correctly */
 
 			anetz_new_state(anetz, ANETZ_GESPRAECH);
@@ -330,17 +330,17 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 		/* throughconnect speech when calling/answer tone is gone */
 		if (tone != 1) {
 			if (!anetz->callref) {
-				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
+				LOGP_CHAN(DANETZ, LOGL_INFO, "1750 Hz signal from mobile station is gone, setup call.\n");
 				anetz->callref = call_up_setup(NULL, anetz->operator, OSMO_CC_NETWORK_ANETZ_NONE, "");
 			} else {
-				PDEBUG_CHAN(DANETZ, DEBUG_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
+				LOGP_CHAN(DANETZ, LOGL_INFO, "1750 Hz signal from mobile station is gone, answer call.\n");
 				call_up_answer(anetz->callref, anetz->station_id);
 			}
 			anetz_set_dsp_mode(anetz, DSP_MODE_AUDIO, 0);
 		}
 		/* release call */
 		if (tone == 1) {
-			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
+			LOGP_CHAN(DANETZ, LOGL_INFO, "Received 1750 Hz release signal from mobile station, sending release tone.\n");
 			anetz_release(anetz);
 			call_up_release(anetz->callref, CAUSE_NORMAL);
 			anetz->callref = 0;
@@ -350,8 +350,8 @@ void anetz_receive_tone(anetz_t *anetz, int tone)
 	case ANETZ_ANRUF:
 		/* answer call on answer tone */
 		if (tone == 1) {
-			PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Received 1750 Hz answer signal from mobile station, removing paging tones.\n");
-			timer_stop(&anetz->timer);
+			LOGP_CHAN(DANETZ, LOGL_INFO, "Received 1750 Hz answer signal from mobile station, removing paging tones.\n");
+			osmo_timer_del(&anetz->timer);
 			anetz_new_state(anetz, ANETZ_GESPRAECH);
 			anetz_set_dsp_mode(anetz, DSP_MODE_SILENCE, 0);
 			break;
@@ -368,7 +368,7 @@ static void anetz_timeout(void *data)
 
 	switch (anetz->state) {
 	case ANETZ_ANRUF:
-		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Timeout while waiting for answer, releasing.\n");
+		LOGP_CHAN(DANETZ, LOGL_NOTICE, "Timeout while waiting for answer, releasing.\n");
 	 	anetz_go_idle(anetz);
 		call_up_release(anetz->callref, CAUSE_NOANSWER);
 		anetz->callref = 0;
@@ -391,8 +391,8 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	/* 1. determine paging frequencies */
 	freq = anetz_nummer2freq(dialing);
 	if (!freq) {
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Number invalid: %s\n", anetz_nummer2freq_error);
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
+		LOGP(DANETZ, LOGL_NOTICE, "Number invalid: %s\n", anetz_nummer2freq_error);
+		LOGP(DANETZ, LOGL_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
 	}
 
@@ -405,7 +405,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (sender) {
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
+		LOGP(DANETZ, LOGL_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
@@ -416,13 +416,13 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
+		LOGP(DANETZ, LOGL_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG_CHAN(DANETZ, DEBUG_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
+	LOGP_CHAN(DANETZ, LOGL_INFO, "Call to mobile station, paging with tones: %.1f %.1f %.1f %.1f\n", freq[0], freq[1], freq[2], freq[3]);
 	if (anetz->page_sequence)
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Sending paging tones in sequence.\n");
+		LOGP(DANETZ, LOGL_NOTICE, "Sending paging tones in sequence.\n");
 
 	/* 4. trying to page mobile station */
 	anetz->callref = callref;
@@ -446,7 +446,7 @@ void call_down_disconnect(int callref, int cause)
 	sender_t *sender;
 	anetz_t *anetz;
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DANETZ, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		anetz = (anetz_t *) sender;
@@ -454,7 +454,7 @@ void call_down_disconnect(int callref, int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DANETZ, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -464,7 +464,7 @@ void call_down_disconnect(int callref, int cause)
 		return;
 	switch (anetz->state) {
 	case ANETZ_ANRUF:
-		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Outgoing disconnect, during alerting, going idle!\n");
+		LOGP_CHAN(DANETZ, LOGL_NOTICE, "Outgoing disconnect, during alerting, going idle!\n");
 	 	anetz_go_idle(anetz);
 		break;
 	default:
@@ -483,7 +483,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 	sender_t *sender;
 	anetz_t *anetz;
 
-	PDEBUG(DANETZ, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DANETZ, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		anetz = (anetz_t *) sender;
@@ -491,7 +491,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DANETZ, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DANETZ, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
@@ -500,11 +500,11 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 
 	switch (anetz->state) {
 	case ANETZ_GESPRAECH:
-		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Outgoing release, during call, sending release tone!\n");
+		LOGP_CHAN(DANETZ, LOGL_NOTICE, "Outgoing release, during call, sending release tone!\n");
 	 	anetz_release(anetz);
 		break;
 	case ANETZ_ANRUF:
-		PDEBUG_CHAN(DANETZ, DEBUG_NOTICE, "Outgoing release, during alerting, going idle!\n");
+		LOGP_CHAN(DANETZ, LOGL_NOTICE, "Outgoing release, during alerting, going idle!\n");
 	 	anetz_go_idle(anetz);
 		break;
 	default:

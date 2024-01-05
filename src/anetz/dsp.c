@@ -26,8 +26,8 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "anetz.h"
 #include "dsp.h"
@@ -68,7 +68,7 @@ void dsp_init(void)
 	int i;
 	double s;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine tables.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine tables.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
 		dsp_sine_tone[i] = s * TX_PEAK_TONE;
@@ -83,7 +83,7 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 	int i;
 	double tone;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for 'Sender'.\n");
 
 	/* init squelch */
 	squelch_init(&anetz->squelch, anetz->sender.kanal, squelch_db, MUTE_TIME, LOSS_TIME);
@@ -95,10 +95,10 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 	anetz->page_sequence = page_sequence;
 
 	anetz->samples_per_chunk = anetz->sender.samplerate * CHUNK_DURATION;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using %d samples per filter chunk duration.\n", anetz->samples_per_chunk);
+	LOGP(DDSP, LOGL_DEBUG, "Using %d samples per filter chunk duration.\n", anetz->samples_per_chunk);
 	spl = calloc(anetz->samples_per_chunk, sizeof(sample_t));
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDSP, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	anetz->fsk_filter_spl = spl;
@@ -119,7 +119,7 @@ int dsp_init_sender(anetz_t *anetz, double page_gain, int page_sequence, double 
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(anetz_t *anetz)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	if (anetz->fsk_filter_spl) {
 		free(anetz->fsk_filter_spl);
@@ -133,7 +133,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	/* lost tone because it is not good anymore or has changed */
 	if (!goodtone || tone != anetz->tone_detected) {
 		if (anetz->tone_count >= TONE_DETECT_TH) {
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Lost %.0f Hz tone after %.0f ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
+			LOGP_CHAN(DDSP, LOGL_INFO, "Lost %.0f Hz tone after %.0f ms.\n", fsk_tones[anetz->tone_detected], 1000.0 * CHUNK_DURATION * anetz->tone_count);
 			anetz_receive_tone(anetz, -1);
 		}
 		if (goodtone)
@@ -148,7 +148,7 @@ static void fsk_receive_tone(anetz_t *anetz, int tone, int goodtone, double leve
 	anetz->tone_count++;
 
 	if (anetz->tone_count == TONE_DETECT_TH) {
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous %.0f Hz tone. (level = %.0f%%, quality =%.0f%%)\n", fsk_tones[anetz->tone_detected], level * 100.0, quality * 100.0);
+		LOGP_CHAN(DDSP, LOGL_INFO, "Detecting continuous %.0f Hz tone. (level = %.0f%%, quality =%.0f%%)\n", fsk_tones[anetz->tone_detected], level * 100.0, quality * 100.0);
 		anetz_receive_tone(anetz, anetz->tone_detected);
 	}
 }
@@ -171,7 +171,7 @@ static void fsk_decode_chunk(anetz_t *anetz, sample_t *spl, int max)
 	display_measurements_update(anetz->dmp_tone_level, level * 100.0, 0.0);
 	display_measurements_update(anetz->dmp_tone_quality, quality[1] * 100.0, 0.0);
 	if ((level > TONE_THRESHOLD && quality[1] > QUAL_THRESHOLD) || anetz->sender.loopback)
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[1], level * 100.0, quality[1] * 100.0);
+		LOGP_CHAN(DDSP, LOGL_INFO, "Tone %.0f: Level=%3.0f%% Quality=%3.0f%%\n", fsk_tones[1], level * 100.0, quality[1] * 100.0);
 
 	/* adjust level, so we get peak of sine curve */
 	/* indicate detected tone */
@@ -403,7 +403,7 @@ const char *anetz_dsp_mode_name(enum dsp_mode mode)
 
 void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode, int detect_reset)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", anetz_dsp_mode_name(anetz->dsp_mode), anetz_dsp_mode_name(mode));
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", anetz_dsp_mode_name(anetz->dsp_mode), anetz_dsp_mode_name(mode));
 	anetz->dsp_mode = mode;
 	/* reset sequence paging */
 	anetz->paging_tone = 0;

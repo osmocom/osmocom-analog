@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libsample/sample.h"
 #include "modem.h"
 

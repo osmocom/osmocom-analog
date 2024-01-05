@@ -10,10 +10,11 @@ cnetz_magnetic_SOURCES = \
 
 cnetz_magnetic_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libaaimage/libaaimage.a \
+	$(top_builddir)/src/liblogging/liblogging.a \
+	$(LIBOSMOCORE_LIBS) \
 	-lm
 
 if HAVE_ALSA

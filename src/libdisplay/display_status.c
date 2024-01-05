@@ -23,7 +23,7 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libdisplay/display.h"
 
 static int status_on = 0;
@@ -46,7 +46,8 @@ static void print_status(int on)
 	if (h > lines_total)
 		h = lines_total;
 
-	lock_debug();
+	lock_logging();
+	enable_limit_scroll(false);
 	printf("\0337\033[H\033[1;37m");
 	for (i = 0; i < h; i++) {
 		j = 0;
@@ -60,7 +61,8 @@ static void print_status(int on)
 		putchar('\n');
 	}
 	printf("\0338"); fflush(stdout);
-	unlock_debug();
+	enable_limit_scroll(true);
+	unlock_logging();
 }
 
 void display_status_on(int on)
@@ -77,9 +79,9 @@ void display_status_on(int on)
 		print_status(1);
 
 	if (status_on)
-		debug_limit_scroll = lines_total;
+		logging_limit_scroll_top(lines_total);
 	else
-		debug_limit_scroll = 0;
+		logging_limit_scroll_top(0);
 }
 
 /* start status display */
@@ -139,7 +141,7 @@ void display_status_end(void)
 	/* set new total lines */
 	lines_total = line_count;
 	if (status_on)
-		debug_limit_scroll = lines_total;
+		logging_limit_scroll_top(lines_total);
 }
 
 

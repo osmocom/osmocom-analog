@@ -33,8 +33,10 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include "../libtimer/timer.h"
-#include "../libdebug/debug.h"
+#include <math.h>
+#include <osmocom/core/timer.h>
+#include <osmocom/core/utils.h>
+#include "../liblogging/logging.h"
 #include "crc16.h"
 #include "mtp.h"
 
@@ -66,6 +68,8 @@
 #define T_4k8	32
 #define T	((mtp->bitrate >= 64000) ? T_64k : T_4k8)
 #define D	256
+
+#define FLOAT_TO_TIMEOUT(f) floor(f), ((f) - floor(f)) * 1000000
 
 const char *mtp_sf_names[8] = {
 	"SIO (Out of alignment)",
@@ -124,7 +128,7 @@ void mtp_l2_new_state(mtp_t *mtp, enum mtp_l2state state)
 {
 	if (mtp->l2_state == state)
 		return;
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Change state '%s' -> '%s'\n", mtp_state_names[mtp->l2_state], mtp_state_names[state]);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Change state '%s' -> '%s'\n", mtp_state_names[mtp->l2_state], mtp_state_names[state]);
 	mtp->l2_state = state;
 }
 
@@ -135,12 +139,12 @@ static void mtp_stop(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uin
 	mtp_flush(mtp);
 
 	/* Send SIOS */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Now sending SIOS\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Now sending SIOS\n");
 	mtp->tx_lssu = STATUS_OS;
 
 	/* Cancel processor outage */
 	if (mtp->remote_outage) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Cancel remote processor outage\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Cancel remote processor outage\n");
 		mtp->remote_outage = 0;
 	}
 
@@ -148,21 +152,21 @@ static void mtp_stop(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uin
 	mtp->remote_emergency = 0;
 
 	/* stop all timers */
-	if (timer_running(&mtp->t1)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T1\n");
-		timer_stop(&mtp->t1);
+	if (osmo_timer_pending(&mtp->t1)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T1\n");
+		osmo_timer_del(&mtp->t1);
 	}
-	if (timer_running(&mtp->t2)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T2\n");
-		timer_stop(&mtp->t2);
+	if (osmo_timer_pending(&mtp->t2)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T2\n");
+		osmo_timer_del(&mtp->t2);
 	}
-	if (timer_running(&mtp->t3)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T3\n");
-		timer_stop(&mtp->t3);
+	if (osmo_timer_pending(&mtp->t3)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T3\n");
+		osmo_timer_del(&mtp->t3);
 	}
-	if (timer_running(&mtp->t4)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T4\n");
-		timer_stop(&mtp->t4);
+	if (osmo_timer_pending(&mtp->t4)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T4\n");
+		osmo_timer_del(&mtp->t4);
 	}
 
 	/* reset sequence numbers */
@@ -180,12 +184,12 @@ static void mtp_stop(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uin
 static void mtp_l3_start(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
 	/* Send SIO */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Now sending SIO\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Now sending SIO\n");
 	mtp->tx_lssu = STATUS_O;
 
 	/* Start T2 */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T2 for %.3f seconds\n", T2);
-	timer_start(&mtp->t2, T2);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T2 for %.3f seconds\n", T2);
+	osmo_timer_schedule(&mtp->t2, FLOAT_TO_TIMEOUT(T2));
 
 	/* reset monitor counters */
 	mtp->proving_errors = 0;
@@ -204,20 +208,20 @@ static void mtp_t2_timeout(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 	mtp_stop(mtp, prim, data, len);
 
 	/* send message to upper layer */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 that we are out of service because of alignment failure\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 that we are out of service because of alignment failure\n");
 	mtp_l2l3(mtp, MTP_PRIM_OUT_OF_SERVICE, 0, &cause, 1);
 }
 
 static void mtp_go_aligned(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
 	/* stop timers */
-	if (timer_running(&mtp->t2)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T2\n");
-		timer_stop(&mtp->t2);
+	if (osmo_timer_pending(&mtp->t2)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T2\n");
+		osmo_timer_del(&mtp->t2);
 	}
-	if (timer_running(&mtp->t4)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T4\n");
-		timer_stop(&mtp->t4);
+	if (osmo_timer_pending(&mtp->t4)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T4\n");
+		osmo_timer_del(&mtp->t4);
 	}
 
 	if (prim == MTP_PRIM_SIE) {
@@ -227,17 +231,17 @@ static void mtp_go_aligned(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 
 	if (mtp->local_emergency) {
 		/* Send SIE */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Now sending SIE\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Now sending SIE\n");
 		mtp->tx_lssu = STATUS_E;
 	} else {
 		/* Send SIN */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Now sending SIN\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Now sending SIN\n");
 		mtp->tx_lssu = STATUS_N;
 	}
 
 	/* Start T3 */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T3 for %.3f seconds\n", T3);
-	timer_start(&mtp->t3, T3);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T3 for %.3f seconds\n", T3);
+	osmo_timer_schedule(&mtp->t3, FLOAT_TO_TIMEOUT(T3));
 
 	/* Aligned */
 	mtp_l2_new_state(mtp, MTP_L2STATE_ALIGNED);
@@ -251,9 +255,9 @@ static void mtp_go_proving(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 	}
 
 	/* stop timer */
-	if (timer_running(&mtp->t3)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T3\n");
-		timer_stop(&mtp->t3);
+	if (osmo_timer_pending(&mtp->t3)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T3\n");
+		osmo_timer_del(&mtp->t3);
 	}
 
 	/* reset proving try counter M */
@@ -264,11 +268,11 @@ static void mtp_go_proving(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 
 	/* Start T4 */
 	if (mtp->local_emergency || mtp->remote_emergency) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
-		timer_start(&mtp->t4, T4e);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
+		osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4e));
 	} else {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4n);
-		timer_start(&mtp->t4, T4n);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4n);
+		osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4n));
 	}
 
 	/* Proving */
@@ -297,7 +301,7 @@ static void mtp_align_fail(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 	mtp_stop(mtp, prim, data, len);
 
 	/* send message to upper layer */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 that we are out of service because of alignment failure\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 that we are out of service because of alignment failure\n");
 	mtp_l2l3(mtp, MTP_PRIM_OUT_OF_SERVICE, 0, &cause, 1);
 }
 
@@ -308,9 +312,9 @@ static void mtp_correct_su(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 		return;
 
 	/* Stop T4 */
-	if (timer_running(&mtp->t4)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T4\n");
-		timer_stop(&mtp->t4);
+	if (osmo_timer_pending(&mtp->t4)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T4\n");
+		osmo_timer_del(&mtp->t4);
 	}
 
 	/* Cancel further proving */
@@ -318,11 +322,11 @@ static void mtp_correct_su(mtp_t *mtp, enum mtp_prim __attribute__((unused)) pri
 
 	/* Start T4 */
 	if (mtp->local_emergency || mtp->remote_emergency) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
-		timer_start(&mtp->t4, T4e);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
+		osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4e));
 	} else {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4n);
-		timer_start(&mtp->t4, T4n);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4n);
+		osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4n));
 	}
 }
 
@@ -335,29 +339,29 @@ static void mtp_align_complete(mtp_t *mtp, enum mtp_prim __attribute__((unused))
 
 		/* Start T4 */
 		if (mtp->local_emergency || mtp->remote_emergency) {
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
-			timer_start(&mtp->t4, T4e);
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
+			osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4e));
 		} else {
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4n);
-			timer_start(&mtp->t4, T4n);
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4n);
+			osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4n));
 		}
 		return;
 	}
 
 	/* Start T1 */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T1 for %.3f seconds\n", T1);
-	timer_start(&mtp->t1, T1);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T1 for %.3f seconds\n", T1);
+	osmo_timer_schedule(&mtp->t1, FLOAT_TO_TIMEOUT(T1));
 
 	if (mtp->local_outage) {
 		/* Send SIPO */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Local processor outage, now sending SIPO\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Local processor outage, now sending SIPO\n");
 		mtp->tx_lssu = STATUS_PO;
 
 		/* Aligned */
 		mtp_l2_new_state(mtp, MTP_L2STATE_ALIGNED_NOT_READY);
 	} else {
 		/* Send FISU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "No local processor outage, now sending FISU\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "No local processor outage, now sending FISU\n");
 		mtp->tx_lssu = -1;
 
 		/* Aligned */
@@ -373,7 +377,7 @@ static void mtp_abort_proving(mtp_t *mtp, enum mtp_prim __attribute__((unused)) 
 		return;
 	}
 
-	PDEBUG_CHAN(DMTP2, DEBUG_NOTICE, "Proving failed, try again!\n");
+	LOGP_CHAN(DMTP2, LOGL_NOTICE, "Proving failed, try again!\n");
 
 	/* Mark further proving */
 	mtp->further_proving = 1;
@@ -383,23 +387,23 @@ static void mtp_proving_emerg(mtp_t *mtp, enum mtp_prim __attribute__((unused)) 
 {
 	if (prim == MTP_PRIM_EMERGENCY) {
 		/* Send SIE */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Now sending SIE\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Now sending SIE\n");
 		mtp->tx_lssu = STATUS_E;
 	}
 
 	if (!mtp->local_emergency && !mtp->remote_emergency) {
 		/* Stop T4 */
-		if (timer_running(&mtp->t4)) {
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T4\n");
-			timer_stop(&mtp->t4);
+		if (osmo_timer_pending(&mtp->t4)) {
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T4\n");
+			osmo_timer_del(&mtp->t4);
 		}
 
 		/* Cancel further proving */
 		mtp->further_proving = 0;
 
 		/* Sart T4 */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
-		timer_start(&mtp->t4, T4e);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start timer T4 for %.3f seconds\n", T4e);
+		osmo_timer_schedule(&mtp->t4, FLOAT_TO_TIMEOUT(T4e));
 	}
 
 	if (prim == MTP_PRIM_EMERGENCY)
@@ -432,35 +436,35 @@ static void mtp_link_failure(mtp_t *mtp, enum mtp_prim __attribute__((unused)) p
 	else
 		cause = MTP_CAUSE_LINK_FAILURE_REMOTE;
 	/* send message to upper layer */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 that we are out of service because of link failure\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 that we are out of service because of link failure\n");
 	mtp_l2l3(mtp, MTP_PRIM_OUT_OF_SERVICE, 0, &cause, 1);
 }
 
 static void mtp_remote_outage(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
 	mtp->remote_outage = 1;
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Set remote processor outage\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Set remote processor outage\n");
 
 	/* Stop T1 */
-	if (timer_running(&mtp->t1)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T1\n");
-		timer_stop(&mtp->t1);
+	if (osmo_timer_pending(&mtp->t1)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T1\n");
+		osmo_timer_del(&mtp->t1);
 	}
 
 	/* Processor outage */
 	mtp_l2_new_state(mtp, MTP_L2STATE_PROCESSOR_OUTAGE);
 
 	/* send message to upper layer */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 about remote processor outage\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 about remote processor outage\n");
 	mtp_l2l3(mtp, MTP_PRIM_REMOTE_PROCESSOR_OUTAGE, 0, NULL, 0);
 }
 
 static void mtp_fisu_msu(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, uint8_t __attribute__((unused)) *data, int __attribute__((unused)) len)
 {
 	/* Stop T1 */
-	if (timer_running(&mtp->t1)) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop timer T1\n");
-		timer_stop(&mtp->t1);
+	if (osmo_timer_pending(&mtp->t1)) {
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop timer T1\n");
+		osmo_timer_del(&mtp->t1);
 	}
 
 	if (mtp->l2_state == MTP_L2STATE_ALIGNED_READY) {
@@ -472,7 +476,7 @@ static void mtp_fisu_msu(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim,
 	}
 
 	/* send message to upper layer */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 that we are in service\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 that we are in service\n");
 	mtp_l2l3(mtp, MTP_PRIM_IN_SERVICE, 0, NULL, 0);
 }
 
@@ -481,7 +485,7 @@ static void mtp_aligned_outage(mtp_t *mtp, enum mtp_prim __attribute__((unused))
 	mtp->local_outage = 1;
 
 	/* Send SIPO */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Local processor outage, now sending SIPO\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Local processor outage, now sending SIPO\n");
 	mtp->tx_lssu = STATUS_PO;
 
 	/* Aligned not ready */
@@ -493,7 +497,7 @@ static void mtp_not_aligned_recovered(mtp_t *mtp, enum mtp_prim __attribute__((u
 	mtp->local_outage = 0;
 
 	/* Send FISU */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "No local processor outage, now sending FISU\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "No local processor outage, now sending FISU\n");
 	mtp->tx_lssu = -1;
 
 	/* Aligned ready */
@@ -505,7 +509,7 @@ static void mtp_in_service_outage(mtp_t *mtp, enum mtp_prim __attribute__((unuse
 	mtp->local_outage = 1;
 
 	/* Send SIPO */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Local processor outage, now sending SIPO\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Local processor outage, now sending SIPO\n");
 	mtp->tx_lssu = STATUS_PO;
 
 	/* Processor outage */
@@ -519,7 +523,7 @@ static void mtp_outage(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, u
 		mtp->local_outage = 1;
 
 		/* Send SIPO */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Local processor outage, now sending SIPO\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Local processor outage, now sending SIPO\n");
 		mtp->tx_lssu = STATUS_PO;
 	}
 
@@ -528,27 +532,27 @@ static void mtp_outage(mtp_t *mtp, enum mtp_prim __attribute__((unused)) prim, u
 		mtp->local_outage = 0;
 
 		/* Send FISU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "No local processor outage, now sending FISU\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "No local processor outage, now sending FISU\n");
 		mtp->tx_lssu = -1;
 	}
 
 	/* remote outage */
 	if (prim == MTP_PRIM_SIPO && !mtp->remote_outage) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Set remote processor outage\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Set remote processor outage\n");
 		mtp->remote_outage = 1;
 
 		/* send message to upper layer */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 about remote processor outage\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 about remote processor outage\n");
 		mtp_l2l3(mtp, MTP_PRIM_REMOTE_PROCESSOR_OUTAGE, 0, NULL, 0);
 	}
 
 	/* remote recovered */
 	if ((prim == MTP_PRIM_FISU || prim == MTP_PRIM_MSU) && mtp->remote_outage) {
 		mtp->remote_outage = 0;
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Cancel remote processor outage\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Cancel remote processor outage\n");
 
 		/* send message to upper layer */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Telling L3 about remote processor recovered\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Telling L3 about remote processor recovered\n");
 		mtp_l2l3(mtp, MTP_PRIM_REMOTE_PROCESSOR_RECOVERED, 0, NULL, 0);
 	}
 
@@ -701,7 +705,7 @@ static void handle_event(mtp_t *mtp, enum mtp_prim prim, uint8_t *data, int len)
 {
 	int i;
 
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Handling message '%s' in state '%s'\n", mtp_prim_names[prim], mtp_state_names[mtp->l2_state]);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Handling message '%s' in state '%s'\n", mtp_prim_names[prim], mtp_state_names[mtp->l2_state]);
 
 	/* Find function for current state and message */
 	for (i = 0; i < (int)STATEMACHINE_LEN; i++)
@@ -709,7 +713,7 @@ static void handle_event(mtp_t *mtp, enum mtp_prim prim, uint8_t *data, int len)
 		 && ((1 << mtp->l2_state) & statemachine_list[i].states))
 			break;
 	if (i == STATEMACHINE_LEN) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Message '%s' unhandled at state '%s'\n", mtp_prim_names[prim], mtp_state_names[mtp->l2_state]);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Message '%s' unhandled at state '%s'\n", mtp_prim_names[prim], mtp_state_names[mtp->l2_state]);
 		return;
 	}
 
@@ -727,11 +731,11 @@ int mtp_l3l2(mtp_t *mtp, enum mtp_prim prim, uint8_t sio, uint8_t *data, int len
 	}
 
 	if (mtp->l2_state != MTP_L2STATE_IN_SERVICE) {
-		PDEBUG_CHAN(DMTP2, DEBUG_ERROR, "Rejecting data message in state '%s'\n", mtp_state_names[mtp->l2_state]);
+		LOGP_CHAN(DMTP2, LOGL_ERROR, "Rejecting data message in state '%s'\n", mtp_state_names[mtp->l2_state]);
 		return -EIO;
 	}
 
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Queueing data message.\n");
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "Queueing data message.\n");
 
 	/* go to end of queue */
 	tailp = &mtp->tx_queue;
@@ -741,7 +745,7 @@ int mtp_l3l2(mtp_t *mtp, enum mtp_prim prim, uint8_t sio, uint8_t *data, int len
 	/* add new message to queue */
 	msg = calloc(sizeof(*msg) + len, 1);
 	if (!msg) {
-		PDEBUG_CHAN(DMTP2, DEBUG_ERROR, "No mem!\n");
+		LOGP_CHAN(DMTP2, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	mtp->tx_queue_seq = (mtp->tx_queue_seq + 1) & 0x7f;
@@ -807,7 +811,7 @@ static int mtp_send_msu(mtp_t *mtp, uint8_t *bsn, uint8_t *bib, uint8_t *fsn, ui
 		msg = msg->next;
 	}
 	if (i == 128) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Cannot send MSU, because more than 127 unacknowledged messages have been sent.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Cannot send MSU, because more than 127 unacknowledged messages have been sent.\n");
 		return 0;
 	}
 
@@ -833,7 +837,7 @@ static int mtp_send_msu(mtp_t *mtp, uint8_t *bsn, uint8_t *bib, uint8_t *fsn, ui
 	*fib = mtp->fib;
 	*sio = msg->sio;
 	if (msg->len > max) {
-		PDEBUG_CHAN(DMTP2, DEBUG_ERROR, "Message from layer 3 tructated, because of length %d.\n", msg->len);
+		LOGP_CHAN(DMTP2, LOGL_ERROR, "Message from layer 3 tructated, because of length %d.\n", msg->len);
 		msg->len = max;
 	}
 	memcpy(data, msg->data, msg->len);
@@ -862,14 +866,14 @@ static int ack_msg(mtp_t *mtp, uint8_t bsn)
 
 	/* remove all messages up to the one found */
 	while (mtp->tx_queue != msg) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "ACK: Message with sequence number %d has been acked and is removed.\n", mtp->tx_queue->sequence);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "ACK: Message with sequence number %d has been acked and is removed.\n", mtp->tx_queue->sequence);
 		temp = mtp->tx_queue;
 		mtp->tx_queue = temp->next;
 		free(temp);
 	}
 
 	/* remove the message found */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "ACK: Message with sequence number %d has been acked and is removed.\n", mtp->tx_queue->sequence);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "ACK: Message with sequence number %d has been acked and is removed.\n", mtp->tx_queue->sequence);
 	mtp->tx_queue = msg->next;
 	free(msg);
 
@@ -896,7 +900,7 @@ static int nack_msg(mtp_t *mtp, uint8_t bsn, uint8_t bib)
 		return 0;
 
 	/* rewind tx_seq to retransmit */
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "NACK: Lost messages, retransmitting from sequence number %d.\n", (bsn + 1) & 0x7f);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, "NACK: Lost messages, retransmitting from sequence number %d.\n", (bsn + 1) & 0x7f);
 	mtp->tx_seq = bsn;
 
 	/* flip bit */
@@ -947,7 +951,7 @@ static void mtp_receive_fisu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, 
 
 	/* reject, if local outage */
 	if (mtp->local_outage) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Ignoring, we have local outage.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Ignoring, we have local outage.\n");
 		return;
 	}
 
@@ -963,7 +967,7 @@ static void mtp_receive_fisu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, 
 		
 	/* if the FSN is different and received FIB equals last BIB sent */
 	if (fsn != mtp->rx_seq && fib == mtp->bib) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Send nack, because we missed a frame and FIB equals last transmitted BIB.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Send nack, because we missed a frame and FIB equals last transmitted BIB.\n");
 		/* schedule NACK */
 		mtp->tx_nack = 1;
 	}
@@ -980,7 +984,7 @@ static void mtp_receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, u
 
 	/* reject, if local outage */
 	if (mtp->local_outage) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Ignoring, we have local outage.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Ignoring, we have local outage.\n");
 		return;
 	}
 
@@ -995,7 +999,7 @@ static void mtp_receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, u
 
 	/* i) if sequence equals last received, drop it, regardless of FIB */
 	if (fsn == mtp->rx_seq) {
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Ignoring, because sequence number did not increase.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Ignoring, because sequence number did not increase.\n");
 		return;
 	}
 
@@ -1003,13 +1007,13 @@ static void mtp_receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, u
 	if (fsn == ((mtp->rx_seq + 1) & 0x7f)) {
 		/* if FIB equals last BIB */
 		if (fib == mtp->bib) {
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Accepting, because sequence number increases.\n");
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Accepting, because sequence number increases.\n");
 			mtp_l2l3(mtp, MTP_PRIM_DATA, sio, data, len);
 			/* acknowledge */
 			mtp->rx_seq = fsn;
 		} else {
 			/* discard if not equal */
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Ignoring, because FIB does not equal last transmitted BIB.\n");
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Ignoring, because FIB does not equal last transmitted BIB.\n");
 		}
 		return;
 	}
@@ -1018,10 +1022,10 @@ static void mtp_receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, u
 	 *      a NACK is sent, if FIB equals last BIB */
 	if (fib == mtp->bib) {
 		/* schedule NACK */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Send nack, because we missed a frame and FIB equals last transmitted BIB.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Send nack, because we missed a frame and FIB equals last transmitted BIB.\n");
 		mtp->tx_nack = 1;
 	} else
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> Ignoring, because we missed a frame and FIB dos not equal last transmitted BIB.\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> Ignoring, because we missed a frame and FIB dos not equal last transmitted BIB.\n");
 }
 
 /*
@@ -1037,21 +1041,21 @@ static int mtp_send_frame(mtp_t *mtp, uint8_t *data, int max)
 
 	if (mtp_send_lssu(mtp, &bsn, &bib, &fsn, &fib, &sf)) {
 		/* transmit LSSU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Sending LSSU with status flag '%s'\n", mtp_sf_names[sf]);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Sending LSSU with status flag '%s'\n", mtp_sf_names[sf]);
 		data[3] = sf;
 		len = 1;
 	} else if ((len = mtp_send_msu(mtp, &bsn, &bib, &fsn, &fib, &sio, data + 4, max - 5, &resending))) {
 		/* transmit MSU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "%sSending MSU with SIO '%02x' data '%s'\n", (resending) ? "Re-" : "", sio, debug_hex(data + 4, len));
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "%sSending MSU with SIO '%02x' data '%s'\n", (resending) ? "Re-" : "", sio, osmo_hexdump(data + 4, len));
 		data[3] = sio;
 		len++;
 	} else {
 		/* transmit FISU */
 		mtp_send_fisu(mtp, &bsn, &bib, &fsn, &fib);
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Sending FISU\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Sending FISU\n");
 		len = 0;
 	}
-	PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
+	LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
 	data[0] = (bsn & 0x7f) | (bib << 7);
 	data[1] = (fsn & 0x7f) | (fib << 7);
 	data[2] = (len > 63) ? 63 : len;
@@ -1076,7 +1080,7 @@ static int mtp_receive_frame(mtp_t *mtp, uint8_t *data, int len)
 
 	if (len < 5) {
 		/* frame too short */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving frame is too short (got: %d bytes)\n", len);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving frame is too short (got: %d bytes)\n", len);
 		return -EINVAL;
 	}
 	len -= 5;
@@ -1089,34 +1093,34 @@ static int mtp_receive_frame(mtp_t *mtp, uint8_t *data, int len)
 
 	if (li != len && (li != 63 || len <= 63)) {
 		/* frame wrong length */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving frame has wrong length (got %d bytes, length %d bytes)\n", li, len);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving frame has wrong length (got %d bytes, length %d bytes)\n", li, len);
 		return -EINVAL;
 	}
 
 	crc = calc_crc16(data, len + 3);
 	if (data[3 + len] != (crc & 0xff) || data[4 + len] != (crc >> 8)) {
 		/* crc error */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving frame has wrong CRC\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving frame has wrong CRC\n");
 		return -EINVAL;
 	}
 
 	if (len == 1)
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving LSSU (length = %d) with status flag 0x%02x (%s)\n", len, data[3], mtp_sf_names[data[3] & 0x7]);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving LSSU (length = %d) with status flag 0x%02x (%s)\n", len, data[3], mtp_sf_names[data[3] & 0x7]);
 	if (len == 2)
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving LSSU (length = %d) with status flag 0x%04x (%s)\n", len, data[3] | (data[4] << 8), mtp_sf_names[data[3] & 0x7]);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving LSSU (length = %d) with status flag 0x%04x (%s)\n", len, data[3] | (data[4] << 8), mtp_sf_names[data[3] & 0x7]);
 	if (len == 1 || len == 2) {
 		/* receive LSSU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
 		func_mtp_receive_lssu(mtp, fsn, bib, data[3] & 0x7);
 	} else if (len > 2) {
 		/* receive MSU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving MSU with SIO '%02x' data '%s'\n", data[3], debug_hex(data + 4, len - 1));
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving MSU with SIO '%02x' data '%s'\n", data[3], osmo_hexdump(data + 4, len - 1));
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
 		func_mtp_receive_msu(mtp, bsn, bib, fsn, fib, data[3], data + 4, len - 1);
 	} else {
 		/* receive FISU */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Receiving FISU\n");
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Receiving FISU\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, " -> FSN %d, FIB %d, BSN %d, BIB %d\n", fsn, fib, bsn, bib);
 		func_mtp_receive_fisu(mtp, bsn, bib, fsn, fib);
 	}
 
@@ -1194,9 +1198,9 @@ static void mtp_monitor(mtp_t *mtp, int bad)
 		/* raise error count auntil Ti has been reached */
 		mtp->proving_errors++;
 		if (bad == MONITOR_BAD)
-			PDEBUG(DMTP2, DEBUG_NOTICE, "Proving counter raises to %d/%d due to frame error\n", mtp->proving_errors, Ti);
+			LOGP(DMTP2, LOGL_NOTICE, "Proving counter raises to %d/%d due to frame error\n", mtp->proving_errors, Ti);
 		else
-			PDEBUG(DMTP2, DEBUG_NOTICE, "Proving counter raises to %d/%d due to octet counting\n", mtp->proving_errors, Ti);
+			LOGP(DMTP2, LOGL_NOTICE, "Proving counter raises to %d/%d due to octet counting\n", mtp->proving_errors, Ti);
 		if (mtp->proving_errors == Ti) {
 			mtp->proving_errors = 0;
 			handle_event(mtp, MTP_PRIM_ABORT_PROVING, NULL, 0);
@@ -1212,16 +1216,16 @@ static void mtp_monitor(mtp_t *mtp, int bad)
 				mtp->monitor_good = 0;
 				if (mtp->monitor_errors > 0) {
 					mtp->monitor_errors--;
-					PDEBUG(DMTP2, DEBUG_NOTICE, "Link error counter reduces to %d/%d\n", mtp->monitor_errors, T);
+					LOGP(DMTP2, LOGL_NOTICE, "Link error counter reduces to %d/%d\n", mtp->monitor_errors, T);
 				}
 			}
 		} else {
 			/* raise error count auntil T has been reached */
 			mtp->monitor_errors++;
 			if (bad == MONITOR_BAD)
-				PDEBUG(DMTP2, DEBUG_NOTICE, "Link error counter raises to %d/%d due to frame error\n", mtp->monitor_errors, T);
+				LOGP(DMTP2, LOGL_NOTICE, "Link error counter raises to %d/%d due to frame error\n", mtp->monitor_errors, T);
 			else
-				PDEBUG(DMTP2, DEBUG_NOTICE, "Link error counter raises to %d/%d due to octet counting\n", mtp->monitor_errors, T);
+				LOGP(DMTP2, LOGL_NOTICE, "Link error counter raises to %d/%d due to octet counting\n", mtp->monitor_errors, T);
 			if (mtp->monitor_errors == T) {
 				mtp->monitor_errors = 0;
 				handle_event(mtp, MTP_PRIM_LINK_FAILURE, NULL, 0);
@@ -1246,7 +1250,7 @@ void mtp_receive_bit(mtp_t *mtp, uint8_t bit)
 	if (mtp->rx_octet_counting) {
 		if (++mtp->rx_octet_count == 8 * N) {
 			/* octet counter hits */
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Octet counter hits!\n");
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, "Octet counter hits!\n");
 			mtp->rx_octet_count = 0;
 			mtp_monitor(mtp, MONITOR_OCTET_COUNTING);
 		}
@@ -1268,13 +1272,13 @@ void mtp_receive_bit(mtp_t *mtp, uint8_t bit)
 			}
 			if (rc == 0 && mtp->rx_octet_counting) {
 				/* stop octet counting */
-				PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Stop Octet counting, due to correctly received frame\n");
+				LOGP_CHAN(DMTP2, LOGL_DEBUG, "Stop Octet counting, due to correctly received frame\n");
 				mtp->rx_octet_counting = 0;
 			}
 			mtp->rx_flag_count = 0;
 		} else {
 			if (++mtp->rx_flag_count == 100)
-				PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Continuously receiving HDLC flags (\"01111110\"), remote link seems to be down!\n");
+				LOGP_CHAN(DMTP2, LOGL_DEBUG, "Continuously receiving HDLC flags (\"01111110\"), remote link seems to be down!\n");
 		}
 		mtp->rx_byte_count = 0;
 		mtp->rx_bit_count = 0;
@@ -1287,7 +1291,7 @@ void mtp_receive_bit(mtp_t *mtp, uint8_t bit)
 		if (mtp->rx_octet_counting)
 			return;
 		/* start octet counting */
-		PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start Octet counting, due to 7 consecutive bits\n");
+		LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start Octet counting, due to 7 consecutive bits\n");
 		mtp->rx_octet_counting = 1;
 		mtp->rx_octet_count = 0;
 		return;
@@ -1306,7 +1310,7 @@ void mtp_receive_bit(mtp_t *mtp, uint8_t bit)
 		if (mtp->rx_byte_count == (int)sizeof(mtp->rx_frame)) {
 			mtp->rx_receiving = 0;
 			/* start octet counting */
-			PDEBUG_CHAN(DMTP2, DEBUG_DEBUG, "Start Octet counting, due to frame oversize\n");
+			LOGP_CHAN(DMTP2, LOGL_DEBUG, "Start Octet counting, due to frame oversize\n");
 			mtp->rx_octet_counting = 1;
 			mtp->rx_octet_count = 0;
 			return;

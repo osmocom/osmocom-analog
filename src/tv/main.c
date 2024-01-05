@@ -33,7 +33,7 @@ enum paging_signal;
 #include "../libfm/fm.h"
 #include "../libwave/wave.h"
 #include "../libimage/img.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #ifdef HAVE_SDR
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
@@ -495,7 +495,8 @@ int main(int argc, char *argv[])
 {
 	int __attribute__((__unused__)) rc, argi;
 
-	debuglevel = 0;
+	loglevel = LOGL_DEBUG;
+	logging_init();
 
 #ifdef HAVE_SDR
 	sdr_config_init(DEFAULT_LO_OFFSET);
@@ -567,4 +568,6 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 

@@ -1,5 +1,5 @@
 #include "../libcompandor/compandor.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/sender.h"
 #include "../libmobile/call.h"
 #include "../libfsk/fsk.h"
@@ -69,7 +69,7 @@ typedef struct r2000 {
 	/* sender's states */
 	enum r2000_state	state;
 	int			callref;
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	r2000_subscriber_t	subscriber;
 	int			page_try;		/* the try number of calling the mobile */
 	int			tx_frame_count;		/* to count repeated frames */

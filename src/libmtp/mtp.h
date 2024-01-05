@@ -70,10 +70,10 @@ typedef struct mtp {
 	int		local_outage;	/* current local processor outage */
 	int		remote_outage;	/* current remote processor outage */
 	int		tx_lssu;	/* what LSSU status to transmit (-1 for nothing) */
-	struct timer	t1;		/* timer "alignment ready" */
-	struct timer	t2;		/* timer "not aligned" */
-	struct timer	t3;		/* timer "aligned" */
-	struct timer	t4;		/* proving period timer */
+	struct osmo_timer_list	t1;		/* timer "alignment ready" */
+	struct osmo_timer_list	t2;		/* timer "not aligned" */
+	struct osmo_timer_list	t3;		/* timer "aligned" */
+	struct osmo_timer_list	t4;		/* proving period timer */
 	int		proving_try;	/* counts number of proving attempts */
 	int		further_proving;/* flag that indicates another proving attempt */
 

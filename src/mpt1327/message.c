@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <inttypes.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "message.h"
 
 static struct mpt1327_parameter_names {
@@ -411,7 +411,7 @@ static void debug_codeword(const char *prefix, int i, uint64_t bits, int enc)
 	int column;
 	int b;
 
-	if (debuglevel > DEBUG_INFO)
+	if (loglevel > LOGL_INFO)
 		return;
 
 	switch (mpt1327_definitions[i].type) {
@@ -431,13 +431,13 @@ static void debug_codeword(const char *prefix, int i, uint64_t bits, int enc)
 	case MPT_BCAST3:
 	case MPT_BCAST4:
 	case MPT_BCAST5:
-		if (enc && debuglevel > DEBUG_DEBUG)
+		if (enc && loglevel > LOGL_DEBUG)
 			return;
 	default:
 		;
 	}
 
-	PDEBUG(DFRAME, DEBUG_INFO, "%s Codeword %s: %s\n", prefix, mpt1327_definitions[i].short_name, mpt1327_definitions[i].long_name);
+	LOGP(DFRAME, LOGL_INFO, "%s Codeword %s: %s\n", prefix, mpt1327_definitions[i].short_name, mpt1327_definitions[i].long_name);
 	column = 0;
 	for (b = 0; b < 64; b++) {
 		/* if we have first parameter or we swith to next parameter */
@@ -461,7 +461,7 @@ static void debug_codeword(const char *prefix, int i, uint64_t bits, int enc)
 #endif
 	}
 	text[column] = '\0';
-	PDEBUG(DFRAME, DEBUG_INFO, "%s\n", text);
+	LOGP(DFRAME, LOGL_INFO, "%s\n", text);
 }
 
 uint64_t mpt1327_encode_codeword(mpt1327_codeword_t *codeword)
@@ -541,11 +541,11 @@ int mpt1327_decode_codeword(mpt1327_codeword_t *codeword, int specific, enum mpt
 	}
 	if (i == _NUM_MPT_DEFINITIONS) {
 		char debug[256];
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received unknown codeword or loopback from transmitter side.\n");
+		LOGP(DFRAME, LOGL_NOTICE, "Received unknown codeword or loopback from transmitter side.\n");
 		for (b = 0; b < 64; b++)
 			debug[b] = ((bits >> (63 - b)) & 1) + '0';
 		debug[b] = '\0';
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", debug);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", debug);
 		return -EINVAL;
 	}
 	codeword->type = mpt1327_definitions[i].type;

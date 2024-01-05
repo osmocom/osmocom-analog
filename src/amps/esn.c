@@ -22,10 +22,10 @@
 #include <string.h>
 #include <pthread.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "amps.h"
 #include "esn.h"
 

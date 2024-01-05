@@ -21,7 +21,7 @@ typedef struct jolly {
 	int			callref;		/* call reference */
 	char			station_id[32];		/* current station ID */
 	char			dialing[32];		/* dial string */
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 
 	/* display measurements */
 	dispmeasparam_t		*dmp_dtmf_low;
@@ -41,7 +41,7 @@ typedef struct jolly {
 	double			ack_phase65536;		/* current phase */
 	int			ack_count;		/* counter to count down while playing ack tone */
 	int			ack_max;		/* duration in samples */
-	struct timer		speech_timer;
+	struct osmo_timer_list		speech_timer;
 	char			speech_string[40];	/* speech string */
 	int			speech_digit;		/* counts digits */
 	int			speech_pos;		/* counts samples */

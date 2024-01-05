@@ -32,12 +32,14 @@
 #include <fcntl.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/select.h>
+#include <osmocom/core/timer.h>
 #include "../libfsk/fsk.h"
 #include "../libsound/sound.h"
 #include "../libwave/wave.h"
 #include "../libdisplay/display.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
+#include "../libmobile/get_time.c"
 #include "device.h"
 #include "am791x.h"
 #include "uart.h"
@@ -217,7 +219,7 @@ static void cts(void *inst, int cts)
 		return;
 
 	if (datenklo->auto_rts) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Received CTS=%d in Automatic RTS Mode.\n", cts);
+		LOGP(DDATENKLO, LOGL_INFO, "Received CTS=%d in Automatic RTS Mode.\n", cts);
 		datenklo->auto_rts_cts = cts;
 		return;
 	}
@@ -226,7 +228,7 @@ static void cts(void *inst, int cts)
 		datenklo->lines |= TIOCM_CTS;
 	else
 		datenklo->lines &= ~TIOCM_CTS;
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Indicating to terminal that CTS is %s\n", (cts) ? "on" : "off");
+	LOGP(DDATENKLO, LOGL_INFO, "Indicating to terminal that CTS is %s\n", (cts) ? "on" : "off");
 }
 
 /* modem changes CTS state (back channel) */
@@ -238,7 +240,7 @@ static void bcts(void *inst, int cts)
 		return;
 
 	if (datenklo->auto_rts) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Received BCTS=%d in Automatic RTS Mode.\n", cts);
+		LOGP(DDATENKLO, LOGL_INFO, "Received BCTS=%d in Automatic RTS Mode.\n", cts);
 		datenklo->auto_rts_cts = cts;
 		return;
 	}
@@ -247,7 +249,7 @@ static void bcts(void *inst, int cts)
 		datenklo->lines |= TIOCM_CTS;
 	else
 		datenklo->lines &= ~TIOCM_CTS;
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Indicating to terminal that BCTS is %s\n", (cts) ? "on" : "off");
+	LOGP(DDATENKLO, LOGL_INFO, "Indicating to terminal that BCTS is %s\n", (cts) ? "on" : "off");
 }
 
 /* modem changes CD state */
@@ -259,7 +261,7 @@ static void cd(void *inst, int cd)
 		return;
 
 	if (datenklo->auto_rts) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Received CD=%d in Automatic RTS Mode.\n", cd);
+		LOGP(DDATENKLO, LOGL_INFO, "Received CD=%d in Automatic RTS Mode.\n", cd);
 		datenklo->auto_rts_cd = cd;
 		return;
 	}
@@ -268,7 +270,7 @@ static void cd(void *inst, int cd)
 		datenklo->lines |= TIOCM_CD;
 	else
 		datenklo->lines &= ~TIOCM_CD;
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Indicating to terminal that CD is %s\n", (cd) ? "on" : "off");
+	LOGP(DDATENKLO, LOGL_INFO, "Indicating to terminal that CD is %s\n", (cd) ? "on" : "off");
 }
 
 /* modem changes CD state (back channel) */
@@ -280,7 +282,7 @@ static void bcd(void *inst, int cd)
 		return;
 
 	if (datenklo->auto_rts) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Received BCD=%d in Automatic RTS Mode.\n", cd);
+		LOGP(DDATENKLO, LOGL_INFO, "Received BCD=%d in Automatic RTS Mode.\n", cd);
 		datenklo->auto_rts_cd = cd;
 		return;
 	}
@@ -289,7 +291,7 @@ static void bcd(void *inst, int cd)
 		datenklo->lines |= TIOCM_CD;
 	else
 		datenklo->lines &= ~TIOCM_CD;
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Indicating to terminal that BCD is %s\n", (cd) ? "on" : "off");
+	LOGP(DDATENKLO, LOGL_INFO, "Indicating to terminal that BCD is %s\n", (cd) ? "on" : "off");
 }
 
 /* modem request bit */
@@ -405,7 +407,7 @@ static int tx(void *inst)
 	if (datenklo->onlcr_char) {
 		datenklo->onlcr_char = 0;
 		data = '\n';
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "ONLCR: sending NL\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "ONLCR: sending NL\n");
 		goto out;
 	}
 
@@ -414,7 +416,7 @@ again:
 
 	if (fill == (size_t)datenklo->tx_fifo_full) {
 		/* tell cuse to write again */
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Set POLLOUT!\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Set POLLOUT!\n");
 		datenklo->revents |= POLLOUT;
 		device_set_poll_events(datenklo->device, datenklo->revents);
 	}
@@ -424,12 +426,12 @@ again:
 			datenklo->auto_rts_on = 0;
 
 		if (datenklo->tcsetsw) {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Transmission finished, applying termios now.\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Transmission finished, applying termios now.\n");
 			memcpy(&datenklo->termios, &datenklo->tcsetsw_termios, sizeof(datenklo->termios));
 			if (datenklo->tcsetsw == 2) {
 				flush_rx(datenklo);
 				if ((datenklo->revents & POLLIN)) {
-					PDEBUG(DDATENKLO, DEBUG_DEBUG, "Reset POLLIN (flushed)\n");
+					LOGP(DDATENKLO, LOGL_DEBUG, "Reset POLLIN (flushed)\n");
 					datenklo->revents &= ~POLLIN;
 					device_set_poll_events(datenklo->device, datenklo->revents);
 				}
@@ -450,26 +452,26 @@ again:
 	/* process output features */
 	if (datenklo->opost) {
 		if (datenklo->olcuc) {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "OLCUC: 0x%02x -> 0x%02x\n", data, toupper(data));
+			LOGP(DDATENKLO, LOGL_DEBUG, "OLCUC: 0x%02x -> 0x%02x\n", data, toupper(data));
 			data = toupper(data);
 		}
 		if (datenklo->onlret && data == '\r') {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "ONLRET: ignore CR\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "ONLRET: ignore CR\n");
 			goto again;
 		}
 		if (datenklo->ocrnl && data == '\r') {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "OCRNL: CR -> NL\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "OCRNL: CR -> NL\n");
 			data = '\n';
 		}
 		if (datenklo->onlcr && data == '\n') {
 			datenklo->onlcr_char = 1;
 			data = '\r';
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "ONLCR: sending CR\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "ONLCR: sending CR\n");
 		}
 	}
 
 out:
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Transmitting byte 0x%02x to UART.\n", data);
+	LOGP(DDATENKLO, LOGL_DEBUG, "Transmitting byte 0x%02x to UART.\n", data);
 
 	return data;
 }
@@ -480,35 +482,35 @@ static void rx(void *inst, int data, uint32_t __attribute__((unused)) flags)
 	datenklo_t *datenklo = (datenklo_t *)inst;
 	size_t space;
 
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Received byte 0x%02x ('%c') from UART.\n", data, (data >= 32 && data <= 126) ? data : '.');
+	LOGP(DDATENKLO, LOGL_DEBUG, "Received byte 0x%02x ('%c') from UART.\n", data, (data >= 32 && data <= 126) ? data : '.');
 
 	/* process input features */
 	if (datenklo->ignbrk && (flags & UART_BREAK)) {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "IGNBRK: ignore BREAK\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "IGNBRK: ignore BREAK\n");
 		return;
 	}
 	if (datenklo->istrip && (data & 0x80)) {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "ISTRIP: 0x%02x -> 0x%02x\n", data, data & 0x7f);
+		LOGP(DDATENKLO, LOGL_DEBUG, "ISTRIP: 0x%02x -> 0x%02x\n", data, data & 0x7f);
 		data &= 0x7f;
 	}
 	if (datenklo->inlcr && data == '\n') {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "INLCR: NL -> CR\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "INLCR: NL -> CR\n");
 		data = '\r';
 	}
 	if (datenklo->igncr && data == '\r') {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "IGNCR: ignore CR\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "IGNCR: ignore CR\n");
 		return;
 	}
 	if (datenklo->icrnl && data == '\r') {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "ICRNL: CR -> NL\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "ICRNL: CR -> NL\n");
 		data = '\n';
 	}
 	if (datenklo->iuclc) {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "IUCLC: 0x%02x -> 0x%02x\n", data, tolower(data));
+		LOGP(DDATENKLO, LOGL_DEBUG, "IUCLC: 0x%02x -> 0x%02x\n", data, tolower(data));
 		data = tolower(data);
 	}
 	if (datenklo->echo) {
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "ECHO: write to output\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "ECHO: write to output\n");
 		space = (datenklo->tx_fifo_out - datenklo->tx_fifo_in - 1 + datenklo->tx_fifo_size) % datenklo->tx_fifo_size;
 		if (space) {
 			datenklo->tx_fifo[datenklo->tx_fifo_in++] = data;
@@ -519,7 +521,7 @@ static void rx(void *inst, int data, uint32_t __attribute__((unused)) flags)
 	/* empty buffer gets data */
 	if (datenklo->rx_fifo_out == datenklo->rx_fifo_in) {
 		/* tell cuse to read again */
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Set POLLIN!\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Set POLLIN!\n");
 		datenklo->revents |= POLLIN;
 		device_set_poll_events(datenklo->device, datenklo->revents);
 	}
@@ -528,13 +530,13 @@ static void rx(void *inst, int data, uint32_t __attribute__((unused)) flags)
 
 	if (!space) {
 		err_overflow:
-		PDEBUG(DDATENKLO, DEBUG_NOTICE, "RX buffer overflow, dropping!\n");
+		LOGP(DDATENKLO, LOGL_NOTICE, "RX buffer overflow, dropping!\n");
 		return;
 	}
 
 	if (datenklo->parmrk) {
 		if ((flags & (UART_BREAK | UART_PARITY_ERROR))) {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "PARMRK: 0x%02x -> 0xff,0x00,0x%02x\n", data, data);
+			LOGP(DDATENKLO, LOGL_DEBUG, "PARMRK: 0x%02x -> 0xff,0x00,0x%02x\n", data, data);
 			if (space < 3)
 				goto err_overflow;
 			datenklo->rx_fifo[datenklo->rx_fifo_in++] = 0xff;
@@ -544,7 +546,7 @@ static void rx(void *inst, int data, uint32_t __attribute__((unused)) flags)
 			datenklo->rx_fifo_in %= datenklo->rx_fifo_size;
 			space--;
 		} else if (data == 0xff) {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "PARMRK: 0xff -> 0xff,0xff\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "PARMRK: 0xff -> 0xff,0xff\n");
 			if (space < 2)
 				goto err_overflow;
 			datenklo->rx_fifo[datenklo->rx_fifo_in++] = 0xff;
@@ -567,18 +569,18 @@ static void set_lines(datenklo_t *datenklo, int new)
 	int old = datenklo->lines;
 
 	if (!(old & TIOCM_DTR) && (new & TIOCM_DTR)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal turns DTR on\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal turns DTR on\n");
 		flush_tx(datenklo);
 		flush_rx(datenklo);
 		am791x_dtr(&datenklo->am791x, 1);
 	}
 	if ((old & TIOCM_DTR) && !(new & TIOCM_DTR)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal turns DTR off\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal turns DTR off\n");
 		am791x_dtr(&datenklo->am791x, 0);
 	}
 
 	if (!(old & TIOCM_RTS) && (new & TIOCM_RTS)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal turns RTS on\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal turns RTS on\n");
 		if (datenklo->auto_rts)
 			new |= TIOCM_CTS | TIOCM_CD;
 		else {
@@ -589,7 +591,7 @@ static void set_lines(datenklo_t *datenklo, int new)
 		}
 	}
 	if ((old & TIOCM_RTS) && !(new & TIOCM_RTS)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal turns RTS off\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal turns RTS off\n");
 		if (datenklo->auto_rts)
 			new &= ~(TIOCM_CTS | TIOCM_CD);
 		else {
@@ -609,7 +611,7 @@ static void process_auto_rts(datenklo_t *datenklo)
 	if (!datenklo->auto_rts)
 		return;
 	if (datenklo->auto_rts_on && !datenklo->auto_rts_rts && !datenklo->auto_rts_cd) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Automatically raising RTS.\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Automatically raising RTS.\n");
 		datenklo->auto_rts_rts = 1;
 		if (!datenklo->tx_back)
 			am791x_rts(&datenklo->am791x, 1);
@@ -617,7 +619,7 @@ static void process_auto_rts(datenklo_t *datenklo)
 			am791x_brts(&datenklo->am791x, 1);
 	}
 	if (!datenklo->auto_rts_on && datenklo->auto_rts_rts) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Automatically dropping RTS.\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Automatically dropping RTS.\n");
 		datenklo->auto_rts_rts = 0;
 		if (!datenklo->tx_back)
 			am791x_rts(&datenklo->am791x, 0);
@@ -634,7 +636,7 @@ static ssize_t dk_ioctl_get(void *inst, int cmd, void *buf, size_t out_bufsz)
 	ssize_t rc = 0;
 
 #ifdef HEAVY_DEBUG
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Device has been read for ioctl (cmd = %d, size = %zu).\n", cmd, out_bufsz);
+	LOGP(DDATENKLO, LOGL_DEBUG, "Device has been read for ioctl (cmd = %d, size = %zu).\n", cmd, out_bufsz);
 #endif
 
 	switch (cmd) {
@@ -643,7 +645,7 @@ static ssize_t dk_ioctl_get(void *inst, int cmd, void *buf, size_t out_bufsz)
 		if (!out_bufsz)
 			break;
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal requests termios.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal requests termios.\n");
 #endif
 		memcpy(buf, &datenklo->termios, rc);
 		break;
@@ -652,7 +654,7 @@ static ssize_t dk_ioctl_get(void *inst, int cmd, void *buf, size_t out_bufsz)
 		if (!out_bufsz)
 			break;
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal requests line states.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal requests line states.\n");
 #endif
 		status = datenklo->lines | TIOCM_LE | TIOCM_DSR;
 		memcpy(buf, &status, rc);
@@ -662,7 +664,7 @@ static ssize_t dk_ioctl_get(void *inst, int cmd, void *buf, size_t out_bufsz)
 		if (!out_bufsz)
 			break;
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal requests window size.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal requests window size.\n");
 #endif
 		struct winsize *winsize = (struct winsize *)buf;
 		winsize->ws_row = 25;
@@ -677,7 +679,7 @@ static ssize_t dk_ioctl_get(void *inst, int cmd, void *buf, size_t out_bufsz)
 		status = (datenklo->rx_fifo_in - datenklo->rx_fifo_out + datenklo->rx_fifo_size) % datenklo->rx_fifo_size;
 		memcpy(buf, &status, rc);
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal requests RX buffer fill states.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal requests RX buffer fill states.\n");
 #endif
 		break;
 	case TIOCOUTQ:
@@ -685,7 +687,7 @@ static ssize_t dk_ioctl_get(void *inst, int cmd, void *buf, size_t out_bufsz)
 		if (!out_bufsz)
 			break;
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal requests TX buffer fill states.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal requests TX buffer fill states.\n");
 #endif
 		status = (datenklo->tx_fifo_in - datenklo->tx_fifo_out + datenklo->tx_fifo_size) % datenklo->tx_fifo_size;
 		memcpy(buf, &status, rc);
@@ -786,15 +788,15 @@ static void set_termios(datenklo_t *datenklo, const void *buf)
 	new_echo = !!(datenklo->termios.c_lflag & ECHO);
 
 	if (old_baud != new_baud && (!datenklo->force_tx_baud || !datenklo->force_rx_baud)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal changes baud rate to %.1f Baud.\n", new_baud);
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal changes baud rate to %.1f Baud.\n", new_baud);
 		if ((datenklo->lines & TIOCM_DTR) && !new_baud) {
-			PDEBUG(DDATENKLO, DEBUG_INFO, "Baudrate is set to 0, we drop DTR\n");
+			LOGP(DDATENKLO, LOGL_INFO, "Baudrate is set to 0, we drop DTR\n");
 			am791x_dtr(&datenklo->am791x, 0);
 		}
 		datenklo->baudrate = new_baud;
 		am791x_mc(&datenklo->am791x, datenklo->mc, datenklo->samplerate, tx_baud_rate(datenklo), rx_baud_rate(datenklo));
 		if ((datenklo->lines & TIOCM_DTR) && !old_baud) {
-			PDEBUG(DDATENKLO, DEBUG_INFO, "Baudrate is set from 0, we raise DTR\n");
+			LOGP(DDATENKLO, LOGL_INFO, "Baudrate is set from 0, we raise DTR\n");
 			am791x_dtr(&datenklo->am791x, 1);
 		}
 	}
@@ -802,10 +804,10 @@ static void set_termios(datenklo_t *datenklo, const void *buf)
 	if (old_databits != new_databits
 	 || old_parity != new_parity
 	 || old_stopbits != new_stopbits) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal changes serial mode to %d%c%d.\n", cflag2databits(datenklo->termios.c_cflag), parity2char(cflag2parity(datenklo->termios.c_cflag)), cflag2stopbits(datenklo->termios.c_cflag));
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal changes serial mode to %d%c%d.\n", cflag2databits(datenklo->termios.c_cflag), parity2char(cflag2parity(datenklo->termios.c_cflag)), cflag2stopbits(datenklo->termios.c_cflag));
 		rc = uart_init(&datenklo->uart, datenklo, cflag2databits(datenklo->termios.c_cflag), cflag2parity(datenklo->termios.c_cflag), cflag2stopbits(datenklo->termios.c_cflag), tx, rx);
 		if (rc < 0)
-			PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to initialize UART.\n");
+			LOGP(DDATENKLO, LOGL_ERROR, "Failed to initialize UART.\n");
 	}
 
 	if (old_stopbits != new_stopbits
@@ -835,8 +837,8 @@ static void set_termios(datenklo_t *datenklo, const void *buf)
 		datenklo->onlret = new_onlret;
 		datenklo->olcuc = new_olcuc;
 		datenklo->echo = new_echo;
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal sets serial flags:\n");
-		PDEBUG(DDATENKLO, DEBUG_INFO, "%cignbrk %cparmrk %cistrip %cinlcr %cigncr %cicrnl %ciuclc %copost %conlcr %cocrnl %conlret %colcuc %cecho\n",
+		LOGP(DDATENKLO, LOGL_INFO, "Terminal sets serial flags:\n");
+		LOGP(DDATENKLO, LOGL_INFO, "%cignbrk %cparmrk %cistrip %cinlcr %cigncr %cicrnl %ciuclc %copost %conlcr %cocrnl %conlret %colcuc %cecho\n",
 			(datenklo->ignbrk) ? '+' : '-',
 			(datenklo->parmrk) ? '+' : '-',
 			(datenklo->istrip) ? '+' : '-',
@@ -862,7 +864,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 	size_t space;
 
 #ifdef HEAVY_DEBUG
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Device has been written for ioctl (cmd = %d, size = %zu).\n", cmd, in_bufsz);
+	LOGP(DDATENKLO, LOGL_DEBUG, "Device has been written for ioctl (cmd = %d, size = %zu).\n", cmd, in_bufsz);
 #endif
 
 	switch (cmd) {
@@ -870,7 +872,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		rc = sizeof(datenklo->termios);
 		if (!in_bufsz)
 			break;
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal sets termios now.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal sets termios now.\n");
 		set_termios(datenklo, buf);
 		break;
 	case TCSETSW:
@@ -878,9 +880,9 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		rc = sizeof(datenklo->termios);
 		if (!in_bufsz)
 			break;
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal sets termios after draining output buffer.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal sets termios after draining output buffer.\n");
 		if (1 || datenklo->tx_fifo_out == datenklo->tx_fifo_in) {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Output buffer empty, applying termios now.\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Output buffer empty, applying termios now.\n");
 			set_termios(datenklo, buf);
 			break;
 		}
@@ -895,12 +897,12 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		if (!in_bufsz)
 			break;
 		memcpy(&status, buf, rc);
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal flushes buffer (status = %d).\n", status);
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal flushes buffer (status = %d).\n", status);
 		if (status == TCIOFLUSH || status == TCOFLUSH) {
 			flush_tx(datenklo);
 			if (!(datenklo->revents & POLLOUT)) {
 				/* tell cuse to write again */
-				PDEBUG(DDATENKLO, DEBUG_DEBUG, "Set POLLOUT (flushed)\n");
+				LOGP(DDATENKLO, LOGL_DEBUG, "Set POLLOUT (flushed)\n");
 				datenklo->revents |= POLLOUT;
 				device_set_poll_events(datenklo->device, datenklo->revents);
 			}
@@ -908,7 +910,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		if (status == TCIOFLUSH || status == TCIFLUSH) {
 			flush_rx(datenklo);
 			if ((datenklo->revents & POLLIN)) {
-				PDEBUG(DDATENKLO, DEBUG_DEBUG, "Reset POLLIN (flushed)\n");
+				LOGP(DDATENKLO, LOGL_DEBUG, "Reset POLLIN (flushed)\n");
 				datenklo->revents &= ~POLLIN;
 				device_set_poll_events(datenklo->device, datenklo->revents);
 			}
@@ -916,7 +918,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		break;
 	case TCSBRK:
 		rc = 0;
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal sends break\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal sends break\n");
 		datenklo->break_bits = tx_baud_rate(datenklo) * 3 / 10;
 		break;
 	case TCSBRKP:
@@ -924,7 +926,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		if (!in_bufsz)
 			break;
 		memcpy(&status, buf, rc);
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal sends break (duration = %d).\n", status);
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal sends break (duration = %d).\n", status);
 		if (status == 0)
 			status = 3;
 		if (status > 30)
@@ -933,12 +935,12 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		break;
 	case TIOCSBRK:
 		rc = 0;
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns break on\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal turns break on\n");
 		datenklo->break_on = 1;
 		break;
 	case TIOCCBRK:
 		rc = 0;
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns break off\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal turns break off\n");
 		datenklo->break_on = 0;
 		break;
 	case TIOCMBIS:
@@ -946,7 +948,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		if (!in_bufsz)
 			break;
 		memcpy(&status, buf, rc);
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal sets line status (0x%x).\n", status);
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal sets line status (0x%x).\n", status);
 		status = datenklo->lines | status;
 		set_lines(datenklo, status);
 		break;
@@ -955,7 +957,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		if (!in_bufsz)
 			break;
 		memcpy(&status, buf, rc);
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal clears line status (0x%x).\n", status);
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal clears line status (0x%x).\n", status);
 		status = datenklo->lines & ~status;
 		set_lines(datenklo, status);
 		break;
@@ -964,30 +966,30 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		if (!in_bufsz)
 			break;
 		memcpy(&status, buf, rc);
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal specifies line status (0x%x).\n", status);
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal specifies line status (0x%x).\n", status);
 		set_lines(datenklo, status);
 		break;
 	case TIOCGSID:
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "TIOGSID -> ENOTTY\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "TIOGSID -> ENOTTY\n");
 		rc = -ENOTTY;
 		break;
 	case TIOCGPGRP:
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "TIOCGPGRP -> ENOTTY\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "TIOCGPGRP -> ENOTTY\n");
 		rc = -ENOTTY;
 		break;
 	case TIOCSCTTY:
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "TIOCSCTTY -> ENOTTY\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "TIOCSCTTY -> ENOTTY\n");
 		rc = -ENOTTY;
 		break;
 	case TIOCSPGRP:
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "TIOCSPGRP -> ENOTTY\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "TIOCSPGRP -> ENOTTY\n");
 		rc = -ENOTTY;
 		break;
 	case TIOCSWINSZ:
 		rc = sizeof(struct winsize);
 		if (!in_bufsz)
 			break;
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal sets window size.\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Terminal sets window size.\n");
 		break;
 	case TCXONC:
 		rc = sizeof(status);
@@ -996,15 +998,15 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 		memcpy(&status, buf, rc);
 		switch (status) {
 		case TCOOFF:
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns off output.\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Terminal turns off output.\n");
 			datenklo->output_off = 1;
 			break;
 		case TCOON:
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns on output.\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Terminal turns on output.\n");
 			datenklo->output_off = 0;
 			break;
 		case TCIOFF:
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns off input.\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Terminal turns off input.\n");
 			space = (datenklo->rx_fifo_out - datenklo->rx_fifo_in - 1 + datenklo->rx_fifo_size) % datenklo->rx_fifo_size;
 			if (space < 1)
 				break;
@@ -1012,7 +1014,7 @@ static ssize_t dk_ioctl_set(void *inst, int cmd, const void *buf, size_t in_bufs
 			datenklo->rx_fifo_in %= datenklo->rx_fifo_size;
 			break;
 		case TCION:
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Terminal turns on input.\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Terminal turns on input.\n");
 			space = (datenklo->rx_fifo_out - datenklo->rx_fifo_in - 1 + datenklo->rx_fifo_size) % datenklo->rx_fifo_size;
 			if (space < 1)
 				break;
@@ -1034,12 +1036,12 @@ static int dk_open(void *inst, int flags)
 	datenklo_t *datenklo = (datenklo_t *)inst;
 
 	if (datenklo->open_count) {
-		PDEBUG(DDATENKLO, DEBUG_NOTICE, "Device is busy.\n");
+		LOGP(DDATENKLO, LOGL_NOTICE, "Device is busy.\n");
 		return -EBUSY;
 	}
 	datenklo->open_count++;
 	datenklo->flags = flags;
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Device has been opened.\n");
+	LOGP(DDATENKLO, LOGL_INFO, "Device has been opened.\n");
 	int status = datenklo->lines | TIOCM_DTR | TIOCM_RTS;
 	set_lines(datenklo, status);
 
@@ -1051,7 +1053,7 @@ static void dk_close(void *inst)
 {
 	datenklo_t *datenklo = (datenklo_t *)inst;
 
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Device has been closed.\n");
+	LOGP(DDATENKLO, LOGL_INFO, "Device has been closed.\n");
 	datenklo->open_count--;
 	int status = datenklo->lines & ~(TIOCM_DTR | TIOCM_RTS);
 	set_lines(datenklo, status);
@@ -1071,7 +1073,7 @@ static void debug_data(const char *buf, int count)
 			count--;
 		}
 		text[i] = '\0';
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "  \"%s\"\n", text);
+		LOGP(DDATENKLO, LOGL_DEBUG, "  \"%s\"\n", text);
 	}
 }
 
@@ -1091,7 +1093,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 	if (vmin && vtime) {
 		/* first: start timer */
 		if (!datenklo->vtimeout)
-			timer_start(&datenklo->vtimer, (double)vtime * 0.1);
+			osmo_timer_schedule(&datenklo->vtimer, vtime/10,(vtime % 10) * 100000);
 		/* no data: block (in blocking IO) */
 		if (fill == 0) {
 			/* special value to tell device there is no data right now, we have to block */
@@ -1104,7 +1106,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 		}
 		/* enough data or timeout or nonblocking IO: stop timer and return what we have */
 		datenklo->vtimeout = 0;
-		timer_stop(&datenklo->vtimer);
+		osmo_timer_del(&datenklo->vtimer);
 	}
 	/* both MIN and TIME are zero */
 	if (!vmin && !vtime) {
@@ -1117,7 +1119,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 	if (!vmin && vtime) {
 		/* first: start timer */
 		if (!datenklo->vtimeout)
-			timer_start(&datenklo->vtimer, (double)vtime * 0.1);
+			osmo_timer_schedule(&datenklo->vtimer, vtime/10,(vtime % 10) * 100000);
 		if (fill == 0) {
 			/* no data and no timeout: block (in blocking IO) */
 			if (!datenklo->vtimeout) {
@@ -1130,7 +1132,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 		}
 		/* data: stop timer and return what we have */
 		datenklo->vtimeout = 0;
-		timer_stop(&datenklo->vtimer);
+		osmo_timer_del(&datenklo->vtimer);
 	}
 	/* MIN is nonzero, TIME is zero */
 	if (vmin && !vtime) {
@@ -1142,7 +1144,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 		/* enough data in buffer: return what we have */
 	}
 
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Device has been read from. (fill = %zu)\n", fill);
+	LOGP(DDATENKLO, LOGL_DEBUG, "Device has been read from. (fill = %zu)\n", fill);
 
 	/* get data from fifo */
 	count = 0;
@@ -1160,7 +1162,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 	if (!fill) {
 		/* tell cuse not to read anymore */
 		if ((datenklo->revents & POLLIN)) {
-			PDEBUG(DDATENKLO, DEBUG_DEBUG, "Reset POLLIN (now empty)!\n");
+			LOGP(DDATENKLO, LOGL_DEBUG, "Reset POLLIN (now empty)!\n");
 			datenklo->revents &= ~POLLIN;
 			device_set_poll_events(datenklo->device, datenklo->revents);
 		}
@@ -1177,17 +1179,17 @@ static ssize_t dk_write(void *inst, const char *buf, size_t size, int __attribut
 	size_t i;
 
 	if (!(datenklo->lines & TIOCM_DTR)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Dropping data, DTR is off!\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Dropping data, DTR is off!\n");
 		return -EIO;
 	}
 
 	if (!(datenklo->lines & TIOCM_RTS)) {
-		PDEBUG(DDATENKLO, DEBUG_INFO, "Dropping data, RTS is off!\n");
+		LOGP(DDATENKLO, LOGL_INFO, "Dropping data, RTS is off!\n");
 		return -EIO;
 	}
 
 	if (size > (size_t)datenklo->tx_fifo_size - 1) {
-		PDEBUG(DDATENKLO, DEBUG_NOTICE, "Device sends us too many data. (size = %zu)\n", size);
+		LOGP(DDATENKLO, LOGL_NOTICE, "Device sends us too many data. (size = %zu)\n", size);
 		return -EIO;
 	}
 
@@ -1199,7 +1201,7 @@ static ssize_t dk_write(void *inst, const char *buf, size_t size, int __attribut
 		return -EAGAIN;
 	}
 
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Device has been written to. (space = %zu)\n", space);
+	LOGP(DDATENKLO, LOGL_DEBUG, "Device has been written to. (space = %zu)\n", space);
 	debug_data(buf, size);
 
 	if (datenklo->auto_rts)
@@ -1215,7 +1217,7 @@ static ssize_t dk_write(void *inst, const char *buf, size_t size, int __attribut
 
 	if ((datenklo->revents & POLLOUT) && fill >= (size_t)datenklo->tx_fifo_full) {
 		/* tell cuse not to write */
-		PDEBUG(DDATENKLO, DEBUG_DEBUG, "Reset POLLOUT (buffer full)\n");
+		LOGP(DDATENKLO, LOGL_DEBUG, "Reset POLLOUT (buffer full)\n");
 		datenklo->revents &= ~POLLOUT;
 		device_set_poll_events(datenklo->device, datenklo->revents);
 	}
@@ -1227,7 +1229,7 @@ static void dk_flush_tx(void *inst)
 {
 	datenklo_t *datenklo = (datenklo_t *)inst;
 
-	PDEBUG(DDATENKLO, DEBUG_INFO, "Terminal sends interrupt while writing, flushing TX buffer\n");
+	LOGP(DDATENKLO, LOGL_INFO, "Terminal sends interrupt while writing, flushing TX buffer\n");
 	flush_tx(datenklo);
 }
 
@@ -1270,7 +1272,7 @@ static void vtime_timeout(void *data)
 void datenklo_init_global(void)
 {
 	if (pthread_mutex_init(&mutex, NULL)) {
-		PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to init mutex.\n");
+		LOGP(DDATENKLO, LOGL_ERROR, "Failed to init mutex.\n");
 		exit(0);
 	}
 }
@@ -1282,7 +1284,7 @@ int datenklo_init(datenklo_t *datenklo, const char *dev_name, enum am791x_type a
 	tcflag_t flag;
 	cc_t *cc;
 
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Creating Datenklo instance.\n");
+	LOGP(DDATENKLO, LOGL_DEBUG, "Creating Datenklo instance.\n");
 
 	memset(datenklo, 0, sizeof(*datenklo));
 
@@ -1332,7 +1334,7 @@ int datenklo_init(datenklo_t *datenklo, const char *dev_name, enum am791x_type a
 
 	datenklo->device = device_init(datenklo, dev_name, dk_open, dk_close, dk_read, dk_write, dk_ioctl_get, dk_ioctl_set, dk_flush_tx, dk_lock, dk_unlock);
 	if (!datenklo->device) {
-		PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to attach virtual device '%s' using cuse.\n", dev_name);
+		LOGP(DDATENKLO, LOGL_ERROR, "Failed to attach virtual device '%s' using cuse.\n", dev_name);
 		rc = -errno;
 		goto error;
 	}
@@ -1342,7 +1344,7 @@ int datenklo_init(datenklo_t *datenklo, const char *dev_name, enum am791x_type a
 	datenklo->baudrate = cflag2baud(datenklo->termios.c_cflag);
 	rc = am791x_init(&datenklo->am791x, datenklo, am791x_type, datenklo->mc, datenklo->samplerate, tx_baud_rate(datenklo), rx_baud_rate(datenklo), cts, bcts, cd, bcd, td, btd, rd, brd);
 	if (rc < 0) {
-		PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to initialize AM791X modem chip.\n");
+		LOGP(DDATENKLO, LOGL_ERROR, "Failed to initialize AM791X modem chip.\n");
 		goto error;
 	}
 
@@ -1352,16 +1354,16 @@ int datenklo_init(datenklo_t *datenklo, const char *dev_name, enum am791x_type a
 	datenklo->tx_fifo = calloc(datenklo->tx_fifo_size, 1);
 	datenklo->rx_fifo = calloc(datenklo->rx_fifo_size, 1);
 	if (!datenklo->tx_fifo || !datenklo->rx_fifo) {
-		PDEBUG(DDATENKLO, DEBUG_ERROR, "No mem!\n");
+		LOGP(DDATENKLO, LOGL_ERROR, "No mem!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
 
-	timer_init(&datenklo->vtimer, vtime_timeout, datenklo);
+	osmo_timer_setup(&datenklo->vtimer, vtime_timeout, datenklo);
 
 	rc = uart_init(&datenklo->uart, datenklo, cflag2databits(datenklo->termios.c_cflag), cflag2parity(datenklo->termios.c_cflag), cflag2stopbits(datenklo->termios.c_cflag), tx, rx);
 	if (rc < 0) {
-		PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to initialize UART.\n");
+		LOGP(DDATENKLO, LOGL_ERROR, "Failed to initialize UART.\n");
 		goto error;
 	}
 
@@ -1397,7 +1399,7 @@ int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int buffer, 
 	/* init sound */
 	datenklo->audio = sound_open(audiodev, NULL, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->buffer_size, 1.0, 1.0, 4000.0, 2.0);
 	if (!datenklo->audio) {
-		PDEBUG(DDATENKLO, DEBUG_ERROR, "No sound device!\n");
+		LOGP(DDATENKLO, LOGL_ERROR, "No sound device!\n");
 		return -EIO;
 	}
 #endif
@@ -1405,28 +1407,28 @@ int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int buffer, 
 	if (write_rx_wave) {
 		rc = wave_create_record(&datenklo->wave_rx_rec, write_rx_wave, datenklo->samplerate, channels, 1.0);
 		if (rc < 0) {
-			PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			LOGP(DDATENKLO, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 			return rc;
 		}
 	}
 	if (write_tx_wave) {
 		rc = wave_create_record(&datenklo->wave_tx_rec, write_tx_wave, datenklo->samplerate, channels, 1.0);
 		if (rc < 0) {
-			PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			LOGP(DDATENKLO, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 			return rc;
 		}
 	}
 	if (read_rx_wave) {
 		rc = wave_create_playback(&datenklo->wave_rx_play, read_rx_wave, &datenklo->samplerate, &channels, 1.0);
 		if (rc < 0) {
-			PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			LOGP(DDATENKLO, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 			return rc;
 		}
 	}
 	if (read_tx_wave) {
 		rc = wave_create_playback(&datenklo->wave_tx_play, read_tx_wave, &datenklo->samplerate, &channels, 1.0);
 		if (rc < 0) {
-			PDEBUG(DDATENKLO, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+			LOGP(DDATENKLO, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 			return rc;
 		}
 	}
@@ -1521,14 +1523,14 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 			process_auto_rts(datenklo->slave);
 
 		/* process timers */
-		process_timer();
+		osmo_select_main(1);
 
 #ifdef HAVE_ALSA
 		count = sound_read(datenklo->audio, samples, datenklo->buffer_size, num_chan, rf_level_db);
 		if (count < 0) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Failed to read RX data from audio device (rc = %d)\n", count);
+			LOGP(DDSP, LOGL_ERROR, "Failed to read RX data from audio device (rc = %d)\n", count);
 			if (count == -EPIPE) {
-				PDEBUG(DDATENKLO, DEBUG_ERROR, "Trying to recover!\n");
+				LOGP(DDATENKLO, LOGL_ERROR, "Trying to recover!\n");
 				continue;
 			}
 			break;
@@ -1561,9 +1563,9 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 		count = samplerate / 1000;
 #endif
 		if (count < 0) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
+			LOGP(DDSP, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 			if (count == -EPIPE) {
-				PDEBUG(DDATENKLO, DEBUG_ERROR, "Trying to recover!\n");
+				LOGP(DDATENKLO, LOGL_ERROR, "Trying to recover!\n");
 				continue;
 			}
 			break;
@@ -1611,9 +1613,9 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 		/* write audio */
 		rc = sound_write(datenklo->audio, samples, power, count, NULL, NULL, num_chan);
 		if (rc < 0) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
+			LOGP(DDSP, LOGL_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			if (rc == -EPIPE) {
-				PDEBUG(DDATENKLO, DEBUG_ERROR, "Trying to recover!\n");
+				LOGP(DDATENKLO, LOGL_ERROR, "Trying to recover!\n");
 				continue;
 			}
 			break;
@@ -1625,8 +1627,6 @@ next_char:
 		switch (c) {
 		case 3:
 			/* quit */
-			if (clear_console_text)
-				clear_console_text();
 			printf("CTRL+c received, quitting!\n");
 			quit = 1;
 			goto next_char;
@@ -1655,10 +1655,6 @@ next_char:
 		pthread_mutex_lock(&mutex);
 	}
 
-	/* get rid of last entry */
-	if (clear_console_text)
-		clear_console_text();
-
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);
 
@@ -1674,9 +1670,9 @@ next_char:
 /* cleanup function */
 void datenklo_exit(datenklo_t *datenklo)
 {
-	PDEBUG(DDATENKLO, DEBUG_DEBUG, "Destroying Datenklo instance.\n");
+	LOGP(DDATENKLO, LOGL_DEBUG, "Destroying Datenklo instance.\n");
 
-	timer_exit(&datenklo->vtimer);
+	osmo_timer_del(&datenklo->vtimer);
 
 	/* exit device */
 	if (datenklo->device)

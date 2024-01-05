@@ -75,11 +75,13 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libsample/sample.h"
 #include "../libfsk/fsk.h"
 #include "am791x.h"
+
+#define FLOAT_TO_TIMEOUT(f) floor(f), ((f) - floor(f)) * 1000000
 
 #define db2level(db)	pow(10, (double)(db) / 20.0)
 #define level2db(level)	(20 * log10(level))
@@ -373,19 +375,19 @@ static int fsk_send_bit(void *inst)
 	/* main channel returns TD */
 	if (!am791x->block_td) {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDSP, DEBUG_DEBUG, "Modulating bit '%d' for MAIN channel\n", bit);
+		LOGP(DDSP, LOGL_DEBUG, "Modulating bit '%d' for MAIN channel\n", bit);
 #endif
 		return bit;
 	}
 	/* back channel returns BTD */
 	if (!am791x->block_btd) {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDSP, DEBUG_DEBUG, "Modulating bit '%d' for BACK channel\n", bbit);
+		LOGP(DDSP, LOGL_DEBUG, "Modulating bit '%d' for BACK channel\n", bbit);
 #endif
 		return bbit;
 	}
 #ifdef HEAVY_DEBUG
-	PDEBUG(DDSP, DEBUG_DEBUG, "Modulating bit '1', because TD & BTD is ignored\n");
+	LOGP(DDSP, LOGL_DEBUG, "Modulating bit '1', because TD & BTD is ignored\n");
 #endif
 	return 1;
 }
@@ -399,7 +401,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	int *block, *cd;
 
 #ifdef HEAVY_DEBUG
-	PDEBUG(DDSP, DEBUG_DEBUG, "Demodulated bit '%d' (level = %.0f dBm, quality = %%%.0f)\n", bit, level2db(level), quality * 100.0);
+	LOGP(DDSP, LOGL_DEBUG, "Demodulated bit '%d' (level = %.0f dBm, quality = %%%.0f)\n", bit, level2db(level), quality * 100.0);
 #endif
 
 	if (!am791x->rx_back_channel) {
@@ -416,12 +418,12 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 		handle_rx_state(am791x);
 	} else
 	if (!(*block) && !(*cd) && level > am791x->cd_on && quality >= RX_QUALITY) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "Good quality (level = %.0f dBm, quality = %%%.0f)\n", level2db(level), quality * 100.0);
+		LOGP(DDSP, LOGL_DEBUG, "Good quality (level = %.0f dBm, quality = %%%.0f)\n", level2db(level), quality * 100.0);
 		*cd = 1;
 		handle_rx_state(am791x);
 	} else
 	if (*cd && (level < am791x->cd_off || quality < RX_QUALITY)) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "Bad quality (level = %.0f dBm, quality = %%%.0f)\n", level2db(level), quality * 100.0);
+		LOGP(DDSP, LOGL_DEBUG, "Bad quality (level = %.0f dBm, quality = %%%.0f)\n", level2db(level), quality * 100.0);
 		*cd = 0;
 		handle_rx_state(am791x);
 	}
@@ -437,24 +439,24 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	/* main channel forwards bit to RD */
 	if (!am791x->block_rd) {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDSP, DEBUG_DEBUG, " -> Forwarding bit '%d' to MAIN channel\n", bit);
+		LOGP(DDSP, LOGL_DEBUG, " -> Forwarding bit '%d' to MAIN channel\n", bit);
 #endif
 		am791x->rd_cb(am791x->inst, bit, quality * 100.0, level2db(level));
 	} else {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDSP, DEBUG_DEBUG, " -> Forwarding bit '1' to MAIN channel, because RD is set to MARK\n");
+		LOGP(DDSP, LOGL_DEBUG, " -> Forwarding bit '1' to MAIN channel, because RD is set to MARK\n");
 #endif
 		am791x->rd_cb(am791x->inst, 1, NAN, NAN);
 	}
 	/* main channel forwards bit to RD */
 	if (!am791x->block_brd) {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDSP, DEBUG_DEBUG, " -> Forwarding bit '%d' to BACK channel\n", bit);
+		LOGP(DDSP, LOGL_DEBUG, " -> Forwarding bit '%d' to BACK channel\n", bit);
 #endif
 		am791x->brd_cb(am791x->inst, bit, quality * 100.0, level2db(level));
 	} else {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DDSP, DEBUG_DEBUG, " -> Forwarding bit '1' to BACK channel, because BRD is set to MARK\n");
+		LOGP(DDSP, LOGL_DEBUG, " -> Forwarding bit '1' to BACK channel, because BRD is set to MARK\n");
 #endif
 		am791x->brd_cb(am791x->inst, 1, NAN, NAN);
 	}
@@ -529,9 +531,9 @@ static void set_filters(am791x_t *am791x)
 
 	/* transmitter used */
 	if (f0_tx > 0 && am791x->f0_tx == 0) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "Setting modulator to %s channel's frequencies (F0 = %d, F1 = %d), baudrate %.0f\n", name_tx, f0_tx, f1_tx, am791x->tx_baud);
+		LOGP(DDSP, LOGL_DEBUG, "Setting modulator to %s channel's frequencies (F0 = %d, F1 = %d), baudrate %.0f\n", name_tx, f0_tx, f1_tx, am791x->tx_baud);
 		if (fsk_mod_init(&am791x->fsk_tx, am791x, fsk_send_bit, am791x->samplerate, am791x->tx_baud, (double)f0_tx, (double)f1_tx, am791x->tx_level, 0, 1) < 0)
-			PDEBUG(DDSP, DEBUG_ERROR, "FSK RX init failed!\n");
+			LOGP(DDSP, LOGL_ERROR, "FSK RX init failed!\n");
 		else {
 			am791x->f0_tx = f0_tx;
 			am791x->f1_tx = f1_tx;
@@ -548,9 +550,9 @@ static void set_filters(am791x_t *am791x)
 
 	/* receiver used */
 	if (f0_rx > 0 && am791x->f0_rx == 0) {
-		PDEBUG(DDSP, DEBUG_DEBUG, "Setting demodulator to %s channel's frequencies (F0 = %d, F1 = %d), baudrate %.0f\n", name_rx, f0_rx, f1_rx, am791x->rx_baud);
+		LOGP(DDSP, LOGL_DEBUG, "Setting demodulator to %s channel's frequencies (F0 = %d, F1 = %d), baudrate %.0f\n", name_rx, f0_rx, f1_rx, am791x->rx_baud);
 		if (fsk_demod_init(&am791x->fsk_rx, am791x, fsk_receive_bit, am791x->samplerate, am791x->rx_baud, (double)f0_rx, (double)f1_rx, BIT_ADJUST) < 0)
-			PDEBUG(DDSP, DEBUG_ERROR, "FSK RX init failed!\n");
+			LOGP(DDSP, LOGL_ERROR, "FSK RX init failed!\n");
 		else {
 			am791x->f0_rx = f0_rx;
 			am791x->f1_rx = f1_rx;
@@ -562,14 +564,14 @@ static void set_filters(am791x_t *am791x)
 static void new_tx_state(am791x_t *am791x, enum am791x_st state)
 {
 	if (am791x->tx_state != state)
-		PDEBUG(DAM791X, DEBUG_DEBUG, "Change TX state %s -> %s\n", am791x_state_names[am791x->tx_state], am791x_state_names[state]);
+		LOGP(DAM791X, LOGL_DEBUG, "Change TX state %s -> %s\n", am791x_state_names[am791x->tx_state], am791x_state_names[state]);
 	am791x->tx_state = state;
 }
 
 static void new_rx_state(am791x_t *am791x, enum am791x_st state)
 {
 	if (am791x->rx_state != state)
-		PDEBUG(DAM791X, DEBUG_DEBUG, "Change RX state %s -> %s\n", am791x_state_names[am791x->rx_state], am791x_state_names[state]);
+		LOGP(DAM791X, LOGL_DEBUG, "Change RX state %s -> %s\n", am791x_state_names[am791x->rx_state], am791x_state_names[state]);
 	am791x->rx_state = state;
 }
 
@@ -577,7 +579,7 @@ static void new_rx_state(am791x_t *am791x, enum am791x_st state)
 static void set_flag(int *flag_p, int value, const char *name)
 {
 	if (*flag_p != value) {
-		PDEBUG(DAM791X, DEBUG_DEBUG, " -> %s\n", name);
+		LOGP(DAM791X, LOGL_DEBUG, " -> %s\n", name);
 		*flag_p = value;
 	}
 }
@@ -588,7 +590,7 @@ static void set_flag(int *flag_p, int value, const char *name)
 
 static void go_main_channel_tx(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Enable transmitter on main channel\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Enable transmitter on main channel\n");
 
 	/* only block RD, if not full duplex and not 4-wire (loopback mode) */
 	if (!am791x->fullduplex && !am791x->loopback_main) {
@@ -599,7 +601,7 @@ static void go_main_channel_tx(am791x_t *am791x)
 	/* activate TD now and set CTS timer (RCON) */
 	set_flag(&am791x->block_td, 0, "TD RELEASED");
 	set_flag(&am791x->tx_silence, 0, "RESET SILENCE");
-	timer_start(&am791x->tx_timer, am791x->t_rcon);
+	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_rcon));
 	new_tx_state(am791x, AM791X_STATE_RCON);
 	set_filters(am791x);
 	/* check CD to be blocked */
@@ -613,7 +615,7 @@ static void go_main_channel_tx(am791x_t *am791x)
 
 static void rcon_release_rts(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "RTS was released\n");
+	LOGP(DAM791X, LOGL_DEBUG, "RTS was released\n");
 
 	set_flag(&am791x->block_td, 1, "TD IGNORED");
 	set_flag(&am791x->tx_silence, 1, "SET SILENCE");
@@ -629,7 +631,7 @@ static void rcon_release_rts(am791x_t *am791x)
 
 static void rcon_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Transmission started\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Transmission started\n");
 
 	new_tx_state(am791x, AM791X_STATE_DATA);
 	/* CTS on */
@@ -638,7 +640,7 @@ static void rcon_done(am791x_t *am791x)
 
 static void tx_data_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "RTS was released\n");
+	LOGP(DAM791X, LOGL_DEBUG, "RTS was released\n");
 
 	new_tx_state(am791x, AM791X_STATE_RCOFF);
 	set_flag(&am791x->block_td, 1, "TD IGNORED");
@@ -650,12 +652,12 @@ static void tx_data_done(am791x_t *am791x)
 	if (!am791x->fullduplex) {
 		set_flag(&am791x->squelch, 1, "SET SQUELCH (ON)");
 	}
-	timer_start(&am791x->tx_timer, am791x->t_rcoff);
+	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_rcoff));
 }
 
 static void rcoff_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Transmission over\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Transmission over\n");
 
 	/* CTS off */
 	am791x->cts_cb(am791x->inst, 0);
@@ -665,17 +667,17 @@ static void rcoff_done(am791x_t *am791x)
 		return;
 	}
 	if (!am791x->sto) {
-		timer_start(&am791x->tx_timer, am791x->t_sq - am791x->t_rcoff);
+		osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_sq - am791x->t_rcoff));
 		new_tx_state(am791x, AM791X_STATE_SQ_OFF);
 		return;
 	}
-	timer_start(&am791x->tx_timer, am791x->t_sto - am791x->t_rcoff);
+	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_sto - am791x->t_rcoff));
 	new_tx_state(am791x, AM791X_STATE_STO_OFF);
 }
 
 static void sq_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Squelch over\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Squelch over\n");
 
 	set_flag(&am791x->block_cd, 0, "CD RELEASED");
 	new_tx_state(am791x, AM791X_STATE_INIT);
@@ -690,16 +692,16 @@ static void sq_done(am791x_t *am791x)
 
 static void sto_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "STO over\n");
+	LOGP(DAM791X, LOGL_DEBUG, "STO over\n");
 
 	set_flag(&am791x->tx_sto, 0, "stop STO");
-	timer_start(&am791x->tx_timer, am791x->t_sq - am791x->t_sto);
+	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_sq - am791x->t_sto));
 	new_tx_state(am791x, AM791X_STATE_SQ_OFF);
 }
 
 static void go_back_channel_tx(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Enable transmitter on back channel\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Enable transmitter on back channel\n");
 
 	if (!am791x->loopback_back) {
 		set_flag(&am791x->block_brd, 1, "BRD = MARK");
@@ -709,7 +711,7 @@ static void go_back_channel_tx(am791x_t *am791x)
 	/* activate BTD now and set BCTS timer (BRCON) */
 	set_flag(&am791x->block_btd, 0, "BTD RELEASED");
 	set_flag(&am791x->tx_silence, 0, "RESET SILENCE");
-	timer_start(&am791x->tx_timer, am791x->t_brcon);
+	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_brcon));
 	new_tx_state(am791x, AM791X_STATE_BRCON);
 	set_filters(am791x);
 	/* check BCD to be blocked */
@@ -723,7 +725,7 @@ static void go_back_channel_tx(am791x_t *am791x)
 
 static void brcon_release_brts(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "BRTS was released\n");
+	LOGP(DAM791X, LOGL_DEBUG, "BRTS was released\n");
 
 	set_flag(&am791x->tx_silence, 1, "SET SILENCE");
 	new_tx_state(am791x, AM791X_STATE_INIT);
@@ -732,7 +734,7 @@ static void brcon_release_brts(am791x_t *am791x)
 
 static void brcon_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Transmission started\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Transmission started\n");
 
 	new_tx_state(am791x, AM791X_STATE_BDATA);
 	/* BCTS on */
@@ -741,16 +743,16 @@ static void brcon_done(am791x_t *am791x)
 
 static void tx_bdata_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "BRTS was released\n");
+	LOGP(DAM791X, LOGL_DEBUG, "BRTS was released\n");
 
 	set_flag(&am791x->block_btd, 1, "BTD IGNORED");
 	set_flag(&am791x->tx_silence, 1, "SET SILENCE");
-	timer_start(&am791x->tx_timer, am791x->t_brcoff);
+	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_brcoff));
 }
 
 static void brcoff_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Transmission over\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Transmission over\n");
 
 	/* BCTS off */
 	am791x->bcts_cb(am791x->inst, 0);
@@ -791,7 +793,7 @@ static void handle_tx_state(am791x_t *am791x)
 			rcon_release_rts(am791x);
 			break;
 		}
-		if (!timer_running(&am791x->tx_timer)) {
+		if (!osmo_timer_pending(&am791x->tx_timer)) {
 			rcon_done(am791x);
 			break;
 		}
@@ -803,19 +805,19 @@ static void handle_tx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_RCOFF:
-		if (!timer_running(&am791x->tx_timer)) {
+		if (!osmo_timer_pending(&am791x->tx_timer)) {
 			rcoff_done(am791x);
 			break;
 		}
 		break;
 	case AM791X_STATE_STO_OFF:
-		if (!timer_running(&am791x->tx_timer)) {
+		if (!osmo_timer_pending(&am791x->tx_timer)) {
 			sto_done(am791x);
 			break;
 		}
 		break;
 	case AM791X_STATE_SQ_OFF:
-		if (!timer_running(&am791x->tx_timer)) {
+		if (!osmo_timer_pending(&am791x->tx_timer)) {
 			sq_done(am791x);
 			break;
 		}
@@ -826,7 +828,7 @@ static void handle_tx_state(am791x_t *am791x)
 			brcon_release_brts(am791x);
 			break;
 		}
-		if (!timer_running(&am791x->tx_timer)) {
+		if (!osmo_timer_pending(&am791x->tx_timer)) {
 			brcon_done(am791x);
 			break;
 		}
@@ -838,27 +840,27 @@ static void handle_tx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_BRCOFF:
-		if (!timer_running(&am791x->tx_timer)) {
+		if (!osmo_timer_pending(&am791x->tx_timer)) {
 			brcoff_done(am791x);
 			break;
 		}
 		break;
 	default:
-		PDEBUG(DAM791X, DEBUG_ERROR, "State %s not handled!\n", am791x_state_names[am791x->rx_state]);
+		LOGP(DAM791X, LOGL_ERROR, "State %s not handled!\n", am791x_state_names[am791x->rx_state]);
 	}
 }
 
 static void go_main_channel_rx(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Enable receiver on main channel\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Enable receiver on main channel\n");
 
-	timer_start(&am791x->rx_timer, am791x->t_cdon);
+	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_cdon));
 	new_rx_state(am791x, AM791X_STATE_CDON);
 }
 
 static void cdon_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Reception started\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Reception started\n");
 
 	set_flag(&am791x->block_rd, 0, "RD RELEASED");
 	new_rx_state(am791x, AM791X_STATE_DATA);
@@ -872,23 +874,23 @@ static void cdon_done(am791x_t *am791x)
 
 static void cdon_no_cd(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier is gone\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier is gone\n");
 
-	timer_stop(&am791x->rx_timer);
+	osmo_timer_del(&am791x->rx_timer);
 	new_rx_state(am791x, AM791X_STATE_INIT);
 }
 
 static void rx_data_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier lost\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier lost\n");
 
-	timer_start(&am791x->rx_timer, am791x->t_cdoff);
+	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_cdoff));
 	new_rx_state(am791x, AM791X_STATE_CDOFF);
 }
 
 static void cdoff_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Reception finished\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Reception finished\n");
 
 	set_flag(&am791x->block_rd, 1, "RD = MARK");
 	new_rx_state(am791x, AM791X_STATE_INIT);
@@ -902,23 +904,23 @@ static void cdoff_done(am791x_t *am791x)
 
 static void cdoff_cd(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier recovered\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier recovered\n");
 
-	timer_stop(&am791x->rx_timer);
+	osmo_timer_del(&am791x->rx_timer);
 	new_rx_state(am791x, AM791X_STATE_DATA);
 }
 
 static void go_back_channel_rx(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Enable receiver on back channel\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Enable receiver on back channel\n");
 
-	timer_start(&am791x->rx_timer, am791x->t_bcdon);
+	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_bcdon));
 	new_rx_state(am791x, AM791X_STATE_BCDON);
 }
 
 static void bcdon_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier was detected\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier was detected\n");
 
 	set_flag(&am791x->block_brd, 0, "BRD RELEASED");
 	new_rx_state(am791x, AM791X_STATE_BDATA);
@@ -932,23 +934,23 @@ static void bcdon_done(am791x_t *am791x)
 
 static void bcdon_no_cd(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier is gone\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier is gone\n");
 
-	timer_stop(&am791x->rx_timer);
+	osmo_timer_del(&am791x->rx_timer);
 	new_rx_state(am791x, AM791X_STATE_INIT);
 }
 
 static void rx_bdata_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier lost\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier lost\n");
 
-	timer_start(&am791x->rx_timer, am791x->t_bcdoff);
+	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_bcdoff));
 	new_rx_state(am791x, AM791X_STATE_BCDOFF);
 }
 
 static void bcdoff_done(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Reception finished\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Reception finished\n");
 
 	if (!am791x->bell_202)
 		set_flag(&am791x->block_brd, 1, "BRD = MARK");
@@ -963,9 +965,9 @@ static void bcdoff_done(am791x_t *am791x)
 
 static void bcdoff_cd(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Carrier recovered\n");
+	LOGP(DAM791X, LOGL_DEBUG, "Carrier recovered\n");
 
-	timer_stop(&am791x->rx_timer);
+	osmo_timer_del(&am791x->rx_timer);
 	new_rx_state(am791x, AM791X_STATE_BDATA);
 }
 
@@ -992,7 +994,7 @@ static void handle_rx_state(am791x_t *am791x)
 		break;
 	/* all main channel states ... */
 	case AM791X_STATE_CDON:
-		if (!timer_running(&am791x->rx_timer)) {
+		if (!osmo_timer_pending(&am791x->rx_timer)) {
 			cdon_done(am791x);
 			break;
 		}
@@ -1008,7 +1010,7 @@ static void handle_rx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_CDOFF:
-		if (!timer_running(&am791x->rx_timer)) {
+		if (!osmo_timer_pending(&am791x->rx_timer)) {
 			cdoff_done(am791x);
 			break;
 		}
@@ -1019,7 +1021,7 @@ static void handle_rx_state(am791x_t *am791x)
 		break;
 	/* all back channel states ... */
 	case AM791X_STATE_BCDON:
-		if (!timer_running(&am791x->rx_timer)) {
+		if (!osmo_timer_pending(&am791x->rx_timer)) {
 			bcdon_done(am791x);
 			break;
 		}
@@ -1035,7 +1037,7 @@ static void handle_rx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_BCDOFF:
-		if (!timer_running(&am791x->rx_timer)) {
+		if (!osmo_timer_pending(&am791x->rx_timer)) {
 			bcdoff_done(am791x);
 			break;
 		}
@@ -1045,7 +1047,7 @@ static void handle_rx_state(am791x_t *am791x)
 		}
 		break;
 	default:
-		PDEBUG(DAM791X, DEBUG_ERROR, "State %s not handled!\n", am791x_state_names[am791x->rx_state]);
+		LOGP(DAM791X, LOGL_ERROR, "State %s not handled!\n", am791x_state_names[am791x->rx_state]);
 	}
 }
 
@@ -1086,10 +1088,10 @@ int am791x_init(am791x_t *am791x, void *inst, enum am791x_type type, uint8_t mc,
 	memset(am791x, 0, sizeof(*am791x));
 
 	/* init timers */
-	timer_init(&am791x->tx_timer, tx_timeout, am791x);
-	timer_init(&am791x->rx_timer, rx_timeout, am791x);
+	osmo_timer_setup(&am791x->tx_timer, tx_timeout, am791x);
+	osmo_timer_setup(&am791x->rx_timer, rx_timeout, am791x);
 
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Initializing instance of AM791%d:\n", type);
+	LOGP(DAM791X, LOGL_DEBUG, "Initializing instance of AM791%d:\n", type);
 
 	am791x->inst = inst;
 	am791x->type = type;
@@ -1119,13 +1121,13 @@ int am791x_init(am791x_t *am791x, void *inst, enum am791x_type type, uint8_t mc,
 /* exit routine, must be called when exit */
 void am791x_exit(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Exit instance of AM791%d:\n", am791x->type);
+	LOGP(DAM791X, LOGL_DEBUG, "Exit instance of AM791%d:\n", am791x->type);
 
 	/* bring to reset state, be sure to clean FSK processes */
 	am791x_reset(am791x);
 
-	timer_exit(&am791x->tx_timer);
-	timer_exit(&am791x->rx_timer);
+	osmo_timer_del(&am791x->tx_timer);
+	osmo_timer_del(&am791x->rx_timer);
 }
 
 /* get some default baud rate for each mode, before IOCTL sets it (if it sets it) */
@@ -1149,8 +1151,8 @@ int am791x_mc(am791x_t *am791x, uint8_t mc, int samplerate, double tx_baud, doub
 	if (!((am791x->type) ? am791x_modes[mc].sup_7911 : am791x_modes[mc].sup_7910))
 		rc = -EINVAL;
 
-	PDEBUG(DAM791X, DEBUG_INFO, "Setting mode %d: %s\n", mc, am791x_modes[mc].description);
-	PDEBUG(DAM791X, DEBUG_DEBUG, " -> Baud rate: %.1f/%.1f\n", rx_baud, tx_baud);
+	LOGP(DAM791X, LOGL_INFO, "Setting mode %d: %s\n", mc, am791x_modes[mc].description);
+	LOGP(DAM791X, LOGL_DEBUG, " -> Baud rate: %.1f/%.1f\n", rx_baud, tx_baud);
 
 	am791x->mc = mc;
 	am791x->samplerate = samplerate;
@@ -1187,10 +1189,10 @@ int am791x_mc(am791x_t *am791x, uint8_t mc, int samplerate, double tx_baud, doub
 /* reset at any time, may be called any time by upper layer */
 void am791x_reset(am791x_t *am791x)
 {
-	PDEBUG(DAM791X, DEBUG_INFO, "Reset!\n");
+	LOGP(DAM791X, LOGL_INFO, "Reset!\n");
 
-	timer_stop(&am791x->tx_timer);
-	timer_stop(&am791x->rx_timer);
+	osmo_timer_del(&am791x->tx_timer);
+	osmo_timer_del(&am791x->rx_timer);
 
 	if (am791x->f0_tx) {
 		fsk_mod_cleanup(&am791x->fsk_tx);
@@ -1228,7 +1230,7 @@ void am791x_reset(am791x_t *am791x)
 /* change input lines */
 void am791x_dtr(am791x_t *am791x, int dtr)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Terminal is%s ready!\n", (dtr) ? "" : " not");
+	LOGP(DAM791X, LOGL_DEBUG, "Terminal is%s ready!\n", (dtr) ? "" : " not");
 
 	/* set filters, if DTR becomes on */
 	if (!am791x->line_dtr && dtr) {
@@ -1242,7 +1244,7 @@ void am791x_dtr(am791x_t *am791x, int dtr)
 
 void am791x_rts(am791x_t *am791x, int rts)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Terminal %s RTS.\n", (rts) ? "sets" : "clears");
+	LOGP(DAM791X, LOGL_DEBUG, "Terminal %s RTS.\n", (rts) ? "sets" : "clears");
 
 	am791x->line_rts = rts;
 	handle_state(am791x);
@@ -1250,7 +1252,7 @@ void am791x_rts(am791x_t *am791x, int rts)
 
 void am791x_brts(am791x_t *am791x, int rts)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Terminal %s BRTS.\n", (rts) ? "sets" : "clears");
+	LOGP(DAM791X, LOGL_DEBUG, "Terminal %s BRTS.\n", (rts) ? "sets" : "clears");
 
 	am791x->line_brts = rts;
 	handle_state(am791x);
@@ -1258,7 +1260,7 @@ void am791x_brts(am791x_t *am791x, int rts)
 
 void am791x_ring(am791x_t *am791x, int ring)
 {
-	PDEBUG(DAM791X, DEBUG_DEBUG, "Terminal %s RING.\n", (ring) ? "sets" : "clears");
+	LOGP(DAM791X, LOGL_DEBUG, "Terminal %s RING.\n", (ring) ? "sets" : "clears");
 
 	am791x->line_ring = ring;
 	handle_state(am791x);

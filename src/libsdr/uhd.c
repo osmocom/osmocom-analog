@@ -25,7 +25,7 @@
 #include <uhd.h>
 #include <uhd/usrp/usrp.h>
 #include "uhd.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 
 extern int sdr_rx_overflow;
@@ -56,15 +56,15 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 	samplerate = rate;
 	tx_timestamps = timestamps;
 
-	PDEBUG(DUHD, DEBUG_INFO, "Using device args \"%s\"\n", _device_args);
-	PDEBUG(DUHD, DEBUG_INFO, "Using stream args \"%s\"\n", _stream_args);
-	PDEBUG(DUHD, DEBUG_INFO, "Using tune args \"%s\"\n", _tune_args);
+	LOGP(DUHD, LOGL_INFO, "Using device args \"%s\"\n", _device_args);
+	LOGP(DUHD, LOGL_INFO, "Using stream args \"%s\"\n", _stream_args);
+	LOGP(DUHD, LOGL_INFO, "Using tune args \"%s\"\n", _tune_args);
 
 	/* create USRP */
-	PDEBUG(DUHD, DEBUG_INFO, "Creating USRP with args \"%s\"...\n", _device_args);
+	LOGP(DUHD, LOGL_INFO, "Creating USRP with args \"%s\"...\n", _device_args);
 	error = uhd_usrp_make(&usrp, _device_args);
 	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to create USRP\n");
+		LOGP(DUHD, LOGL_ERROR, "Failed to create USRP\n");
 		uhd_close();
 		return -EIO;
 	}
@@ -78,13 +78,13 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 			error = uhd_string_vector_make(&clocks);
 			if (error) {
 				clock_vector_error:
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to handle UHD vector, please fix!\n");
+				LOGP(DUHD, LOGL_ERROR, "Failed to handle UHD vector, please fix!\n");
 				uhd_close();
 				return -EIO;
 			}
 			error = uhd_usrp_get_clock_sources(usrp, 0, &clocks);
 			if (error) {
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to request list of clock sources!\n");
+				LOGP(DUHD, LOGL_ERROR, "Failed to request list of clock sources!\n");
 				uhd_close();
 				return -EIO;
 			}
@@ -95,33 +95,33 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 				error = uhd_string_vector_at(clocks, i, got_clock, sizeof(got_clock));
 				if (error)
 					goto clock_vector_error;
-				PDEBUG(DUHD, DEBUG_NOTICE, "Clock source: '%s'\n", got_clock);
+				LOGP(DUHD, LOGL_NOTICE, "Clock source: '%s'\n", got_clock);
 			}
 			uhd_string_vector_free(&clocks);
 			error = uhd_usrp_get_clock_source(usrp, 0, got_clock, sizeof(got_clock));
 			if (error) {
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to get clock source\n");
+				LOGP(DUHD, LOGL_ERROR, "Failed to get clock source\n");
 				uhd_close();
 				return -EINVAL;
 			}
-			PDEBUG(DUHD, DEBUG_NOTICE, "Default clock source: '%s'\n", got_clock);
+			LOGP(DUHD, LOGL_NOTICE, "Default clock source: '%s'\n", got_clock);
 			uhd_close();
 			return 1;
 		}
 		error = uhd_usrp_set_clock_source(usrp, clock_source, 0);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set clock source to '%s'\n", clock_source);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set clock source to '%s'\n", clock_source);
 			uhd_close();
 			return -EIO;
 		}
 		error = uhd_usrp_get_clock_source(usrp, 0, got_clock, sizeof(got_clock));
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get clock source\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get clock source\n");
 			uhd_close();
 			return -EINVAL;
 		}
 		if (!!strcasecmp(clock_source, got_clock)) {
-			PDEBUG(DUHD, DEBUG_NOTICE, "Given clock source '%s' was accepted, but driver claims to use '%s'\n", clock_source, got_clock);
+			LOGP(DUHD, LOGL_NOTICE, "Given clock source '%s' was accepted, but driver claims to use '%s'\n", clock_source, got_clock);
 			uhd_close();
 			return -EINVAL;
 		}
@@ -137,13 +137,13 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 				error = uhd_string_vector_make(&antennas);
 				if (error) {
 					tx_vector_error:
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to handle UHD vector, please fix!\n");
+					LOGP(DUHD, LOGL_ERROR, "Failed to handle UHD vector, please fix!\n");
 					uhd_close();
 					return -EIO;
 				}
 				error = uhd_usrp_get_tx_antennas(usrp, channel, &antennas);
 				if (error) {
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to request list of TX antennas!\n");
+					LOGP(DUHD, LOGL_ERROR, "Failed to request list of TX antennas!\n");
 					uhd_close();
 					return -EIO;
 				}
@@ -154,33 +154,33 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 					error = uhd_string_vector_at(antennas, i, got_antenna, sizeof(got_antenna));
 					if (error)
 						goto tx_vector_error;
-					PDEBUG(DUHD, DEBUG_NOTICE, "TX Antenna: '%s'\n", got_antenna);
+					LOGP(DUHD, LOGL_NOTICE, "TX Antenna: '%s'\n", got_antenna);
 				}
 				uhd_string_vector_free(&antennas);
 				error = uhd_usrp_get_tx_antenna(usrp, channel, got_antenna, sizeof(got_antenna));
 				if (error) {
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX antenna\n");
+					LOGP(DUHD, LOGL_ERROR, "Failed to get TX antenna\n");
 					uhd_close();
 					return -EINVAL;
 				}
-				PDEBUG(DUHD, DEBUG_NOTICE, "Default TX Antenna: '%s'\n", got_antenna);
+				LOGP(DUHD, LOGL_NOTICE, "Default TX Antenna: '%s'\n", got_antenna);
 				uhd_close();
 				return 1;
 			}
 			error = uhd_usrp_set_tx_antenna(usrp, tx_antenna, channel);
 			if (error) {
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX antenna to '%s'\n", tx_antenna);
+				LOGP(DUHD, LOGL_ERROR, "Failed to set TX antenna to '%s'\n", tx_antenna);
 				uhd_close();
 				return -EIO;
 			}
 			error = uhd_usrp_get_tx_antenna(usrp, channel, got_antenna, sizeof(got_antenna));
 			if (error) {
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX antenna\n");
+				LOGP(DUHD, LOGL_ERROR, "Failed to get TX antenna\n");
 				uhd_close();
 				return -EINVAL;
 			}
 			if (!!strcasecmp(tx_antenna, got_antenna)) {
-				PDEBUG(DUHD, DEBUG_NOTICE, "Given TX antenna '%s' was accepted, but driver claims to use '%s'\n", tx_antenna, got_antenna);
+				LOGP(DUHD, LOGL_NOTICE, "Given TX antenna '%s' was accepted, but driver claims to use '%s'\n", tx_antenna, got_antenna);
 				uhd_close();
 				return -EINVAL;
 			}
@@ -189,7 +189,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* create streamers */
 		error = uhd_tx_streamer_make(&tx_streamer);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create TX streamer\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to create TX streamer\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -197,7 +197,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* set rate */
 		error = uhd_usrp_set_tx_rate(usrp, rate, channel);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set TX rate to %.0f Hz\n", rate);
 			uhd_close();
 			return -EIO;
 		}
@@ -205,12 +205,12 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what rate actually is */
 		error = uhd_usrp_get_tx_rate(usrp, channel, &got_rate);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX rate\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get TX rate\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_rate - rate) > 1.0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Given TX rate %.0f Hz is not supported, try %.0f Hz\n", rate, got_rate);
+			LOGP(DUHD, LOGL_ERROR, "Given TX rate %.0f Hz is not supported, try %.0f Hz\n", rate, got_rate);
 			uhd_close();
 			return -EINVAL;
 		}
@@ -218,7 +218,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* set gain */
 		error = uhd_usrp_set_tx_gain(usrp, tx_gain, channel, "");
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set TX gain to %.0f\n", tx_gain);
 			uhd_close();
 			return -EIO;
 		}
@@ -226,12 +226,12 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what gain actually is */
 		error = uhd_usrp_get_tx_gain(usrp, channel, "", &got_gain);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX gain\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get TX gain\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_gain - tx_gain) > 0.001) {
-			PDEBUG(DUHD, DEBUG_NOTICE, "Given TX gain %.0f is not supported, we use %.0f\n", tx_gain, got_gain);
+			LOGP(DUHD, LOGL_NOTICE, "Given TX gain %.0f is not supported, we use %.0f\n", tx_gain, got_gain);
 			tx_gain = got_gain;
 		}
 
@@ -247,7 +247,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		tune_request.args = options_strdup(_tune_args);
 		error = uhd_usrp_set_tx_freq(usrp, &tune_request, channel, &tune_result);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set TX frequency to %.0f Hz\n", tx_frequency);
 			uhd_close();
 			return -EIO;
 		}
@@ -255,19 +255,19 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what frequency actually is */
 		error = uhd_usrp_get_tx_freq(usrp, channel, &got_frequency);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX frequency\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get TX frequency\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_frequency - tx_frequency) > 100.0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Given TX frequency %.0f Hz is not supported, try %.0f Hz\n", tx_frequency, got_frequency);
+			LOGP(DUHD, LOGL_ERROR, "Given TX frequency %.0f Hz is not supported, try %.0f Hz\n", tx_frequency, got_frequency);
 			uhd_close();
 			return -EINVAL;
 		}
 
 		/* set bandwidth */
 		if (uhd_usrp_set_tx_bandwidth(usrp, bandwidth, channel) != 0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set TX bandwidth to %.0f Hz\n", bandwidth);
 			uhd_close();
 			return -EIO;
 		}
@@ -275,12 +275,12 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what bandwidth actually is */
 		error = uhd_usrp_get_tx_bandwidth(usrp, channel, &got_bandwidth);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX bandwidth\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get TX bandwidth\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_bandwidth - bandwidth) > 100.0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
+			LOGP(DUHD, LOGL_ERROR, "Given TX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
 			uhd_close();
 			return -EINVAL;
 		}
@@ -294,7 +294,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		stream_args.n_channels = 1;
 		error = uhd_usrp_get_tx_stream(usrp, &stream_args, tx_streamer);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set TX streamer args\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to set TX streamer args\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -302,7 +302,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* get buffer sizes */
 		error = uhd_tx_streamer_max_num_samps(tx_streamer, &tx_samps_per_buff);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get TX streamer sample buffer\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get TX streamer sample buffer\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -318,13 +318,13 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 				error = uhd_string_vector_make(&antennas);
 				if (error) {
 					rx_vector_error:
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to handle UHD vector, please fix!\n");
+					LOGP(DUHD, LOGL_ERROR, "Failed to handle UHD vector, please fix!\n");
 					uhd_close();
 					return -EIO;
 				}
 				error = uhd_usrp_get_rx_antennas(usrp, channel, &antennas);
 				if (error) {
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to request list of RX antennas!\n");
+					LOGP(DUHD, LOGL_ERROR, "Failed to request list of RX antennas!\n");
 					uhd_close();
 					return -EIO;
 				}
@@ -335,33 +335,33 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 					error = uhd_string_vector_at(antennas, i, got_antenna, sizeof(got_antenna));
 					if (error)
 						goto rx_vector_error;
-					PDEBUG(DUHD, DEBUG_NOTICE, "RX Antenna: '%s'\n", got_antenna);
+					LOGP(DUHD, LOGL_NOTICE, "RX Antenna: '%s'\n", got_antenna);
 				}
 				uhd_string_vector_free(&antennas);
 				error = uhd_usrp_get_rx_antenna(usrp, channel, got_antenna, sizeof(got_antenna));
 				if (error) {
-					PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX antenna\n");
+					LOGP(DUHD, LOGL_ERROR, "Failed to get RX antenna\n");
 					uhd_close();
 					return -EINVAL;
 				}
-				PDEBUG(DUHD, DEBUG_NOTICE, "Default RX Antenna: '%s'\n", got_antenna);
+				LOGP(DUHD, LOGL_NOTICE, "Default RX Antenna: '%s'\n", got_antenna);
 				uhd_close();
 				return 1;
 			}
 			error = uhd_usrp_set_rx_antenna(usrp, rx_antenna, channel);
 			if (error) {
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX antenna to '%s'\n", rx_antenna);
+				LOGP(DUHD, LOGL_ERROR, "Failed to set RX antenna to '%s'\n", rx_antenna);
 				uhd_close();
 				return -EIO;
 			}
 			error = uhd_usrp_get_rx_antenna(usrp, channel, got_antenna, sizeof(got_antenna));
 			if (error) {
-				PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX antenna\n");
+				LOGP(DUHD, LOGL_ERROR, "Failed to get RX antenna\n");
 				uhd_close();
 				return -EINVAL;
 			}
 			if (!!strcasecmp(rx_antenna, got_antenna)) {
-				PDEBUG(DUHD, DEBUG_NOTICE, "Given RX antenna '%s' was accepted, but driver claims to use '%s'\n", rx_antenna, got_antenna);
+				LOGP(DUHD, LOGL_NOTICE, "Given RX antenna '%s' was accepted, but driver claims to use '%s'\n", rx_antenna, got_antenna);
 				uhd_close();
 				return -EINVAL;
 			}
@@ -369,7 +369,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* create streamers */
 		error = uhd_rx_streamer_make(&rx_streamer);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create RX streamer\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to create RX streamer\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -377,7 +377,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* create metadata */
 		error = uhd_rx_metadata_make(&rx_metadata);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create RX metadata\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to create RX metadata\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -385,7 +385,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* set rate */
 		error = uhd_usrp_set_rx_rate(usrp, rate, channel);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set RX rate to %.0f Hz\n", rate);
 			uhd_close();
 			return -EIO;
 		}
@@ -393,12 +393,12 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what rate actually is */
 		error = uhd_usrp_get_rx_rate(usrp, channel, &got_rate);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX rate\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get RX rate\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_rate - rate) > 1.0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Given RX rate %.0f Hz is not supported, try %.0f Hz\n", rate, got_rate);
+			LOGP(DUHD, LOGL_ERROR, "Given RX rate %.0f Hz is not supported, try %.0f Hz\n", rate, got_rate);
 			uhd_close();
 			return -EINVAL;
 		}
@@ -406,7 +406,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* set gain */
 		error = uhd_usrp_set_rx_gain(usrp, rx_gain, channel, "");
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set RX gain to %.0f\n", rx_gain);
 			uhd_close();
 			return -EIO;
 		}
@@ -414,12 +414,12 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what gain actually is */
 		error = uhd_usrp_get_rx_gain(usrp, channel, "", &got_gain);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX gain\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get RX gain\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_gain - rx_gain) > 0.001) {
-			PDEBUG(DUHD, DEBUG_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
+			LOGP(DUHD, LOGL_NOTICE, "Given RX gain %.3f is not supported, we use %.3f\n", rx_gain, got_gain);
 			rx_gain = got_gain;
 		}
 
@@ -435,7 +435,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		tune_request.args = options_strdup(_tune_args);
 		error = uhd_usrp_set_rx_freq(usrp, &tune_request, channel, &tune_result);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set RX frequency to %.0f Hz\n", rx_frequency);
 			uhd_close();
 			return -EIO;
 		}
@@ -443,19 +443,19 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what frequency actually is */
 		error = uhd_usrp_get_rx_freq(usrp, channel, &got_frequency);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX frequency\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get RX frequency\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_frequency - rx_frequency) > 100.0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Given RX frequency %.0f Hz is not supported, try %.0f Hz\n", rx_frequency, got_frequency);
+			LOGP(DUHD, LOGL_ERROR, "Given RX frequency %.0f Hz is not supported, try %.0f Hz\n", rx_frequency, got_frequency);
 			uhd_close();
 			return -EINVAL;
 		}
 
 		/* set bandwidth */
 		if (uhd_usrp_set_rx_bandwidth(usrp, bandwidth, channel) != 0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
+			LOGP(DUHD, LOGL_ERROR, "Failed to set RX bandwidth to %.0f Hz\n", bandwidth);
 			uhd_close();
 			return -EIO;
 		}
@@ -463,12 +463,12 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* see what bandwidth actually is */
 		error = uhd_usrp_get_rx_bandwidth(usrp, channel, &got_bandwidth);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX bandwidth\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get RX bandwidth\n");
 			uhd_close();
 			return -EIO;
 		}
 		if (fabs(got_bandwidth - bandwidth) > 100.0) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
+			LOGP(DUHD, LOGL_ERROR, "Given RX bandwidth %.0f Hz is not supported, try %.0f Hz\n", bandwidth, got_bandwidth);
 			uhd_close();
 			return -EINVAL;
 		}
@@ -482,7 +482,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		stream_args.n_channels = 1;
 		error = uhd_usrp_get_rx_stream(usrp, &stream_args, rx_streamer);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to set RX streamer args\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to set RX streamer args\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -490,7 +490,7 @@ int uhd_open(size_t channel, const char *_device_args, const char *_stream_args,
 		/* get buffer sizes */
 		error = uhd_rx_streamer_max_num_samps(rx_streamer, &rx_samps_per_buff);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to get RX streamer sample buffer\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to get RX streamer sample buffer\n");
 			uhd_close();
 			return -EIO;
 		}
@@ -510,7 +510,7 @@ int uhd_start(void)
 	stream_cmd.stream_now = true;
 	error = uhd_rx_streamer_issue_stream_cmd(rx_streamer, &stream_cmd);
 	if (error) {
-		PDEBUG(DUHD, DEBUG_ERROR, "Failed to issue RX stream command\n");
+		LOGP(DUHD, LOGL_ERROR, "Failed to issue RX stream command\n");
 		return -EIO;
 	}
 	return 0;
@@ -518,7 +518,7 @@ int uhd_start(void)
 
 void uhd_close(void)
 {
-	PDEBUG(DUHD, DEBUG_DEBUG, "Clean up UHD\n");
+	LOGP(DUHD, LOGL_DEBUG, "Clean up UHD\n");
 	if (tx_metadata)
         	uhd_tx_metadata_free(&tx_metadata);
 	if (rx_metadata)
@@ -548,12 +548,12 @@ int uhd_send(float *buff, int num)
 		else
 			error = uhd_tx_metadata_make(&tx_metadata, false, 0, 0.0, false, false);
 		if (error)
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to create TX metadata\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to create TX metadata\n");
 		buffs_ptr[0] = buff;
 		count = 0;
 		error = uhd_tx_streamer_send(tx_streamer, buffs_ptr, chunk, &tx_metadata, 1.0, &count);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to write to TX streamer\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to write to TX streamer\n");
 			break;
 		}
 		if (count == 0)
@@ -595,7 +595,7 @@ int uhd_receive(float *buff, int max)
 		count = 0;
 		error = uhd_rx_streamer_recv(rx_streamer, buffs_ptr, rx_samps_per_buff, &rx_metadata, 0.0, false, &count);
 		if (error) {
-			PDEBUG(DUHD, DEBUG_ERROR, "Failed to read from UHD device.\n");
+			LOGP(DUHD, LOGL_ERROR, "Failed to read from UHD device.\n");
 			break;
 		}
 		if (count) {
@@ -605,7 +605,7 @@ int uhd_receive(float *buff, int max)
 				if (rc == 0 && has_time_spec)
 					rc = uhd_rx_metadata_time_spec(rx_metadata, &rx_time_secs, &rx_time_fract_sec);
 				if (rc < 0 || !has_time_spec) {
-					PDEBUG(DSOAPY, DEBUG_ERROR, "SDR RX: No time stamps available. This may cuse little gaps and problems with time slot based networks, like C-Netz.\n");
+					LOGP(DSOAPY, LOGL_ERROR, "SDR RX: No time stamps available. This may cuse little gaps and problems with time slot based networks, like C-Netz.\n");
 					tx_timestamps = 0;
 				}
 			}
@@ -657,7 +657,7 @@ int uhd_get_tosend(int buffer_size)
 	advance = ((double)tx_time_secs + tx_time_fract_sec) - ((double)rx_time_secs + rx_time_fract_sec);
 	/* in case of underrun: */
 	if (advance < 0) {
-		PDEBUG(DSOAPY, DEBUG_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
+		LOGP(DSOAPY, LOGL_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
 		advance = 0;
 	}
 	tosend = buffer_size - (int)(advance * samplerate);

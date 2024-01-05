@@ -25,9 +25,9 @@
 #include <errno.h>
 #include <string.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "sender.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #ifdef HAVE_SDR
 #include "../libsdr/sdr_config.h"
 #endif
@@ -69,12 +69,12 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 	}
 
 	if (samplerate < 8000) {
-		PDEBUG(DSENDER, DEBUG_NOTICE, "Given sample rate is below 8 KHz. Please use higher sample rate!\n");
+		LOGP(DSENDER, LOGL_NOTICE, "Given sample rate is below 8 KHz. Please use higher sample rate!\n");
 		rc = -EINVAL;
 		goto error;
 	}
 
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Creating 'Sender' instance\n");
+	LOGP_CHAN(DSENDER, LOGL_DEBUG, "Creating 'Sender' instance\n");
 
 	/* if we find a channel that uses the same device as we do,
 	 * we will link us as slave to this master channel. then we 
@@ -83,27 +83,27 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 	 */
 	for (master = sender_head; master; master = master->next) {
 		if (!strcmp(master->kanal, kanal)) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Channel %s may not be defined for multiple transceivers!\n", kanal);
+			LOGP(DSENDER, LOGL_ERROR, "Channel %s may not be defined for multiple transceivers!\n", kanal);
 			rc = -EIO;
 			goto error;
 		}
 		if (check_channel && abs(atoi(master->kanal) - atoi(kanal)) == 1) {
-			PDEBUG(DSENDER, DEBUG_NOTICE, "------------------------------------------------------------------------\n");
-			PDEBUG(DSENDER, DEBUG_NOTICE, "NOTE: Channel %s is next to channel %s. This will cause interferences.\n", kanal, master->kanal);
-			PDEBUG(DSENDER, DEBUG_NOTICE, "Please use at least one channel distance to avoid that.\n");
-			PDEBUG(DSENDER, DEBUG_NOTICE, "------------------------------------------------------------------------\n");
+			LOGP(DSENDER, LOGL_NOTICE, "------------------------------------------------------------------------\n");
+			LOGP(DSENDER, LOGL_NOTICE, "NOTE: Channel %s is next to channel %s. This will cause interferences.\n", kanal, master->kanal);
+			LOGP(DSENDER, LOGL_NOTICE, "Please use at least one channel distance to avoid that.\n");
+			LOGP(DSENDER, LOGL_NOTICE, "------------------------------------------------------------------------\n");
 		}
 		if (!strcmp(master->device, device))
 			break;
 	}
 	if (master) {
 		if (master->paging_signal != PAGING_SIGNAL_NONE && !use_sdr) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %s, because its second audio channel is used for paging signal! Use different audio device.\n", master->kanal);
+			LOGP(DSENDER, LOGL_ERROR, "Cannot share audio device with channel %s, because its second audio channel is used for paging signal! Use different audio device.\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
 		if (paging_signal != PAGING_SIGNAL_NONE && !use_sdr) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Cannot share audio device with channel %s, because we need a second audio channel for paging signal! Use different audio device.\n", master->kanal);
+			LOGP(DSENDER, LOGL_ERROR, "Cannot share audio device with channel %s, because we need a second audio channel for paging signal! Use different audio device.\n", master->kanal);
 			rc = -EBUSY;
 			goto error;
 		}
@@ -136,7 +136,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 			sender->audio_write = sound_write;
 			sender->audio_get_tosend = sound_get_tosend;
 #else
-			PDEBUG(DSENDER, DEBUG_ERROR, "No sound card support compiled in!\n");
+			LOGP(DSENDER, LOGL_ERROR, "No sound card support compiled in!\n");
 			rc = -ENOTSUP;
 			goto error;
 #endif
@@ -145,19 +145,19 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 
 	rc = init_samplerate(&sender->srstate, 8000.0, (double)samplerate, 3300.0);
 	if (rc < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to init sample rate conversion!\n");
+		LOGP(DSENDER, LOGL_ERROR, "Failed to init sample rate conversion!\n");
 		goto error;
 	}
 
 	rc = jitter_create(&sender->dejitter, sender->kanal, 8000, sizeof(sample_t), JITTER_AUDIO);
 	if (rc < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init audio buffer!\n");
+		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init audio buffer!\n");
 		goto error;
 	}
 
 	rc = jitter_create(&sender->loop_dejitter, sender->kanal, samplerate, sizeof(sample_t), JITTER_AUDIO);
 	if (rc < 0) {
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create and init audio buffer!\n");
+		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init audio buffer!\n");
 		goto error;
 	}
 
@@ -208,28 +208,28 @@ int sender_open_audio(int buffer_size, double interval)
 		if (master->write_rx_wave) {
 			rc = wave_create_record(&master->wave_rx_rec, master->write_rx_wave, master->samplerate, channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
-				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				LOGP(DSENDER, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 				return rc;
 			}
 		}
 		if (master->write_tx_wave) {
 			rc = wave_create_record(&master->wave_tx_rec, master->write_tx_wave, master->samplerate, channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
-				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				LOGP(DSENDER, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 				return rc;
 			}
 		}
 		if (master->read_rx_wave) {
 			rc = wave_create_playback(&master->wave_rx_play, master->read_rx_wave, &master->samplerate, &channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
-				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				LOGP(DSENDER, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
 			}
 		}
 		if (master->read_tx_wave) {
 			rc = wave_create_playback(&master->wave_tx_play, master->read_tx_wave, &master->samplerate, &channels, (master->max_deviation) ?: 1.0);
 			if (rc < 0) {
-				PDEBUG(DSENDER, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				LOGP(DSENDER, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 				return rc;
 			}
 		}
@@ -237,7 +237,7 @@ int sender_open_audio(int buffer_size, double interval)
 		/* open device */
 		master->audio = master->audio_open(master->device, tx_f, rx_f, am, channels, paging_frequency, master->samplerate, buffer_size, interval, (master->max_deviation) ?: 1.0, master->max_modulation, master->modulation_index);
 		if (!master->audio) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "No device for transceiver!\n");
+			LOGP(DSENDER, LOGL_ERROR, "No device for transceiver!\n");
 			return -EIO;
 		}
 	}
@@ -273,7 +273,7 @@ int sender_start_audio(void)
 /* Destroy transceiver instance and unlink from list. */
 void sender_destroy(sender_t *sender)
 {
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Destroying 'Sender' instance\n");
+	LOGP_CHAN(DSENDER, LOGL_DEBUG, "Destroying 'Sender' instance\n");
 
 	sender_tailp = &sender_head;
 	while (*sender_tailp) {
@@ -305,8 +305,8 @@ void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation
 	sender->speech_deviation = speech_deviation;
 	sender->max_display = max_display;
 
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Maximum deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Deviation at speech level: %.1f kHz\n", speech_deviation / 1000.0);
+	LOGP_CHAN(DSENDER, LOGL_DEBUG, "Maximum deviation: %.1f kHz, Maximum modulation: %.1f kHz\n", max_deviation / 1000.0, max_modulation / 1000.0);
+	LOGP_CHAN(DSENDER, LOGL_DEBUG, "Deviation at speech level: %.1f kHz\n", speech_deviation / 1000.0);
 }
 
 /* set amplitude modulation and parameters */
@@ -319,7 +319,7 @@ void sender_set_am(sender_t *sender, double max_modulation, double speech_level,
 	sender->max_display = max_display;
 	sender->modulation_index = modulation_index;
 
-	PDEBUG_CHAN(DSENDER, DEBUG_DEBUG, "Modulation degree: %.0f %%, Maximum modulation: %.1f kHz\n", modulation_index / 100.0, max_modulation / 1000.0);
+	LOGP_CHAN(DSENDER, LOGL_DEBUG, "Modulation degree: %.0f %%, Maximum modulation: %.1f kHz\n", modulation_index / 100.0, max_modulation / 1000.0);
 }
 
 static void gain_samples(sample_t *samples, int length, double gain)
@@ -357,15 +357,15 @@ void process_sender_audio(sender_t *sender, int *quit, int buffer_size)
 #endif
 	count = sender->audio_get_tosend(sender->audio, buffer_size);
 	if (count < 0) {
-		PDEBUG_CHAN(DSENDER, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
+		LOGP_CHAN(DSENDER, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 		if (count == -EPIPE) {
 			if (cant_recover) {
 cant_recover:
-				PDEBUG(DSENDER, DEBUG_ERROR, "Cannot recover due to measurements, quitting!\n");
+				LOGP(DSENDER, LOGL_ERROR, "Cannot recover due to measurements, quitting!\n");
 				*quit = 1;
 				return;
 			}
-			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
+			LOGP(DSENDER, LOGL_ERROR, "Trying to recover!\n");
 		}
 		return;
 	}
@@ -411,11 +411,11 @@ cant_recover:
 
 		rc = sender->audio_write(sender->audio, samples, power, count, paging_signal, on, num_chan);
 		if (rc < 0) {
-			PDEBUG(DSENDER, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
+			LOGP(DSENDER, LOGL_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			if (rc == -EPIPE) {
 				if (cant_recover)
 					goto cant_recover;
-				PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
+				LOGP(DSENDER, LOGL_ERROR, "Trying to recover!\n");
 			}
 			return;
 		}
@@ -431,11 +431,11 @@ cant_recover:
 			*quit = 1;
 			return;
 		}
-		PDEBUG(DSENDER, DEBUG_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
+		LOGP(DSENDER, LOGL_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
 		if (count == -EPIPE) {
 			if (cant_recover)
 				goto cant_recover;
-			PDEBUG(DSENDER, DEBUG_ERROR, "Trying to recover!\n");
+			LOGP(DSENDER, LOGL_ERROR, "Trying to recover!\n");
 		}
 		return;
 	}

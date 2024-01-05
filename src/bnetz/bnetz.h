@@ -1,7 +1,7 @@
 #include "../libsquelch/squelch.h"
 #include "../libfsk/fsk.h"
 #include "../libmobile/sender.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 
 /* fsk modes of transmission */
 enum dsp_mode {
@@ -74,7 +74,7 @@ typedef struct bnetz {
 	int			station_id_pos;		/* position while transmitting */
 	enum page_mode		page_mode;		/* sub state while paging */
 	int			page_try;		/* try number (1 or 2) */
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	int			trenn_count;		/* count number of release messages */
 
 	/* display measurements */

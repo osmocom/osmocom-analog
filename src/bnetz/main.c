@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../anetz/freiton.h"
@@ -218,6 +218,7 @@ fail:
 		bnetz_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	options_free();

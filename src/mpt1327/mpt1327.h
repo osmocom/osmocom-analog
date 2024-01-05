@@ -84,7 +84,7 @@ typedef struct mpt1327_unit {
 	struct mpt1327_unit	*next;
 	uint64_t		state;
 	int			repeat;			/* number of repeating messages / retries after timeout */
-	struct timer		timer;			/* timeout waiting for unit response */
+	struct osmo_timer_list		timer;			/* timeout waiting for unit response */
 	struct mpt1327		*tc;			/* link to transceiver */
 	uint8_t			prefix;			/* unit's prefix */
 	uint16_t		ident;			/* unit's ident */
@@ -102,7 +102,7 @@ typedef struct mpt1327 {
 
 	/* sender's states */
 	enum mpt1327_state	state;			/* current sender's state */
-	struct timer		timer;			/* inactivity timer to clear channel */
+	struct osmo_timer_list		timer;			/* inactivity timer to clear channel */
 	mpt1327_unit_t		*unit;			/* link to unit */
 
 	/* display measurements */

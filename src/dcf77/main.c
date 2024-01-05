@@ -28,7 +28,7 @@
 #include <sched.h>
 #include <time.h>
 #include <math.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libsample/sample.h"
 #include "../libsound/sound.h"
@@ -146,7 +146,7 @@ void print_help(void)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
-	debug_print_help();
+	logging_print_help();
 	printf(" -a --audio-device hw:<card>,<device>\n");
 	printf("        Sound card and device number (default = '%s')\n", dsp_device);
 	printf(" -s --samplerate <rate>\n");
@@ -253,13 +253,11 @@ static int handle_options(int short_option, int argi, char **argv)
 		print_help();
 		return 0;
 	case 'v':
-		if (!strcasecmp(argv[argi], "list")) {
-	                debug_list_cat();
+		rc = parse_logging_opt(argv[argi]);
+		if (rc > 0)
 			return 0;
-		}
-		rc = parse_debug_opt(argv[argi]);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
+			fprintf(stderr, "Failed to parse logging option, please use -h for help.\n");
 			return rc;
 		}
 		break;
@@ -416,14 +414,14 @@ static int get_char()
 int soundif_open(const char *audiodev, int samplerate, int buffer_size)
 {
 	if (!audiodev || !audiodev[0]) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No audio device given!\n");
+		LOGP(DDSP, LOGL_ERROR, "No audio device given!\n");
 		return -EINVAL;
 	}
 
 	/* open audiodev */
 	soundif = sound_open(audiodev, NULL, NULL, NULL, (double_amplitude) ? 2 : 1, 0.0, samplerate, buffer_size, 1.0, 1.0, 0.0, 2.0);
 	if (!soundif) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to open sound device!\n");
+		LOGP(DDSP, LOGL_ERROR, "Failed to open sound device!\n");
 		return -EIO;
 	}
 
@@ -433,7 +431,7 @@ int soundif_open(const char *audiodev, int samplerate, int buffer_size)
 void soundif_start(void)
 {
 	sound_start(soundif);
-	PDEBUG(DDSP, DEBUG_DEBUG, "Starting audio stream!\n");
+	LOGP(DDSP, LOGL_DEBUG, "Starting audio stream!\n");
 }
 
 void soundif_close(void)
@@ -456,7 +454,7 @@ void soundif_work(int buffer_size)
 	/* encode and write */
 	count = sound_get_tosend(soundif, buffer_size);
 	if (count < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
+		LOGP(DDSP, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 		return;
 	}
 	if (count) {
@@ -467,7 +465,7 @@ void soundif_work(int buffer_size)
 		}
 		rc = sound_write(soundif, samples, NULL, count, NULL, NULL, (double_amplitude) ? 2 : 1);
 		if (rc < 0) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
+			LOGP(DDSP, LOGL_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			return;
 		}
 	}
@@ -475,7 +473,7 @@ void soundif_work(int buffer_size)
 	/* read */
 	count = sound_read(soundif, samples, buffer_size, 1, rf_level_db);
 	if (count < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
+		LOGP(DDSP, LOGL_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
 		return;
 	}
 
@@ -490,6 +488,8 @@ int main(int argc, char *argv[])
 	struct termios term, term_orig;
 	double begin_time, now, sleep;
 	char c;
+
+	logging_init();
 
 	/* handle options / config file */
 	add_options();
@@ -641,4 +641,6 @@ error:
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 

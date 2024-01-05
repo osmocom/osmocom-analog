@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "systemmeldungen.h"
 
 static struct systemmeldungen {
@@ -21894,8 +21894,8 @@ void print_systemmeldung(uint16_t code, int bytes, uint8_t *ind)
 	if (i == ii)
 		return;
 
-	PDEBUG(DMUP, DEBUG_INFO, " -> %s\n", systemmeldungen[i].desc);
+	LOGP(DMUP, LOGL_INFO, " -> %s\n", systemmeldungen[i].desc);
 	for (j = 0; j < systemmeldungen[i].bytes; j++)
-		PDEBUG(DMUP, DEBUG_INFO, "    Byte %d = %02Xh: %s\n", j, ind[j], systemmeldungen[i].ind[j]);
+		LOGP(DMUP, LOGL_INFO, "    Byte %d = %02Xh: %s\n", j, ind[j], systemmeldungen[i].ind[j]);
 }
 

@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"

@@ -29,7 +29,7 @@
 #include "../libsample/sample.h"
 #include "../libsound/sound.h"
 #include "../libwave/wave.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libaaimage/aaimage.h"
 #include "iso7811.h"
@@ -64,7 +64,7 @@ void print_help(const char *arg0)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
-	debug_print_help();
+	logging_print_help();
 	printf(" -a --audio-device hw:<card>,<device>\n");
 	printf("        Input audio from sound card's device number\n");
 	printf(" -s --samplerate <sample rate>\n");
@@ -101,13 +101,11 @@ int handle_options(int short_option, int argi, char **argv)
 		print_help(argv[0]);
 		return 0;
 	case 'v':
-		if (!strcasecmp(argv[argi], "list")) {
-	                debug_list_cat();
+		rc = parse_logging_opt(argv[argi]);
+		if (rc > 0)
 			return 0;
-		}
-		rc = parse_debug_opt(argv[argi]);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
+			fprintf(stderr, "Failed to parse logging option, please use -h for help.\n");
 			return rc;
 		}
 		break;
@@ -154,7 +152,8 @@ int main(int argc, char *argv[])
 	int rc, argi;
 	int i, j;
 
-	debuglevel = DEBUG_INFO;
+	loglevel = LOGL_INFO;
+	logging_init();
 
 	add_options();
 	rc = options_config_file(argc, argv, "~/.osmocom/analog/magnetic.conf", handle_options);
@@ -244,9 +243,9 @@ inval_number:
 	}
 	memset(silence, 0, sizeof(silence));
 
-	PDEBUG(DDSP, DEBUG_INFO, "Total bits: %d\n", length * 5);
-	PDEBUG(DDSP, DEBUG_INFO, "Samples per bit: %d\n", samples_per_halfbit * 2);
-	PDEBUG(DDSP, DEBUG_INFO, "Total samples: %d (duration: %.3f seconds)\n", total_samples, (double)total_samples / (double)dsp_samplerate);
+	LOGP(DDSP, LOGL_INFO, "Total bits: %d\n", length * 5);
+	LOGP(DDSP, LOGL_INFO, "Samples per bit: %d\n", samples_per_halfbit * 2);
+	LOGP(DDSP, LOGL_INFO, "Total samples: %d (duration: %.3f seconds)\n", total_samples, (double)total_samples / (double)dsp_samplerate);
 
 	if (wave_file) {
 		wave_rec_t wave_rec;
@@ -254,7 +253,7 @@ inval_number:
 		/* open wave file */
 		rc = wave_create_record(&wave_rec, wave_file, dsp_samplerate, 1, 1.0);
 		if (rc < 0) {
-			PDEBUG(DRADIO, DEBUG_ERROR, "Failed to create WAVE record instance!\n");
+			LOGP(DRADIO, LOGL_ERROR, "Failed to create WAVE record instance!\n");
 			goto error;
 		}
 		samples[0] = silence;
@@ -272,12 +271,12 @@ inval_number:
 	sound = sound_open(dsp_audiodev, NULL, NULL, NULL, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 1.0, 0.0, 2.0);
 	if (!sound) {
 		rc = -EIO;
-		PDEBUG(DRADIO, DEBUG_ERROR, "Failed to open sound device!\n");
+		LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
 		goto error;
 	}
 #else
 	rc = -ENOTSUP;
-	PDEBUG(DRADIO, DEBUG_ERROR, "No sound card support compiled in!\n");
+	LOGP(DRADIO, LOGL_ERROR, "No sound card support compiled in!\n");
 	goto error;
 #endif
 
@@ -364,5 +363,7 @@ done:
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 
 #endif /* ARDUINO */

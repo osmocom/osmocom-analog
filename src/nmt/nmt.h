@@ -1,5 +1,5 @@
 #include "../libmobile/sender.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #include "../libcompandor/compandor.h"
 #include "../libdtmf/dtmf_encode.h"
 #include "../libmobile/call.h"
@@ -85,7 +85,7 @@ struct nmt {
 	enum nmt_state		state;
 	int			wait_autoanswer;	/* wait for frame 15 before we can send autoanswer */
 	enum nmt_active_state	active_state;
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	int			rx_frame_count;		/* receive frame counter */
 	int			tx_frame_count;		/* transmit frame counter */
 	int			tx_callerid_count;	/* counter for caller ID repetition */
@@ -138,7 +138,7 @@ struct nmt {
 	dms_t			dms;			/* DMS states */
 	sms_t			sms;			/* SMS states */
 	char			smsc_number[33];	/* digits to match SMSC */
-	struct timer		sms_timer;
+	struct osmo_timer_list		sms_timer;
 };
 
 void nmt_channel_list(int nmt_system);

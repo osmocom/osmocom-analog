@@ -14,7 +14,7 @@ typedef struct transaction {
 	nmt_t			*nmt;			/* pointer to nmt instance, if bound to a channel */
 	int			callref;		/* callref for transaction */
 	struct nmt_subscriber	subscriber;
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	int			page_try;		/* number of paging try */
 
 	/* caller ID */

@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "uart.h"
 
 static uint32_t calc_parity(uint32_t data, uint8_t data_bits, enum uart_parity parity)
@@ -56,13 +56,13 @@ int uart_init(uart_t *uart, void *inst, uint8_t data_bits, enum uart_parity pari
 	uart->rx_cb = rx_cb;
 	uart->data_bits = data_bits;
 	if (uart->data_bits > 9) {
-		PDEBUG(DUART, DEBUG_ERROR, "Illegal number of data bits, please fix!\n");
+		LOGP(DUART, LOGL_ERROR, "Illegal number of data bits, please fix!\n");
 		abort();
 	}
 	uart->parity = parity;
 	uart->stop_bits = stop_bits;
 	if (uart->stop_bits < 1 || uart->stop_bits > 2) {
-		PDEBUG(DUART, DEBUG_ERROR, "Illegal number of stop bits, please fix!\n");
+		LOGP(DUART, LOGL_ERROR, "Illegal number of stop bits, please fix!\n");
 		abort();
 	}
 	uart->tx_pos = -1;

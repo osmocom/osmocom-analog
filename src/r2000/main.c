@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "r2000.h"
 #include "dsp.h"
@@ -376,6 +376,7 @@ fail:
 		r2000_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	options_free();

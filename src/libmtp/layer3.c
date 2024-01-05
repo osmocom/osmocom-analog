@@ -29,8 +29,9 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include "../libtimer/timer.h"
-#include "../libdebug/debug.h"
+#include <osmocom/core/timer.h>
+#include <osmocom/core/utils.h>
+#include "../liblogging/logging.h"
 #include "mtp.h"
 
 /* message from layer 4 */
@@ -39,7 +40,7 @@ int mtp_send(mtp_t *mtp, enum mtp_prim prim, uint8_t slc, uint8_t *data, int len
 	uint8_t buffer[len + 4];
 
 	if (prim == MTP_PRIM_DATA) {
-		PDEBUG_CHAN(DMTP3, DEBUG_DEBUG, "Send frame to remote: SIO=0x%02x DPC=%d OPC=%d SLC=%d %s\n", mtp->sio, mtp->remote_pc, mtp->local_pc, slc, debug_hex(data, len));
+		LOGP_CHAN(DMTP3, LOGL_DEBUG, "Send frame to remote: SIO=0x%02x DPC=%d OPC=%d SLC=%d %s\n", mtp->sio, mtp->remote_pc, mtp->local_pc, slc, osmo_hexdump(data, len));
 		/* add header */
 		buffer[0] = mtp->remote_pc;
 		buffer[1] = (mtp->remote_pc >> 8) & 0x3f;
@@ -67,7 +68,7 @@ void mtp_l2l3(mtp_t *mtp, enum mtp_prim prim, uint8_t sio, uint8_t *data, int le
 
 	if (prim == MTP_PRIM_DATA) {
 		if (len < 4) {
-			PDEBUG_CHAN(DMTP3, DEBUG_NOTICE, "Short frame from layer 2 (len=%d)\n", len);
+			LOGP_CHAN(DMTP3, LOGL_NOTICE, "Short frame from layer 2 (len=%d)\n", len);
 			return;
 		}
 
@@ -81,18 +82,18 @@ void mtp_l2l3(mtp_t *mtp, enum mtp_prim prim, uint8_t sio, uint8_t *data, int le
 		data += 4;
 		len -= 4;
 
-		PDEBUG_CHAN(DMTP3, DEBUG_DEBUG, "Received frame from remote: SIO=0x%02x DPC=%d OPC=%d SLC=%d %s\n", sio, dpc, opc, slc, debug_hex(data, len));
+		LOGP_CHAN(DMTP3, LOGL_DEBUG, "Received frame from remote: SIO=0x%02x DPC=%d OPC=%d SLC=%d %s\n", sio, dpc, opc, slc, osmo_hexdump(data, len));
 
 		if (dpc != mtp->local_pc || opc != mtp->remote_pc) {
-			PDEBUG_CHAN(DMTP3, DEBUG_NOTICE, "Received message with wrong point codes: %d->%d but expecting %d->%d\n", opc, dpc, mtp->remote_pc, mtp->local_pc);
+			LOGP_CHAN(DMTP3, LOGL_NOTICE, "Received message with wrong point codes: %d->%d but expecting %d->%d\n", opc, dpc, mtp->remote_pc, mtp->local_pc);
 			return;
 		}
 		if ((sio & 0x0f) == 0x0 && len >= 1) {
-			PDEBUG_CHAN(DMTP3, DEBUG_NOTICE, "MGMT message received: SLC=%d H0=%d H1=%d %s\n", slc, data[0] & 0xf, data[0] >> 4, debug_hex(data + 1, len - 1));
+			LOGP_CHAN(DMTP3, LOGL_NOTICE, "MGMT message received: SLC=%d H0=%d H1=%d %s\n", slc, data[0] & 0xf, data[0] >> 4, osmo_hexdump(data + 1, len - 1));
 			return;
 		}
 		if (sio != mtp->sio) {
-			PDEBUG_CHAN(DMTP3, DEBUG_NOTICE, "Received message with wrong SIO: 0x%02x but expecting 0x%02x\n", sio, mtp->sio);
+			LOGP_CHAN(DMTP3, LOGL_NOTICE, "Received message with wrong SIO: 0x%02x but expecting 0x%02x\n", sio, mtp->sio);
 			return;
 		}
 	}

@@ -29,13 +29,14 @@
 #include <errno.h>
 #include "../libsample/sample.h"
 #include "main_mobile.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "sender.h"
-#include "../libtimer/timer.h"
-#include "../libselect/select.h"
+#include <osmocom/core/timer.h>
+#include <osmocom/core/select.h>
 #include "call.h"
-#include "../libosmocc/endpoint.h"
+#include <osmocom/cc/endpoint.h>
 #include "console.h"
+#include "get_time.h"
 #ifdef HAVE_SDR
 #include "../libsdr/sdr.h"
 #include "../libsdr/sdr_config.h"
@@ -167,6 +168,8 @@ const char *(*mobile_number_check_valid)(const char *);
 
 void main_mobile_init(const char *digits, const struct number_lengths lengths[], const char *prefixes[], const char *(*check_valid)(const char *))
 {
+	logging_init();
+
 	cc_argv[cc_argc++] = options_strdup("remote auto");
 
 	number_digits = digits;
@@ -178,6 +181,14 @@ void main_mobile_init(const char *digits, const struct number_lengths lengths[],
 #ifdef HAVE_SDR
 	sdr_config_init(DEFAULT_LO_OFFSET);
 #endif
+}
+
+void main_mobile_exit(void)
+{
+	if (got_init) {
+		enable_limit_scroll(false);
+		printf("\n\n");
+	}
 }
 
 void main_mobile_set_number_check_valid(const char *(*check_valid)(const char *))
@@ -230,7 +241,7 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
-	debug_print_help();
+	logging_print_help();
 	printf(" -k --kanal <channel>\n");
 	printf(" -k --channel <channel>\n");
 	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");
@@ -414,13 +425,11 @@ int main_mobile_handle_options(int short_option, int argi, char **argv)
 		print_help(argv[0]);
 		return 0;
 	case 'v':
-		if (!strcasecmp(argv[argi], "list")) {
-	                debug_list_cat();
+		rc = parse_logging_opt(argv[argi]);
+		if (rc > 0)
 			return 0;
-		}
-		rc = parse_debug_opt(argv[argi]);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
+			fprintf(stderr, "Failed to parse logging option, please use -h for help.\n");
 			return rc;
 		}
 		break;
@@ -577,8 +586,6 @@ void sighandler(int sigset)
 	if (sigset == SIGPIPE)
 		return;
 
-	if (clear_console_text)
-		clear_console_text();
 	printf("Signal received: %d\n", sigset);
 
 	quit = 1;
@@ -731,9 +738,6 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 			process_sender_audio(sender, quit, buffer_size);
 		}
 
-		/* process timers */
-		process_timer();
-
 		/* process audio for call instances */
 		now = get_time();
 		if (now - last_time_call >= 0.1)
@@ -749,8 +753,6 @@ next_char:
 		switch (c) {
 		case 3:
 			/* quit */
-			if (clear_console_text)
-				clear_console_text();
 			printf("CTRL+c received, quitting!\n");
 			*quit = 1;
 			goto next_char;
@@ -787,6 +789,8 @@ next_char:
 #ifdef HAVE_SDR
 		case 'q':
 			/* toggle IQ display */
+			if (!use_sdr)
+				goto next_char;
 			display_wave_on(0);
 			display_status_on(0);
 			display_measurements_on(0);
@@ -795,6 +799,8 @@ next_char:
 			goto next_char;
 		case 's':
 			/* toggle spectrum display */
+			if (!use_sdr)
+				goto next_char;
 			display_wave_on(0);
 			display_status_on(0);
 			display_measurements_on(0);
@@ -817,8 +823,7 @@ next_char:
 		do {
 			work = 0;
 			work |= osmo_cc_handle();
-			work |= (process_timer() == 0.0);
-			work |= osmo_fd_select(0.0);
+			work |= osmo_select_main(1);
 		} while (work);
 
 		if (!use_osmocc_sock)
@@ -845,10 +850,6 @@ next_char:
 	signal(SIGHUP, SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGPIPE, SIG_DFL);
-
-	/* get rid of last entry */
-	if (clear_console_text)
-		clear_console_text();
 
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);

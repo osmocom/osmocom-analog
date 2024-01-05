@@ -26,25 +26,25 @@
 #include <errno.h>
 #include <time.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "r2000.h"
 //#include "transaction.h"
 #include "frame.h"
 #include "dsp.h"
 
-#define	CUT_OFF_EMPHASIS_R2000	300 //FIXME: use real cut-off / time constant
+#define	CUT_OFF_EMPHASIS_R2000	300	 //FIXME: use real cut-off / time constant
 
-#define PAGE_TRIES		3	/* how many times trying to page */
-#define IDENT_TIME		3.0	/* time to wait for identity response */
-#define ALERT_TIME		60.0	/* time to wait for party to answer */
-#define DIAL1_TIME		1.0	/* time to wait for party to dial digits 1..10 */
-#define DIAL2_TIME		0.5	/* time to wait for party to dial digits 11..20 */
-#define SUSPEND_TIME		1.0	/* time to wait for suspend response */
-#define SUPER_TIME1		4.0	/* time to release if not receiving initial supervisory signal */
-#define SUPER_TIME2		20.0	/* time to release after loosing supervisory signal */
-#define RELEASE_TIME		2.0	/* time to wait for release response */
+#define PAGE_TRIES		3		/* how many times trying to page */
+#define IDENT_TIME		3,0		/* time to wait for identity response */
+#define ALERT_TIME		60,0		/* time to wait for party to answer */
+#define DIAL1_TIME		1,0		/* time to wait for party to dial digits 1..10 */
+#define DIAL2_TIME		0,500000	/* time to wait for party to dial digits 11..20 */
+#define SUSPEND_TIME		1,0		/* time to wait for suspend response */
+#define SUPER_TIME1		4,0		/* time to release if not receiving initial supervisory signal */
+#define SUPER_TIME2		20,0		/* time to release after loosing supervisory signal */
+#define RELEASE_TIME		2,0		/* time to wait for release response */
 
 /* definition of bands and channels */
 #define CHANNEL_SPACING	0.0125
@@ -101,12 +101,12 @@ double r2000_channel2freq(int band, int channel, int uplink)
 	}
 	
 	if (!r2000_bands[i].name) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Given band number is invalid! (use '-B list' for valid bands)\n");
+		LOGP(DR2000, LOGL_NOTICE, "Given band number is invalid! (use '-B list' for valid bands)\n");
 		return 0.0;
 	}
 
 	if (channel < 0 || channel > r2000_bands[i].channels - 1) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Given channel number %d invalid! (use '-B list' for valid channels)\n", channel);
+		LOGP(DR2000, LOGL_NOTICE, "Given channel number %d invalid! (use '-B list' for valid channels)\n", channel);
 		return 0.0;
 	}
 
@@ -231,7 +231,7 @@ int r2000_channel_by_short_name(const char *short_name)
 
 	for (i = 0; r2000_channels[i].short_name; i++) {
 		if (!strcasecmp(r2000_channels[i].short_name, short_name)) {
-			PDEBUG(DR2000, DEBUG_INFO, "Selecting channel '%s' = %s\n", r2000_channels[i].short_name, r2000_channels[i].long_name);
+			LOGP(DR2000, LOGL_INFO, "Selecting channel '%s' = %s\n", r2000_channels[i].short_name, r2000_channels[i].long_name);
 			return r2000_channels[i].chan_type;
 		}
 	}
@@ -267,7 +267,7 @@ static void r2000_new_state(r2000_t *r2000, enum r2000_state new_state)
 {
 	if (r2000->state == new_state)
 		return;
-	PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "State change: %s -> %s\n", r2000_state_name(r2000->state), r2000_state_name(new_state));
+	LOGP_CHAN(DR2000, LOGL_DEBUG, "State change: %s -> %s\n", r2000_state_name(r2000->state), r2000_state_name(new_state));
 	r2000->state = new_state;
 	r2000_display_status();
 	r2000->tx_frame_count = 0;
@@ -314,11 +314,11 @@ static int string2subscriber(const char *dialstring, r2000_subscriber_t *subscr)
 static int match_voie(r2000_t *r2000, frame_t *frame, uint8_t voie)
 {
 	if (frame->voie == 0 && voie == 1) {
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for control channel, but expecting traffic channel, ignoring. (maybe radio noise)\n");
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Frame for control channel, but expecting traffic channel, ignoring. (maybe radio noise)\n");
 		return 0;
 	}
 	if (frame->voie == 1 && voie == 0) {
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for traffic channel, but expecting control channel, ignoring. (maybe radio noise)\n");
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Frame for traffic channel, but expecting control channel, ignoring. (maybe radio noise)\n");
 		return 0;
 	}
 
@@ -328,7 +328,7 @@ static int match_voie(r2000_t *r2000, frame_t *frame, uint8_t voie)
 static int match_channel(r2000_t *r2000, frame_t *frame)
 {
 	if (frame->channel != atoi(r2000->sender.kanal)) {
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for different channel %d received, ignoring.\n", frame->channel);
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Frame for different channel %d received, ignoring.\n", frame->channel);
 		return 0;
 	}
 
@@ -338,7 +338,7 @@ static int match_channel(r2000_t *r2000, frame_t *frame)
 static int match_relais(r2000_t *r2000, frame_t *frame)
 {
 	if (frame->relais != r2000->sysinfo.relais) {
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for different relais %d received, ignoring.\n", frame->relais);
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Frame for different relais %d received, ignoring.\n", frame->relais);
 		return 0;
 	}
 
@@ -353,7 +353,7 @@ static int match_subscriber(r2000_t *r2000, frame_t *frame)
 
 	if (r2000->subscriber.relais != frame->sm_relais
 	 || r2000->subscriber.mor != frame->sm_mor) {
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Frame for different subscriber '%s' received, ignoring.\n", print_subscriber_frame(frame));
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Frame for different subscriber '%s' received, ignoring.\n", print_subscriber_frame(frame));
 		return 0;
 	}
 
@@ -377,7 +377,7 @@ uint8_t r2000_encode_super(r2000_t *r2000)
 	      | ((relais << 2) & 0x10)
 	      | (relais & 0x08);
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "TX Supervisory: NCONV: %d relais (4 lowest bits): %d\n", nconv, relais);
+	LOGP_CHAN(DDSP, LOGL_INFO, "TX Supervisory: NCONV: %d relais (4 lowest bits): %d\n", nconv, relais);
 
 	return super ^ 0x7f;
 }
@@ -399,27 +399,27 @@ int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, co
 		r2000 = (r2000_t *)sender;
 		if ((r2000->sysinfo.chan_type == CHAN_TYPE_CC || r2000->sysinfo.chan_type == CHAN_TYPE_CC_TC)
 		 && (chan_type == CHAN_TYPE_CC || chan_type == CHAN_TYPE_CC_TC)) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "More than one control channel is not supported, please define other channels as traffic channels!\n");
+			LOGP(DCNETZ, LOGL_NOTICE, "More than one control channel is not supported, please define other channels as traffic channels!\n");
 			return -EINVAL;
 		}
 	}
 
 	r2000 = calloc(1, sizeof(r2000_t));
 	if (!r2000) {
-		PDEBUG(DR2000, DEBUG_ERROR, "No memory!\n");
+		LOGP(DR2000, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DR2000, DEBUG_DEBUG, "Creating 'Radiocom 2000' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DR2000, LOGL_DEBUG, "Creating 'Radiocom 2000' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&r2000->sender, kanal, r2000_channel2freq(band, atoi(kanal), 0), r2000_channel2freq(band, atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DR2000, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DR2000, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
-	timer_init(&r2000->timer, r2000_timeout, r2000);
+	osmo_timer_setup(&r2000->timer, r2000_timeout, r2000);
 	r2000->sysinfo.relais = relais;
 	r2000->sysinfo.chan_type = chan_type;
 	r2000->sysinfo.deport = deport;
@@ -430,7 +430,7 @@ int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, co
 	r2000->sysinfo.nconv = nconv;
 	r2000->sysinfo.recall = recall;
 	if (crins == 3 && destruction != 2342) {
-		PDEBUG(DR2000, DEBUG_ERROR, "Crins is 3, but destruction is not confirmed, please fix!\n");
+		LOGP(DR2000, LOGL_ERROR, "Crins is 3, but destruction is not confirmed, please fix!\n");
 		abort();
 	}
 	r2000->compandor = 1;
@@ -445,14 +445,14 @@ int r2000_create(int band, const char *kanal, enum r2000_chan_type chan_type, co
 	/* init audio processing */
 	rc = dsp_init_sender(r2000);
 	if (rc < 0) {
-		PDEBUG(DR2000, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DR2000, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
 	/* go into idle state */
 	r2000_go_idle(r2000);
 
-	PDEBUG(DR2000, DEBUG_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	LOGP(DR2000, LOGL_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -481,18 +481,18 @@ void r2000_check_channels(void)
 		}
 	}
 	if (cc && !tc) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** No call is possible at all!\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** Selected channel(s) can be used for control only.\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** No call is possible at all!\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 	}
 	if (tc && !cc) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** No register/call is possible at all!\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Use combined 'CC/TC' instead!\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** No register/call is possible at all!\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** Use combined 'CC/TC' instead!\n");
 	}
 	if (combined) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "*** Selected (non standard) combined 'CC/TC'.\n");
-		PDEBUG(DR2000, DEBUG_NOTICE, "Phones might reject this, but non of my phones does, so it's ok.\n");
+		LOGP(DR2000, LOGL_NOTICE, "*** Selected (non standard) combined 'CC/TC'.\n");
+		LOGP(DR2000, LOGL_NOTICE, "Phones might reject this, but non of my phones does, so it's ok.\n");
 	}
 }
 
@@ -501,9 +501,9 @@ void r2000_destroy(sender_t *sender)
 {
 	r2000_t *r2000 = (r2000_t *) sender;
 
-	PDEBUG(DR2000, DEBUG_DEBUG, "Destroying 'Radiocom 2000' instance for channel = %s.\n", sender->kanal);
+	LOGP(DR2000, LOGL_DEBUG, "Destroying 'Radiocom 2000' instance for channel = %s.\n", sender->kanal);
 	dsp_cleanup_sender(r2000);
-	timer_exit(&r2000->timer);
+	osmo_timer_del(&r2000->timer);
 	sender_destroy(&r2000->sender);
 	free(r2000);
 }
@@ -511,19 +511,19 @@ void r2000_destroy(sender_t *sender)
 /* go idle and return to frame mode */
 void r2000_go_idle(r2000_t *r2000)
 {
-	timer_stop(&r2000->timer);
+	osmo_timer_del(&r2000->timer);
 
 	if (r2000->callref) {
-		PDEBUG(DR2000, DEBUG_ERROR, "Going idle, but still having callref, please fix!\n");
+		LOGP(DR2000, LOGL_ERROR, "Going idle, but still having callref, please fix!\n");
 		call_up_release(r2000->callref, CAUSE_NORMAL);
 		r2000->callref = 0;
 	}
 
 	if (r2000->sysinfo.chan_type == CHAN_TYPE_TC) {
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Entering IDLE state, no transmission at relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Entering IDLE state, no transmission at relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
 		r2000_set_dsp_mode(r2000, DSP_MODE_OFF, -1);
 	} else {
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Entering IDLE state, sending idle frames at relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Entering IDLE state, sending idle frames at relais %d on %s.\n", r2000->sysinfo.relais, chan_type_long_name(r2000->sysinfo.chan_type));
 		r2000_set_dsp_mode(r2000, DSP_MODE_FRAME, (r2000->sender.loopback) ? r2000_encode_super(r2000) : -1);
 	}
 	r2000_new_state(r2000, STATE_IDLE);
@@ -541,18 +541,18 @@ void r2000_release(r2000_t *r2000)
 	 || r2000->state == STATE_RECALL_WAIT) {
 	 	/* release on CC */
 		r2000_new_state(r2000, STATE_RELEASE_CC);
-		timer_start(&r2000->timer, RELEASE_TIME);
+		osmo_timer_schedule(&r2000->timer, RELEASE_TIME);
 	} else {
 		/* release on TC */
 		r2000_new_state(r2000, STATE_RELEASE_TC);
-		timer_start(&r2000->timer, RELEASE_TIME);
+		osmo_timer_schedule(&r2000->timer, RELEASE_TIME);
 	}
 	r2000_set_dsp_mode(r2000, DSP_MODE_FRAME, -1);
 }
 
 static void r2000_page(r2000_t *r2000, int try, enum r2000_state state)
 {
-        PDEBUG_CHAN(DR2000, DEBUG_INFO, "Entering paging state (try %d), sending 'Appel' to '%s'.\n", try, print_subscriber_subscr(&r2000->subscriber));
+        LOGP_CHAN(DR2000, LOGL_INFO, "Entering paging state (try %d), sending 'Appel' to '%s'.\n", try, print_subscriber_subscr(&r2000->subscriber));
         r2000_new_state(r2000, state);
         r2000->page_try = try;
 }
@@ -586,13 +586,13 @@ static r2000_t *move_call_to_chan(r2000_t *old_r2000, enum r2000_chan_type chan_
 
 	/* no free channel, reuse combined channel, if possible, or release call */
 	if (!new_r2000 && old_r2000->sysinfo.chan_type == CHAN_TYPE_CC_TC) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "No %s found, straying on %s!\n", chan_type_long_name(chan_type), chan_type_long_name(old_r2000->sysinfo.chan_type));
+		LOGP(DR2000, LOGL_NOTICE, "No %s found, straying on %s!\n", chan_type_long_name(chan_type), chan_type_long_name(old_r2000->sysinfo.chan_type));
 		return old_r2000;
 	}
 	if (!new_r2000) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Cannot move us to %s, because there is no free channel!\n", chan_type_long_name(chan_type));
+		LOGP(DR2000, LOGL_NOTICE, "Cannot move us to %s, because there is no free channel!\n", chan_type_long_name(chan_type));
 		if (old_r2000->callref) {
-			PDEBUG(DR2000, DEBUG_NOTICE, "Failed to assign channel, releasing towards network\n");
+			LOGP(DR2000, LOGL_NOTICE, "Failed to assign channel, releasing towards network\n");
 			call_up_release(old_r2000->callref, CAUSE_NOCHANNEL);
 			old_r2000->callref = 0;
 		}
@@ -651,11 +651,11 @@ static void rx_idle(r2000_t *r2000, frame_t *frame)
 		r2000->subscriber.relais = frame->sm_relais;
 		r2000->subscriber.mor = frame->sm_mor;
 
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received inscription from station mobile '%s'\n", print_subscriber_subscr(&r2000->subscriber));
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Mobile Type: %d'\n", r2000->subscriber.type);
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Home Relais: %d'\n", r2000->subscriber.relais);
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, " -> Mobile ID: %d'\n", r2000->subscriber.mor);
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, " (Use '%s' as dial string to call the station mobile.)'\n", subscriber2string(&r2000->subscriber));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received inscription from station mobile '%s'\n", print_subscriber_subscr(&r2000->subscriber));
+		LOGP_CHAN(DR2000, LOGL_INFO, " -> Mobile Type: %d'\n", r2000->subscriber.type);
+		LOGP_CHAN(DR2000, LOGL_INFO, " -> Home Relais: %d'\n", r2000->subscriber.relais);
+		LOGP_CHAN(DR2000, LOGL_INFO, " -> Mobile ID: %d'\n", r2000->subscriber.mor);
+		LOGP_CHAN(DR2000, LOGL_INFO, " (Use '%s' as dial string to call the station mobile.)'\n", subscriber2string(&r2000->subscriber));
 
 		r2000_new_state(r2000, STATE_INSCRIPTION);
 		break;
@@ -666,18 +666,18 @@ static void rx_idle(r2000_t *r2000, frame_t *frame)
 		r2000->subscriber.relais = frame->sm_relais;
 		r2000->subscriber.mor = frame->sm_mor;
 
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received outgoing call from station mobile '%s'\n", print_subscriber_frame(frame));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received outgoing call from station mobile '%s'\n", print_subscriber_frame(frame));
 
 		r2000_t *tc = get_free_chan(CHAN_TYPE_TC);
 		if (!tc) {
-			PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Rejecting mobile originated call, no free traffic channel\n");
+			LOGP_CHAN(DR2000, LOGL_NOTICE, "Rejecting mobile originated call, no free traffic channel\n");
 			r2000_release(r2000);
 			return;
 		}
 		r2000_new_state(r2000, STATE_OUT_ASSIGN);
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
@@ -691,7 +691,7 @@ static void tx_inscription(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 	frame->crins = r2000->sysinfo.crins;
 
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending inscription acknowledge\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Sending inscription acknowledge\n");
 
 	r2000_go_idle(r2000);
 }
@@ -721,10 +721,10 @@ static void tx_out_assign(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 	frame->chan_assign = atoi(tc->sender.kanal);
 
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending outgoing assignment from channel %s to %s\n", r2000->sender.kanal, tc->sender.kanal);
+	LOGP_CHAN(DR2000, LOGL_INFO, "Sending outgoing assignment from channel %s to %s\n", r2000->sender.kanal, tc->sender.kanal);
 
 	r2000_new_state(tc, (tc->state == STATE_OUT_ASSIGN) ? STATE_OUT_IDENT : STATE_RECALL_IDENT);
-	timer_start(&tc->timer, IDENT_TIME);
+	osmo_timer_schedule(&tc->timer, IDENT_TIME);
 }
 
 /* page phone, assign incoming call */
@@ -748,10 +748,10 @@ static void tx_in_assign(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 	frame->chan_assign = atoi(tc->sender.kanal);
 
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending incoming assignment from channel %s to %s\n", r2000->sender.kanal, tc->sender.kanal);
+	LOGP_CHAN(DR2000, LOGL_INFO, "Sending incoming assignment from channel %s to %s\n", r2000->sender.kanal, tc->sender.kanal);
 
 	r2000_new_state(tc, STATE_IN_IDENT);
-	timer_start(&tc->timer, IDENT_TIME);
+	osmo_timer_schedule(&tc->timer, IDENT_TIME);
 }
 
 /*
@@ -768,7 +768,7 @@ static void tx_ident(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending identity request\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Sending identity request\n");
 }
 
 /* receive identity response */
@@ -786,38 +786,38 @@ static void rx_ident(r2000_t *r2000, frame_t *frame)
 	switch(frame->message) {
 	case 16:
 		/* identity response */
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received identity response from station mobile '%s'\n", print_subscriber_frame(frame));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received identity response from station mobile '%s'\n", print_subscriber_frame(frame));
 
 		switch (r2000->state) {
 		case STATE_IN_IDENT:
 			/* alert the phone */
 			r2000_new_state(r2000, STATE_IN_ALERT);
-			timer_start(&r2000->timer, ALERT_TIME);
+			osmo_timer_schedule(&r2000->timer, ALERT_TIME);
 			call_up_alerting(r2000->callref);
 			break;
 		case STATE_RECALL_IDENT:
 			/* alert the phone */
 			r2000_new_state(r2000, STATE_RECALL_ALERT);
-			timer_start(&r2000->timer, ALERT_TIME);
+			osmo_timer_schedule(&r2000->timer, ALERT_TIME);
 			break;
 		case STATE_OUT_IDENT:
 			/* request dial string */
 			r2000_new_state(r2000, STATE_OUT_DIAL1);
-			timer_start(&r2000->timer, DIAL1_TIME);
+			osmo_timer_schedule(&r2000->timer, DIAL1_TIME);
 			break;
 		default:
 			break;
 		}
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
 /* no identity response from phone */
 static void timeout_out_ident(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (outgoing call)\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Timeout receiving identity (outgoing call)\n");
 
 	r2000_go_idle(r2000);
 }
@@ -825,9 +825,9 @@ static void timeout_out_ident(r2000_t *r2000)
 static void timeout_in_ident(r2000_t *r2000)
 {
 	if (r2000->state == STATE_IN_IDENT)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (incoming call)\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Timeout receiving identity (incoming call)\n");
 	else
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout receiving identity (recalling outgoing call)\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Timeout receiving identity (recalling outgoing call)\n");
 
 	/* move us back to cc */
 	r2000 = move_call_to_chan(r2000, CHAN_TYPE_CC);
@@ -841,7 +841,7 @@ static void timeout_in_ident(r2000_t *r2000)
 	}
 
 	/* ... or release */
-	PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Phone does not response, releasing towards network\n");
+	LOGP_CHAN(DR2000, LOGL_NOTICE, "Phone does not response, releasing towards network\n");
 	call_up_release(r2000->callref, CAUSE_OUTOFORDER);
 	r2000->callref = 0;
 	r2000_release(r2000);
@@ -868,13 +868,13 @@ static void tx_alert(r2000_t *r2000, frame_t *frame)
 	tx_invitation(r2000, frame, 3, r2000->sysinfo.nconv);
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending answer invitation to station mobile\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Sending answer invitation to station mobile\n");
 }
 
 static int setup_call(r2000_t *r2000)
 {
 	/* make call toward network */
-	PDEBUG(DR2000, DEBUG_INFO, "Setup call to network.\n");
+	LOGP(DR2000, LOGL_INFO, "Setup call to network.\n");
 	r2000->callref = call_up_setup(subscriber2string(&r2000->subscriber), r2000->subscriber.dialing, OSMO_CC_NETWORK_R2000_NONE, "");
 
 	return 0;
@@ -895,12 +895,12 @@ static void rx_alert(r2000_t *r2000, frame_t *frame)
 	switch(frame->message) {
 	case 17:
 		/* answer */
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received answer from station mobile '%s'\n", print_subscriber_frame(frame));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received answer from station mobile '%s'\n", print_subscriber_frame(frame));
 
 		switch (r2000->state) {
 		case STATE_IN_ALERT:
 			/* answer incoming call */
-			PDEBUG(DR2000, DEBUG_INFO, "Answer call to network.\n");
+			LOGP(DR2000, LOGL_INFO, "Answer call to network.\n");
 			call_up_answer(r2000->callref, subscriber2string(&r2000->subscriber));
 			break;
 		case STATE_OUT_ALERT:
@@ -914,23 +914,23 @@ static void rx_alert(r2000_t *r2000, frame_t *frame)
 			break;
 		}
 		/* go active */
-		timer_stop(&r2000->timer);
+		osmo_timer_del(&r2000->timer);
 		r2000_new_state(r2000, STATE_ACTIVE);
 		r2000_set_dsp_mode(r2000, DSP_MODE_AUDIO_TX, r2000_encode_super(r2000));
 		/* start supervisory timer */
-		timer_start(&r2000->timer, SUPER_TIME1);
+		osmo_timer_schedule(&r2000->timer, SUPER_TIME1);
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
 /* no answer */
 static void timeout_alert(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout while alerting\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Timeout while alerting\n");
 
-	PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Phone does not response, releasing towards network\n");
+	LOGP_CHAN(DR2000, LOGL_NOTICE, "Phone does not response, releasing towards network\n");
 	if (r2000->callref) {
 		call_up_release(r2000->callref, CAUSE_NOANSWER);
 		r2000->callref = 0;
@@ -948,7 +948,7 @@ static void tx_out_dial(r2000_t *r2000, frame_t *frame)
 	tx_invitation(r2000, frame, 10, 0);
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending dialing invitation to station mobile\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Sending dialing invitation to station mobile\n");
 }
 
 /* receive digits */
@@ -970,20 +970,20 @@ static void rx_out_dial1(r2000_t *r2000, frame_t *frame)
 			r2000->subscriber.dialing[i] = frame->digit[i] + '0';
 		r2000->subscriber.dialing[10] = '\0';
 
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received digits 1..10 from station mobile: %s\n", r2000->subscriber.dialing);
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received digits 1..10 from station mobile: %s\n", r2000->subscriber.dialing);
 
 		r2000_new_state(r2000, STATE_OUT_DIAL2);
-		timer_start(&r2000->timer, DIAL2_TIME);
+		osmo_timer_schedule(&r2000->timer, DIAL2_TIME);
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
 /* no digits */
 static void timeout_out_dial1(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout while receiving digits (outgoing call)\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Timeout while receiving digits (outgoing call)\n");
 
 	r2000_release(r2000);
 }
@@ -1007,34 +1007,34 @@ static void rx_out_dial2(r2000_t *r2000, frame_t *frame)
 			r2000->subscriber.dialing[i + 10] = frame->digit[i] + '0';
 		r2000->subscriber.dialing[20] = '\0';
 
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received digits 11..20 from station mobile: %s\n", r2000->subscriber.dialing);
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received digits 11..20 from station mobile: %s\n", r2000->subscriber.dialing);
 
 		if (r2000->sysinfo.recall) {
-			PDEBUG_CHAN(DR2000, DEBUG_INFO, "Suspending call until called party has answered\n");
+			LOGP_CHAN(DR2000, LOGL_INFO, "Suspending call until called party has answered\n");
 			r2000_new_state(r2000, STATE_SUSPEND);
-			timer_start(&r2000->timer, SUSPEND_TIME);
+			osmo_timer_schedule(&r2000->timer, SUSPEND_TIME);
 		} else {
 			r2000_new_state(r2000, STATE_OUT_ALERT);
-			timer_start(&r2000->timer, ALERT_TIME);
+			osmo_timer_schedule(&r2000->timer, ALERT_TIME);
 		}
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
 /* no additional digits */
 static void timeout_out_dial2(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Phone does not send digits 11..20\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Phone does not send digits 11..20\n");
 
 	if (r2000->sysinfo.recall) {
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Suspending call until called party has answered\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Suspending call until called party has answered\n");
 		r2000_new_state(r2000, STATE_SUSPEND);
-		timer_start(&r2000->timer, SUSPEND_TIME);
+		osmo_timer_schedule(&r2000->timer, SUSPEND_TIME);
 	} else {
 		r2000_new_state(r2000, STATE_OUT_ALERT);
-		timer_start(&r2000->timer, ALERT_TIME);
+		osmo_timer_schedule(&r2000->timer, ALERT_TIME);
 	}
 }
 
@@ -1048,7 +1048,7 @@ static void tx_suspend(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending suspend frame\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Sending suspend frame\n");
 }
 
 /* release response */
@@ -1066,9 +1066,9 @@ static void rx_suspend(r2000_t *r2000, frame_t *frame)
 	switch(frame->message) {
 	case 26:
 		/* suspend ack */
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received suspend response from station mobile '%s'\n", print_subscriber_frame(frame));
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received suspend response from station mobile '%s'\n", print_subscriber_frame(frame));
 
-		timer_stop(&r2000->timer);
+		osmo_timer_del(&r2000->timer);
 		/* move us back to cc */
 		r2000 = move_call_to_chan(r2000, CHAN_TYPE_CC);
 		if (!r2000)
@@ -1079,14 +1079,14 @@ static void rx_suspend(r2000_t *r2000, frame_t *frame)
 			return;
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame->message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
 /* response to accept frame */
 static void timeout_suspend(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Phone does not respond to suspend frame\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Phone does not respond to suspend frame\n");
 
 	r2000_release(r2000);
 }
@@ -1097,7 +1097,7 @@ static void timeout_suspend(r2000_t *r2000)
 
 static void timeout_active(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout after loosing supervisory signal, releasing call\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Timeout after loosing supervisory signal, releasing call\n");
 
 	call_up_release(r2000->callref, CAUSE_TEMPFAIL);
 	r2000->callref = 0;
@@ -1117,12 +1117,12 @@ static void tx_release_cc(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending release towards station mobile\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Sending release towards station mobile\n");
 }
 
 static void timeout_release_cc(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Done sending release, going idle\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Done sending release, going idle\n");
 
 	r2000_go_idle(r2000);
 }
@@ -1136,13 +1136,13 @@ static void tx_release_tc(r2000_t *r2000, frame_t *frame)
 	frame->sm_mor = r2000->subscriber.mor;
 
 	if (r2000->tx_frame_count == 1)
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Sending release towards station mobile\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Sending release towards station mobile\n");
 
 }
 
 static void timeout_release_tc(r2000_t *r2000)
 {
-	PDEBUG_CHAN(DR2000, DEBUG_INFO, "Timeout while sending release, going idle\n");
+	LOGP_CHAN(DR2000, LOGL_INFO, "Timeout while sending release, going idle\n");
 
 	r2000_go_idle(r2000);
 }
@@ -1223,9 +1223,9 @@ const char *r2000_get_frame(r2000_t *r2000)
 	bits = encode_frame(&frame, debug);
 
 	if (debug)
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Sending frame %s.\n", r2000_frame_name(frame.message, REL_TO_SM));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Sending frame %s.\n", r2000_frame_name(frame.message, REL_TO_SM));
 	if (debug && r2000->tx_last_frame_idle)
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
 	return bits;
 }
 
@@ -1234,18 +1234,18 @@ void r2000_receive_frame(r2000_t *r2000, const char *bits, double quality, doubl
 	frame_t frame;
 	int rc;
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0, quality * 100.0);
+	LOGP_CHAN(DDSP, LOGL_INFO, "RX Level: %.0f%% Quality=%.0f\n", level * 100.0, quality * 100.0);
 
 	rc = decode_frame(&frame, bits);
 	if (rc < 0) {
-		PDEBUG_CHAN(DR2000, (r2000->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received invalid frame.\n");
+		LOGP_CHAN(DR2000, (r2000->sender.loopback) ? LOGL_NOTICE : LOGL_DEBUG, "Received invalid frame.\n");
 		return;
 	}
 
 	if (r2000->sender.loopback)
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Received frame %s\n", r2000_frame_name(frame.message, REL_TO_SM));
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Received frame %s\n", r2000_frame_name(frame.message, REL_TO_SM));
 	else
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Received frame %s\n", r2000_frame_name(frame.message, SM_TO_REL));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Received frame %s\n", r2000_frame_name(frame.message, SM_TO_REL));
 
 	if (r2000->sender.loopback)
 		return;
@@ -1263,7 +1263,7 @@ void r2000_receive_frame(r2000_t *r2000, const char *bits, double quality, doubl
 		if (!match_subscriber(r2000, &frame))
 			return;
 
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Received release from station mobile\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Received release from station mobile\n");
 
 		if (r2000->callref) {
 			call_up_release(r2000->callref, CAUSE_NORMAL);
@@ -1297,7 +1297,7 @@ void r2000_receive_frame(r2000_t *r2000, const char *bits, double quality, doubl
 		rx_alert(r2000, &frame);
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame.message, SM_TO_REL), r2000_state_name(r2000->state));
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Dropping frame %s in state %s\n", r2000_frame_name(frame.message, SM_TO_REL), r2000_state_name(r2000->state));
 	}
 }
 
@@ -1318,7 +1318,7 @@ void r2000_receive_super(r2000_t *r2000, uint8_t super, double quality, double l
 	      | ((super >> 2) & 0x04)
 	      | (super & 0x08);
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Supervisory: NCONV: %d Relais (4 lowest bits): %d RX Level: %.0f%% Quality=%.0f\n", nconv, relais, level * 100.0, quality * 100.0);
+	LOGP_CHAN(DDSP, LOGL_INFO, "RX Supervisory: NCONV: %d Relais (4 lowest bits): %d RX Level: %.0f%% Quality=%.0f\n", nconv, relais, level * 100.0, quality * 100.0);
 
 	if (r2000->sender.loopback)
 		return;
@@ -1333,7 +1333,7 @@ void r2000_receive_super(r2000_t *r2000, uint8_t super, double quality, double l
 	r2000_set_dsp_mode(r2000, DSP_MODE_AUDIO_TX_RX, -1);
 
 	/* reset supervisory timer */
-	timer_start(&r2000->timer, SUPER_TIME2);
+	osmo_timer_schedule(&r2000->timer, SUPER_TIME2);
 }
 
 /* Timeout handling */
@@ -1392,7 +1392,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 
 	/* 1. convert number to station mobile identification, return INVALNUMBER */
 	if (string2subscriber(dialing, &subscr)) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
 	}
 
@@ -1405,23 +1405,23 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 		 	break;
 	}
 	if (sender) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
 	/* 3. check if all paging (control) channels are busy, return NOCHANNEL */
 	r2000 = get_free_chan(CHAN_TYPE_CC);
 	if (!r2000) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing call, but no free control channel, rejecting!\n");
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing call, but no free control channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 	tc = get_free_chan(CHAN_TYPE_TC);
 	if (!tc) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing call, but no free traffic channel, rejecting!\n");
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing call, but no free traffic channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DR2000, DEBUG_INFO, "Call to station mobile, paging station id '%s'\n", print_subscriber_subscr(&subscr));
+	LOGP(DR2000, LOGL_INFO, "Call to station mobile, paging station id '%s'\n", print_subscriber_subscr(&subscr));
 
 	/* 4. trying to page station mobile */
 	memcpy(&r2000->subscriber, &subscr, sizeof(r2000_subscriber_t));
@@ -1443,14 +1443,14 @@ void call_down_answer(int callref)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing answer, but no callref!\n");
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing answer, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
 
 	switch (r2000->state) {
 	case STATE_RECALL_WAIT:
-		PDEBUG_CHAN(DR2000, DEBUG_INFO, "Call has been answered by network, recalling station mobile.\n");
+		LOGP_CHAN(DR2000, LOGL_INFO, "Call has been answered by network, recalling station mobile.\n");
 		r2000_page(r2000, PAGE_TRIES, STATE_RECALL_ASSIGN);
 		call_tone_recall(callref, 1);
 		break;
@@ -1468,7 +1468,7 @@ void call_down_disconnect(int callref, int __attribute__((unused)) cause)
 	sender_t *sender;
 	r2000_t *r2000;
 
-	PDEBUG(DR2000, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DR2000, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		r2000 = (r2000_t *) sender;
@@ -1476,7 +1476,7 @@ void call_down_disconnect(int callref, int __attribute__((unused)) cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1486,7 +1486,7 @@ void call_down_disconnect(int callref, int __attribute__((unused)) cause)
 		return;
 	switch (r2000->state) {
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Outgoing disconnect, during call setup, releasing!\n");
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Outgoing disconnect, during call setup, releasing!\n");
 		r2000->callref = 0;
 	 	r2000_release(r2000);
 		break;
@@ -1501,7 +1501,7 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 	sender_t *sender;
 	r2000_t *r2000;
 
-	PDEBUG(DR2000, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DR2000, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		r2000 = (r2000_t *) sender;
@@ -1509,7 +1509,7 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DR2000, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DR2000, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
@@ -1518,11 +1518,11 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 
 	switch (r2000->state) {
 	case STATE_ACTIVE:
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Outgoing release, during ringing, releasing!\n");
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Outgoing release, during ringing, releasing!\n");
 	 	r2000_release(r2000);
 		break;
 	default:
-		PDEBUG_CHAN(DR2000, DEBUG_NOTICE, "Outgoing release, during call setup, releasing!\n");
+		LOGP_CHAN(DR2000, LOGL_NOTICE, "Outgoing release, during call setup, releasing!\n");
 	 	r2000_release(r2000);
 		break;
 	}

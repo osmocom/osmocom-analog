@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libsample/sample.h"
 #include "psk.h"
 
@@ -93,18 +93,18 @@ int psk_mod_init(psk_mod_t *psk, void *inst, int (*send_bit)(void *inst), int sa
 	sample_t spl;
 
 	if (samplerate != 48000) {
-		PDEBUG(DDSP, DEBUG_NOTICE, "Sampling rate for PSK encoder must be exactly 48000 Hz!\n");
+		LOGP(DDSP, LOGL_NOTICE, "Sampling rate for PSK encoder must be exactly 48000 Hz!\n");
 		return -EINVAL;
 	}
 	if (symbolrate != 1600) {
-		PDEBUG(DDSP, DEBUG_NOTICE, "Symbol rate for PSK encoder must be exactly 1600 Hz!\n");
+		LOGP(DDSP, LOGL_NOTICE, "Symbol rate for PSK encoder must be exactly 1600 Hz!\n");
 		return -EINVAL;
 	}
 
 	cutoff = 3300.0;
 	transitionband = 200;
 	psk->lp[0] = fir_lowpass_init((double)samplerate, cutoff, transitionband);
-        PDEBUG(DDSP, DEBUG_DEBUG, "Cut off frequency is at %.1f Hz and %.1f Hz.\n", TX_CARRIER + cutoff, TX_CARRIER - cutoff);
+        LOGP(DDSP, LOGL_DEBUG, "Cut off frequency is at %.1f Hz and %.1f Hz.\n", TX_CARRIER + cutoff, TX_CARRIER - cutoff);
 
 	/* interpolate symbol table from 9600 Hz to 48000 Hz */
 	for (i = 0; i < 8; i++) {
@@ -119,7 +119,7 @@ int psk_mod_init(psk_mod_t *psk, void *inst, int (*send_bit)(void *inst), int sa
 	}
 #else
 	if (samplerate < 48000) {
-		PDEBUG(DDSP, DEBUG_NOTICE, "Sampling rate for PSK encoder must be 48000 Hz minimum!\n");
+		LOGP(DDSP, LOGL_NOTICE, "Sampling rate for PSK encoder must be 48000 Hz minimum!\n");
 		return -EINVAL;
 	}
 
@@ -128,13 +128,13 @@ int psk_mod_init(psk_mod_t *psk, void *inst, int (*send_bit)(void *inst), int sa
 	transitionband = 200;
 	psk->lp[0] = fir_lowpass_init((double)samplerate, cutoff, transitionband);
 	psk->lp[1] = fir_lowpass_init((double)samplerate, cutoff, transitionband);
-        PDEBUG(DDSP, DEBUG_DEBUG, "Cut off frequency is at %.1f Hz and %.1f Hz.\n", TX_CARRIER + cutoff, TX_CARRIER - cutoff);
+        LOGP(DDSP, LOGL_DEBUG, "Cut off frequency is at %.1f Hz and %.1f Hz.\n", TX_CARRIER + cutoff, TX_CARRIER - cutoff);
 
 	psk->symbols_per_sample = symbolrate / (double)samplerate;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Symbol duration of %.4f symbols per sample @ %d.\n", psk->symbols_per_sample, samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Symbol duration of %.4f symbols per sample @ %d.\n", psk->symbols_per_sample, samplerate);
 
 	psk->carrier_phaseshift = 2.0 * M_PI * TX_CARRIER / (double)samplerate;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Carrier phase shift of %.4f per sample @ %d.\n", psk->carrier_phaseshift, samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Carrier phase shift of %.4f per sample @ %d.\n", psk->carrier_phaseshift, samplerate);
 #endif
 
 	return 0;
@@ -237,7 +237,7 @@ int psk_demod_init(psk_demod_t *psk, void *inst, void (*receive_bit)(void *inst,
 	double cutoff, transitionband;
 
 	if (samplerate < 48000) {
-		PDEBUG(DDSP, DEBUG_NOTICE, "Sampling rate for PSK decoder must be 48000 Hz minimum!\n");
+		LOGP(DDSP, LOGL_NOTICE, "Sampling rate for PSK decoder must be 48000 Hz minimum!\n");
 		return -EINVAL;
 	}
 
@@ -256,10 +256,10 @@ int psk_demod_init(psk_demod_t *psk, void *inst, void (*receive_bit)(void *inst,
 	iir_lowpass_init(&psk->lp_error[1], 50.0, samplerate, 2);
 	iir_bandpass_init(&psk->lp_clock, symbolrate, samplerate, 40);
 	psk->sample_delay = (int)floor((double)samplerate / symbolrate * 0.25); /* percent of sine duration behind zero crossing */
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cut off frequency is at %.1f Hz and %.1f Hz.\n", RX_CARRIER + cutoff, RX_CARRIER - cutoff);
+	LOGP(DDSP, LOGL_DEBUG, "Cut off frequency is at %.1f Hz and %.1f Hz.\n", RX_CARRIER + cutoff, RX_CARRIER - cutoff);
 
 	psk->carrier_phaseshift = 2.0 * M_PI * -RX_CARRIER / (double)samplerate;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Carrier phase shift of %.4f per sample @ %d.\n", psk->carrier_phaseshift, samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Carrier phase shift of %.4f per sample @ %d.\n", psk->carrier_phaseshift, samplerate);
 
 	return 0;
 }

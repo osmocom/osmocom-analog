@@ -30,7 +30,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <sys/time.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libserial/serial.h"
 #include "../libaaimage/aaimage.h"
@@ -72,7 +72,7 @@ void print_help(const char *arg0)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
-	debug_print_help();
+	logging_print_help();
 	printf(" -s --serial-device <device>\n");
 	printf("        Serial device (default = '%s')\n", serialdev);
 	printf(" -b --baud-rate <baud>\n");
@@ -140,13 +140,11 @@ int handle_options(int short_option, int argi, char **argv)
 		print_help(argv[0]);
 		return 0;
 	case 'v':
-		if (!strcasecmp(argv[argi], "list")) {
-	                debug_list_cat();
+		rc = parse_logging_opt(argv[argi]);
+		if (rc > 0)
 			return 0;
-		}
-		rc = parse_debug_opt(argv[argi]);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
+			fprintf(stderr, "Failed to parse logging option, please use -h for help.\n");
 			return rc;
 		}
 		break;
@@ -337,7 +335,8 @@ int main(int argc, char *argv[])
 	int sniffer = 0;
 	int i;
 
-	debuglevel = DEBUG_INFO;
+	loglevel = LOGL_INFO;
+	logging_init();
 
 	add_options();
 	rc = options_config_file(argc, argv, "~/.osmocom/analog/sim.conf", handle_options);
@@ -366,13 +365,13 @@ int main(int argc, char *argv[])
 			rc = fread(eeprom_memory(), eeprom_length(), 1, fp);
 			fclose(fp);
 		} else
-			PDEBUG(DOPTIONS, DEBUG_INFO, "EEPROM file '%s' does not exist yet.\n", eeprom_file);
+			LOGP(DOPTIONS, LOGL_INFO, "EEPROM file '%s' does not exist yet.\n", eeprom_file);
 
 	}
 
 	/* check version */
 	if (eeprom_read(EEPROM_MAGIC + 0) != 'C' || eeprom_read(EEPROM_MAGIC + 1) != '0' + EEPROM_VERSION) {
-		PDEBUG(DOPTIONS, DEBUG_ERROR, "EEPROM file '%s' is not compatible with this version of program, please remove it!\n", eeprom_file);
+		LOGP(DOPTIONS, LOGL_ERROR, "EEPROM file '%s' is not compatible with this version of program, please remove it!\n", eeprom_file);
 		return 1;
 	}
 
@@ -400,7 +399,7 @@ int main(int argc, char *argv[])
 	eeprom_write(EEPROM_WARTUNG_L, ebdt_data[8]);
 	if (pin) {
 		if (strlen(pin) < 4 || strlen(pin) > 8) {
-			PDEBUG(DSIM7, DEBUG_NOTICE, "Given PIN '%s' has invalid length. (Must be 4 .. 8)\n", pin);
+			LOGP(DSIM7, LOGL_NOTICE, "Given PIN '%s' has invalid length. (Must be 4 .. 8)\n", pin);
 			return 0;
 		}
 		eeprom_write(EEPROM_FLAGS, (strlen(pin) << EEPROM_FLAG_PIN_LEN) | (MAX_PIN_TRY << EEPROM_FLAG_PIN_TRY));
@@ -488,9 +487,9 @@ int main(int argc, char *argv[])
 		if (fp) {
 			fwrite(eeprom_memory(), eeprom_length(), 1, fp);
 			fclose(fp);
-			PDEBUG(DOPTIONS, DEBUG_INFO, "EEPROM file '%s' written.\n", eeprom_file);
+			LOGP(DOPTIONS, LOGL_INFO, "EEPROM file '%s' written.\n", eeprom_file);
 		} else
-			PDEBUG(DOPTIONS, DEBUG_INFO, "EEPROM file '%s' cannot be written. (errno = %d)\n", eeprom_file, errno);
+			LOGP(DOPTIONS, LOGL_INFO, "EEPROM file '%s' cannot be written. (errno = %d)\n", eeprom_file, errno);
 	}
 
 error:
@@ -501,5 +500,7 @@ error:
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 
 #endif /* ARDUINO */

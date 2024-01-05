@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "nmt.h"
 #include "transaction.h"
 
@@ -35,7 +35,7 @@ static void link_transaction(transaction_t *trans)
 	transaction_t **transp;
 
 	/* attach to end of list, so first transaction is served first */
-	PDEBUG(DTRANS, DEBUG_DEBUG, "Linking transaction %p to list\n", trans);
+	LOGP(DTRANS, LOGL_DEBUG, "Linking transaction %p to list\n", trans);
 	trans->next = NULL;
 	transp = &trans_list;
 	while (*transp)
@@ -51,12 +51,12 @@ static void unlink_transaction(transaction_t *trans)
 	nmt_t *nmt;
 
 	/* unlink */
-	PDEBUG(DTRANS, DEBUG_DEBUG, "Unlinking transaction %p from list\n", trans);
+	LOGP(DTRANS, LOGL_DEBUG, "Unlinking transaction %p from list\n", trans);
 	transp = &trans_list;
 	while (*transp && *transp != trans)
 		transp = &((*transp)->next);
 	if (!(*transp)) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "Transaction not in list, please fix!!\n");
+		LOGP(DTRANS, LOGL_ERROR, "Transaction not in list, please fix!!\n");
 		abort();
 	}
 	*transp = trans->next;
@@ -78,15 +78,15 @@ transaction_t *create_transaction(struct nmt_subscriber *subscr)
 
 	trans = calloc(1, sizeof(*trans));
 	if (!trans) {
-		PDEBUG(DTRANS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DTRANS, LOGL_ERROR, "No memory!\n");
 		return NULL;
 	}
 
-	timer_init(&trans->timer, transaction_timeout, trans);
+	osmo_timer_setup(&trans->timer, transaction_timeout, trans);
 
 	memcpy(&trans->subscriber, subscr, sizeof(struct nmt_subscriber));
 
-	PDEBUG(DTRANS, DEBUG_INFO, "Created transaction for subscriber '%c,%s'\n", subscr->country, subscr->number);
+	LOGP(DTRANS, LOGL_INFO, "Created transaction for subscriber '%c,%s'\n", subscr->country, subscr->number);
 
 	link_transaction(trans);
 
@@ -98,9 +98,9 @@ void destroy_transaction(transaction_t *trans)
 {
 	unlink_transaction(trans);
 
-	PDEBUG(DTRANS, DEBUG_INFO, "Destroying transaction for subscriber '%c,%s'\n", trans->subscriber.country, trans->subscriber.number);
+	LOGP(DTRANS, LOGL_INFO, "Destroying transaction for subscriber '%c,%s'\n", trans->subscriber.country, trans->subscriber.number);
 
-	timer_exit(&trans->timer);
+	osmo_timer_del(&trans->timer);
 
 	free(trans);
 }

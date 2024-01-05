@@ -11,9 +11,10 @@ cnetz_sim_SOURCES = \
 
 cnetz_sim_LDADD = \
 	$(COMMON_LA) \
-	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libserial/libserial.a \
 	$(top_builddir)/src/libaaimage/libaaimage.a \
+	$(top_builddir)/src/liblogging/liblogging.a \
+	$(LIBOSMOCORE_LIBS) \
 	-lm
 

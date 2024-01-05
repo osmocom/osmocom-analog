@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "nmt.h"
 #include "transaction.h"
 #include "dsp.h"
@@ -89,7 +89,7 @@ void dsp_init(void)
 	int i;
 	double s;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for supervisory signal and dial tone.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine table for supervisory signal and dial tone.\n");
 	for (i = 0; i < 65536; i++) {
 		s = sin((double)i / 65536.0 * 2.0 * PI);
 		/* supervisor sine */
@@ -113,21 +113,21 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	/* attack (3ms) and recovery time (13.5ms) according to NMT specs */
 	setup_compandor(&nmt->cstate, 8000, 3.0, 13.5);
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for Transceiver.\n");
 
 	/* set modulation parameters */
 	sender_set_fm(&nmt->sender, MAX_DEVIATION * deviation_factor, MAX_MODULATION * deviation_factor, SPEECH_DEVIATION * deviation_factor, MAX_DISPLAY);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
+	LOGP(DDSP, LOGL_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 1500 Hz)\n", TX_PEAK_FSK * deviation_factor, 3.5 * deviation_factor);
+	LOGP(DDSP, LOGL_DEBUG, "Using Supervisory level of %.3f (%.3f KHz deviation @ 4015 Hz)\n", TX_PEAK_SUPER * deviation_factor, 0.3 * deviation_factor);
 
 	/* init fsk */
 	if (fsk_mod_init(&nmt->fsk_mod, nmt, fsk_send_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 1, 0) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (fsk_demod_init(&nmt->fsk_demod, nmt, fsk_receive_bit, nmt->sender.samplerate, BIT_RATE, F0, F1, BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 
@@ -138,7 +138,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 	nmt->super_samples = (int)((double)nmt->sender.samplerate * (1.0 / (SUPER_BANDWIDTH / 2)) + 0.5);
 	spl = calloc(1, nmt->super_samples * sizeof(*spl));
 	if (!spl) {
-		PDEBUG(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDSP, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 	nmt->super_filter_spl = spl;
@@ -170,7 +170,7 @@ int dsp_init_sender(nmt_t *nmt, double deviation_factor)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(nmt_t *nmt)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for Transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for Transceiver.\n");
 
 	fsk_mod_cleanup(&nmt->fsk_mod);
 	fsk_demod_cleanup(&nmt->fsk_demod);
@@ -283,7 +283,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 	if (nmt->state == STATE_ACTIVE) {
 		if (++nmt->super_print == SUPER_PRINT) {
 			nmt->super_print = 0;
-			PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", level * 100.0, quality * 100.0);
+			LOGP_CHAN(DDSP, LOGL_NOTICE, "Supervisory level %.0f%% quality %.0f%%\n", level * 100.0, quality * 100.0);
 		}
 		/* update measurements (if dmp_* params are NULL, we omit this) */
 		display_measurements_update(nmt->dmp_super_level, level * 100.0, 0.0);
@@ -296,7 +296,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 			if (nmt->super_detect_count == SUPER_DETECT_COUNT) {
 				nmt->super_detected = 1;
 				nmt->super_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 / TX_PEAK_SUPER * 100.0, quality * 100.0);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Supervisory signal detected with level=%.0f%%, quality=%.0f%%.\n", result[0] / 0.63662 / TX_PEAK_SUPER * 100.0, quality * 100.0);
 				nmt_rx_super(nmt, 1, quality);
 			}
 		} else
@@ -307,7 +307,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 			if (nmt->super_detect_count == SUPER_LOST_COUNT) {
 				nmt->super_detected = 0;
 				nmt->super_detect_count = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory signal lost.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Supervisory signal lost.\n");
 				nmt_rx_super(nmt, 0, 0.0);
 			}
 		} else
@@ -318,7 +318,7 @@ static void super_decode(nmt_t *nmt, sample_t *samples, int length)
 /* Reset supervisory detection states, so ongoing tone will be detected again. */
 void super_reset(nmt_t *nmt)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Supervisory detector reset.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Supervisory detector reset.\n");
 	nmt->super_detected = 0;
 	nmt->super_detect_count = 0;
 }
@@ -395,7 +395,7 @@ static int fsk_send_bit(void *inst)
 			frame = nmt_get_frame(nmt);
 			if (!frame) {
 				nmt->tx_frame_length = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending frames.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Stop sending frames.\n");
 				return -1;
 			}
 			memcpy(nmt->tx_frame, frame, 166);
@@ -521,7 +521,7 @@ void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 		nmt->tx_frame_length = 0;
 	}
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", nmt_dsp_mode_name(nmt->dsp_mode), nmt_dsp_mode_name(mode));
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", nmt_dsp_mode_name(nmt->dsp_mode), nmt_dsp_mode_name(mode));
 	nmt->dsp_mode = mode;
 }
 

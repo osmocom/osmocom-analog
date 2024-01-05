@@ -20,7 +20,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "squelch.h"
 
 #define CHAN squelch->kanal
@@ -59,11 +59,11 @@ void squelch_init(squelch_t *squelch, const char *kanal, double threshold_db, do
 	/* measure noise floor for auto threshold mode */
 	if (threshold_db == 0.0) {
 		/* automatic threshold */
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal squelch: Use automatic threshold\n");
+		LOGP_CHAN(DDSP, LOGL_INFO, "RF signal squelch: Use automatic threshold\n");
 		squelch->auto_state = 1;
 	} else if (!isinf(threshold_db)) {
 		/* preset threshold */
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal squelch: Use preset threshold of %.1f dB\n", threshold_db);
+		LOGP_CHAN(DDSP, LOGL_INFO, "RF signal squelch: Use preset threshold of %.1f dB\n", threshold_db);
 	}
 	/* squelch is mute on init */
 	squelch->mute_time = mute_time;
@@ -97,7 +97,7 @@ enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double durat
 			/* must be 0.1 dB smaller, so we prevent repeated debugging message with similar value */
 			if (threshold_db < squelch->threshold_db - 0.1) {
 				squelch->threshold_db = threshold_db;
-				PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal measurement: %.1f dB noise floor, using squelch threshold of %.1f dB\n", noise_db, threshold_db);
+				LOGP_CHAN(DDSP, LOGL_INFO, "RF signal measurement: %.1f dB noise floor, using squelch threshold of %.1f dB\n", noise_db, threshold_db);
 			}
 			squelch->auto_count = 0.0;
 			squelch->auto_level_count = 0;
@@ -110,7 +110,7 @@ enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double durat
 		squelch->mute_count -= duration;
 		if (squelch->mute_count <= 0.0) {
 			if (squelch->mute_state) {
-				PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal strong: Unmuting audio (RF %.1f >= %.1f dB)\n", rf_level_db, squelch->threshold_db);
+				LOGP_CHAN(DDSP, LOGL_INFO, "RF signal strong: Unmuting audio (RF %.1f >= %.1f dB)\n", rf_level_db, squelch->threshold_db);
 				squelch->mute_state = 0;
 			}
 			squelch->mute_count = 0.0;
@@ -120,7 +120,7 @@ enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double durat
 		squelch->mute_count += duration;
 		if (squelch->mute_count >= squelch->mute_time) {
 			if (!squelch->mute_state) {
-				PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF signal weak: Muting audio (RF %.1f < %.1f dB)\n", rf_level_db, squelch->threshold_db);
+				LOGP_CHAN(DDSP, LOGL_INFO, "RF signal weak: Muting audio (RF %.1f < %.1f dB)\n", rf_level_db, squelch->threshold_db);
 				squelch->mute_state = 1;
 			}
 			squelch->mute_count = squelch->mute_time;
@@ -132,7 +132,7 @@ enum squelch_result squelch(squelch_t *squelch, double rf_level_db, double durat
 		squelch->loss_count += duration;
 		if (squelch->loss_count >= squelch->loss_time) {
 			if (!squelch->loss_state) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "RF signal loss detected after %.1f seconds\n", squelch->loss_time);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "RF signal loss detected after %.1f seconds\n", squelch->loss_time);
 				squelch->loss_state = 1;
 				return SQUELCH_LOSS;
 			}

@@ -22,7 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
+#include "../libmobile/get_time.h"
 #include "cnetz.h"
 #include "database.h"
 #include "sysinfo.h"
@@ -45,7 +46,7 @@ typedef struct cnetz_database {
 	int			eingebucht;	/* set if still available */
 	double			last_seen;
 	int			busy;		/* set if currently in a call */
-	struct timer		timer;		/* timer for next availability check */
+	struct osmo_timer_list		timer;		/* timer for next availability check */
 	int			retry;		/* counts number of retries */
 } cnetz_db_t;
 
@@ -72,14 +73,14 @@ static void remove_db(cnetz_db_t *db)
 	while (*dbp && *dbp != db)
 		dbp = &((*dbp)->next);
 	if (!(*dbp)) {
-		PDEBUG(DDB, DEBUG_ERROR, "Subscriber not in list, please fix!!\n");
+		LOGP(DDB, LOGL_ERROR, "Subscriber not in list, please fix!!\n");
 		abort();
 	}
 	*dbp = db->next;
 
-	PDEBUG(DDB, DEBUG_INFO, "Removing subscriber '%d,%d,%05d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	LOGP(DDB, LOGL_INFO, "Removing subscriber '%d,%d,%05d' from database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 
-	timer_exit(&db->timer);
+	osmo_timer_del(&db->timer);
 
 	free(db);
 }
@@ -90,15 +91,15 @@ static void db_timeout(void *data)
 	cnetz_db_t *db = data;
 	int rc;
 
-	PDEBUG(DDB, DEBUG_INFO, "Check, if subscriber '%d,%d,%05d' is still available.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	LOGP(DDB, LOGL_INFO, "Check, if subscriber '%d,%d,%05d' is still available.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	
 	rc = cnetz_meldeaufruf(db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
 	if (rc < 0) {
 		/* OgK is used for speech, but this never happens in a real
 		 * network. We just assume that the phone has responded and
 		 * assume we had a response. */
-		PDEBUG(DDB, DEBUG_INFO, "OgK busy, so we assume a positive response.\n");
-		timer_start(&db->timer, si.meldeinterval); /* when to check avaiability again */
+		LOGP(DDB, LOGL_INFO, "OgK busy, so we assume a positive response.\n");
+		osmo_timer_schedule(&db->timer, si.meldeinterval,0); /* when to check avaiability again */
 		db->retry = 0;
 	}
 }
@@ -120,10 +121,10 @@ int update_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int o
 	if (!db) {
 		db = calloc(1, sizeof(*db));
 		if (!db) {
-			PDEBUG(DDB, DEBUG_ERROR, "No memory!\n");
+			LOGP(DDB, LOGL_ERROR, "No memory!\n");
 			return 0;
 		}
-		timer_init(&db->timer, db_timeout, db);
+		osmo_timer_setup(&db->timer, db_timeout, db);
 
 		db->eingebucht = 1;
 		db->futln_nat = futln_nat;
@@ -136,7 +137,7 @@ int update_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int o
 			dbp = &((*dbp)->next);
 		*dbp = db;
 
-		PDEBUG(DDB, DEBUG_INFO, "Adding subscriber '%d,%d,%05d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		LOGP(DDB, LOGL_INFO, "Adding subscriber '%d,%d,%05d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
 	}
 
 	if (ogk_kanal)
@@ -150,23 +151,23 @@ int update_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, int o
 
 	db->busy = busy;
 	if (busy) {
-		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
-		timer_stop(&db->timer);
+		LOGP(DDB, LOGL_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is busy now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
+		osmo_timer_del(&db->timer);
 	} else if (!failed) {
-		PDEBUG(DDB, DEBUG_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
-		timer_start(&db->timer, si.meldeinterval); /* when to check avaiability (again) */
+		LOGP(DDB, LOGL_INFO, "Subscriber '%d,%d,%05d' on OGK channel #%d is idle now.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal);
+		osmo_timer_schedule(&db->timer, si.meldeinterval,0); /* when to check avaiability (again) */
 		db->retry = 0;
 		db->eingebucht = 1;
 		db->last_seen = get_time();
 	} else {
 		db->retry++;
-		PDEBUG(DDB, DEBUG_NOTICE, "Paging subscriber '%d,%d,%05d' on OGK channel #%d failed (try %d of %s).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal, db->retry, print_meldeaufrufe(si.meldeaufrufe));
+		LOGP(DDB, LOGL_NOTICE, "Paging subscriber '%d,%d,%05d' on OGK channel #%d failed (try %d of %s).\n", db->futln_nat, db->futln_fuvst, db->futln_rest, db->ogk_kanal, db->retry, print_meldeaufrufe(si.meldeaufrufe));
 		if (si.meldeaufrufe && db->retry == si.meldeaufrufe) {
-			PDEBUG(DDB, DEBUG_INFO, "Marking subscriber as gone.\n");
+			LOGP(DDB, LOGL_INFO, "Marking subscriber as gone.\n");
 			db->eingebucht = 0;
 			return db->extended;
 		}
-		timer_start(&db->timer, (si.meldeinterval < MELDE_WIEDERHOLUNG) ? si.meldeinterval : MELDE_WIEDERHOLUNG); /* when to do retry */
+		osmo_timer_schedule(&db->timer, (si.meldeinterval < MELDE_WIEDERHOLUNG) ? si.meldeinterval : MELDE_WIEDERHOLUNG,0); /* when to do retry */
 	}
 
 	if (futelg_bit)
@@ -211,18 +212,18 @@ void dump_db(void)
 	int last;
 	char attached[16];
 
-	PDEBUG(DDB, DEBUG_NOTICE, "Dump of subscriber database:\n");
+	LOGP(DDB, LOGL_NOTICE, "Dump of subscriber database:\n");
 	if (!db) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - No subscribers attached!\n");
+		LOGP(DDB, LOGL_NOTICE, " - No subscribers attached!\n");
 		return;
 	}
 
-	PDEBUG(DDB, DEBUG_NOTICE, "Subscriber\tAttached\tBusy\t\tLast seen\tMeldeaufrufe\n");
-	PDEBUG(DDB, DEBUG_NOTICE, "-------------------------------------------------------------------------------\n");
+	LOGP(DDB, LOGL_NOTICE, "Subscriber\tAttached\tBusy\t\tLast seen\tMeldeaufrufe\n");
+	LOGP(DDB, LOGL_NOTICE, "-------------------------------------------------------------------------------\n");
 	while (db) {
 		last = (db->busy) ? 0 : (uint32_t)(now - db->last_seen);
 		sprintf(attached, "YES (OGK %d)", db->ogk_kanal);
-		PDEBUG(DDB, DEBUG_NOTICE, "%d,%d,%05d\t%s\t%s\t\t%02d:%02d:%02d \t%d/%s\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? attached : "-no-\t", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, print_meldeaufrufe(si.meldeaufrufe));
+		LOGP(DDB, LOGL_NOTICE, "%d,%d,%05d\t%s\t%s\t\t%02d:%02d:%02d \t%d/%s\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->eingebucht) ? attached : "-no-\t", (db->busy) ? "YES" : "-no-", last / 3600, (last / 60) % 60, last % 60, db->retry, print_meldeaufrufe(si.meldeaufrufe));
 		db = db->next;
 	}
 }

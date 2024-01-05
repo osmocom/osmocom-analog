@@ -26,7 +26,7 @@
 #include "../libsample/sample.h"
 #include "../libfsk/fsk.h"
 #include "../libwave/wave.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #ifdef HAVE_ALSA
 #include "../libsound/sound.h"
 #endif
@@ -161,13 +161,13 @@ static int fsk_send_bit(void __attribute__((unused)) *inst)
 	if (!tx_telegramm || tx_telegramm_pos == 16) {
 		switch (funkwahl[digit_pos]) {
 		case '\0':
-			PDEBUG(DBNETZ, DEBUG_INFO, "Done sending dialing sequence\n");
+			LOGP(DBNETZ, LOGL_INFO, "Done sending dialing sequence\n");
 			tx_mode = TX_MODE_SILENCE;
 			tx_silence_count = 0;
 			return -1;
 		case 'w':
 			if (!tx_telegramm)
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending channel allocation tone ('Kanalbelegung')\n");
+				LOGP(DBNETZ, LOGL_INFO, "Sending channel allocation tone ('Kanalbelegung')\n");
 			tx_telegramm = "0000000000000000";
 			tx_telegramm_pos = 0;
 			digit_pos++;
@@ -175,23 +175,23 @@ static int fsk_send_bit(void __attribute__((unused)) *inst)
 		default:
 			switch (funkwahl[digit_pos]) {
 			case 's':
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending start digit (no charging meater on board)\n");
+				LOGP(DBNETZ, LOGL_INFO, "Sending start digit (no charging meater on board)\n");
 				break;
 			case 'S':
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending start digit (with charging meater on board)\n");
+				LOGP(DBNETZ, LOGL_INFO, "Sending start digit (with charging meater on board)\n");
 				break;
 			case 'M':
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending start digit (Phone is a coin box.)\n");
+				LOGP(DBNETZ, LOGL_INFO, "Sending start digit (Phone is a coin box.)\n");
 				break;
 			case 'e':
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending stop digit\n");
+				LOGP(DBNETZ, LOGL_INFO, "Sending stop digit\n");
 				break;
 			default:
-				PDEBUG(DBNETZ, DEBUG_INFO, "Sending digit '%c'\n", funkwahl[digit_pos]);
+				LOGP(DBNETZ, LOGL_INFO, "Sending digit '%c'\n", funkwahl[digit_pos]);
 			}
 			impulstelegramm = bnetz_digit2telegramm(funkwahl[digit_pos]);
 			if (!impulstelegramm) {
-				PDEBUG(DBNETZ, DEBUG_ERROR, "Illegal digit '%c', please fix!\n", funkwahl[digit_pos]);
+				LOGP(DBNETZ, LOGL_ERROR, "Illegal digit '%c', please fix!\n", funkwahl[digit_pos]);
 				abort();
 			}
 			tx_telegramm = impulstelegramm->sequence;
@@ -252,7 +252,7 @@ static void process_signal(int buffer_size)
 		count = dsp_samplerate / 1000;
 #endif
 		if (count < 0) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
+			LOGP(DDSP, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 			break;
 		}
 
@@ -267,7 +267,7 @@ static void process_signal(int buffer_size)
 		/* write audio */
 		rc = sound_write(audio, samples, power, count, NULL, NULL, 1);
 		if (rc < 0) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
+			LOGP(DDSP, LOGL_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
 			break;
 		}
 #endif
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
 
 	/* init fsk */
 	if (fsk_mod_init(&fsk_mod, NULL, fsk_send_bit, dsp_samplerate, BIT_RATE, F0, F1, 1.0, 0, 0) < 0) {
-		PDEBUG(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		goto exit;
 	}
 
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
 	/* init sound */
 	audio = sound_open(dsp_audiodev, NULL, NULL, NULL, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 1.0, 4000.0, 2.0);
 	if (!audio) {
-		PDEBUG(DBNETZ, DEBUG_ERROR, "No sound device!\n");
+		LOGP(DBNETZ, LOGL_ERROR, "No sound device!\n");
 		goto exit;
 	}
 #endif
@@ -357,13 +357,13 @@ int main(int argc, char *argv[])
 	if (write_tx_wave) {
 		rc = wave_create_record(&wave_tx_rec, write_tx_wave, dsp_samplerate, 1, 1.0);
 		if (rc < 0) {
-			PDEBUG(DBNETZ, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+			LOGP(DBNETZ, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 			goto exit;
 		}
 	}
 #ifndef HAVE_ALSA
 	else {
-		PDEBUG(DBNETZ, DEBUG_ERROR, "No sound support compiled in, so you need to write to a wave file. See help!\n");
+		LOGP(DBNETZ, LOGL_ERROR, "No sound support compiled in, so you need to write to a wave file. See help!\n");
 		goto exit;
 	}
 #endif
@@ -373,7 +373,7 @@ int main(int argc, char *argv[])
 	sound_start(audio);
 #endif
 
-	PDEBUG(DBNETZ, DEBUG_ERROR, "Start audio after pause...\n");
+	LOGP(DBNETZ, LOGL_ERROR, "Start audio after pause...\n");
 
 	process_signal(buffer_size);
 

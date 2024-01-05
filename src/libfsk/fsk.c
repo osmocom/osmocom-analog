@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "fsk.h"
 
 #define PI			M_PI
@@ -51,7 +51,7 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	int i;
 	int rc;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Setup FSK for Transmitter. (F0 = %.1f, F1 = %.1f, peak = %.1f)\n", f0, f1, level);
+	LOGP(DDSP, LOGL_DEBUG, "Setup FSK for Transmitter. (F0 = %.1f, F1 = %.1f, peak = %.1f)\n", f0, f1, level);
 
 	memset(fsk, 0, sizeof(*fsk));
 
@@ -79,12 +79,12 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 	}
 
 	fsk->bits65536_per_sample = (double)bitrate / (double)samplerate * 65536.0;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits65536_per_sample / 65536.0, samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits65536_per_sample / 65536.0, samplerate);
 
 	fsk->phaseshift65536[0] = f0 / (double)samplerate * 65536.0;
 	fsk->phaseshift65536[1] = f1 / (double)samplerate * 65536.0;
-	PDEBUG(DDSP, DEBUG_DEBUG, "F0 = %.0f Hz (phaseshift65536[0] = %.4f)\n", f0, fsk->phaseshift65536[0]);
-	PDEBUG(DDSP, DEBUG_DEBUG, "F1 = %.0f Hz (phaseshift65536[1] = %.4f)\n", f1, fsk->phaseshift65536[1]);
+	LOGP(DDSP, LOGL_DEBUG, "F0 = %.0f Hz (phaseshift65536[0] = %.4f)\n", f0, fsk->phaseshift65536[0]);
+	LOGP(DDSP, LOGL_DEBUG, "F1 = %.0f Hz (phaseshift65536[1] = %.4f)\n", f1, fsk->phaseshift65536[1]);
 
 	/* use ffsk modulation, i.e. each bit has an integer number of
 	 * half waves and starts/ends at zero crossing
@@ -93,12 +93,12 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 		double waves;
 
 		if (filter) {
-			PDEBUG(DDSP, DEBUG_ERROR, "Cannot use FFSK with filter.\n");
+			LOGP(DDSP, LOGL_ERROR, "Cannot use FFSK with filter.\n");
 			rc = -EINVAL;
 			goto error;
 		}
 
-		PDEBUG(DDSP, DEBUG_DEBUG, "enable FFSK modulation mode\n");
+		LOGP(DDSP, LOGL_DEBUG, "enable FFSK modulation mode\n");
 		fsk->ffsk = 1;
 		waves = (f0 / bitrate);
 		if (fabs(round(waves * 2) - (waves * 2)) > 0.001) {
@@ -116,8 +116,8 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 		fsk->cycles_per_bit65536[0] = f0 / bitrate * 65536.0;
 		fsk->cycles_per_bit65536[1] = f1 / bitrate * 65536.0;
 	}
-	PDEBUG(DDSP, DEBUG_DEBUG, "F0 = %.0f Hz (cycles_per_bit65536[0] = %.4f)\n", f0, fsk->cycles_per_bit65536[0]);
-	PDEBUG(DDSP, DEBUG_DEBUG, "F1 = %.0f Hz (cycles_per_bit65536[1] = %.4f)\n", f1, fsk->cycles_per_bit65536[1]);
+	LOGP(DDSP, LOGL_DEBUG, "F0 = %.0f Hz (cycles_per_bit65536[0] = %.4f)\n", f0, fsk->cycles_per_bit65536[0]);
+	LOGP(DDSP, LOGL_DEBUG, "F1 = %.0f Hz (cycles_per_bit65536[1] = %.4f)\n", f1, fsk->cycles_per_bit65536[1]);
 
 	/* if filter is enabled, use a cosine shaped curve to change the phase each sample */
 	if (filter) {
@@ -138,7 +138,7 @@ int fsk_mod_init(fsk_mod_t *fsk, void *inst, int (*send_bit)(void *inst), int sa
 #endif
 		}
 
-		PDEBUG(DDSP, DEBUG_DEBUG, "Enable filter to smooth FSK transmission.\n");
+		LOGP(DDSP, LOGL_DEBUG, "Enable filter to smooth FSK transmission.\n");
 		fsk->filter = 1;
 	}
 
@@ -155,7 +155,7 @@ error:
 /* Cleanup transceiver instance. */
 void fsk_mod_cleanup(fsk_mod_t *fsk)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup FSK for Transmitter.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Cleanup FSK for Transmitter.\n");
 
 	if (fsk->sin_tab) {
 		free(fsk->sin_tab);
@@ -314,7 +314,7 @@ int fsk_demod_init(fsk_demod_t *fsk, void *inst, void (*receive_bit)(void *inst,
 	double bandwidth;
 	int rc;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Setup FSK for Receiver. (F0 = %.1f, F1 = %.1f)\n", f0, f1);
+	LOGP(DDSP, LOGL_DEBUG, "Setup FSK for Receiver. (F0 = %.1f, F1 = %.1f)\n", f0, f1);
 
 	memset(fsk, 0, sizeof(*fsk));
 
@@ -341,7 +341,7 @@ int fsk_demod_init(fsk_demod_t *fsk, void *inst, void (*receive_bit)(void *inst,
 		goto error;
 
 	fsk->bits_per_sample = (double)bitrate / (double)samplerate;
-	PDEBUG(DDSP, DEBUG_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits_per_sample, samplerate);
+	LOGP(DDSP, LOGL_DEBUG, "Bitduration of %.4f bits per sample @ %d.\n", fsk->bits_per_sample, samplerate);
 
 	return 0;
 
@@ -353,7 +353,7 @@ error:
 /* Cleanup transceiver instance. */
 void fsk_demod_cleanup(fsk_demod_t *fsk)
 {
-	PDEBUG(DDSP, DEBUG_DEBUG, "Cleanup FSK for Receiver.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Cleanup FSK for Receiver.\n");
 
 	fm_demod_exit(&fsk->demod);
 }

@@ -26,7 +26,7 @@
 #include <math.h>
 #include <sys/param.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libdisplay/display.h"
 
 #define MAX_NAME_LEN	16
@@ -111,10 +111,10 @@ static void print_measurements(int on)
 	if (bar_width < 1)
 		return;
 
-	lock_debug();
-
 	lines_total = 0;
 	color = -1;
+	lock_logging();
+	enable_limit_scroll(false);
 	printf("\0337\033[H");
 	for (disp = meas_head; disp; disp = disp->next) {
 		memset(line, ' ', width);
@@ -253,10 +253,10 @@ static void print_measurements(int on)
 	}
 	/* reset color and position */
 	printf("\033[0;39m\0338"); fflush(stdout);
-
-	debug_limit_scroll = lines_total;
-
-	unlock_debug();
+	enable_limit_scroll(true);
+	unlock_logging();
+	/* Set new limit. */
+	logging_limit_scroll_top(lines_total);
 }
 
 void display_measurements_on(int on)
@@ -269,7 +269,7 @@ void display_measurements_on(int on)
 	else
 		measurements_on = on;
 
-	debug_limit_scroll = 0;
+	logging_limit_scroll_top(0);
 }
 
 /* add new parameter on startup to the list of measurements */

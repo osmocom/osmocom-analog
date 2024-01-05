@@ -71,18 +71,18 @@
 #include <math.h>
 #include <inttypes.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "mpt1327.h"
 #include "dsp.h"
 #include "message.h"
 
 
 /* Timers and counters */
-#define RESPONSE_TIMEOUT	1.0
+#define RESPONSE_TIMEOUT	1,0
 #define REPEAT_GTC		1
 #define REPEAT_AHY		1
 #define REPEAT_AHYC		1
@@ -195,7 +195,7 @@ const char *unit_state_name(uint64_t state)
 
 void unit_new_state(mpt1327_unit_t *unit, uint64_t new_state)
 {
-	PDEBUG(DMPT1327, DEBUG_DEBUG, "Radio Unit (Prefix:%d Ident:%d) state: %s -> %s\n", unit->prefix, unit->ident, unit_state_name(unit->state), unit_state_name(new_state));
+	LOGP(DMPT1327, LOGL_DEBUG, "Radio Unit (Prefix:%d Ident:%d) state: %s -> %s\n", unit->prefix, unit->ident, unit_state_name(unit->state), unit_state_name(new_state));
 	unit->state = new_state;
 }
 
@@ -212,9 +212,9 @@ mpt1327_unit_t *get_unit(uint8_t prefix, uint16_t ident)
 	}
 
 	if (!(*unitp)) {
-		PDEBUG(DDB, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) added to database\n", prefix, ident);
+		LOGP(DDB, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) added to database\n", prefix, ident);
 		*unitp = calloc(1, sizeof(mpt1327_unit_t));
-		timer_init(&(*unitp)->timer, unit_timeout, (*unitp));
+		osmo_timer_setup(&(*unitp)->timer, unit_timeout, (*unitp));
 		(*unitp)->state = UNIT_IDLE;
 		(*unitp)->prefix = prefix;
 		(*unitp)->ident = ident;
@@ -262,11 +262,11 @@ static void unit_timeout(void *data)
 	case UNIT_CALLING_SAMIS:
 		if (unit->repeat) {
 			--unit->repeat;
-			PDEBUG(DMPT1327, DEBUG_INFO, "Resend AHYC, because unit timed out.\n");
+			LOGP(DMPT1327, LOGL_INFO, "Resend AHYC, because unit timed out.\n");
 			unit_new_state(unit, UNIT_CALLING_AHYC);
 			break;
 		}
-		PDEBUG(DMPT1327, DEBUG_INFO, "Unit failed to respond to AHYC, releasing...\n");
+		LOGP(DMPT1327, LOGL_INFO, "Unit failed to respond to AHYC, releasing...\n");
 		mpt1327_release(unit);
 		if (unit->callref) {
 			call_up_release(unit->callref, CAUSE_NORMAL);
@@ -276,11 +276,11 @@ static void unit_timeout(void *data)
 	case UNIT_CALLED_ACK:
 		if (unit->repeat) {
 			--unit->repeat;
-			PDEBUG(DMPT1327, DEBUG_INFO, "Resend AHY, because unit timed out.\n");
+			LOGP(DMPT1327, LOGL_INFO, "Resend AHY, because unit timed out.\n");
 			unit_new_state(unit, UNIT_CALLED_AHY);
 			break;
 		}
-		PDEBUG(DMPT1327, DEBUG_INFO, "Unit failed to respond to AHY, releasing...\n");
+		LOGP(DMPT1327, LOGL_INFO, "Unit failed to respond to AHY, releasing...\n");
 		mpt1327_release(unit);
 		if (unit->callref) {
 			call_up_release(unit->callref, CAUSE_NORMAL);
@@ -288,7 +288,7 @@ static void unit_timeout(void *data)
 		}
 		break;
 	case UNIT_CALL:
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Release call, because unit timed out.\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "Release call, because unit timed out.\n");
 		mpt1327_release(unit);
 		if (unit->callref) {
 			call_up_release(unit->callref, CAUSE_NORMAL);
@@ -296,7 +296,7 @@ static void unit_timeout(void *data)
 		}
 		break;
 	default:
-		PDEBUG(DMPT1327, DEBUG_ERROR, "Unknown timeout at state 0x%" PRIx64 ", please fix!\n", unit->state);
+		LOGP(DMPT1327, LOGL_ERROR, "Unknown timeout at state 0x%" PRIx64 ", please fix!\n", unit->state);
 		break;
 	}
 
@@ -308,7 +308,7 @@ void flush_units(void)
 
 	while (unit_list) {
 		next = unit_list->next;
-		timer_exit(&unit_list->timer);
+		osmo_timer_del(&unit_list->timer);
 		free(unit_list);
 		unit_list = next;
 	}
@@ -318,14 +318,14 @@ void dump_units(void)
 {
 	mpt1327_unit_t *unit = unit_list;
 
-	PDEBUG(DDB, DEBUG_NOTICE, "Dump of Radio Unit list:\n");
+	LOGP(DDB, LOGL_NOTICE, "Dump of Radio Unit list:\n");
 	if (!unit) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - No Radio Unit seen yet!\n");
+		LOGP(DDB, LOGL_NOTICE, " - No Radio Unit seen yet!\n");
 		return;
 	}
 
 	while (unit) {
-		PDEBUG(DDB, DEBUG_NOTICE, " - Radio Unit (Prefix:%d Ident:%d) seen on this TSC.\n", unit->prefix, unit->ident);
+		LOGP(DDB, LOGL_NOTICE, " - Radio Unit (Prefix:%d Ident:%d) seen on this TSC.\n", unit->prefix, unit->ident);
 		unit = unit->next;
 	}
 }
@@ -469,7 +469,7 @@ int mpt1327_channel_by_short_name(const char *short_name)
 
 	for (i = 0; mpt1327_channels[i].short_name; i++) {
 		if (!strcasecmp(mpt1327_channels[i].short_name, short_name)) {
-			PDEBUG(DMPT1327, DEBUG_INFO, "Selecting channel '%s' = %s\n", mpt1327_channels[i].short_name, mpt1327_channels[i].long_name);
+			LOGP(DMPT1327, LOGL_INFO, "Selecting channel '%s' = %s\n", mpt1327_channels[i].short_name, mpt1327_channels[i].long_name);
 			return mpt1327_channels[i].chan_type;
 		}
 	}
@@ -582,7 +582,7 @@ static void mpt1327_new_state(mpt1327_t *mpt1327, enum mpt1327_state new_state, 
 {
 	if (mpt1327->state == new_state)
 		return;
-	PDEBUG_CHAN(DMPT1327, DEBUG_DEBUG, "State change: %s -> %s\n", mpt1327_state_name(mpt1327->state), mpt1327_state_name(new_state));
+	LOGP_CHAN(DMPT1327, LOGL_DEBUG, "State change: %s -> %s\n", mpt1327_state_name(mpt1327->state), mpt1327_state_name(new_state));
 
 	/* unlink unit, if linked */
 	if (mpt1327->unit) {
@@ -617,52 +617,52 @@ int mpt1327_create(enum mpt1327_band band, const char *kanal, enum mpt1327_chan_
 		mpt1327 = (mpt1327_t *)sender;
 		if ((mpt1327->chan_type == CHAN_TYPE_CC || mpt1327->chan_type == CHAN_TYPE_CC_TC)
 		 && (chan_type == CHAN_TYPE_CC || chan_type == CHAN_TYPE_CC_TC)) {
-			PDEBUG(DCNETZ, DEBUG_NOTICE, "More than one control channel is not supported, please define other channels as traffic channels!\n");
+			LOGP(DCNETZ, LOGL_NOTICE, "More than one control channel is not supported, please define other channels as traffic channels!\n");
 			return -EINVAL;
 		}
 	}
 	mpt1327 = calloc(1, sizeof(mpt1327_t));
 	if (!mpt1327) {
-		PDEBUG(DMPT1327, DEBUG_ERROR, "No memory!\n");
+		LOGP(DMPT1327, LOGL_ERROR, "No memory!\n");
 		return -EIO;
 	}
 
-	PDEBUG(DMPT1327, DEBUG_DEBUG, "Creating 'MPT1327' instance for Channel %s on Band %s (sample rate %d).\n", kanal, mpt1327_band_def[band].name, samplerate);
+	LOGP(DMPT1327, LOGL_DEBUG, "Creating 'MPT1327' instance for Channel %s on Band %s (sample rate %d).\n", kanal, mpt1327_band_def[band].name, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&mpt1327->sender, kanal, mpt1327_channel2freq(band, atoi(kanal), 0), mpt1327_channel2freq(band, atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DMPT1327, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
+		LOGP(DMPT1327, LOGL_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(mpt1327, squelch_db);
 	if (rc < 0) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
+		LOGP(DANETZ, LOGL_ERROR, "Failed to init signal processing!\n");
 		goto error;
 	}
 
 	/* timers */
-	timer_init(&mpt1327->timer, mpt1327_timeout, mpt1327);
+	osmo_timer_setup(&mpt1327->timer, mpt1327_timeout, mpt1327);
 
 	mpt1327->band = band;
 	mpt1327->chan_type = chan_type;
 
 	/* only accept these valued */
 	if (sysdef.framelength != 1 && sysdef.framelength != 3 && sysdef.framelength != 6) {
-		PDEBUG(DMPT1327, DEBUG_ERROR, "Invalid frame length %d, please fix!\n", sysdef.framelength);
+		LOGP(DMPT1327, LOGL_ERROR, "Invalid frame length %d, please fix!\n", sysdef.framelength);
 		abort();
 	}
 	if (sysdef.wt != 5 && sysdef.wt != 10 && sysdef.wt != 15) {
-		PDEBUG(DMPT1327, DEBUG_ERROR, "Invalid WT value %d, please fix!\n", sysdef.wt);
+		LOGP(DMPT1327, LOGL_ERROR, "Invalid WT value %d, please fix!\n", sysdef.wt);
 		abort();
 	}
 
 	/* go into idle state */
 	mpt1327_go_idle(mpt1327);
 
-	PDEBUG(DMPT1327, DEBUG_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	LOGP(DMPT1327, LOGL_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -691,21 +691,21 @@ void mpt1327_check_channels(void)
 		}
 	}
 	if (cc && !tc) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "\n");
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "*** No call is possible.\n");
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "*** Use at least one 'TC'!\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "*** Selected channel(s) can be used for control only.\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "*** No call is possible.\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "*** Use at least one 'TC'!\n");
 		note = 1;
 	}
 	if (tc && !cc) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "\n");
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "*** No call to the mobile phone is possible.\n");
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "*** Use one 'CC'!\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "*** No call to the mobile phone is possible.\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "*** Use one 'CC'!\n");
 		note = 1;
 	}
 	if (note)
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "\n");
 }
 
 /* Destroy transceiver instance and unlink from list. */
@@ -713,10 +713,10 @@ void mpt1327_destroy(sender_t *sender)
 {
 	mpt1327_t *mpt1327 = (mpt1327_t *) sender;
 
-	PDEBUG(DMPT1327, DEBUG_DEBUG, "Destroying 'MPT1327' instance for channel = %s.\n", sender->kanal);
+	LOGP(DMPT1327, LOGL_DEBUG, "Destroying 'MPT1327' instance for channel = %s.\n", sender->kanal);
 
 	dsp_cleanup_sender(mpt1327);
-	timer_exit(&mpt1327->timer);
+	osmo_timer_del(&mpt1327->timer);
 	sender_destroy(&mpt1327->sender);
 	free(sender);
 }
@@ -724,10 +724,10 @@ void mpt1327_destroy(sender_t *sender)
 /* Abort connection towards mobile station changing to IDLE state */
 static void mpt1327_go_idle(mpt1327_t *mpt1327)
 {
-	timer_stop(&mpt1327->timer);
+	osmo_timer_del(&mpt1327->timer);
 	mpt1327->pressel_on = 0;
 
-	PDEBUG(DMPT1327, DEBUG_INFO, "Entering IDLE state on channel %s.\n", mpt1327->sender.kanal);
+	LOGP(DMPT1327, LOGL_INFO, "Entering IDLE state on channel %s.\n", mpt1327->sender.kanal);
 	mpt1327_new_state(mpt1327, STATE_IDLE, NULL);
 	memset(&mpt1327->tx_sched, 0, sizeof(mpt1327->tx_sched));
 	switch (mpt1327->chan_type) {
@@ -745,7 +745,7 @@ static void mpt1327_go_idle(mpt1327_t *mpt1327)
 
 static void mpt1327_release(mpt1327_unit_t *unit)
 {
-	timer_stop(&unit->timer);
+	osmo_timer_del(&unit->timer);
 
 	if (unit->state == UNIT_CALL && unit->tc) {
 		/* release all units on traffic channel */
@@ -815,7 +815,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 			codeword->params[MPT_PFIX] = 0x2a; /* just some alternating pattern (ignored) */
 			codeword->params[MPT_IDENT1] = IDENT_DUMMYI;
 			codeword->params[MPT_IDENT2] = IDENT_DUMMYI;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending dummy AHY, to prevent random access while receiving SAMIS\n");
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending dummy AHY, to prevent random access while receiving SAMIS\n");
 		} else {
 			unit = find_unit_state(UNIT_REGISTER_ACK | UNIT_DIVERSION_REJ | UNIT_CALLING_REJ | UNIT_CALLING_AHYC | UNIT_CALLED_AHY | UNIT_GTC_P | UNIT_GTC_A | UNIT_GTC_B | UNIT_CANCEL_ACK | UNIT_CALLED_AHYX, NULL);
 			if (!unit) {
@@ -851,7 +851,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT2] = unit->ident;
 				codeword->params[MPT_QUAL] = 0;
 				unit_new_state(unit, UNIT_IDLE);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				break;
 			case UNIT_DIVERSION_REJ: /* reject diversion */
 				codeword->type = MPT_ACKX;
@@ -859,7 +859,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT1] = unit->called_ident;
 				codeword->params[MPT_IDENT2] = unit->ident;
 				codeword->params[MPT_QUAL] = 0;
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending negative acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending negative acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				if (unit->repeat) {
 					--unit->repeat;
 					break;
@@ -874,7 +874,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT1] = unit->called_ident;
 				codeword->params[MPT_IDENT2] = unit->ident;
 				codeword->params[MPT_QUAL] = 1;
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending negative acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending negative acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				if (unit->repeat) {
 					--unit->repeat;
 					break;
@@ -907,15 +907,15 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 					codeword->params[MPT_DESC] = 0x2;
 					break;
 				default:
-					PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Want to send AHYC, but called_type not set correctly, please fix!\n");
+					LOGP_CHAN(DMPT1327, LOGL_ERROR, "Want to send AHYC, but called_type not set correctly, please fix!\n");
 					abort();
 				}
 				unit_new_state(unit, UNIT_CALLING_SAMIS);
 				mpt1327->rx_sched.data_prefix = unit->prefix;
 				mpt1327->rx_sched.data_ident = unit->ident;
-				PDEBUG_CHAN(DMPT1327, DEBUG_DEBUG, "Starting timer, waiting for response\n");
-				timer_start(&unit->timer, RESPONSE_TIMEOUT);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending AHYC, to request SAMIS from Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_DEBUG, "Starting timer, waiting for response\n");
+				osmo_timer_schedule(&unit->timer, RESPONSE_TIMEOUT);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending AHYC, to request SAMIS from Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				break;
 			case UNIT_CALLED_AHY: /* call to unit and request ACK from unit */
 				codeword->type = MPT_AHY;
@@ -928,9 +928,9 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_E] = 0; /* no emergency call */
 				codeword->params[MPT_AD] = 0; /* no appended data */
 				unit_new_state(unit, UNIT_CALLED_ACK);
-				PDEBUG_CHAN(DMPT1327, DEBUG_DEBUG, "Starting timer, waiting for response\n");
-				timer_start(&unit->timer, RESPONSE_TIMEOUT);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending AHY, to request ACK from Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_DEBUG, "Starting timer, waiting for response\n");
+				osmo_timer_schedule(&unit->timer, RESPONSE_TIMEOUT);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending AHY, to request ACK from Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				break;
 			case UNIT_GTC_P: /* channel assignment to unit itself and called unit */
 				codeword->type = MPT_GTC;
@@ -938,7 +938,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT1] = unit->called_ident;
 				codeword->params[MPT_IDENT2] = unit->ident;
 				codeword->params[MPT_CHAN] = mpt1327_channel2chan(unit->tc->band, atoi(unit->tc->sender.kanal));
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending channel assignment to calling and called Radio Units (Prefix:%d Ident:%d and Ident:%d)\n", unit->prefix, unit->ident, unit->called_ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending channel assignment to calling and called Radio Units (Prefix:%d Ident:%d and Ident:%d)\n", unit->prefix, unit->ident, unit->called_ident);
 				if (unit->repeat) {
 					--unit->repeat;
 					break;
@@ -946,7 +946,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				unit_new_state(unit, UNIT_CALL);
 				mpt1327_set_dsp_mode(unit->tc, DSP_MODE_TRAFFIC, 1);
 				if (sysdef.timeout)
-					timer_start(&unit->timer, sysdef.timeout);
+					osmo_timer_schedule(&unit->timer, sysdef.timeout,0);
 				break;
 			case UNIT_GTC_B: /* channel assignment to called unit */
 				/* NOTE GTC to called unit must be sent before GTC to calling unit (1.3.5.3) */
@@ -955,7 +955,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT1] = unit->called_ident;
 				codeword->params[MPT_IDENT2] = IDENT_DUMMYI;
 				codeword->params[MPT_CHAN] = mpt1327_channel2chan(unit->tc->band, atoi(unit->tc->sender.kanal));
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending channel assignment to called Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending channel assignment to called Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				if (unit->repeat) {
 					--unit->repeat;
 					break;
@@ -969,7 +969,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT1] = IDENT_DUMMYI;
 				codeword->params[MPT_IDENT2] = unit->ident;
 				codeword->params[MPT_CHAN] = mpt1327_channel2chan(unit->tc->band, atoi(unit->tc->sender.kanal));
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending channel assignment to calling Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending channel assignment to calling Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				if (unit->repeat) {
 					--unit->repeat;
 					break;
@@ -977,7 +977,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				unit_new_state(unit, UNIT_CALL);
 				mpt1327_set_dsp_mode(unit->tc, DSP_MODE_TRAFFIC, 1);
 				if (sysdef.timeout)
-					timer_start(&unit->timer, sysdef.timeout);
+					osmo_timer_schedule(&unit->timer, sysdef.timeout,0);
 				break;
 			case UNIT_CANCEL_ACK:
 				codeword->type = MPT_ACK;
@@ -986,14 +986,14 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
 				codeword->params[MPT_IDENT2] = unit->ident;
 				codeword->params[MPT_QUAL] = 1;
 				unit_new_state(unit, UNIT_IDLE);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending acknowledge to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				break;
 			case UNIT_CALLED_AHYX: /* cancel call towards unit */
 				codeword->type = MPT_AHYX;
 				codeword->params[MPT_PFIX] = unit->prefix;
 				codeword->params[MPT_IDENT1] = unit->ident;
 				codeword->params[MPT_IDENT2] = IDENT_PABXI;
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending AHYX, to cancel call to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending AHYX, to cancel call to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 				if (unit->repeat) {
 					--unit->repeat;
 					break;
@@ -1047,7 +1047,7 @@ int mpt1327_send_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t __attri
 		switch (unit->state) {
 		case UNIT_CALL_CLEAR: /* release channel */
 			if (!unit->repeat) {
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Done sending clear down on traffic channel, releasing\n");
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Done sending clear down on traffic channel, releasing\n");
 				unit_new_state(unit, UNIT_IDLE);
 				mpt1327_go_idle(mpt1327);
 				return -1;
@@ -1072,7 +1072,7 @@ int mpt1327_send_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t __attri
 			cc = search_cc();
 			if (cc)
 				codeword->params[MPT_CONT] = mpt1327_channel2chan(cc->band, atoi(cc->sender.kanal));
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Sending clear down on traffic channel\n");
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Sending clear down on traffic channel\n");
 		}
 		mpt1327->tx_sched.state = SCHED_STATE_TC_ADDR;
 		break;
@@ -1115,7 +1115,7 @@ static void out_setup(mpt1327_unit_t *unit, uint8_t network_type, int network_id
 	char caller_id[32], id[16];
 
 	/* setup call */
-	PDEBUG(DMPT1327, DEBUG_INFO, "Setup call to network.\n");
+	LOGP(DMPT1327, LOGL_INFO, "Setup call to network.\n");
 	sprintf(caller_id, "%03d%04d", unit->prefix, unit->ident);
 	if (network_id)
 		sprintf(id, "%d", network_id);
@@ -1126,9 +1126,9 @@ static void out_setup(mpt1327_unit_t *unit, uint8_t network_type, int network_id
 
 static void _cancel_pending_call(mpt1327_t *mpt1327, mpt1327_unit_t *unit)
 {
-	PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "We are already in a call, the phone might have restarted, so we free old channel first.\n");
+	LOGP_CHAN(DMPT1327, LOGL_INFO, "We are already in a call, the phone might have restarted, so we free old channel first.\n");
 	mpt1327_go_idle(unit->tc);
-	timer_stop(&unit->timer);
+	osmo_timer_del(&unit->timer);
 	if (unit->callref) {
 		call_up_release(unit->callref, CAUSE_NORMAL);
 		unit->callref = 0;
@@ -1144,7 +1144,7 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 	case MPT_RQR: /* register */
 		mpt1327_reset_sync(mpt1327); /* message complete */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT1]);
-		PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) registers\n", unit->prefix, unit->ident);
+		LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) registers\n", unit->prefix, unit->ident);
 		if (unit->tc)
 			_cancel_pending_call(mpt1327, unit);
 		unit_new_state(unit, UNIT_REGISTER_ACK);
@@ -1153,10 +1153,10 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 		mpt1327_reset_sync(mpt1327); /* message complete */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT2]);
 		unit->called_ident = codeword->params[MPT_IDENT1];
-		PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) requests diversion\n", unit->prefix, unit->ident);
+		LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) requests diversion\n", unit->prefix, unit->ident);
 		if (unit->tc)
 			_cancel_pending_call(mpt1327, unit);
-		PDEBUG_CHAN(DMPT1327, DEBUG_NOTICE, "Diversion not supported by TSC, rejecting...\n");
+		LOGP_CHAN(DMPT1327, LOGL_NOTICE, "Diversion not supported by TSC, rejecting...\n");
 		unit_new_state(unit, UNIT_DIVERSION_REJ);
 		break;
 	case MPT_RQS: /* simple call */
@@ -1164,13 +1164,13 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 		mpt1327_reset_sync(mpt1327); /* message complete */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT2]);
 		unit->called_ident = codeword->params[MPT_IDENT1];
-		PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Ident:%d%s\n", unit->prefix, unit->ident, unit->called_ident, (codeword->type == MPT_RQE) ? " (emergency)" : "");
+		LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Ident:%d%s\n", unit->prefix, unit->ident, unit->called_ident, (codeword->type == MPT_RQE) ? " (emergency)" : "");
 		if (unit->tc)
 			_cancel_pending_call(mpt1327, unit);
 		tc = search_free_tc();
 		if (!tc) {
 			unit_new_state(unit, UNIT_CALLING_REJ);
-			PDEBUG_CHAN(DMPT1327, DEBUG_NOTICE, "No free Traffic Channel, call is rejected.\n");
+			LOGP_CHAN(DMPT1327, LOGL_NOTICE, "No free Traffic Channel, call is rejected.\n");
 			break;
 		}
 		if (codeword->params[MPT_EXT]) {
@@ -1178,79 +1178,79 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			unit->called_type = CALLED_TYPE_PBX_SHORT;
 			sprintf(unit->called_number, "%d", unit->called_ident);
 			exchange = ((codeword->params[MPT_FLAG1] << 1) | codeword->params[MPT_FLAG2]) + 1;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to PBX exchange %d, Number %s\n", exchange, unit->called_number);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to PBX exchange %d, Number %s\n", exchange, unit->called_number);
 			unit_new_state(unit, UNIT_GTC_A);
 			unit->repeat = REPEAT_GTC;
 			out_setup(unit, OSMO_CC_NETWORK_MPT1327_PBX, exchange);
 		} else if (unit->called_ident >= IDENT_PSTNSI1 && unit->called_ident < IDENT_PSTNSI1 + 15) {
 			unit->called_type = CALLED_TYPE_PSTN_PRE;
 			sprintf(unit->called_number, "%d", unit->called_ident - IDENT_PSTNSI1 + 1);
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to PSTN with pre-arranged Number %s\n", unit->called_number);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to PSTN with pre-arranged Number %s\n", unit->called_number);
 			unit_new_state(unit, UNIT_GTC_A);
 			unit->repeat = REPEAT_GTC;
 			out_setup(unit, OSMO_CC_NETWORK_MPT1327_PSTN, 0);
 		} else switch (unit->called_ident) {
 		case IDENT_IPFIXI:
 			unit->called_type = CALLED_TYPE_INTERPFX;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to Unit/Group %d with different Prefix\n", unit->called_ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to Unit/Group %d with different Prefix\n", unit->called_ident);
 			unit_new_state(unit, UNIT_CALLING_AHYC);
 			unit->repeat = REPEAT_AHYC;
 			break;
 		case IDENT_ALLI:
 			unit->called_type = CALLED_TYPE_SYSTEM;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> System wide Call\n");
+			LOGP_CHAN(DMPT1327, LOGL_INFO, " -> System wide Call\n");
 			unit_new_state(unit, UNIT_GTC_P);
 			unit->repeat = REPEAT_GTC;
 			break;
 		case IDENT_PSTNGI:
 			if (codeword->params[MPT_FLAG1]) {
 				unit->called_type = CALLED_TYPE_PSTN_LONG2;
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to PSTN with long Number (10..31 Digits)\n");
+				LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to PSTN with long Number (10..31 Digits)\n");
 			} else {
 				unit->called_type = CALLED_TYPE_PSTN_LONG1;
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to PSTN with long Number (1..9 Digits)\n");
+				LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to PSTN with long Number (1..9 Digits)\n");
 			}
 			unit_new_state(unit, UNIT_CALLING_AHYC);
 			unit->repeat = REPEAT_AHYC;
 			break;
 		case IDENT_PABXI:
 			unit->called_type = CALLED_TYPE_PBX_LONG;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to PBX (long number)\n");
+			LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to PBX (long number)\n");
 			unit_new_state(unit, UNIT_CALLING_AHYC);
 			unit->repeat = REPEAT_AHYC;
 			break;
 		default:
 			unit->called_type = CALLED_TYPE_UNIT;
 			unit->called_prefix = unit->prefix;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, " -> Call to Unit/Group %d (same Prefix)\n", unit->called_ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, " -> Call to Unit/Group %d (same Prefix)\n", unit->called_ident);
 			unit_new_state(unit, UNIT_GTC_P);
 			unit->repeat = REPEAT_GTC;
 		}
-		PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Allocating Traffic Channel %s\n", tc->sender.kanal);
+		LOGP_CHAN(DMPT1327, LOGL_INFO, "Allocating Traffic Channel %s\n", tc->sender.kanal);
 		mpt1327_new_state(tc, STATE_BUSY, unit);
 		break;
 	case MPT_SAMIS: /* SAMIS response */
 		unit = get_unit(mpt1327->rx_sched.data_prefix, mpt1327->rx_sched.data_ident);
 		if (unit->state != UNIT_CALLING_SAMIS) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Radio Unit (Prefix:%d Ident:%d) sends SAMIS, but not requested\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_ERROR, "Radio Unit (Prefix:%d Ident:%d) sends SAMIS, but not requested\n", unit->prefix, unit->ident);
 			break;
 		}
 		switch (unit->called_type) {
 		case CALLED_TYPE_INTERPFX:
 			if (codeword->params[MPT_DESC] != 0x0) {
-				PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Expecting DESC=%d from Radio Unit, but got DESC=%d, dropping!\n", 0x0, (int)codeword->params[MPT_DESC]);
+				LOGP_CHAN(DMPT1327, LOGL_ERROR, "Expecting DESC=%d from Radio Unit, but got DESC=%d, dropping!\n", 0x0, (int)codeword->params[MPT_DESC]);
 				return;
 			}
 			unit->called_prefix = codeword->params[MPT_PARAMETERS1] >> 13;
 			unit->called_ident = codeword->params[MPT_PARAMETERS1] & 0x1fff;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Prefix:%d Ident:%d\n", unit->prefix, unit->ident, unit->called_prefix, unit->called_ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Prefix:%d Ident:%d\n", unit->prefix, unit->ident, unit->called_prefix, unit->called_ident);
 			unit_new_state(unit, UNIT_GTC_B);
 			unit->repeat = REPEAT_GTC;
 			break;
 		case CALLED_TYPE_PSTN_LONG1:
 		case CALLED_TYPE_PSTN_LONG2:
 			if (codeword->params[MPT_DESC] != 0x1) {
-				PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Expecting DESC=%d from Radio Unit, but got DESC=%d, dropping!\n", 0x1, (int)codeword->params[MPT_DESC]);
+				LOGP_CHAN(DMPT1327, LOGL_ERROR, "Expecting DESC=%d from Radio Unit, but got DESC=%d, dropping!\n", 0x1, (int)codeword->params[MPT_DESC]);
 				return;
 			}
 			unit->called_number[0] = '0';
@@ -1269,8 +1269,8 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			mpt1327->rx_sched.data_count = 0;
 			mpt1327->rx_sched.data_word = MPT_SAMIS_DT;
 			if (mpt1327->rx_sched.data_num == 0) {
-				timer_stop(&unit->timer);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
+				osmo_timer_del(&unit->timer);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
 				out_setup(unit, OSMO_CC_NETWORK_MPT1327_PSTN, 0);
 				unit_new_state(unit, UNIT_GTC_A);
 				unit->repeat = REPEAT_GTC;
@@ -1278,7 +1278,7 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			break;
 		case CALLED_TYPE_PBX_LONG:
 			if (codeword->params[MPT_DESC] != 0x2) {
-				PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Expecting DESC=%d from Radio Unit, but got DESC=%d, dropping!\n", 0x2, (int)codeword->params[MPT_DESC]);
+				LOGP_CHAN(DMPT1327, LOGL_ERROR, "Expecting DESC=%d from Radio Unit, but got DESC=%d, dropping!\n", 0x2, (int)codeword->params[MPT_DESC]);
 				return;
 			}
 			unit->called_number[0] = '0';
@@ -1292,21 +1292,21 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			unit->called_number[8] = mpt1327_bcd[(codeword->params[MPT_PARAMETERS2] >> 4) & 0xf];
 			unit->called_number[9] = mpt1327_bcd[(codeword->params[MPT_PARAMETERS2] >> 0) & 0xf];
 			unit->called_number[10] = '\0';
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
-			timer_stop(&unit->timer);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
+			osmo_timer_del(&unit->timer);
 			out_setup(unit, OSMO_CC_NETWORK_MPT1327_PBX, 0);
 			unit_new_state(unit, UNIT_GTC_A);
 			unit->repeat = REPEAT_GTC;
 			break;
 		default:
-			PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Want to receive SAMIS, but called_type not set correctly, please fix!\n");
+			LOGP_CHAN(DMPT1327, LOGL_ERROR, "Want to receive SAMIS, but called_type not set correctly, please fix!\n");
 			abort();
 		}
 		break;
 	case MPT_SAMIS_DT:
 		unit = get_unit(mpt1327->rx_sched.data_prefix, mpt1327->rx_sched.data_ident);
 		if (unit->state != UNIT_CALLING_SAMIS) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Radio Unit (Prefix:%d Ident:%d) sends SAMIS, but not requested\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_ERROR, "Radio Unit (Prefix:%d Ident:%d) sends SAMIS, but not requested\n", unit->prefix, unit->ident);
 			break;
 		}
 		if (mpt1327->rx_sched.data_count == 1) {
@@ -1323,8 +1323,8 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			unit->called_number[20] = mpt1327_bcd[(codeword->params[MPT_BCD11] >> 0) & 0xf];
 			unit->called_number[21] = '\0';
 			if (mpt1327->rx_sched.data_num == 1) {
-				timer_stop(&unit->timer);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
+				osmo_timer_del(&unit->timer);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
 				out_setup(unit, OSMO_CC_NETWORK_MPT1327_PSTN, 0);
 				unit_new_state(unit, UNIT_GTC_A);
 				unit->repeat = REPEAT_GTC;
@@ -1343,8 +1343,8 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			unit->called_number[31] = mpt1327_bcd[(codeword->params[MPT_BCD11] >> 0) & 0xf];
 			unit->called_number[32] = '\0';
 			mpt1327->rx_sched.data_num = 0; /* just in case it is more than 2 data words */
-			timer_stop(&unit->timer);
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
+			osmo_timer_del(&unit->timer);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) calls Number %s\n", unit->prefix, unit->ident, unit->called_number);
 			out_setup(unit, OSMO_CC_NETWORK_MPT1327_PSTN, 0);
 			unit_new_state(unit, UNIT_GTC_A);
 			unit->repeat = REPEAT_GTC;
@@ -1353,30 +1353,30 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 	case MPT_RQX: /* call cancel */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT2]);
 		unit->called_ident = codeword->params[MPT_IDENT1];
-		timer_stop(&unit->timer);
-		PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) cancels call to %d\n", unit->prefix, unit->ident, unit->called_ident);
+		osmo_timer_del(&unit->timer);
+		LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) cancels call to %d\n", unit->prefix, unit->ident, unit->called_ident);
 		unit_new_state(unit, UNIT_CANCEL_ACK);
 		if (unit->tc) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Free Traffic Channel %s, because unit cancels on control channel\n", unit->tc->sender.kanal);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Free Traffic Channel %s, because unit cancels on control channel\n", unit->tc->sender.kanal);
 			mpt1327_go_idle(unit->tc);
 		}
 		break;
 	case MPT_ACKI: /* ack from unit (not ready, wait for RQQ) */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT1]);
-		timer_stop(&unit->timer);
+		osmo_timer_del(&unit->timer);
 		if (unit->state == UNIT_CALLED_ACK) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) acknowledges call (not yet ready, waiting for RQQ\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) acknowledges call (not yet ready, waiting for RQQ\n", unit->prefix, unit->ident);
 			if (unit->callref)
 				call_up_alerting(unit->callref);
 			break;
 		}
-		PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Radio Unit (Prefix:%d Ident:%d) acknowledges, no call\n", unit->prefix, unit->ident);
+		LOGP_CHAN(DMPT1327, LOGL_ERROR, "Radio Unit (Prefix:%d Ident:%d) acknowledges, no call\n", unit->prefix, unit->ident);
 		break;
 	case MPT_ACK: /* ack from unit */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT1]);
-		timer_stop(&unit->timer);
+		osmo_timer_del(&unit->timer);
 		if (unit->state == UNIT_CALLED_ACK) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) acknowledges call\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) acknowledges call\n", unit->prefix, unit->ident);
 answer:
 			if (unit->callref) {
 				char connected_id[32];
@@ -1387,22 +1387,22 @@ answer:
 			unit->repeat = REPEAT_GTC;
 			break;
 		}
-		PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Radio Unit (Prefix:%d Ident:%d) acknowledges, no call\n", unit->prefix, unit->ident);
+		LOGP_CHAN(DMPT1327, LOGL_ERROR, "Radio Unit (Prefix:%d Ident:%d) acknowledges, no call\n", unit->prefix, unit->ident);
 		break;
 	case MPT_RQQ: /* status from radio */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT2]);
-		timer_stop(&unit->timer);
-		PDEBUG_CHAN(DMPT1327, DEBUG_ERROR, "Radio Unit (Prefix:%d Ident:%d) sends RRQ with STATUS=%d\n", unit->prefix, unit->ident, (int)codeword->params[MPT_STATUS]);
+		osmo_timer_del(&unit->timer);
+		LOGP_CHAN(DMPT1327, LOGL_ERROR, "Radio Unit (Prefix:%d Ident:%d) sends RRQ with STATUS=%d\n", unit->prefix, unit->ident, (int)codeword->params[MPT_STATUS]);
 		switch (codeword->params[MPT_STATUS]) {
 		case 0x00:
 			if (unit->state == UNIT_CALLED_ACK) {
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) answers call\n", unit->prefix, unit->ident);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) answers call\n", unit->prefix, unit->ident);
 				// NOTE: GTC acknowledges RQQ
 				goto answer;
 			}
 			break;
 		case 0x1f:
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) rejects call, releasing\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) rejects call, releasing\n", unit->prefix, unit->ident);
 			// NOTE: AHYX acknowledges RQQ
 			mpt1327_release(unit);
 			if (unit->callref) {
@@ -1427,7 +1427,7 @@ answer:
 	default:
 		if (mpt1327->sender.loopback)
 			return;
-		PDEBUG_CHAN(DMPT1327, DEBUG_NOTICE, "Received unsupported codeword '%s' = '%s' on control channel\n", codeword->short_name, codeword->long_name);
+		LOGP_CHAN(DMPT1327, LOGL_NOTICE, "Received unsupported codeword '%s' = '%s' on control channel\n", codeword->short_name, codeword->long_name);
 	}
 }
 
@@ -1439,34 +1439,34 @@ void mpt1327_receive_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 	case MPT_MAINT: /* maintenance message */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT1]);
 		if (codeword->params[MPT_CHAN] != mpt1327_channel2chan(mpt1327->band, atoi(mpt1327->sender.kanal))) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_NOTICE, "Radio Unit (Prefix:%d Ident:%d) sends maintenance message on wrong channel %d, ignoring!\n", unit->prefix, unit->ident, (int)codeword->params[MPT_CHAN]);
+			LOGP_CHAN(DMPT1327, LOGL_NOTICE, "Radio Unit (Prefix:%d Ident:%d) sends maintenance message on wrong channel %d, ignoring!\n", unit->prefix, unit->ident, (int)codeword->params[MPT_CHAN]);
 			return;
 		}
 		if (!unit->tc) {
-			PDEBUG_CHAN(DMPT1327, DEBUG_NOTICE, "Radio Unit (Prefix:%d Ident:%d) sends maintenance, but it has no channel assigned, ignoring!\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_NOTICE, "Radio Unit (Prefix:%d Ident:%d) sends maintenance, but it has no channel assigned, ignoring!\n", unit->prefix, unit->ident);
 			return;
 		}
 		switch (codeword->params[MPT_OPER]) {
 		case OPER_PRESSEL_ON:
 			if (sysdef.timeout)
-				timer_start(&unit->timer, sysdef.timeout);
+				osmo_timer_schedule(&unit->timer, sysdef.timeout,0);
 			mpt1327->pressel_on = 1;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) starts transmission\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) starts transmission\n", unit->prefix, unit->ident);
 			break;
 		case OPER_PRESSEL_OFF:
 			if (sysdef.timeout)
-				timer_start(&unit->timer, sysdef.timeout);
+				osmo_timer_schedule(&unit->timer, sysdef.timeout,0);
 			mpt1327->pressel_on = 0;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) stops transmission\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) stops transmission\n", unit->prefix, unit->ident);
 			break;
 		case OPER_DISCONNECT:
 			/* ignore while we send clear message */
 			if (unit->state == UNIT_CALL_CLEAR)
 				return;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) disconnects from channel\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) disconnects from channel\n", unit->prefix, unit->ident);
 			if (unit->state == UNIT_CALL) {
-				timer_stop(&unit->timer);
-				PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Free Traffic Channel %s, because the initiator goes on-hook\n", unit->tc->sender.kanal);
+				osmo_timer_del(&unit->timer);
+				LOGP_CHAN(DMPT1327, LOGL_INFO, "Free Traffic Channel %s, because the initiator goes on-hook\n", unit->tc->sender.kanal);
 				mpt1327_go_idle(unit->tc);
 				if (unit->callref) {
 					call_up_release(unit->callref, CAUSE_NORMAL);
@@ -1477,16 +1477,16 @@ void mpt1327_receive_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 			break;
 		case OPER_PERIODIC:
 			if (sysdef.timeout)
-				timer_start(&unit->timer, sysdef.timeout);
+				osmo_timer_schedule(&unit->timer, sysdef.timeout,0);
 			mpt1327->pressel_on = 1;
-			PDEBUG_CHAN(DMPT1327, DEBUG_INFO, "Radio Unit (Prefix:%d Ident:%d) sends periodic message\n", unit->prefix, unit->ident);
+			LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) sends periodic message\n", unit->prefix, unit->ident);
 			break;
 		}
 		break;
 	default:
 		if (mpt1327->sender.loopback)
 			return;
-		PDEBUG_CHAN(DMPT1327, DEBUG_NOTICE, "Received unsupported codeword '%s' = '%s' on traffic channel\n", codeword->short_name, codeword->long_name);
+		LOGP_CHAN(DMPT1327, LOGL_NOTICE, "Received unsupported codeword '%s' = '%s' on traffic channel\n", codeword->short_name, codeword->long_name);
 	}
 }
 
@@ -1495,7 +1495,7 @@ void mpt1327_receive_codeword(mpt1327_t *mpt1327, uint64_t bits, double quality,
 	mpt1327_codeword_t codeword;
 	int rc;
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f%%\n", level * 100.0, quality * 100.0);
+	LOGP_CHAN(DDSP, LOGL_INFO, "RX Level: %.0f%% Quality=%.0f%%\n", level * 100.0, quality * 100.0);
 
 	rc = mpt1327_decode_codeword(&codeword, (mpt1327->rx_sched.data_num) ? mpt1327->rx_sched.data_word : -1, (mpt1327->sender.loopback) ? MPT_DOWN : MPT_UP, bits);
 	if (rc < 0) {
@@ -1533,7 +1533,7 @@ void mpt1327_signal_indication(mpt1327_t *mpt1327)
 	/* restart timer, if enabled */
 	if (mpt1327->unit && mpt1327->unit->state == UNIT_CALL) {
 		if (sysdef.timeout)
-			timer_start(&mpt1327->unit->timer, sysdef.timeout);
+			osmo_timer_schedule(&mpt1327->unit->timer, sysdef.timeout,0);
 	}
 }
 
@@ -1567,18 +1567,18 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	/* 2. check if given number is already in a call, return BUSY */
 	unit = get_unit(prefix, ident);
 	if (unit->state != UNIT_IDLE) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing call to busy Radio Unit, rejecting!\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "Outgoing call to busy Radio Unit, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
 	/* 3. check if all channels are busy, return NOCHANNEL */
 	tc = search_free_tc();
 	if (!tc) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DMPT1327, DEBUG_INFO, "Outgoing call to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
+	LOGP(DMPT1327, LOGL_INFO, "Outgoing call to Radio Unit (Prefix:%d Ident:%d)\n", unit->prefix, unit->ident);
 
 	/* 4. trying to reach radio unit */
 	unit->callref = callref;
@@ -1603,11 +1603,11 @@ void call_down_disconnect(int callref, int cause)
 {
 	mpt1327_unit_t *unit;
 
-	PDEBUG(DMPT1327, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DMPT1327, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	unit = find_unit_callref(callref);
 	if (!unit) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing disconnect, but no unit for callref!\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "Outgoing disconnect, but no unit for callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1615,7 +1615,7 @@ void call_down_disconnect(int callref, int cause)
 	/* Release when not active */
 	if (unit->state == UNIT_CALL)
 		return;
-	PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing disconnect, but no call, releasing!\n");
+	LOGP(DMPT1327, LOGL_NOTICE, "Outgoing disconnect, but no call, releasing!\n");
 	mpt1327_release(unit);
 	unit->callref = 0;
 
@@ -1627,16 +1627,16 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 {
 	mpt1327_unit_t *unit;
 
-	PDEBUG(DMPT1327, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DMPT1327, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	unit = find_unit_callref(callref);
 	if (!unit) {
-		PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing release, but no unit for callref!\n");
+		LOGP(DMPT1327, LOGL_NOTICE, "Outgoing release, but no unit for callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
 
-	PDEBUG(DMPT1327, DEBUG_NOTICE, "Outgoing release, releasing!\n");
+	LOGP(DMPT1327, LOGL_NOTICE, "Outgoing release, releasing!\n");
 	mpt1327_release(unit);
 	unit->callref = 0;
 }

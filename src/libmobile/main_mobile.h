@@ -35,6 +35,7 @@ extern const char *(*mobile_number_check_valid)(const char *);
 int main_mobile_number_ask(const char *number, const char *what);
 
 void main_mobile_init(const char *digits, const struct number_lengths lengths[], const char *prefixes[], const char *(*check_valid)(const char *));
+void main_mobile_exit(void);
 void main_mobile_set_number_check_valid(const char *(*check_valid)(const char *));
 void main_mobile_print_help(const char *arg0, const char *ext_usage);
 void main_mobile_print_hotkeys(void);

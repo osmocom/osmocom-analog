@@ -19,8 +19,8 @@ compile
 .deps
 .libs
 .dirstamp
+src/liblogging/liblogging.a
 src/liboptions/liboptions.a
-src/libdebug/libdebug.a
 src/libmobile/libmobile.a
 src/libdisplay/libdisplay.a
 src/libimage/libimage.a
@@ -31,9 +31,6 @@ src/libjitter/libjitter.a
 src/libsquelch/libsquelch.a
 src/libhagelbarger/libhagelbarger.a
 src/libdtmf/libdtmf.a
-src/libtimer/libtimer.a
-src/libselect/libselect.a
-src/libph_socket/libph_socket.a
 src/libsamplerate/libsamplerate.a
 src/libscrambler/libscrambler.a
 src/libemphasis/libemphasis.a
@@ -50,8 +47,6 @@ src/libclipper/libclipper.a
 src/libserial/libserial.a
 src/libv27/libv27.a
 src/libmtp/libmtp.a
-src/libosmocc/libosmocc.a
-src/libg711/libg711.a
 src/libaaimage/libaaimage.a
 src/anetz/libgermanton.a
 src/anetz/anetz

@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <../src/libdebug/debug.h>
+#include <../src/liblogging/logging.h>
 #include <../src/liboptions/options.h>
 
 int num_kanal = 1;
@@ -196,7 +196,8 @@ int main(int argc, char *argv[])
 	int argi;
 	int i;
 
-	debuglevel = DEBUG_INFO;
+	loglevel = LOGL_INFO;
+	logging_init();
 
 	add_options();
 
@@ -254,4 +255,6 @@ inval_sub:
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 

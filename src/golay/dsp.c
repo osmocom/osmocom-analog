@@ -27,7 +27,7 @@
 #include <math.h>
 #include <sys/param.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "golay.h"
 #include "dsp.h"
 
@@ -39,7 +39,7 @@ static void dsp_init_ramp(gsc_t *gsc)
         double c;
         int i;
 
-        PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Generating cosine shaped ramp table.\n");
+        LOGP_CHAN(DDSP, LOGL_DEBUG, "Generating cosine shaped ramp table.\n");
         for (i = 0; i < 256; i++) {
 		/* This is mathematically incorrect... */
                 if (i < 64)
@@ -58,7 +58,7 @@ int dsp_init_sender(gsc_t *gsc, int samplerate, double deviation, double polarit
 {
 	int rc;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for transceiver.\n");
 
 	/* set modulation parameters */
 	// NOTE: baudrate equals modulation, because we have a raised cosine ramp of beta = 0.5
@@ -66,12 +66,12 @@ int dsp_init_sender(gsc_t *gsc, int samplerate, double deviation, double polarit
 
 	gsc->fsk_bitduration = (double)samplerate / 600.0;
 	gsc->fsk_bitstep = 1.0 / gsc->fsk_bitduration;
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Use %.4f samples for one bit duration @ %d.\n", gsc->fsk_bitduration, gsc->sender.samplerate);
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Use %.4f samples for one bit duration @ %d.\n", gsc->fsk_bitduration, gsc->sender.samplerate);
 
 	gsc->fsk_tx_buffer_size = gsc->fsk_bitduration + 10; /* 1 bit, add some extra to prevent short buffer due to rounding */
 	gsc->fsk_tx_buffer = calloc(sizeof(sample_t), gsc->fsk_tx_buffer_size);
 	if (!gsc->fsk_tx_buffer) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -93,7 +93,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(gsc_t *gsc)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for transceiver.\n");
 
 	if (gsc->fsk_tx_buffer) {
 		free(gsc->fsk_tx_buffer);
@@ -202,7 +202,7 @@ again:
 		}
 		samplerate_upsample(&gsc->wave_tx_upsample, wave_samples[0], wave_num, samples, length);
 		if (!gsc->wave_tx_play.left) {
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Voice message sent.\n");
+			LOGP_CHAN(DDSP, LOGL_INFO, "Voice message sent.\n");
 			wave_destroy_playback(&gsc->wave_tx_play);
 			return;
 		}
@@ -221,9 +221,9 @@ again:
 				rc = wave_create_playback(&gsc->wave_tx_play, gsc->wave_tx_filename, &gsc->wave_tx_samplerate, &gsc->wave_tx_channels, gsc->fsk_deviation);
 				if (rc < 0) {
 					gsc->wave_tx_play.left = 0;
-					PDEBUG_CHAN(DDSP, DEBUG_ERROR, "Failed to open wave file '%s' for voice message.\n", gsc->wave_tx_filename);
+					LOGP_CHAN(DDSP, LOGL_ERROR, "Failed to open wave file '%s' for voice message.\n", gsc->wave_tx_filename);
 				} else {
-					PDEBUG_CHAN(DDSP, DEBUG_INFO, "Sending wave file '%s' for voice message after 2 seconds.\n", gsc->wave_tx_filename);
+					LOGP_CHAN(DDSP, LOGL_INFO, "Sending wave file '%s' for voice message after 2 seconds.\n", gsc->wave_tx_filename);
 					init_samplerate(&gsc->wave_tx_upsample, gsc->wave_tx_samplerate, gsc->sender.samplerate, VOICE_BANDWIDTH);
 				}
 			}

@@ -24,7 +24,7 @@
 #include <math.h>
 #include <sys/ioctl.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libdisplay/display.h"
 
 #define HEIGHT	11
@@ -52,7 +52,8 @@ void display_wave_on(int on)
 
 	if (wave_on) {
 		memset(&screen, ' ', sizeof(screen));
-		lock_debug();
+		lock_logging();
+		enable_limit_scroll(false);
 		printf("\0337\033[H");
 		for (i = 0; i < num_sender; i++) {
 			for (j = 0; j < HEIGHT; j++) {
@@ -61,7 +62,8 @@ void display_wave_on(int on)
 			}
 		}
 		printf("\0338"); fflush(stdout);
-		unlock_debug();
+		enable_limit_scroll(true);
+		unlock_logging();
 	}
 
 	if (on < 0)
@@ -70,9 +72,9 @@ void display_wave_on(int on)
 		wave_on = on;
 
 	if (wave_on)
-		debug_limit_scroll = HEIGHT * num_sender;
+		logging_limit_scroll_top(HEIGHT * num_sender);
 	else
-		debug_limit_scroll = 0;
+		logging_limit_scroll_top(0);
 }
 
 /*
@@ -103,8 +105,6 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 
 	if (!wave_on)
 		return;
-
-	lock_debug();
 
 	get_win_size(&width, &h);
 	if (width > MAX_DISPLAY_WIDTH - 1)
@@ -208,6 +208,8 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 			}
 			sprintf(screen[0], "(chan %s", disp->kanal);
 			*strchr(screen[0], '\0') = ')';
+			lock_logging();
+			enable_limit_scroll(false);
 			printf("\0337\033[H");
 			for (j = 0; j < disp->offset; j++)
 				puts("");
@@ -241,12 +243,12 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 			}
 			/* reset color and position */
 			printf("\033[0;39m\0338"); fflush(stdout);
+			enable_limit_scroll(true);
+			unlock_logging();
 		}
 	}
 
 	disp->interval_pos = pos;
-
-	unlock_debug();
 }
 
 

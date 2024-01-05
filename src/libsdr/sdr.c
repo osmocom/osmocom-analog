@@ -31,7 +31,7 @@ enum paging_signal;
 #include "../libsample/sample.h"
 #include "../libfm/fm.h"
 #include "../libam/am.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/sender.h"
 #include "sdr_config.h"
 #include "sdr.h"
@@ -41,7 +41,7 @@ enum paging_signal;
 #ifdef HAVE_SOAPY
 #include "soapy.h"
 #endif
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 
 /* enable to debug buffer handling */
 //#define DEBUG_BUFFER
@@ -130,11 +130,11 @@ static void show_spectrum(const char *direction, double halfbandwidth, double ce
 			text[x] = 'P';
 	}
 
-	PDEBUG(DSDR, DEBUG_INFO, "%s Spectrum:\n%s\n---------------------------------------+---------------------------------------\n", direction, text);
+	LOGP(DSDR, LOGL_INFO, "%s Spectrum:\n%s\n---------------------------------------+---------------------------------------\n", direction, text);
 	for (i = 0; i < num; i++)
-		PDEBUG(DSDR, DEBUG_INFO, "Frequency %c = %.4f MHz\n", '1' + i, frequency[i] / 1e6);
+		LOGP(DSDR, LOGL_INFO, "Frequency %c = %.4f MHz\n", '1' + i, frequency[i] / 1e6);
 	if (paging_frequency)
-		PDEBUG(DSDR, DEBUG_INFO, "Frequency P = %.4f MHz (Paging Frequency)\n", paging_frequency / 1e6);
+		LOGP(DSDR, LOGL_INFO, "Frequency P = %.4f MHz (Paging Frequency)\n", paging_frequency / 1e6);
 }
 
 void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_frequency, double *rx_frequency, int *am, int channels, double paging_frequency, int samplerate, int buffer_size, double interval, double max_deviation, double max_modulation, double modulation_index)
@@ -146,17 +146,17 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	int rc;
 	int c;
 
-	PDEBUG(DSDR, DEBUG_DEBUG, "Open SDR device\n");
+	LOGP(DSDR, LOGL_DEBUG, "Open SDR device\n");
 
 	if (sdr_config->samplerate != samplerate) {
 		if (samplerate > sdr_config->samplerate) {
-			PDEBUG(DSDR, DEBUG_ERROR, "SDR sample rate must be greater than audio sample rate!\n");
-			PDEBUG(DSDR, DEBUG_ERROR, "You selected an SDR rate of %d and an audio rate of %d.\n", sdr_config->samplerate, samplerate);
+			LOGP(DSDR, LOGL_ERROR, "SDR sample rate must be greater than audio sample rate!\n");
+			LOGP(DSDR, LOGL_ERROR, "You selected an SDR rate of %d and an audio rate of %d.\n", sdr_config->samplerate, samplerate);
 			return NULL;
 		}
 		if ((sdr_config->samplerate % samplerate)) {
-			PDEBUG(DSDR, DEBUG_ERROR, "SDR sample rate must be a multiple of audio sample rate!\n");
-			PDEBUG(DSDR, DEBUG_ERROR, "You selected an SDR rate of %d and an audio rate of %d.\n", sdr_config->samplerate, samplerate);
+			LOGP(DSDR, LOGL_ERROR, "SDR sample rate must be a multiple of audio sample rate!\n");
+			LOGP(DSDR, LOGL_ERROR, "You selected an SDR rate of %d and an audio rate of %d.\n", sdr_config->samplerate, samplerate);
 			return NULL;
 		}
 		oversample = sdr_config->samplerate / samplerate;
@@ -165,11 +165,11 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 
 	bandwidth = 2.0 * (max_deviation + max_modulation);
 	if (bandwidth)
-		PDEBUG(DSDR, DEBUG_INFO, "Require bandwidth of each channel is 2 * (%.1f deviation + %.1f modulation) = %.1f KHz\n", max_deviation / 1e3, max_modulation / 1e3, bandwidth / 1e3);
+		LOGP(DSDR, LOGL_INFO, "Require bandwidth of each channel is 2 * (%.1f deviation + %.1f modulation) = %.1f KHz\n", max_deviation / 1e3, max_modulation / 1e3, bandwidth / 1e3);
 
 	sdr = calloc(sizeof(*sdr), 1);
 	if (!sdr) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 	sdr->channels = channels;
@@ -185,12 +185,12 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		sdr->thread_read.buffer_size = sdr->buffer_size * 2 * sdr->oversample + 2;
 		sdr->thread_read.buffer = calloc(sdr->thread_read.buffer_size, sizeof(*sdr->thread_read.buffer));
 		if (!sdr->thread_read.buffer) {
-			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			LOGP(DSDR, LOGL_ERROR, "No mem!\n");
 			goto error;
 		}
 		sdr->thread_read.buffer2 = calloc(sdr->thread_read.buffer_size, sizeof(*sdr->thread_read.buffer2));
 		if (!sdr->thread_read.buffer2) {
-			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			LOGP(DSDR, LOGL_ERROR, "No mem!\n");
 			goto error;
 		}
 		sdr->thread_read.in = sdr->thread_read.out = 0;
@@ -202,12 +202,12 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		sdr->thread_write.buffer_size = sdr->buffer_size * 2 + 2;
 		sdr->thread_write.buffer = calloc(sdr->thread_write.buffer_size, sizeof(*sdr->thread_write.buffer));
 		if (!sdr->thread_write.buffer) {
-			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			LOGP(DSDR, LOGL_ERROR, "No mem!\n");
 			goto error;
 		}
 		sdr->thread_write.buffer2 = calloc(sdr->thread_write.buffer_size * sdr->oversample, sizeof(*sdr->thread_write.buffer2));
 		if (!sdr->thread_write.buffer2) {
-			PDEBUG(DSDR, DEBUG_ERROR, "No mem!\n");
+			LOGP(DSDR, LOGL_ERROR, "No mem!\n");
 			goto error;
 		}
 		sdr->thread_write.in = sdr->thread_write.out = 0;
@@ -220,32 +220,32 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	/* alloc fm modulation buffers */
 	sdr->modbuff = calloc(sdr->buffer_size * 2, sizeof(*sdr->modbuff));
 	if (!sdr->modbuff) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 	sdr->modbuff_I = calloc(sdr->buffer_size, sizeof(*sdr->modbuff_I));
 	if (!sdr->modbuff_I) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 	sdr->modbuff_Q = calloc(sdr->buffer_size, sizeof(*sdr->modbuff_Q));
 	if (!sdr->modbuff_Q) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 	sdr->modbuff_carrier = calloc(sdr->buffer_size, sizeof(*sdr->modbuff_carrier));
 	if (!sdr->modbuff_carrier) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 	sdr->wavespl0 = calloc(sdr->buffer_size, sizeof(*sdr->wavespl0));
 	if (!sdr->wavespl0) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 	sdr->wavespl1 = calloc(sdr->buffer_size, sizeof(*sdr->wavespl1));
 	if (!sdr->wavespl1) {
-		PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+		LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 		goto error;
 	}
 
@@ -259,7 +259,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	if (channels) {
 		sdr->chan = calloc(sizeof(*sdr->chan), channels + (sdr->paging_channel != 0));
 		if (!sdr->chan) {
-			PDEBUG(DSDR, DEBUG_ERROR, "NO MEM!\n");
+			LOGP(DSDR, LOGL_ERROR, "NO MEM!\n");
 			goto error;
 		}
 	}
@@ -267,7 +267,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	/* swap links, if required */
 	if (sdr_config->swap_links) {
 		double *temp;
-		PDEBUG(DSDR, DEBUG_NOTICE, "Sapping RX and TX frequencies!\n");
+		LOGP(DSDR, LOGL_NOTICE, "Sapping RX and TX frequencies!\n");
 		temp = rx_frequency;
 		rx_frequency = tx_frequency;
 		tx_frequency = temp;
@@ -304,7 +304,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 			   This is correct, since there is no bandwidth
 			   below new center frequency.
 			 */
-			PDEBUG(DSDR, DEBUG_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
+			LOGP(DSDR, LOGL_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
 		} else {
 			/* find two channels that are aside the center */
 			double low_dist = 0, high_dist = 0, dist;
@@ -342,7 +342,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 				tx_center_frequency =
 					((sdr->chan[low_c].tx_frequency) +
 					 (sdr->chan[high_c].tx_frequency)) / 2.0;
-				PDEBUG(DSDR, DEBUG_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
+				LOGP(DSDR, LOGL_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
 			}
 		}
 
@@ -354,20 +354,20 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		low_side = (tx_center_frequency - tx_low_frequency) + bandwidth / 2.0;
 		high_side = (tx_high_frequency - tx_center_frequency) + bandwidth / 2.0;
 		range = ((low_side > high_side) ? low_side : high_side) * 2.0;
-		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth (two side bands) for all TX Frequencies: %.0f Hz\n", range);
+		LOGP(DSDR, LOGL_INFO, "Total bandwidth (two side bands) for all TX Frequencies: %.0f Hz\n", range);
 		if (range > samplerate * USABLE_BANDWIDTH) {
-			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
-			PDEBUG(DSDR, DEBUG_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
-			PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
-			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
+			LOGP(DSDR, LOGL_NOTICE, "*******************************************************************************\n");
+			LOGP(DSDR, LOGL_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
+			LOGP(DSDR, LOGL_NOTICE, "Please increase samplerate!\n");
+			LOGP(DSDR, LOGL_NOTICE, "*******************************************************************************\n");
 			goto error;
 		}
-		PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: TX %.6f MHz\n", tx_center_frequency / 1e6);
+		LOGP(DSDR, LOGL_INFO, "Using center frequency: TX %.6f MHz\n", tx_center_frequency / 1e6);
 		/* set offsets to center frequency */
 		for (c = 0; c < channels; c++) {
 			double tx_offset;
 			tx_offset = sdr->chan[c].tx_frequency - tx_center_frequency;
-			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: TX offset: %.6f MHz\n", c, tx_offset / 1e6);
+			LOGP(DSDR, LOGL_DEBUG, "Frequency #%d: TX offset: %.6f MHz\n", c, tx_offset / 1e6);
 			sdr->chan[c].am = am[c];
 			if (am[c]) {
 				double gain, bias;
@@ -382,18 +382,18 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		if (sdr->paging_channel) {
 			double tx_offset;
 			tx_offset = sdr->chan[sdr->paging_channel].tx_frequency - tx_center_frequency;
-			PDEBUG(DSDR, DEBUG_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
+			LOGP(DSDR, LOGL_DEBUG, "Paging Frequency: TX offset: %.6f MHz\n", tx_offset / 1e6);
 			rc = fm_mod_init(&sdr->chan[sdr->paging_channel].fm_mod, samplerate, tx_offset, sdr->amplitude);
 			if (rc < 0)
 				goto error;
 		}
 		/* show gain */
-		PDEBUG(DSDR, DEBUG_INFO, "Using gain: TX %.1f dB\n", sdr_config->tx_gain);
+		LOGP(DSDR, LOGL_INFO, "Using gain: TX %.1f dB\n", sdr_config->tx_gain);
 		/* open wave */
 		if (sdr_config->write_iq_tx_wave) {
 			rc = wave_create_record(&sdr->wave_tx_rec, sdr_config->write_iq_tx_wave, samplerate, 2, 1.0);
 			if (rc < 0) {
-				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				LOGP(DSDR, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 				goto error;
 			}
 		}
@@ -401,7 +401,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 			int two = 2;
 			rc = wave_create_playback(&sdr->wave_tx_play, sdr_config->read_iq_tx_wave, &samplerate, &two, 1.0);
 			if (rc < 0) {
-				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				LOGP(DSDR, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;
 			}
 		}
@@ -430,7 +430,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 			   This is correct, since there is no bandwidth
 			   below new center frequency.
 			 */
-			PDEBUG(DSDR, DEBUG_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
+			LOGP(DSDR, LOGL_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
 		} else {
 			/* find two channels that are aside the center */
 			double low_dist, high_dist, dist;
@@ -454,7 +454,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 				rx_center_frequency =
 					((sdr->chan[low_c].rx_frequency) +
 					 (sdr->chan[high_c].rx_frequency)) / 2.0;
-				PDEBUG(DSDR, DEBUG_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
+				LOGP(DSDR, LOGL_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
 			}
 		}
 
@@ -466,20 +466,20 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 		low_side = (rx_center_frequency - rx_low_frequency) + bandwidth / 2.0;
 		high_side = (rx_high_frequency - rx_center_frequency) + bandwidth / 2.0;
 		range = ((low_side > high_side) ? low_side : high_side) * 2.0;
-		PDEBUG(DSDR, DEBUG_INFO, "Total bandwidth (two side bands) for all RX Frequencies: %.0f Hz\n", range);
+		LOGP(DSDR, LOGL_INFO, "Total bandwidth (two side bands) for all RX Frequencies: %.0f Hz\n", range);
 		if (range > samplerate * USABLE_BANDWIDTH) {
-			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
-			PDEBUG(DSDR, DEBUG_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
-			PDEBUG(DSDR, DEBUG_NOTICE, "Please increase samplerate!\n");
-			PDEBUG(DSDR, DEBUG_NOTICE, "*******************************************************************************\n");
+			LOGP(DSDR, LOGL_NOTICE, "*******************************************************************************\n");
+			LOGP(DSDR, LOGL_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
+			LOGP(DSDR, LOGL_NOTICE, "Please increase samplerate!\n");
+			LOGP(DSDR, LOGL_NOTICE, "*******************************************************************************\n");
 			goto error;
 		}
-		PDEBUG(DSDR, DEBUG_INFO, "Using center frequency: RX %.6f MHz\n", rx_center_frequency / 1e6);
+		LOGP(DSDR, LOGL_INFO, "Using center frequency: RX %.6f MHz\n", rx_center_frequency / 1e6);
 		/* set offsets to center frequency */
 		for (c = 0; c < channels; c++) {
 			double rx_offset;
 			rx_offset = sdr->chan[c].rx_frequency - rx_center_frequency;
-			PDEBUG(DSDR, DEBUG_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
+			LOGP(DSDR, LOGL_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
 			sdr->chan[c].am = am[c];
 			if (am[c])
 				rc = am_demod_init(&sdr->chan[c].am_demod, samplerate, rx_offset, bandwidth, 1.0 / modulation_index);
@@ -489,12 +489,12 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 				goto error;
 		}
 		/* show gain */
-		PDEBUG(DSDR, DEBUG_INFO, "Using gain: RX %.1f dB\n", sdr_config->rx_gain);
+		LOGP(DSDR, LOGL_INFO, "Using gain: RX %.1f dB\n", sdr_config->rx_gain);
 		/* open wave */
 		if (sdr_config->write_iq_rx_wave) {
 			rc = wave_create_record(&sdr->wave_rx_rec, sdr_config->write_iq_rx_wave, samplerate, 2, 1.0);
 			if (rc < 0) {
-				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE recoding instance!\n");
+				LOGP(DSDR, LOGL_ERROR, "Failed to create WAVE recoding instance!\n");
 				goto error;
 			}
 		}
@@ -502,7 +502,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 			int two = 2;
 			rc = wave_create_playback(&sdr->wave_rx_play, sdr_config->read_iq_rx_wave, &samplerate, &two, 1.0);
 			if (rc < 0) {
-				PDEBUG(DSDR, DEBUG_ERROR, "Failed to create WAVE playback instance!\n");
+				LOGP(DSDR, LOGL_ERROR, "Failed to create WAVE playback instance!\n");
 				goto error;
 			}
 		}
@@ -522,7 +522,7 @@ void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_freque
 	display_iq_init(samplerate);
 	display_spectrum_init(samplerate, rx_center_frequency);
 
-	PDEBUG(DSDR, DEBUG_INFO, "Using local oscillator offseet: %.0f Hz\n", sdr_config->lo_offset);
+	LOGP(DSDR, LOGL_INFO, "Using local oscillator offseet: %.0f Hz\n", sdr_config->lo_offset);
 
 #ifdef HAVE_UHD
 	if (sdr_config->uhd) {
@@ -570,7 +570,7 @@ static void sdr_bias(float *buffer, int count)
 		if (bias_count >= sdr_config->samplerate) {
 			bias_I /= bias_count;
 			bias_Q /= bias_count;
-			PDEBUG(DSDR, DEBUG_INFO, "DC bias calibration finished.\n");
+			LOGP(DSDR, LOGL_INFO, "DC bias calibration finished.\n");
 		}
 	} else {
 		for (i = 0; i < count; i++) {
@@ -625,7 +625,7 @@ static void *sdr_write_child(void *arg)
 		usleep(sdr->interval * 1000.0);
 	}
 
-	PDEBUG(DSDR, DEBUG_DEBUG, "Thread received exit!\n");
+	LOGP(DSDR, LOGL_DEBUG, "Thread received exit!\n");
 	sdr->thread_write.exit = 1;
 	return NULL;
 }
@@ -677,7 +677,7 @@ static void *sdr_read_child(void *arg)
 		usleep(sdr->interval * 1000.0);
 	}
 
-	PDEBUG(DSDR, DEBUG_DEBUG, "Thread received exit!\n");
+	LOGP(DSDR, LOGL_DEBUG, "Thread received exit!\n");
 	sdr->thread_read.exit = 1;
 	return NULL;
 }
@@ -704,13 +704,13 @@ int sdr_start(void *inst)
 		pthread_t tid;
 		char tname[64];
 
-		PDEBUG(DSDR, DEBUG_DEBUG, "Create threads!\n");
+		LOGP(DSDR, LOGL_DEBUG, "Create threads!\n");
 		sdr->thread_write.running = 1;
 		sdr->thread_write.exit = 0;
 		rc = pthread_create(&tid, NULL, sdr_write_child, inst);
 		if (rc < 0) {
 			sdr->thread_write.running = 0;
-			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create thread!\n");
+			LOGP(DSDR, LOGL_ERROR, "Failed to create thread!\n");
 			return rc;
 		}
 		pthread_getname_np(tid, tname, sizeof(tname));
@@ -722,7 +722,7 @@ int sdr_start(void *inst)
 		rc = pthread_create(&tid, NULL, sdr_read_child, inst);
 		if (rc < 0) {
 			sdr->thread_read.running = 0;
-			PDEBUG(DSDR, DEBUG_ERROR, "Failed to create thread!\n");
+			LOGP(DSDR, LOGL_ERROR, "Failed to create thread!\n");
 			return rc;
 		}
 		pthread_getname_np(tid, tname, sizeof(tname));
@@ -738,17 +738,17 @@ void sdr_close(void *inst)
 {
 	sdr_t *sdr = (sdr_t *)inst;
 
-	PDEBUG(DSDR, DEBUG_DEBUG, "Close SDR device\n");
+	LOGP(DSDR, LOGL_DEBUG, "Close SDR device\n");
 
 	if (sdr->threads) {
 		if (sdr->thread_write.running) {
-			PDEBUG(DSDR, DEBUG_DEBUG, "Thread sending exit!\n");
+			LOGP(DSDR, LOGL_DEBUG, "Thread sending exit!\n");
 			sdr->thread_write.running = 0;
 			while (sdr->thread_write.exit == 0)
 				usleep(1000);
 		}
 		if (sdr->thread_read.running) {
-			PDEBUG(DSDR, DEBUG_DEBUG, "Thread sending exit!\n");
+			LOGP(DSDR, LOGL_DEBUG, "Thread sending exit!\n");
 			sdr->thread_read.running = 0;
 			while (sdr->thread_read.exit == 0)
 				usleep(1000);
@@ -805,6 +805,15 @@ void sdr_close(void *inst)
 	display_spectrum_exit();
 }
 
+static double get_time(void)
+{
+	static struct timespec tv;
+
+	clock_gettime(CLOCK_REALTIME, &tv);
+
+	return (double)tv.tv_sec + (double)tv.tv_nsec / 1000000000.0;
+}
+
 int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum paging_signal __attribute__((unused)) *paging_signal, int *on, int channels)
 {
 	sdr_t *sdr = (sdr_t *)inst;
@@ -817,7 +826,7 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 		abort();
 	}
 	if (channels != sdr->channels && channels != 0) {
-		PDEBUG(DSDR, DEBUG_ERROR, "Invalid number of channels, please fix!\n");
+		LOGP(DSDR, LOGL_ERROR, "Invalid number of channels, please fix!\n");
 		abort();
 	}
 
@@ -872,11 +881,11 @@ int sdr_write(void *inst, sample_t **samples, uint8_t **power, int num, enum pag
 			delay = (double)sdr->thread_write.max_fill / 2.0 / (double)sdr->samplerate;
 			sdr->thread_write.max_fill = 0;
 			sdr->thread_write.max_fill_timer += 1.0;
-			PDEBUG(DSDR, DEBUG_DEBUG, "write delay = %.3f ms\n", delay * 1000.0);
+			LOGP(DSDR, LOGL_DEBUG, "write delay = %.3f ms\n", delay * 1000.0);
 		}
 
 		if (space < num * 2) {
-			PDEBUG(DSDR, DEBUG_ERROR, "Write SDR buffer overflow!\n");
+			LOGP(DSDR, LOGL_ERROR, "Write SDR buffer overflow!\n");
 			num = space / 2;
 		}
 #ifdef DEBUG_BUFFER
@@ -940,7 +949,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 			delay = (double)sdr->thread_read.max_fill / 2.0 / (double)sdr_config->samplerate;
 			sdr->thread_read.max_fill = 0;
 			sdr->thread_read.max_fill_timer += 1.0;
-			PDEBUG(DSDR, DEBUG_DEBUG, "read delay = %.3f ms\n", delay * 1000.0);
+			LOGP(DSDR, LOGL_DEBUG, "read delay = %.3f ms\n", delay * 1000.0);
 		}
 
 		if (fill / 2 / sdr->oversample < num)
@@ -972,7 +981,7 @@ int sdr_read(void *inst, sample_t **samples, int num, int channels, double *rf_l
 	}
 
 	if (sdr_rx_overflow) {
-		PDEBUG(DSDR, DEBUG_ERROR, "SDR RX overflow!\n");
+		LOGP(DSDR, LOGL_ERROR, "SDR RX overflow!\n");
 		sdr_rx_overflow = 0;
 	}
 

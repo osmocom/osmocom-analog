@@ -6,7 +6,7 @@
 #include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
 #include "../libfm/fm.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 
 struct timeval start_tv, tv;
 double duration;

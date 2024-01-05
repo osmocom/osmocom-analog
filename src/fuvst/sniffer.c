@@ -23,8 +23,9 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libtimer/timer.h"
-#include "../libdebug/debug.h"
+#include <osmocom/core/timer.h>
+#include <osmocom/core/utils.h>
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
@@ -72,7 +73,7 @@ static void receive_fisu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, uint
 {
 	sniffer_t *sniffer = (sniffer_t *)mtp->inst;
 
-	PDEBUG(DMTP3, (fsn == sniffer->last_fsn) ? DEBUG_INFO : DEBUG_NOTICE, "%s FISU Frame: FSN=%d FIB=%d BSN=%d BIB=%d\n", mtp->name, fsn, fib, bsn, bib);
+	LOGP(DMTP3, (fsn == sniffer->last_fsn) ? LOGL_INFO : LOGL_NOTICE, "%s FISU Frame: FSN=%d FIB=%d BSN=%d BIB=%d\n", mtp->name, fsn, fib, bsn, bib);
 
 	/* store current FSN */
 	sniffer->last_fsn = fsn;
@@ -83,7 +84,7 @@ static void receive_lssu(mtp_t *mtp, uint8_t fsn, uint8_t bib, uint8_t status)
 {
 	sniffer_t *sniffer = (sniffer_t *)mtp->inst;
 
-	PDEBUG(DMTP3, DEBUG_INFO, "%s LSSU Frame: FSN=%d BIB=%d status=%d\n", mtp->name, fsn, bib, status);
+	LOGP(DMTP3, LOGL_INFO, "%s LSSU Frame: FSN=%d BIB=%d status=%d\n", mtp->name, fsn, bib, status);
 
 	/* store initial FSN */
 	sniffer->last_fsn = fsn;
@@ -98,17 +99,17 @@ static void receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, uint8
 	uint8_t ident, opcode;
 
 	if (len < 4) {
-		PDEBUG(DMTP3, DEBUG_NOTICE, "Short frame from layer 2 (len=%d)\n", len);
+		LOGP(DMTP3, LOGL_NOTICE, "Short frame from layer 2 (len=%d)\n", len);
 		return;
 	}
 
 	if (fsn == sniffer->last_fsn) {
-		PDEBUG(DMTP3, DEBUG_INFO, "%s MSU Frame: FSN=%d FIB=%d BSN=%d BIB=%d data: %02x %s\n", mtp->name, fsn, fib, bsn, bib, sio, debug_hex(data, len));
+		LOGP(DMTP3, LOGL_INFO, "%s MSU Frame: FSN=%d FIB=%d BSN=%d BIB=%d data: %02x %s\n", mtp->name, fsn, fib, bsn, bib, sio, osmo_hexdump(data, len));
 		return;
 	}
 
 	if (len < 6) {
-		PDEBUG(DMTP3, DEBUG_NOTICE, "Frame from layer 2 too short to carry an Opcode (len=%d)\n", len);
+		LOGP(DMTP3, LOGL_NOTICE, "Frame from layer 2 too short to carry an Opcode (len=%d)\n", len);
 		return;
 	}
 
@@ -126,9 +127,9 @@ static void receive_msu(mtp_t *mtp, uint8_t bsn, uint8_t bib, uint8_t fsn, uint8
 	len -= 6;
 
 	if (sio == 0xcd)
-		PDEBUG(DMTP3, DEBUG_NOTICE, "%s MuP Frame: FSN=%d FIB=%d BSN=%d BIB=%d SIO=0x%02x DCP=%d OCP=%d Ident=0x%02x OP=%02XH %s\n", mtp->name, fsn, fib, bsn, bib, sio, dcp, ocp, ident, opcode, debug_hex(data, len));
+		LOGP(DMTP3, LOGL_NOTICE, "%s MuP Frame: FSN=%d FIB=%d BSN=%d BIB=%d SIO=0x%02x DCP=%d OCP=%d Ident=0x%02x OP=%02XH %s\n", mtp->name, fsn, fib, bsn, bib, sio, dcp, ocp, ident, opcode, osmo_hexdump(data, len));
 	else
-		PDEBUG(DMTP3, DEBUG_NOTICE, "%s MSU Frame: FSN=%d FIB=%d BSN=%d BIB=%d SIO=0x%02x DCP=%d OCP=%d SLC=%d H2/H1=0x%02x %02x %s\n", mtp->name, fsn, fib, bsn, bib, sio, dcp, ocp, slc, h2h1, data[-1], debug_hex(data, len));
+		LOGP(DMTP3, LOGL_NOTICE, "%s MSU Frame: FSN=%d FIB=%d BSN=%d BIB=%d SIO=0x%02x DCP=%d OCP=%d SLC=%d H2/H1=0x%02x %02x %s\n", mtp->name, fsn, fib, bsn, bib, sio, dcp, ocp, slc, h2h1, data[-1], osmo_hexdump(data, len));
 
 	/* store current FSN */
 	sniffer->last_fsn = fsn;
@@ -158,7 +159,7 @@ void sniffer_destroy(sender_t *sender)
 {
 	sniffer_t *sniffer = (sniffer_t *) sender;
 
-	PDEBUG(DCNETZ, DEBUG_DEBUG, "Destroying 'Sniffer' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DCNETZ, LOGL_DEBUG, "Destroying 'Sniffer' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	mtp_exit(&sniffer->mtp);
 
@@ -202,11 +203,11 @@ int main(int argc, char *argv[])
 	if (num_device <= 1)
 		dsp_device[1] = dsp_device[0];
 	for (i = 0; i < num_kanal; i++) {
-		PDEBUG(DCNETZ, DEBUG_DEBUG, "Creating 'Sniffer' instance for 'Kanal' = %s (sample rate %d).\n", kanal[i], dsp_samplerate);
+		LOGP(DCNETZ, LOGL_DEBUG, "Creating 'Sniffer' instance for 'Kanal' = %s (sample rate %d).\n", kanal[i], dsp_samplerate);
 
 		sniffer = calloc(1, sizeof(sniffer_t));
 		if (!sniffer) {
-			PDEBUG(DCNETZ, DEBUG_ERROR, "No memory!\n");
+			LOGP(DCNETZ, LOGL_ERROR, "No memory!\n");
 			goto fail;
 		}
 		rc = sender_create(&sniffer->sender, kanal[i], 131, 131, dsp_device[i], 0, dsp_samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
@@ -234,6 +235,7 @@ fail:
 		sniffer_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	return 0;

@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = \
+	liblogging \
 	liboptions \
-	libdebug \
 	libmobile \
 	libdisplay \
 	libsample \
@@ -14,9 +14,6 @@ SUBDIRS = \
 	libsquelch \
 	libhagelbarger \
 	libdtmf \
-	libtimer \
-	libselect \
-	libph_socket \
 	libsamplerate \
 	libscrambler \
 	libemphasis \
@@ -30,8 +27,6 @@ SUBDIRS = \
 	libserial \
 	libv27 \
 	libmtp \
-	libosmocc \
-	libg711 \
 	libaaimage
 
 if HAVE_ALSA

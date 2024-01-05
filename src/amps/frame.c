@@ -27,7 +27,8 @@
 #include <math.h>
 #include <inttypes.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
+#include "../libmobile/get_time.h"
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
@@ -2719,7 +2720,7 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 		sum_bits += w->ie[i].bits;
 
 	if (debug)
-		PDEBUG(DFRAME, DEBUG_INFO, "Transmit: %s\n", w->name);
+		LOGP(DFRAME, LOGL_INFO, "Transmit: %s\n", w->name);
 	word = 0;
 	for (i = 0; w->ie[i].name; i++) {
 		bits = w->ie[i].bits;
@@ -2730,9 +2731,9 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 		word = (word << bits) | (value & cut_bits[bits]);
 		if (debug) {
 			if (amps_ie_desc[w->ie[i].ie].decoder)
-				PDEBUG(DFRAME, DEBUG_DEBUG, " %s%s: %" PRIu64 " = %s  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].decoder(value), amps_ie_desc[w->ie[i].ie].desc);
+				LOGP(DFRAME, LOGL_DEBUG, " %s%s: %" PRIu64 " = %s  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].decoder(value), amps_ie_desc[w->ie[i].ie].desc);
 			else
-				PDEBUG(DFRAME, DEBUG_DEBUG, " %s%s: %" PRIu64 "  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].desc);
+				LOGP(DFRAME, LOGL_DEBUG, " %s%s: %" PRIu64 "  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].desc);
 		}
 		/* show result for 3 IEs of table 4 */
 		if (w->ie[i].ie == AMPS_IE_LOCAL_MSG_TYPE || w->ie[i].ie == AMPS_IE_ORDQ || w->ie[i].ie == AMPS_IE_ORDER)
@@ -2740,7 +2741,7 @@ static uint64_t amps_encode_word(frame_t *frame, struct def_word *w, int debug)
 		if (t4 == 3) {
 			t4 = 0;
 			if (debug)
-				PDEBUG(DFRAME, DEBUG_DEBUG, " %s--> %s\n", spaces, amps_table4_name(frame->ie[AMPS_IE_LOCAL_MSG_TYPE], frame->ie[AMPS_IE_ORDQ], frame->ie[AMPS_IE_ORDER]));
+				LOGP(DFRAME, LOGL_DEBUG, " %s--> %s\n", spaces, amps_table4_name(frame->ie[AMPS_IE_LOCAL_MSG_TYPE], frame->ie[AMPS_IE_ORDQ], frame->ie[AMPS_IE_ORDER]));
 		}
 	}
 
@@ -3070,22 +3071,22 @@ static frame_t *amps_decode_word(uint64_t word, struct def_word *w)
 	for (i = 0; w->ie[i].name; i++)
 		bits_left += w->ie[i].bits;
 
-	PDEBUG(DFRAME, DEBUG_INFO, "Received: %s\n", w->name);
+	LOGP(DFRAME, LOGL_INFO, "Received: %s\n", w->name);
 	for (i = 0; w->ie[i].name; i++) {
 		bits = w->ie[i].bits;
 		bits_left -= bits;
 		value = (word >> bits_left) & cut_bits[bits];
 		frame.ie[w->ie[i].ie] = value;
 		if (amps_ie_desc[w->ie[i].ie].decoder)
-			PDEBUG(DFRAME, DEBUG_DEBUG, " %s%s: %" PRIu64 " = %s  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].decoder(value), amps_ie_desc[w->ie[i].ie].desc);
+			LOGP(DFRAME, LOGL_DEBUG, " %s%s: %" PRIu64 " = %s  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].decoder(value), amps_ie_desc[w->ie[i].ie].desc);
 		else
-			PDEBUG(DFRAME, DEBUG_DEBUG, " %s%s: %" PRIu64 "  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].desc);
+			LOGP(DFRAME, LOGL_DEBUG, " %s%s: %" PRIu64 "  (%s)\n", spaces + strlen(w->ie[i].name), w->ie[i].name, value, amps_ie_desc[w->ie[i].ie].desc);
 		/* show result for 3 IEs of table 4 */
 		if (w->ie[i].ie == AMPS_IE_LOCAL_MSG_TYPE || w->ie[i].ie == AMPS_IE_ORDQ || w->ie[i].ie == AMPS_IE_ORDER)
 			t4++;
 		if (t4 == 3) {
 			t4 = 0;
-			PDEBUG(DFRAME, DEBUG_DEBUG, " %s--> %s\n", spaces, amps_table4_name(frame.ie[AMPS_IE_LOCAL_MSG_TYPE], frame.ie[AMPS_IE_ORDQ], frame.ie[AMPS_IE_ORDER]));
+			LOGP(DFRAME, LOGL_DEBUG, " %s--> %s\n", spaces, amps_table4_name(frame.ie[AMPS_IE_LOCAL_MSG_TYPE], frame.ie[AMPS_IE_ORDQ], frame.ie[AMPS_IE_ORDER]));
 		}
 	}
 
@@ -3103,7 +3104,7 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 
 	/* control message */
 	if (t1t2 != 3) {
-		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Received Mobile Station Control Message (T1T2 = %d)\n", t1t2);
+		LOGP_CHAN(DFRAME, LOGL_INFO, "Received Mobile Station Control Message (T1T2 = %d)\n", t1t2);
 		if (t1t2 == 1)
 			amps->rx_focc_word_count = 1;
 		if (t1t2 == 0 || t1t2 == 1) {
@@ -3120,7 +3121,7 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 					w = &word2_extended_address_word_b;
 				goto decode;
 			}
-			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Decoding of more than 2 Control messages not supported\n");
+			LOGP_CHAN(DFRAME, LOGL_INFO, "Decoding of more than 2 Control messages not supported\n");
 		}
 		return;
 	}
@@ -3188,14 +3189,14 @@ static void amps_decode_word_focc(amps_t *amps, uint64_t word)
 
 decode:
 	if (!w) {
-		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Received Illegal Overhead Message\n");
+		LOGP_CHAN(DFRAME, LOGL_INFO, "Received Illegal Overhead Message\n");
 		return;
 	}
 
 	frame = amps_decode_word(word, w);
 	/* show control filler delay */
 	if (amps->sender.loopback && ohd == 1)
-		PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Round trip delay is %.3f seconds\n", amps->when_received - amps->when_transmitted[frame->ie[AMPS_IE_1111]]);
+		LOGP_CHAN(DDSP, LOGL_NOTICE, "Round trip delay is %.3f seconds\n", amps->when_received - amps->when_transmitted[frame->ie[AMPS_IE_1111]]);
 }
 
 /* get word from data bits and call decoder function
@@ -3214,24 +3215,24 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		amps->rx_recc_word_count = 0;
 		amps->rx_recc_nawc = nawc;
 		if (f == 0) {
-			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received first word, but F bit is not set.\n");
+			LOGP_CHAN(DFRAME, LOGL_NOTICE, "Received first word, but F bit is not set.\n");
 			return 0;
 		}
 	} else {
 		if (f == 1) {
-			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word, but F bit is set.\n");
+			LOGP_CHAN(DFRAME, LOGL_NOTICE, "Received additional word, but F bit is set.\n");
 			return 0;
 		}
 		amps->rx_recc_nawc--;
 		if (amps->rx_recc_nawc != nawc) {
-			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received additional word with NAWC mismatch!\n");
+			LOGP_CHAN(DFRAME, LOGL_NOTICE, "Received additional word with NAWC mismatch!\n");
 		}
 	}
 
 	msg_count = amps->rx_recc_word_count;
 
 	if (msg_count == 8) {
-		PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Received too many words.\n");
+		LOGP_CHAN(DFRAME, LOGL_NOTICE, "Received too many words.\n");
 		return 0;
 	}
 
@@ -3268,7 +3269,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 
 
 	if (!w) {
-		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Received Illegal RECC Message\n");
+		LOGP_CHAN(DFRAME, LOGL_INFO, "Received Illegal RECC Message\n");
 		goto done;
 	}
 
@@ -3333,7 +3334,7 @@ static int amps_decode_word_recc(amps_t *amps, uint64_t word, int first)
 		amps->rx_recc_dialing[31] = digit2number[frame->ie[AMPS_IE_DIGIT_32]];
 	}
 
-	PDEBUG_CHAN(DFRAME, DEBUG_INFO, "expecting %d more word(s) to come\n", amps->rx_recc_nawc);
+	LOGP_CHAN(DFRAME, LOGL_INFO, "expecting %d more word(s) to come\n", amps->rx_recc_nawc);
 
 	if (msg_count >= 3 && amps->rx_recc_nawc == 0) {
 		/* if no digit messages are present, send NULL as dial string (paging reply) */
@@ -3400,16 +3401,16 @@ static void amps_encode_focc_bits(uint64_t word_a, uint64_t word_b, char *bits)
 	bits[k] = '\0';
 
 #ifdef BIT_DEBUGGING
-	if (debuglevel == DEBUG_DEBUG) {
+	if (loglevel == LOGL_DEBUG) {
 		char text[64];
 
 		strncpy(text, bits, 23);
 		text[23] = '\0';
-		PDEBUG(DFRAME, DEBUG_INFO, "TX FOCC: %s\n", text);
+		LOGP(DFRAME, LOGL_INFO, "TX FOCC: %s\n", text);
 		for (i = 0; i < 10; i++) {
 			strncpy(text, bits + 23 + i * 44, 44);
 			text[44] = '\0';
-			PDEBUG(DFRAME, DEBUG_DEBUG, "  word %c - %s\n", (i & 1) ? 'b' : 'a', text);
+			LOGP(DFRAME, LOGL_DEBUG, "  word %c - %s\n", (i & 1) ? 'b' : 'a', text);
 		}
 	}
 #endif
@@ -3440,8 +3441,8 @@ static void amps_encode_fvc_bits(uint64_t word_a, char *bits)
 	bits[k] = '\0';
 
 #ifdef BIT_DEBUGGING
-	if (debuglevel == DEBUG_DEBUG) {
-		PDEBUG(DFRAME, DEBUG_INFO, "TX FVC: %s\n", bits);
+	if (loglevel == LOGL_DEBUG) {
+		LOGP(DFRAME, LOGL_INFO, "TX FVC: %s\n", bits);
 	}
 #endif
 }
@@ -3511,7 +3512,7 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 	if (++amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 		amps->tx_focc_frame_count = 0;
 	if (debug)
-		PDEBUG_CHAN(DFRAME, DEBUG_INFO, "Subsequent system/filler frames are not show, to prevent flooding the output.\n");
+		LOGP_CHAN(DFRAME, LOGL_INFO, "Subsequent system/filler frames are not show, to prevent flooding the output.\n");
 	amps->tx_focc_debugged = 1;
 
 send:
@@ -3626,17 +3627,17 @@ static void amps_decode_bits_focc(amps_t *amps, const char *bits)
 	else
 		idle = 0;
 
-	PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX FOCC: B/I = %s\n", (idle) ? "idle" : "busy");
-	if (debuglevel == DEBUG_DEBUG) {
+	LOGP_CHAN(DFRAME, LOGL_INFO, "RX FOCC: B/I = %s\n", (idle) ? "idle" : "busy");
+	if (loglevel == LOGL_DEBUG) {
 		char text[64];
 
 		for (i = 0; i < 10; i++) {
 			strncpy(text, bits + i * 44, 44);
 			text[44] = '\0';
 			if ((i & 1) == 0)
-				PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word a - %s%s\n", text, (crc_a_ok[i >> 1]) ? " ok" : " BAD CRC!");
+				LOGP_CHAN(DFRAME, LOGL_DEBUG, "  word a - %s%s\n", text, (crc_a_ok[i >> 1]) ? " ok" : " BAD CRC!");
 			else
-				PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word b - %s%s\n", text, (crc_b_ok[i >> 1]) ? " ok" : " BAD CRC!");
+				LOGP_CHAN(DFRAME, LOGL_DEBUG, "  word b - %s%s\n", text, (crc_b_ok[i >> 1]) ? " ok" : " BAD CRC!");
 		}
 	}
 
@@ -3712,7 +3713,7 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 				crc_ok++;
 		}
 		if (crc_ok) {
-			PDEBUG_CHAN(DFRAME, DEBUG_NOTICE, "Seems we RX FOCC frame due to loopback, ignoring!\n");
+			LOGP_CHAN(DFRAME, LOGL_NOTICE, "Seems we RX FOCC frame due to loopback, ignoring!\n");
 			return 0;
 		}
 		bits_ -= 221;
@@ -3724,24 +3725,24 @@ static int amps_decode_bits_recc(amps_t *amps, const char *bits, int first)
 	}
 
 	if (first) {
-		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0) {
-			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX RECC: DCC=%d (%d of 5 CRCs are ok)\n", dcc, crc_ok_count);
+		if (loglevel == LOGL_DEBUG || crc_ok_count > 0) {
+			LOGP_CHAN(DFRAME, LOGL_INFO, "RX RECC: DCC=%d (%d of 5 CRCs are ok)\n", dcc, crc_ok_count);
 			if (dcc != amps->si.dcc) {
-				PDEBUG(DFRAME, DEBUG_INFO, "received DCC=%d mismatches the base station's DCC=%d\n", dcc, amps->si.dcc);
+				LOGP(DFRAME, LOGL_INFO, "received DCC=%d mismatches the base station's DCC=%d\n", dcc, amps->si.dcc);
 				return 0;
 			}
 		}
 	} else {
-		if (debuglevel == DEBUG_DEBUG || crc_ok_count > 0)
-			PDEBUG_CHAN(DFRAME, DEBUG_INFO, "RX RECC: (%d of 5 CRCs are ok)\n", crc_ok_count);
+		if (loglevel == LOGL_DEBUG || crc_ok_count > 0)
+			LOGP_CHAN(DFRAME, LOGL_INFO, "RX RECC: (%d of 5 CRCs are ok)\n", crc_ok_count);
 	}
-	if (debuglevel == DEBUG_DEBUG) {
+	if (loglevel == LOGL_DEBUG) {
 		char text[64];
 
 		for (i = 0; i < 5; i++) {
 			strncpy(text, bits + i * 48, 48);
 			text[48] = '\0';
-			PDEBUG_CHAN(DFRAME, DEBUG_DEBUG, "  word - %s%s\n", text, (crc_a_ok[i]) ? " ok" : " BAD CRC!");
+			LOGP_CHAN(DFRAME, LOGL_DEBUG, "  word - %s%s\n", text, (crc_a_ok[i]) ? " ok" : " BAD CRC!");
 		}
 	}
 
@@ -3756,7 +3757,7 @@ int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, d
 
 	/* not if additional words are received without sync */
 	if (count != 240) {
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality: %.0f%% Polarity: %s\n", level * 100.0, quality * 100.0, (negative) ? "NEGATIVE" : "POSITIVE");
+		LOGP_CHAN(DDSP, LOGL_INFO, "RX Level: %.0f%% Quality: %.0f%% Polarity: %s\n", level * 100.0, quality * 100.0, (negative) ? "NEGATIVE" : "POSITIVE");
 	}
 	if (count == 441) {
 		amps_decode_bits_focc(amps, bits);
@@ -3765,7 +3766,7 @@ int amps_decode_frame(amps_t *amps, const char *bits, int count, double level, d
 	} else if (count == 240) {
 		more = amps_decode_bits_recc(amps, bits, 0);
 	} else {
-		PDEBUG_CHAN(DFRAME, DEBUG_ERROR, "Frame with unknown length = %d, please fix!\n", count);
+		LOGP_CHAN(DFRAME, LOGL_ERROR, "Frame with unknown length = %d, please fix!\n", count);
 	}
 
 	return more;

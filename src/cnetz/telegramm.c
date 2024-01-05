@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "cnetz.h"
 #include "dsp.h"
 #include "sysinfo.h"
@@ -510,13 +510,13 @@ static int encode_dialstring(uint64_t *value, const char *number)
 
 	max = strlen(number);
 	if (max > 16) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Given number '%s' has more than 16 digits\n", number);
+		LOGP(DFRAME, LOGL_NOTICE, "Given number '%s' has more than 16 digits\n", number);
 		return -EINVAL;
 	}
 
 	if (max == 16) {
 		if (number[0] != '0') {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Given 16 digit number '%s' does not start with '0'\n", number);
+			LOGP(DFRAME, LOGL_NOTICE, "Given 16 digit number '%s' does not start with '0'\n", number);
 			return -EINVAL;
 		}
 		*value = 0;
@@ -575,7 +575,7 @@ int match_fuz(telegramm_t *telegramm)
 	if (telegramm->fuz_nationalitaet != si.fuz_nat
 	 || telegramm->fuz_fuvst_nr != si.fuz_fuvst
 	 || telegramm->fuz_rest_nr != si.fuz_rest) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Cell 'Funkzelle' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		LOGP(DFRAME, LOGL_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Cell 'Funkzelle' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 	 	return 0;
 	}
 
@@ -587,7 +587,7 @@ int match_futln(telegramm_t *telegramm, uint8_t futln_nat, uint8_t futln_fuvst, 
 	if (telegramm->futln_nationalitaet != futln_nat
 	 || telegramm->futln_heimat_fuvst_nr != futln_fuvst
 	 || telegramm->futln_rest_nr != futln_rest) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Mobile station 'Funktelefongeraet' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
+		LOGP(DFRAME, LOGL_NOTICE, "Ignoring message from mobile phone %d,%d,%d: Mobile station 'Funktelefongeraet' does not match!\n", telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr);
 	 	return 0;
 	}
 
@@ -600,19 +600,19 @@ static void debug_parameter(char digit, uint64_t value)
 
 	parameter = get_parameter(digit);
 	if (!parameter) {
-		PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' not found in definition_parameter list, please fix!\n", digit);
+		LOGP(DFRAME, LOGL_ERROR, "Digit '%c' not found in definition_parameter list, please fix!\n", digit);
 		abort();
 	}
 	if (parameter->value_names)
-		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : %s\n", digit, parameter->param_name, parameter->value_names[value]);
+		LOGP(DFRAME, LOGL_DEBUG, " (%c) %s : %s\n", digit, parameter->param_name, parameter->value_names[value]);
 	else if (parameter->bits == 64)
-		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : 0x%016" PRIx64 "\n", digit, parameter->param_name, value);
+		LOGP(DFRAME, LOGL_DEBUG, " (%c) %s : 0x%016" PRIx64 "\n", digit, parameter->param_name, value);
 	else if (digit == 'X') {
 		char wahlziffern[17];
 		decode_dialstring(wahlziffern, value);
-		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : '%s'\n", digit, parameter->param_name, wahlziffern);
+		LOGP(DFRAME, LOGL_DEBUG, " (%c) %s : '%s'\n", digit, parameter->param_name, wahlziffern);
 	} else
-		PDEBUG(DFRAME, DEBUG_DEBUG, " (%c) %s : %" PRIu64 "\n", digit, parameter->param_name, value);
+		LOGP(DFRAME, LOGL_DEBUG, " (%c) %s : %" PRIu64 "\n", digit, parameter->param_name, value);
 }
 
 /* encode telegram to 70 bits
@@ -628,12 +628,12 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 	int rc;
 
 	if (telegramm->opcode >= 64) {
-		PDEBUG(DFRAME, DEBUG_ERROR, "Opcode '0x%x' exceeds bit range, please fix!\n", telegramm->opcode);
+		LOGP(DFRAME, LOGL_ERROR, "Opcode '0x%x' exceeds bit range, please fix!\n", telegramm->opcode);
 		abort();
 	}
 
 	if (debug)
-		PDEBUG(DFRAME, DEBUG_INFO, "Coding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
+		LOGP(DFRAME, LOGL_INFO, "Coding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
 
 	/* copy opcode */
 	for (i = 0; i < 6; i++)
@@ -717,7 +717,7 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 		case 'X':
 			rc = encode_dialstring(&value, telegramm->wahlziffern);
 			if (rc < 0) {
-				PDEBUG(DFRAME, DEBUG_ERROR, "Illegal dial string '%s', please fix!\n", telegramm->wahlziffern);
+				LOGP(DFRAME, LOGL_ERROR, "Illegal dial string '%s', please fix!\n", telegramm->wahlziffern);
 				abort();
 			}
 			break;
@@ -806,10 +806,10 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 			value = telegramm->illegaler_opcode;
 			break;
 		default:
-			PDEBUG(DFRAME, DEBUG_ERROR, "Parameter '%c' does not exist, please fix!\n", parameter);
+			LOGP(DFRAME, LOGL_ERROR, "Parameter '%c' does not exist, please fix!\n", parameter);
 			abort();
 		}
-		if (debug && debuglevel <= DEBUG_DEBUG)
+		if (debug && loglevel <= LOGL_DEBUG)
 			debug_parameter(parameter, value);
 		val = value;
 		for (j = 0; string[63 - i - j] == parameter; j++) {
@@ -817,14 +817,14 @@ static char *assemble_telegramm(const telegramm_t *telegramm, int debug)
 			val >>= 1;
 		}
 		if (val)
-			PDEBUG(DFRAME, DEBUG_ERROR, "Parameter '%c' value '0x%" PRIx64 "' exceeds bit range!\n", parameter, value);
+			LOGP(DFRAME, LOGL_ERROR, "Parameter '%c' value '0x%" PRIx64 "' exceeds bit range!\n", parameter, value);
 		i += j - 1;
 	}
 	bits[70] = '\0';
 
 	if (debug) {
-		PDEBUG(DFRAME, DEBUG_DEBUG, "OOOOOO%s\n", string);
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", bits);
+		LOGP(DFRAME, LOGL_DEBUG, "OOOOOO%s\n", string);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", bits);
 	}
 
 	return bits;
@@ -848,7 +848,7 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 		value = (value << 1) | (bits[i] == '1');
 	telegramm->opcode = value;
 
-	PDEBUG(DFRAME, DEBUG_INFO, "Decoding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
+	LOGP(DFRAME, LOGL_INFO, "Decoding %s %s\n", definition_opcode[telegramm->opcode].message_name, definition_opcode[telegramm->opcode].message_text);
 
 	/* copy parameters */
 	if (auth && bits[1]) /* auth flag and chip card flag */
@@ -864,7 +864,7 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 			value = (value >> 1) | ((uint64_t)(bits[69 - i - j] == '1') << 63);
 		value >>= 64 - j;
 		i += j - 1;
-		if (debuglevel <= DEBUG_DEBUG)
+		if (loglevel <= LOGL_DEBUG)
 			debug_parameter(parameter, value);
 		switch (parameter) {
 		case 'A':
@@ -1021,18 +1021,18 @@ static void disassemble_telegramm(telegramm_t *telegramm, const char *bits, int 
 			telegramm->illegaler_opcode = value;
 			break;
 		default:
-			PDEBUG(DFRAME, DEBUG_ERROR, "Parameter '%c' does not exist, please fix!\n", parameter);
+			LOGP(DFRAME, LOGL_ERROR, "Parameter '%c' does not exist, please fix!\n", parameter);
 			abort();
 		}
 	}
 
-	if (debuglevel <= DEBUG_DEBUG) {
+	if (loglevel <= LOGL_DEBUG) {
 		char debug_bits[71];
 
 		memcpy(debug_bits, bits, 70);
 		debug_bits[70] = '\0';
-		PDEBUG(DFRAME, DEBUG_DEBUG, "OOOOOO%s\n", string);
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", debug_bits);
+		LOGP(DFRAME, LOGL_DEBUG, "OOOOOO%s\n", string);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", debug_bits);
 	}
 
 }
@@ -1392,11 +1392,11 @@ static const char *decode(const char *input, int *_bit_errors)
 	fail_str[10] = '\0';
 	
 	if (failed)
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Received Telegram with these block errors: '%s' (X = uncorrectable)\n", fail_str);
+		LOGP(DFRAME, LOGL_DEBUG, "Received Telegram with these block errors: '%s' (X = uncorrectable)\n", fail_str);
 	else if (warn)
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Received Telegram with these block errors: '%s' (1 / 2 = correctable)\n", fail_str);
+		LOGP(DFRAME, LOGL_DEBUG, "Received Telegram with these block errors: '%s' (1 / 2 = correctable)\n", fail_str);
 	else
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Received Telegram with no block errors.\n");
+		LOGP(DFRAME, LOGL_DEBUG, "Received Telegram with no block errors.\n");
 
 	if (failed)
 		return NULL;
@@ -1496,13 +1496,13 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 			break;
 	}
 	if (i == 70) {
-		PDEBUG(DFRAME, DEBUG_INFO, "Ignoring mysterious unmodulated telegramm (noise from phone's transmitter)\n");
+		LOGP(DFRAME, LOGL_INFO, "Ignoring mysterious unmodulated telegramm (noise from phone's transmitter)\n");
 		return;
 	}
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RF level: %.1f dB RX Level: %.0f%% Standard deviation: %.0f%% Sync Time: %.2f (TS %.2f) %s\n", cnetz->rf_level_db, fabs(level) / cnetz->fsk_deviation * 100.0, stddev / fabs(level) * 100.0, sync_time, sync_time / 396.0, (level < 0) ? "NEGATIVE (phone's mode)" : "POSITIVE (base station's mode)");
+	LOGP_CHAN(DDSP, LOGL_INFO, "RF level: %.1f dB RX Level: %.0f%% Standard deviation: %.0f%% Sync Time: %.2f (TS %.2f) %s\n", cnetz->rf_level_db, fabs(level) / cnetz->fsk_deviation * 100.0, stddev / fabs(level) * 100.0, sync_time, sync_time / 396.0, (level < 0) ? "NEGATIVE (phone's mode)" : "POSITIVE (base station's mode)");
 	if (bit_errors)
-		PDEBUG_CHAN(DDSP, DEBUG_INFO, " -> Frame has %d bit errors.\n", bit_errors);
+		LOGP_CHAN(DDSP, LOGL_INFO, " -> Frame has %d bit errors.\n", bit_errors);
 
 	disassemble_telegramm(&telegramm, bits, si.authentifikationsbit);
 	opcode = telegramm.opcode;
@@ -1510,18 +1510,18 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 	telegramm.sync_time = sync_time;
 
 	if (cnetz->sender.loopback) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm in loopback test mode (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+		LOGP(DFRAME, LOGL_NOTICE, "Received Telegramm in loopback test mode (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 		cnetz_sync_frame(cnetz, sync_time, -1);
 		return;
 	}
 
 	if (opcode >= 32) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used by mobile station, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+		LOGP(DFRAME, LOGL_NOTICE, "Received Telegramm that is not used by mobile station, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 		return;
 	}
 
 	if (definition_opcode[opcode].block == BLOCK_I) {
-		PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is an illegal opcode, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+		LOGP(DFRAME, LOGL_NOTICE, "Received Telegramm that is an illegal opcode, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 		return;
 	}
 
@@ -1544,7 +1544,7 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 	switch (cnetz->dsp_mode) {
 	case DSP_MODE_OGK:
 		if (definition_opcode[opcode].block != BLOCK_R && definition_opcode[opcode].block != BLOCK_M) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used OgK channel signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+			LOGP(DFRAME, LOGL_NOTICE, "Received Telegramm that is not used OgK channel signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
 		/* determine block by last timeslot sent and by message type
@@ -1557,14 +1557,14 @@ void cnetz_decode_telegramm(cnetz_t *cnetz, const char *bits, double level, doub
 		break;
 	case DSP_MODE_SPK_K:
 		if (definition_opcode[opcode].block != BLOCK_K) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used for concentrated signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+			LOGP(DFRAME, LOGL_NOTICE, "Received Telegramm that is not used for concentrated signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
 		cnetz_receive_telegramm_spk_k(cnetz, &telegramm);
 		break;
 	case DSP_MODE_SPK_V:
 		if (definition_opcode[opcode].block != BLOCK_V) {
-			PDEBUG(DFRAME, DEBUG_NOTICE, "Received Telegramm that is not used for distributed signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
+			LOGP(DFRAME, LOGL_NOTICE, "Received Telegramm that is not used for distributed signaling, ignoring! (opcode %d = %s)\n", opcode, definition_opcode[opcode].message_name);
 			return;
 		}
 		cnetz_receive_telegramm_spk_v(cnetz, &telegramm);
@@ -1622,7 +1622,7 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 		cnetz->sched_lr_debugged = 1;
 	if (opcode == OPCODE_MLR_M && !cnetz->sched_mlr_debugged) {
 		cnetz->sched_mlr_debugged = 1;
-		PDEBUG(DFRAME, DEBUG_INFO, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
+		LOGP(DFRAME, LOGL_INFO, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
 	}
 
 	return bits;

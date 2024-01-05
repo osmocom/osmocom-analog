@@ -22,7 +22,7 @@
 #include <math.h>
 #include <alsa/asoundlib.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #ifdef HAVE_MOBILE
 #include "../libmobile/sender.h"
 #else
@@ -54,42 +54,42 @@ static int set_hw_params(snd_pcm_t *handle, int samplerate, int *channels)
 
 	rc = snd_pcm_hw_params_malloc(&hw_params);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to allocate hw_params! (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "Failed to allocate hw_params! (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 
 	rc = snd_pcm_hw_params_any(handle, hw_params);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot initialize hardware parameter structure (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot initialize hardware parameter structure (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 
 	rc = snd_pcm_hw_params_set_rate_resample(handle, hw_params, 0);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot set real hardware rate (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot set real hardware rate (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 
 	rc = snd_pcm_hw_params_set_access (handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot set access to interleaved (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot set access to interleaved (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 
 	rc = snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_S16);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot set sample format (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot set sample format (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 
 	rrate = samplerate;
 	rc = snd_pcm_hw_params_set_rate_near(handle, hw_params, &rrate, 0);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot set sample rate (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot set sample rate (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 	if ((int)rrate != samplerate) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Rate doesn't match (requested %dHz, get %dHz)\n", samplerate, rrate);
+		LOGP(DSOUND, LOGL_ERROR, "Rate doesn't match (requested %dHz, get %dHz)\n", samplerate, rrate);
 		rc = -EIO;
 		goto error;
 	}
@@ -100,14 +100,14 @@ static int set_hw_params(snd_pcm_t *handle, int samplerate, int *channels)
 		*channels = 2;
 		rc = snd_pcm_hw_params_set_channels(handle, hw_params, *channels);
 		if (rc < 0) {
-			PDEBUG(DSOUND, DEBUG_ERROR, "cannot set channel count to 1 nor 2 (%s)\n", snd_strerror(rc));
+			LOGP(DSOUND, LOGL_ERROR, "cannot set channel count to 1 nor 2 (%s)\n", snd_strerror(rc));
 			goto error;
 		}
 	}
 
 	rc = snd_pcm_hw_params(handle, hw_params);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot set parameters (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot set parameters (%s)\n", snd_strerror(rc));
 		goto error;
 	}
 
@@ -130,51 +130,51 @@ static int dev_open(sound_t *sound)
 	rc_play = snd_pcm_open(&sound->phandle, sound->audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	rc_rec = snd_pcm_open(&sound->chandle, sound->audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
 	if (rc_play < 0 && rc_rec < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s'! (%s)\n", sound->audiodev, snd_strerror(rc_play));
-		PDEBUG(DSOUND, DEBUG_ERROR, "Run 'aplay -l' to get a list of available cards and devices.\n");
-		PDEBUG(DSOUND, DEBUG_ERROR, "Then use 'hw:<card>:<device>' for audio device.\n");
+		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s'! (%s)\n", sound->audiodev, snd_strerror(rc_play));
+		LOGP(DSOUND, LOGL_ERROR, "Run 'aplay -l' to get a list of available cards and devices.\n");
+		LOGP(DSOUND, LOGL_ERROR, "Then use 'hw:<card>:<device>' for audio device.\n");
 		return rc_play;
 	}
 	if (rc_play < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_play));
+		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_play));
 		return rc_play;
 	}
 	if (rc_rec < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_rec));
+		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_rec));
 		return rc_rec;
 	}
 
 	rc = set_hw_params(sound->phandle, sound->samplerate, &sound->pchannels);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set playback hw params\n");
+		LOGP(DSOUND, LOGL_ERROR, "Failed to set playback hw params\n");
 		return rc;
 	}
 	if (sound->pchannels < sound->channels) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
+		LOGP(DSOUND, LOGL_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
 		return rc;
 	}
-	PDEBUG(DSOUND, DEBUG_DEBUG, "Playback with %d channels.\n", sound->pchannels);
+	LOGP(DSOUND, LOGL_DEBUG, "Playback with %d channels.\n", sound->pchannels);
 
 	rc = set_hw_params(sound->chandle, sound->samplerate, &sound->cchannels);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to set capture hw params\n");
+		LOGP(DSOUND, LOGL_ERROR, "Failed to set capture hw params\n");
 		return rc;
 	}
 	if (sound->cchannels < sound->channels) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
+		LOGP(DSOUND, LOGL_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
 		return -EIO;
 	}
-	PDEBUG(DSOUND, DEBUG_DEBUG, "Capture with %d channels.\n", sound->cchannels);
+	LOGP(DSOUND, LOGL_DEBUG, "Capture with %d channels.\n", sound->cchannels);
 
 	rc = snd_pcm_prepare(sound->phandle);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
 		return rc;
 	}
 
 	rc = snd_pcm_prepare(sound->chandle);
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
 		return rc;
 	}
 
@@ -196,13 +196,13 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 	int rc;
 
 	if (channels < 1 || channels > 2) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Cannot use more than two channels with the same sound card!\n");
+		LOGP(DSOUND, LOGL_ERROR, "Cannot use more than two channels with the same sound card!\n");
 		return NULL;
 	}
 
 	sound = calloc(1, sizeof(sound_t));
 	if (!sound) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "Failed to alloc memory!\n");
+		LOGP(DSOUND, LOGL_ERROR, "Failed to alloc memory!\n");
 		return NULL;
 	}
 
@@ -234,7 +234,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 
 	if ((env = getenv("KEEP_FRAMES"))) {
 		KEEP_FRAMES = atoi(env);
-		PDEBUG(DSOUND, DEBUG_NOTICE, "KEEP %d samples in RX buffer, to prevent corrupt read.\n", KEEP_FRAMES);
+		LOGP(DSOUND, LOGL_NOTICE, "KEEP %d samples in RX buffer, to prevent corrupt read.\n", KEEP_FRAMES);
 	}
 
 	return sound;
@@ -377,7 +377,7 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 	rc = snd_pcm_writei(sound->phandle, buff, num);
 
 	if (rc < 0) {
-		PDEBUG(DSOUND, DEBUG_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "failed to write audio to interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE) {
 			dev_close(sound);
 			rc = dev_open(sound);
@@ -390,7 +390,7 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 	}
 
 	if (rc != num)
-		PDEBUG(DSOUND, DEBUG_ERROR, "short write to audio interface, written %d bytes, got %d bytes\n", num, rc);
+		LOGP(DSOUND, LOGL_ERROR, "short write to audio interface, written %d bytes, got %d bytes\n", num, rc);
 
 	return rc;
 }
@@ -423,7 +423,7 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 	if (rc < 0) {
 		if (errno == EAGAIN)
 			return 0;
-		PDEBUG(DSOUND, DEBUG_ERROR, "failed to read audio from interface (%s)\n", snd_strerror(rc));
+		LOGP(DSOUND, LOGL_ERROR, "failed to read audio from interface (%s)\n", snd_strerror(rc));
 		/* recover read */
 		if (rc == -EPIPE) {
 			dev_close(sound);
@@ -505,9 +505,9 @@ int sound_get_tosend(void *inst, int buffer_size)
 	rc = snd_pcm_delay(sound->phandle, &delay);
 	if (rc < 0) {
 		if (rc == -32)
-			PDEBUG(DSOUND, DEBUG_ERROR, "Buffer underrun: Please use higher buffer and enable real time scheduling\n");
+			LOGP(DSOUND, LOGL_ERROR, "Buffer underrun: Please use higher buffer and enable real time scheduling\n");
 		else
-			PDEBUG(DSOUND, DEBUG_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
+			LOGP(DSOUND, LOGL_ERROR, "failed to get delay from interface (%s)\n", snd_strerror(rc));
 		if (rc == -EPIPE) {
 			dev_close(sound);
 			rc = dev_open(sound);

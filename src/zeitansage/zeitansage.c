@@ -25,9 +25,10 @@
 #include <math.h>
 #include <time.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
+#include "../libmobile/get_time.h"
 #include "zeitansage.h"
 
 #define db2level(db)	pow(10, (double)(db) / 20.0)
@@ -96,7 +97,7 @@ static void call_new_state(zeit_call_t *call, enum zeit_call_state new_state)
 {
 	if (call->state == new_state)
 		return;
-	PDEBUG(DZEIT, DEBUG_DEBUG, "State change: %s -> %s\n", call_state_name(call->state), call_state_name(new_state));
+	LOGP(DZEIT, LOGL_DEBUG, "State change: %s -> %s\n", call_state_name(call->state), call_state_name(new_state));
 	call->state = new_state;
 	zeit_display_status();
 }
@@ -133,7 +134,7 @@ int zeit_init(double audio_level_dBm, int alerting)
 	}
 	sekunden_time += minuten_time;
 
-	PDEBUG(DZEIT, DEBUG_DEBUG, "Total time to play announcement, starting with beep: %.2f seconds\n", (double)sekunden_time / 8000.0);
+	LOGP(DZEIT, LOGL_DEBUG, "Total time to play announcement, starting with beep: %.2f seconds\n", (double)sekunden_time / 8000.0);
 
 	return 0;
 }
@@ -156,10 +157,12 @@ static void zeit_calc_time(zeit_call_t *call, time_t time_sec)
 	call->m = tm->tm_min;
 	call->s = tm->tm_sec;
 
-	PDEBUG(DZEIT, DEBUG_INFO, "The time at the next beep is: %d:%02d:%02d\n", call->h, call->m, call->s);
+	LOGP(DZEIT, LOGL_INFO, "The time at the next beep is: %d:%02d:%02d\n", call->h, call->m, call->s);
 }
 
 static void call_timeout(void *data);
+
+#define FLOAT_TO_TIMEOUT(f) floor(f), ((f) - floor(f)) * 1000000
 
 /* Create call instance */
 static zeit_call_t *zeit_call_create(uint32_t callref, const char *id)
@@ -168,25 +171,25 @@ static zeit_call_t *zeit_call_create(uint32_t callref, const char *id)
 	double now, time_offset;
 	time_t time_sec;
 
-	PDEBUG(DZEIT, DEBUG_INFO, "Creating call instance to play time for caller '%s'.\n", id);
+	LOGP(DZEIT, LOGL_INFO, "Creating call instance to play time for caller '%s'.\n", id);
 
 	/* create */
 	call = calloc(1, sizeof(*call));
 	if (!call) {
-		PDEBUG(DZEIT, DEBUG_ERROR, "No mem!\n");
+		LOGP(DZEIT, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 
 	/* init */
 	call->callref = callref;
 	strncpy(call->caller_id, id, sizeof(call->caller_id) - 1);
-	timer_init(&call->timer, call_timeout, call);
+	osmo_timer_setup(&call->timer, call_timeout, call);
 	now = get_time();
 	time_offset = fmod(now, 10.0);
 	time_sec = (int)floor(now / 10.0) * 10;
 	call->spl_time = (int)(time_offset * 8000.0);
 	zeit_calc_time(call, time_sec);
-	timer_start(&call->timer, 10.0 - time_offset);
+	osmo_timer_schedule(&call->timer, FLOAT_TO_TIMEOUT(10.0 - time_offset));
 
 	/* link */
 	callp = &zeit_call_list;
@@ -209,7 +212,7 @@ static void zeit_call_destroy(zeit_call_t *call)
 	(*callp) = call->next;
 
 	/* cleanup */
-	timer_exit(&call->timer);
+	osmo_timer_del(&call->timer);
 
 	/* destroy */
 	free(call);
@@ -323,7 +326,7 @@ static void call_timeout(void *data)
 	double now, time_offset;
 	time_t time_sec;
 
-	PDEBUG(DZEIT, DEBUG_INFO, "Beep!\n");
+	LOGP(DZEIT, LOGL_INFO, "Beep!\n");
 
 	now = get_time();
 
@@ -336,7 +339,7 @@ static void call_timeout(void *data)
 	}
 	call->spl_time = 0;
 	zeit_calc_time(call, time_sec);
-	timer_start(&call->timer, 10.0 - time_offset);
+	osmo_timer_schedule(&call->timer, FLOAT_TO_TIMEOUT(10.0 - time_offset));
 }
 
 /* Call control starts call towards clock */
@@ -363,14 +366,14 @@ static void _release(int callref, int __attribute__((unused)) cause)
 {
 	zeit_call_t *call;
 
-	PDEBUG(DZEIT, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DZEIT, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (call = zeit_call_list; call; call = call->next) {
 		if (call->callref == callref)
 			break;
 	}
 	if (!call) {
-		PDEBUG(DZEIT, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DZEIT, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../nmt/nmt.h"
 
 extern int dms_allow_loopback;
@@ -80,9 +80,10 @@ int main(void)
 	int i, j;
 
 	/* this is never called, it forces the linker to add mobile functions */
-	if (debuglevel == -1000) main_mobile_loop();
+	if (loglevel == -1000) main_mobile_loop();
 
-	debuglevel = DEBUG_DEBUG;
+	loglevel = LOGL_DEBUG;
+	logging_init();
 	dms_allow_loopback = 1;
 
 	nmt = alloc_nmt();
@@ -199,7 +200,7 @@ int main(void)
 
 	ok();
 
-	debuglevel = DEBUG_INFO;
+	loglevel = LOGL_INFO;
 
 	/* test again with pseudo random packet dropps */
 	srandom(0);

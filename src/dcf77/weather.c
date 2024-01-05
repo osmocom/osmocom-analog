@@ -7,7 +7,7 @@ https://github.com/tobozo/esp32-dcf77-weatherman/blob/master/dcf77.cpp
 #include <stdio.h>
 #include <stdint.h>
 #include <endian.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "weather.h"
 
 /// Container zum Konvertieren zwischen 4 Bytes und Uint.
@@ -536,9 +536,9 @@ int32_t weather_decode(uint64_t cipher, uint64_t key)
 	weather = GetWeatherFromPlain(PlainBytes);
 
 #ifdef DEBUG_CIPER
-	printf("cipher=%s\n", debug_hex(CipherBytes, 5));
-	printf("key   =%s\n", debug_hex(KeyBytes, 5));
-	printf("plain =%s\n", debug_hex(PlainBytes, 5));
+	printf("cipher=%s\n", osmo_hexdump(CipherBytes, 5));
+	printf("key   =%s\n", osmo_hexdump(KeyBytes, 5));
+	printf("plain =%s\n", osmo_hexdump(PlainBytes, 5));
 	if (weather < 0)
 		printf("weather=error\n");
 	else
@@ -569,9 +569,9 @@ uint64_t weather_encode(uint32_t weather, uint64_t key)
 	CipherBytes = Encrypt(PlainBytes, KeyBytes);
 
 #ifdef DEBUG_CIPER
-	printf("plain =%s\n", debug_hex(PlainBytes, 5));
-	printf("key   =%s\n", debug_hex(KeyBytes, 5));
-	printf("cipher=%s\n", debug_hex(CipherBytes, 5));
+	printf("plain =%s\n", osmo_hexdump(PlainBytes, 5));
+	printf("key   =%s\n", osmo_hexdump(KeyBytes, 5));
+	printf("cipher=%s\n", osmo_hexdump(CipherBytes, 5));
 #endif
 
 	for (i = 0; i < 5; i++)

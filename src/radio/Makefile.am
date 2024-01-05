@@ -11,7 +11,6 @@ osmoradio_SOURCES = \
 osmoradio_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/liboptions/liboptions.a \
-	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(top_builddir)/src/libsdr/libsdr.a \
@@ -24,7 +23,8 @@ osmoradio_LDADD = \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libfft/libfft.a \
-	$(top_builddir)/src/libtimer/libtimer.a \
+	$(top_builddir)/src/liblogging/liblogging.a \
+	$(LIBOSMOCORE_LIBS) \
 	$(UHD_LIBS) \
 	$(SOAPY_LIBS) \
 	-lm

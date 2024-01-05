@@ -1,24 +1,30 @@
 You need to have the following packages install:
 
+* libosmocore, core libraries for various osmocom related projects
+* libosmo-cc, call control interface library, to interconnect applications
 * automake, gcc for compilation
 * libasound2 for sound card support, which is what you need!
 * libsoapysdr or libuhd (developer) to support SDR
 * -> SoapySDR modules to support your SDR hardware
 * libimagamagick version >= 7 (developer) optionally for TV image display
 
+Install libosmocore:
+See: https://osmocom.org/projects/libosmocore/wiki/Libosmocore
 
-Generate "configure":
-
-$ autoreconf -if
-
-
-Run "configure":
-
-$ ./configure
-
-
-Build and install:
-
+Install libosmo-cc:
+$ git clone https://gitea.osmocom.org/osmocom/libosmo-cc.git
+$ cd libosmocore/
+$ autoreconf -i
+$./configure
 $ make
-$ make install
+s udo make install
+$ sudo ldconfig -i
+$ cd ..
+
+Install osmocom-analog:
+$ autoreconf -i
+$ ./configure
+$ make
+$ sudo make install
+
 

@@ -4,7 +4,7 @@
 #include <string.h>
 #include "../libsample/sample.h"
 #include "../libgoertzel/goertzel.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 
 #define level2db(level)		(20 * log10(level))
 #define db2level(db)		pow(10, (double)db / 20.0)

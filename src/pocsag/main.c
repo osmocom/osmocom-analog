@@ -27,7 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
@@ -220,7 +220,7 @@ static void myhandler(void)
 			if (tx)
 				pocsag_msg_send(language, buffer);
 			else
-				PDEBUG(DPOCSAG, DEBUG_ERROR, "Failed to send message, transmitter is not enabled!\n");
+				LOGP(DPOCSAG, LOGL_ERROR, "Failed to send message, transmitter is not enabled!\n");
 		}
 	}
 }
@@ -362,6 +362,7 @@ fail:
 		pocsag_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 	pocsag_exit();
 

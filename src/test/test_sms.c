@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../nmt/nmt.h"
 
 static const uint8_t test_mo_sms_data1[] = {
@@ -107,9 +107,10 @@ int main(void)
 	int rc;
 
 	/* this is never called, it forces the linker to add mobile functions */
-	if (debuglevel == -1000) main_mobile_loop();
+	if (loglevel == -1000) main_mobile_loop();
 
-	debuglevel = DEBUG_DEBUG;
+	loglevel = LOGL_DEBUG;
+	logging_init();
 
 	nmt = calloc(sizeof(*nmt), 1);
 	sms_init_sender(nmt);

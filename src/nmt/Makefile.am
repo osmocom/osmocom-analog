@@ -23,17 +23,13 @@ nmt_LDADD = \
 	$(COMMON_LA) \
 	libdmssms.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
-	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
-	$(top_builddir)/src/libosmocc/libosmocc.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
 	$(top_builddir)/src/libhagelbarger/libhagelbarger.a \
 	$(top_builddir)/src/libdtmf/libdtmf.a \
-	$(top_builddir)/src/libtimer/libtimer.a \
-	$(top_builddir)/src/libselect/libselect.a \
 	$(top_builddir)/src/libsamplerate/libsamplerate.a \
 	$(top_builddir)/src/libemphasis/libemphasis.a \
 	$(top_builddir)/src/libfsk/libfsk.a \
@@ -41,8 +37,10 @@ nmt_LDADD = \
 	$(top_builddir)/src/libfilter/libfilter.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \
-	$(top_builddir)/src/libg711/libg711.a \
 	$(top_builddir)/src/libaaimage/libaaimage.a \
+	$(top_builddir)/src/liblogging/liblogging.a \
+	$(LIBOSMOCORE_LIBS) \
+	$(LIBOSMOCC_LIBS) \
 	-lm
 
 if HAVE_ALSA

@@ -26,10 +26,10 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "../liboptions/options.h"
 #include "fuenf.h"
 #include "dsp.h"
@@ -149,7 +149,7 @@ void fuenf_new_state(fuenf_t *fuenf, enum fuenf_state new_state)
 {
 	if (fuenf->state == new_state)
 		return;
-	PDEBUG_CHAN(DFUENF, DEBUG_DEBUG, "State change: %s -> %s\n", fuenf_state_name[fuenf->state], fuenf_state_name[new_state]);
+	LOGP_CHAN(DFUENF, LOGL_DEBUG, "State change: %s -> %s\n", fuenf_state_name[fuenf->state], fuenf_state_name[new_state]);
 	fuenf->state = new_state;
 	fuenf_display_status();
 }
@@ -160,13 +160,13 @@ static int fuenf_scan_or_loopback(fuenf_t *fuenf)
 
 	if (fuenf->scan_from < fuenf->scan_to) {
 		sprintf(rufzeichen, "%05d", fuenf->scan_from++);
-		PDEBUG_CHAN(DFUENF, DEBUG_NOTICE, "Transmitting ID '%s'.\n", rufzeichen);
+		LOGP_CHAN(DFUENF, LOGL_NOTICE, "Transmitting ID '%s'.\n", rufzeichen);
 		dsp_setup(fuenf, rufzeichen, fuenf->default_funktion);
 		return 1;
 	}
 
 	if (fuenf->sender.loopback) {
-		PDEBUG(DFUENF, DEBUG_INFO, "Sending 5-Ton-Ruf for loopback test.\n");
+		LOGP(DFUENF, LOGL_INFO, "Sending 5-Ton-Ruf for loopback test.\n");
 		dsp_setup(fuenf, "10357", FUENF_FUNKTION_FEUER);
 		return 1;
 	}
@@ -182,23 +182,23 @@ int fuenf_create(const char *kanal, double frequency, const char *device, int us
 
 	fuenf = calloc(1, sizeof(*fuenf));
 	if (!fuenf) {
-		PDEBUG(DFUENF, DEBUG_ERROR, "No memory!\n");
+		LOGP(DFUENF, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DFUENF, DEBUG_DEBUG, "Creating '5-Ton-Folge' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DFUENF, LOGL_DEBUG, "Creating '5-Ton-Folge' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&fuenf->sender, kanal, frequency, frequency, device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DFUENF, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DFUENF, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(fuenf, samplerate, max_deviation, signal_deviation);
 	if (rc < 0) {
-		PDEBUG(DFUENF, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DFUENF, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
@@ -210,7 +210,7 @@ int fuenf_create(const char *kanal, double frequency, const char *device, int us
 
 	fuenf_display_status();
 
-	PDEBUG(DFUENF, DEBUG_NOTICE, "Created 'Kanal' %s\n", kanal);
+	LOGP(DFUENF, LOGL_NOTICE, "Created 'Kanal' %s\n", kanal);
 
 	/* start scanning, if enabled, otherwise send loopback sequence, if enabled */
 	fuenf_scan_or_loopback(fuenf);
@@ -228,7 +228,7 @@ void fuenf_destroy(sender_t *sender)
 {
 	fuenf_t *fuenf = (fuenf_t *) sender;
 
-	PDEBUG(DFUENF, DEBUG_DEBUG, "Destroying '5-Ton-Folge' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DFUENF, LOGL_DEBUG, "Destroying '5-Ton-Folge' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	dsp_cleanup_sender(fuenf);
 	sender_destroy(&fuenf->sender);
@@ -238,7 +238,7 @@ void fuenf_destroy(sender_t *sender)
 /* call sign was transmitted */
 void fuenf_tx_done(fuenf_t *fuenf)
 {
-	PDEBUG_CHAN(DFUENF, DEBUG_INFO, "Done sending 5-Ton-Ruf.\n");
+	LOGP_CHAN(DFUENF, LOGL_INFO, "Done sending 5-Ton-Ruf.\n");
 
 	/* start scanning, if enabled, otherwise send loopback sequence, if enabled */
 	if (fuenf_scan_or_loopback(fuenf)) {
@@ -247,7 +247,7 @@ void fuenf_tx_done(fuenf_t *fuenf)
 
 	/* go talker state */
 	if (fuenf->callref && fuenf->tx_funktion == FUENF_FUNKTION_RUF) {
-		PDEBUG_CHAN(DFUENF, DEBUG_INFO, "Caller may talk now.\n");
+		LOGP_CHAN(DFUENF, LOGL_INFO, "Caller may talk now.\n");
 		fuenf_new_state(fuenf, FUENF_STATE_DURCHSAGE);
 		return;
 	}
@@ -255,19 +255,19 @@ void fuenf_tx_done(fuenf_t *fuenf)
 	/* go idle */
 	fuenf_new_state(fuenf, FUENF_STATE_IDLE);
 	if (fuenf->callref) {
-		PDEBUG_CHAN(DFUENF, DEBUG_INFO, "Releasing call toward network.\n");
+		LOGP_CHAN(DFUENF, LOGL_INFO, "Releasing call toward network.\n");
 		call_up_release(fuenf->callref, CAUSE_NORMAL);
 	}
 }
 
 void fuenf_rx_callsign(fuenf_t *fuenf, const char *callsign)
 {
-	PDEBUG_CHAN(DFUENF, DEBUG_INFO, "Received 5-Ton-Ruf with call sign '%s'.\n", callsign);
+	LOGP_CHAN(DFUENF, LOGL_INFO, "Received 5-Ton-Ruf with call sign '%s'.\n", callsign);
 }
 
 void fuenf_rx_function(fuenf_t *fuenf, enum fuenf_funktion funktion)
 {
-	PDEBUG_CHAN(DFUENF, DEBUG_INFO, "Received function '%s'.\n", fuenf_funktion_name[funktion]);
+	LOGP_CHAN(DFUENF, LOGL_INFO, "Received function '%s'.\n", fuenf_funktion_name[funktion]);
 }
 
 void call_down_clock(void)
@@ -298,9 +298,9 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	}
 	if (!sender) {
 		if (channel)
-			PDEBUG(DFUENF, DEBUG_NOTICE, "Cannot page, because given station not available, rejecting!\n");
+			LOGP(DFUENF, LOGL_NOTICE, "Cannot page, because given station not available, rejecting!\n");
 		else
-			PDEBUG(DFUENF, DEBUG_NOTICE, "Cannot page, no trasmitting station idle, rejecting!\n");
+			LOGP(DFUENF, LOGL_NOTICE, "Cannot page, no trasmitting station idle, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
@@ -335,7 +335,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 		return -CAUSE_INVALNUMBER;
 	}
 
-	PDEBUG_CHAN(DFUENF, DEBUG_INFO, "Sending 5-Ton-Ruf with call sign '%s' and function '%s'.\n", rufzeichen, fuenf_funktion_name[funktion]);
+	LOGP_CHAN(DFUENF, LOGL_INFO, "Sending 5-Ton-Ruf with call sign '%s' and function '%s'.\n", rufzeichen, fuenf_funktion_name[funktion]);
 
 	dsp_setup(fuenf, rufzeichen, funktion);
 
@@ -357,7 +357,7 @@ static void _release(int __attribute__((unused)) callref, int __attribute__((unu
 	sender_t *sender;
 	fuenf_t *fuenf;
 
-	PDEBUG(DFUENF, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DFUENF, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		fuenf = (fuenf_t *) sender;
@@ -365,7 +365,7 @@ static void _release(int __attribute__((unused)) callref, int __attribute__((unu
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DBNETZ, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DBNETZ, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
         }

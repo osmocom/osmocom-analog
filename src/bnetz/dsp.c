@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "bnetz.h"
 #include "dsp.h"
@@ -70,7 +70,7 @@ void dsp_init(void)
 {
 	int i;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for metering tone.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine table for metering tone.\n");
 	for (i = 0; i < 65536; i++)
 		dsp_metering[i] = sin((double)i / 65536.0 * 2.0 * PI) * TX_PEAK_METER;
 }
@@ -81,10 +81,10 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level);
 /* Init transceiver instance. */
 int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for 'Sender'.\n");
 
 	if (TONE_DETECT_CNT > sizeof(bnetz->rx_tone_quality) / sizeof(bnetz->rx_tone_quality[0])) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "buffer for tone quality is too small, please fix!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "buffer for tone quality is too small, please fix!\n");
 		return -EINVAL;
 	}
 
@@ -94,15 +94,15 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 	/* set modulation parameters */
 	sender_set_fm(&bnetz->sender, MAX_DEVIATION, MAX_MODULATION, SPEECH_DEVIATION, MAX_DISPLAY);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 2000 Hz)\n", TX_PEAK_FSK, 4.0);
+	LOGP(DDSP, LOGL_DEBUG, "Using FSK level of %.3f (%.3f KHz deviation @ 2000 Hz)\n", TX_PEAK_FSK, 4.0);
 
 	/* init fsk */
 	if (fsk_mod_init(&bnetz->fsk_mod, bnetz, fsk_send_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, TX_PEAK_FSK, 0, 0) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 	if (fsk_demod_init(&bnetz->fsk_demod, bnetz, fsk_receive_bit, bnetz->sender.samplerate, BIT_RATE, F0, F1, BIT_ADJUST) < 0) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "FSK init failed!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "FSK init failed!\n");
 		return -EINVAL;
 	}
 
@@ -124,7 +124,7 @@ int dsp_init_sender(bnetz_t *bnetz, double squelch_db)
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(bnetz_t *bnetz)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	fsk_mod_cleanup(&bnetz->fsk_mod);
 	fsk_demod_cleanup(&bnetz->fsk_demod);
@@ -148,7 +148,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int tone, int goodtone, double leve
 			/* set duration to TONE_DETECT_CNT, because it took that long to detect the tone */
 			bnetz->tone_duration = TONE_DETECT_CNT;
 			bnetz->tone_detected = tone;
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Detecting continuous tone: F%d Level=%3.0f%% (threshold %3.0f%%) standard deviation=%.0f%% (threshold=%.0f%%) Quality=%3.0f%%\n", bnetz->tone_detected, level_avg * 100.0, TONE_LEVEL_TH * 100.0, level_stddev / level_avg * 100.0, TONE_STDDEV_TH * 100.0, quality_avg * 100.0);
+			LOGP_CHAN(DDSP, LOGL_INFO, "Detecting continuous tone: F%d Level=%3.0f%% (threshold %3.0f%%) standard deviation=%.0f%% (threshold=%.0f%%) Quality=%3.0f%%\n", bnetz->tone_detected, level_avg * 100.0, TONE_LEVEL_TH * 100.0, level_stddev / level_avg * 100.0, TONE_STDDEV_TH * 100.0, quality_avg * 100.0);
 			bnetz_receive_tone(bnetz, bnetz->tone_detected);
 		}
 	}
@@ -158,7 +158,7 @@ static void fsk_receive_tone(bnetz_t *bnetz, int tone, int goodtone, double leve
 		bnetz->tone_count++;
 		if (bnetz->tone_count == TONE_LOST_CNT) {
 			/* subtract TONE_LOST_CNT from duration, because it took that long to detect loss of tone */
-			PDEBUG_CHAN(DDSP, DEBUG_INFO, "Lost F%d tone after %.2f seconds.\n", bnetz->tone_detected, (double)(bnetz->tone_duration - TONE_LOST_CNT) / 100.0);
+			LOGP_CHAN(DDSP, LOGL_INFO, "Lost F%d tone after %.2f seconds.\n", bnetz->tone_detected, (double)(bnetz->tone_duration - TONE_LOST_CNT) / 100.0);
 			bnetz->tone_detected = -1;
 			bnetz_receive_tone(bnetz, -1);
 		}
@@ -250,7 +250,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 			j++;
 	}
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "FSK  Valid bits: %d/%d Level: %.0f%% (threshold %.0f%%)  Stddev: %.0f%% (threshold %.0f%%)\n", j, 16, level_avg * 100.0, TONE_LEVEL_TH * 100.0, level_stddev / level_avg * 100.0, TONE_STDDEV_TH * 100.0);
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "FSK  Valid bits: %d/%d Level: %.0f%% (threshold %.0f%%)  Stddev: %.0f%% (threshold %.0f%%)\n", j, 16, level_avg * 100.0, TONE_LEVEL_TH * 100.0, level_stddev / level_avg * 100.0, TONE_STDDEV_TH * 100.0);
 
         /* drop any telegramm that is too bad */
 	if (level_stddev / level_avg > TONE_STDDEV_TH || j < 16)
@@ -261,7 +261,7 @@ static void fsk_receive_bit(void *inst, int bit, double quality, double level)
 	display_measurements_update(bnetz->dmp_frame_stddev, level_stddev / level_avg * 100.0, 0.0);
 	display_measurements_update(bnetz->dmp_frame_quality, quality_avg * 100.0, 0.0);
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "Telegramm RX Level: average=%.0f%% (threshold %.0f%%) standard deviation=%.0f%% (threshold %.0f%%) Quality: %.0f%%\n", level_avg * 100.0, TONE_LEVEL_TH * 100.0, level_stddev / level_avg * 100.0, TONE_STDDEV_TH * 100.0, quality_avg * 100.0);
+	LOGP_CHAN(DDSP, LOGL_INFO, "Telegramm RX Level: average=%.0f%% (threshold %.0f%%) standard deviation=%.0f%% (threshold %.0f%%) Quality: %.0f%%\n", level_avg * 100.0, TONE_LEVEL_TH * 100.0, level_stddev / level_avg * 100.0, TONE_STDDEV_TH * 100.0, quality_avg * 100.0);
 
 	/* receive telegramm */
 	bnetz_receive_telegramm(bnetz, bnetz->rx_telegramm);
@@ -320,7 +320,7 @@ static int fsk_send_bit(void *inst)
 			/* request frame */
 			bnetz->tx_telegramm = bnetz_get_telegramm(bnetz);
 			if (!bnetz->tx_telegramm) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Stop sending 'Telegramm'.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Stop sending 'Telegramm'.\n");
 				return -1;
 			}
 			bnetz->tx_telegramm_pos = 0;
@@ -423,7 +423,7 @@ void bnetz_set_dsp_mode(bnetz_t *bnetz, enum dsp_mode mode)
 		fsk_mod_reset(&bnetz->fsk_mod);
 	}
 	
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "DSP mode %s -> %s\n", bnetz_dsp_mode_name(bnetz->dsp_mode), bnetz_dsp_mode_name(mode));
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", bnetz_dsp_mode_name(bnetz->dsp_mode), bnetz_dsp_mode_name(mode));
 	bnetz->dsp_mode = mode;
 }
 

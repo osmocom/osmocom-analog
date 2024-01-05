@@ -23,7 +23,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libhagelbarger/hagelbarger.h"
 #include "nmt.h"
 #include "frame.h"
@@ -854,7 +854,7 @@ int init_frame(void)
 	for (i = 0; nmt_frame[i].digits; i++) {
 		/* check message type */
 		if ((int)nmt_frame[i].message_type != i) {
-			PDEBUG(DFRAME, DEBUG_ERROR, "Message type at message index #%d does not have a value of %d, but has %d, please fix!\n", i, i + 1, nmt_frame[i].message_type);
+			LOGP(DFRAME, LOGL_ERROR, "Message type at message index #%d does not have a value of %d, but has %d, please fix!\n", i, i + 1, nmt_frame[i].message_type);
 			return -1;
 		}
 		/* check IEs */
@@ -867,7 +867,7 @@ int init_frame(void)
 					break;
 			}
 			if (!nmt_parameter[k].digit) {
-				PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' in message index %d does not exist, please fix!\n", digit, i);
+				LOGP(DFRAME, LOGL_ERROR, "Digit '%c' in message index %d does not exist, please fix!\n", digit, i);
 				return -1;
 			}
 		}
@@ -894,7 +894,7 @@ static void disassemble_frame(int nmt_system, frame_t *frame, const uint8_t *dig
 	/* update direction */
 	direction = nmt_frame[mt].direction;
 
-	PDEBUG(DFRAME, DEBUG_DEBUG, "Decoding %s %s %s\n", nmt_dir_name(direction), nmt_frame[mt].nr, nmt_frame[mt].description);
+	LOGP(DFRAME, LOGL_DEBUG, "Decoding %s %s %s\n", nmt_dir_name(direction), nmt_frame[mt].nr, nmt_frame[mt].description);
 
 	for (i = 0; i < 16; i++) {
 		digit = nmt_frame[mt].digits[i];
@@ -983,28 +983,28 @@ static void disassemble_frame(int nmt_system, frame_t *frame, const uint8_t *dig
 			frame->waiting_info = value;
 			break;
 		default:
-			PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
+			LOGP(DFRAME, LOGL_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
 			abort();
 		}
-		if (debuglevel <= DEBUG_DEBUG) {
+		if (loglevel <= LOGL_DEBUG) {
 			for (j = 0; nmt_parameter[j].digit; j++) {
 				if (nmt_parameter[j].system != 0 && nmt_parameter[j].system != nmt_system)
 					continue;
 				if (nmt_parameter[j].digit == digit) {
-					PDEBUG(DFRAME, DEBUG_DEBUG, " %c: %s\n", digit, nmt_parameter[j].decoder(value, ndigits, direction));
+					LOGP(DFRAME, LOGL_DEBUG, " %c: %s\n", digit, nmt_parameter[j].decoder(value, ndigits, direction));
 				}
 			}
 		}
 	}
 
-	if (debuglevel <= DEBUG_DEBUG) {
+	if (loglevel <= LOGL_DEBUG) {
 		char debug_digits[17];
 
 		for (i = 0; i < 16; i++)
 			debug_digits[i] = "0123456789abcdef"[digits[i]];
 		debug_digits[i] = '\0';
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", nmt_frame[mt].digits);
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", debug_digits);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", nmt_frame[mt].digits);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", debug_digits);
 	}
 }
 
@@ -1020,7 +1020,7 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 	mt = frame->mt;
 
 	if ((int)mt >= num_frames) {
-		PDEBUG(DFRAME, DEBUG_ERROR, "Frame mt %d out of range (0..%d), please fix!\n", mt, num_frames - 1);
+		LOGP(DFRAME, LOGL_ERROR, "Frame mt %d out of range (0..%d), please fix!\n", mt, num_frames - 1);
 		abort();
 	}
 
@@ -1031,7 +1031,7 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 	direction = nmt_frame[mt].direction;
 
 	if (debug)
-		PDEBUG(DFRAME, DEBUG_DEBUG, "Coding %s %s %s\n", nmt_dir_name(direction), nmt_frame[mt].nr, nmt_frame[mt].description);
+		LOGP(DFRAME, LOGL_DEBUG, "Coding %s %s %s\n", nmt_dir_name(direction), nmt_frame[mt].nr, nmt_frame[mt].description);
 
 	for (i = 15; i >= 0; i--) {
 		digit = nmt_frame[mt].digits[i];
@@ -1113,7 +1113,7 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 			value = frame->waiting_info;
 			break;
 		default:
-			PDEBUG(DFRAME, DEBUG_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
+			LOGP(DFRAME, LOGL_ERROR, "Digit '%c' does not exist, please fix!\n", digit);
 			abort();
 		}
 
@@ -1127,7 +1127,7 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 			i--;
 		}
 	}
-	if (debug && debuglevel <= DEBUG_DEBUG) {
+	if (debug && loglevel <= LOGL_DEBUG) {
 		char debug_digits[17];
 		int ndigits;
 
@@ -1148,7 +1148,7 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 				if (nmt_parameter[j].system != 0 && nmt_parameter[j].system != nmt_system)
 					continue;
 				if (nmt_parameter[j].digit == digit) {
-					PDEBUG(DFRAME, DEBUG_DEBUG, " %c: %s\n", digit, nmt_parameter[j].decoder(value, ndigits, direction));
+					LOGP(DFRAME, LOGL_DEBUG, " %c: %s\n", digit, nmt_parameter[j].decoder(value, ndigits, direction));
 				}
 			}
 		}
@@ -1156,8 +1156,8 @@ static void assemble_frame(int nmt_system, frame_t *frame, uint8_t *digits, int 
 		for (i = 0; i < 16; i++)
 			debug_digits[i] = "0123456789abcdef"[digits[i]];
 		debug_digits[i] = '\0';
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", nmt_frame[mt].digits);
-		PDEBUG(DFRAME, DEBUG_DEBUG, "%s\n", debug_digits);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", nmt_frame[mt].digits);
+		LOGP(DFRAME, LOGL_DEBUG, "%s\n", debug_digits);
 	}
 }
 

@@ -22,10 +22,10 @@
 #include <string.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "dtmf_decode.h"
 
-//#define DEBUG
+//#define DEBUG_DTMF
 
 #define level2db(level)	(20 * log10(level))
 #define db2level(db)	pow(10, (double)db / 20.0)
@@ -133,7 +133,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 	dtmf_decode_filter(dtmf, samples, length, frequency_low, frequency_high, amplitude_low, amplitude_high);
 
 	for (i = 0; i < length; i++) {
-#ifdef DEBUG
+#ifdef DEBUG_DTMF
 //		printf("%s %.5f\n", debug_amplitude(samples[i]/2.0), samples[i]/2.0);
 #endif
 		/* get frequency of low frequencies, correct amplitude drop at cutoff point */
@@ -194,7 +194,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 			/* check for limits */
 			if (amplitude_low[i] <= max_amplitude && amplitude_low[i] >= min_amplitude && amplitude_high[i] <= max_amplitude && amplitude_high[i] >= min_amplitude) {
 				amplitude_ok = 1;
-#ifdef DEBUG
+#ifdef DEBUG_DTMF
 				printf("%.1f %.1f (limits %.1f .. %.1f) %.1f\n", level2db(amplitude_low[i]), level2db(amplitude_high[i]), level2db(min_amplitude), level2db(max_amplitude), level2db(amplitude_high[i] / amplitude_low[i]));
 #endif
 				if (amplitude_high[i] / amplitude_low[i] <= forward_twist && amplitude_low[i] / amplitude_high[i] <= reverse_twist)
@@ -231,14 +231,14 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 				count++;
 				if (count >= time_pause) {
 					detected = 0;
-#ifdef DEBUG
+#ifdef DEBUG_DTMF
 					printf("lost!\n");
 #endif
 				}
 			} else
 				count = 0;
 		}
-#ifdef DEBUG
+#ifdef DEBUG_DTMF
 		if (digit)
 			printf("DTMF tone='%c' diff frequency=%.1f %.1f amplitude=%.1f %.1f dB (%s) twist=%.1f dB (%s)\n", digit, f1, f2, level2db(amplitude_low[i]), level2db(amplitude_high[i]), (amplitude_ok) ? "OK" : "nok", level2db(amplitude_high[i] / amplitude_low[i]), (twist_ok) ? "OK" : "nok");
 #endif

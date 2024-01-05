@@ -43,10 +43,10 @@
 #include <string.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "amps.h"
 #include "dsp.h"
 #include "frame.h"
@@ -57,15 +57,15 @@
 /* Uncomment this to test SAT via loopback */
 //#define DEBUG_VC
 
-#define SAT_TO1		5.0	/* 5 sec to detect after setup */
-#define SAT_TO2		5.0	/* 5 sec lost until abort (specs say 5) */
-#define PAGE_TRIES	2	/* how many times to page the phone */
-#define PAGE_TO1	8.0	/* max time to wait for paging reply */
-#define PAGE_TO2	4.0	/* max time to wait for last paging reply */
-#define ALERT_TRIES	3	/* how many times to alert the phone */
-#define ALERT_TO	0.6	/* max time to wait for alert confirm */
-#define ANSWER_TO	60.0	/* max time to wait for answer */
-#define RELEASE_TIMER	5.0	/* max time to send release messages */
+#define SAT_TO1		5,0		/* 5 sec to detect after setup */
+#define SAT_TO2		5,0		/* 5 sec lost until abort (specs say 5) */
+#define PAGE_TRIES	2		/* how many times to page the phone */
+#define PAGE_TO1	8,0		/* max time to wait for paging reply */
+#define PAGE_TO2	4,0		/* max time to wait for last paging reply */
+#define ALERT_TRIES	3		/* how many times to alert the phone */
+#define ALERT_TO	0,600000	/* max time to wait for alert confirm */
+#define ANSWER_TO	60,0		/* max time to wait for answer */
+#define RELEASE_TIMER	5,0		/* max time to send release messages */
 
 /* Convert channel number to frequency number of base station.
    Set 'uplink' to 1 to get frequency of mobile station. */
@@ -395,7 +395,7 @@ static void amps_new_state(amps_t *amps, enum amps_state new_state)
 {
 	if (amps->state == new_state)
 		return;
-	PDEBUG_CHAN(DAMPS, DEBUG_DEBUG, "State change: %s -> %s\n", amps_state_name(amps->state), amps_state_name(new_state));
+	LOGP_CHAN(DAMPS, LOGL_DEBUG, "State change: %s -> %s\n", amps_state_name(amps->state), amps_state_name(new_state));
 	amps->state = new_state;
 	amps_display_status();
 }
@@ -429,7 +429,7 @@ int amps_channel_by_short_name(const char *short_name)
 
 	for (i = 0; amps_channels[i].short_name; i++) {
 		if (!strcasecmp(amps_channels[i].short_name, short_name)) {
-			PDEBUG(DAMPS, DEBUG_INFO, "Selecting channel '%s' = %s\n", amps_channels[i].short_name, amps_channels[i].long_name);
+			LOGP(DAMPS, LOGL_INFO, "Selecting channel '%s' = %s\n", amps_channels[i].short_name, amps_channels[i].long_name);
 			return amps_channels[i].chan_type;
 		}
 	}
@@ -528,15 +528,15 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 
 	/* check for channel number */
 	if (amps_channel2freq(atoi(kanal), 0) == 0) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s invalid.\n", kanal);
+		LOGP(DAMPS, LOGL_ERROR, "Channel number %s invalid.\n", kanal);
 		if (jtacs)
-			PDEBUG(DAMPS, DEBUG_ERROR, "Try an even channel number, like 440.\n");
+			LOGP(DAMPS, LOGL_ERROR, "Try an even channel number, like 440.\n");
 		return -EINVAL;
 	}
 
 	/* no paging channel (without control channel) support */
 	if (chan_type == CHAN_TYPE_PC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Dedicated paging channel currently not supported. Please select CC/PC or CC/PC/VC instead.\n");
+		LOGP(DAMPS, LOGL_ERROR, "Dedicated paging channel currently not supported. Please select CC/PC or CC/PC/VC instead.\n");
 		return -EINVAL;
 	}
 
@@ -545,7 +545,7 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 		for (sender = sender_head; sender; sender = sender->next) {
 			amps = (amps_t *)sender;
 			if (amps->chan_type == CHAN_TYPE_PC || amps->chan_type == CHAN_TYPE_CC_PC || amps->chan_type == CHAN_TYPE_CC_PC_VC) {
-				PDEBUG(DAMPS, DEBUG_ERROR, "Only one paging channel is currently supported. Please check your channel types.\n");
+				LOGP(DAMPS, LOGL_ERROR, "Only one paging channel is currently supported. Please check your channel types.\n");
 				return -EINVAL;
 			}
 		}
@@ -554,51 +554,51 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 	/* check if channel type matches channel number */
 	ct = amps_channel2type(atoi(kanal));
 	if (ct == CHAN_TYPE_CC && chan_type != CHAN_TYPE_PC && chan_type != CHAN_TYPE_CC_PC && chan_type != CHAN_TYPE_CC_PC_VC) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Channel number %s belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this, but all my phones don't.\n", kanal, chan_type_long_name(chan_type));
+		LOGP(DAMPS, LOGL_NOTICE, "Channel number %s belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this, but all my phones don't.\n", kanal, chan_type_long_name(chan_type));
 	}
 	if (ct == CHAN_TYPE_VC && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", kanal, chan_type_long_name(chan_type));
+		LOGP(DAMPS, LOGL_ERROR, "Channel number %s belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", kanal, chan_type_long_name(chan_type));
 		return -EINVAL;
 	}
 	/* only even channels */
 	if (jtacs && chan_type != CHAN_TYPE_VC && (atoi(kanal) & 1)) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Control channel on JTACS system seem not to work with odd channel numbers. Please use even channel number.\n");
+		LOGP(DAMPS, LOGL_ERROR, "Control channel on JTACS system seem not to work with odd channel numbers. Please use even channel number.\n");
 		return -EINVAL;
 	}
 
 	/* check if sid machtes channel band */
 	band = amps_channel2band(atoi(kanal));
 	if (band[0] == 'A' && (sid & 1) == 0 && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to system A, but your %s %d is even and belongs to system B. Please give odd %s.\n", kanal, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
+		LOGP(DAMPS, LOGL_ERROR, "Channel number %s belongs to system A, but your %s %d is even and belongs to system B. Please give odd %s.\n", kanal, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
 		return -EINVAL;
 	}
 	if (band[0] == 'B' && (sid & 1) == 1 && chan_type != CHAN_TYPE_VC) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Channel number %s belongs to system B, but your %s %d is odd and belongs to system A. Please give even %s.\n", kanal, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
+		LOGP(DAMPS, LOGL_ERROR, "Channel number %s belongs to system B, but your %s %d is odd and belongs to system A. Please give even %s.\n", kanal, (!tacs) ? "SID" : "AID", sid, (!tacs) ? "SID" : "AID");
 		return -EINVAL;
 	}
 
 	/* check if we use combined voice channel hack */
 	if (chan_type == CHAN_TYPE_CC_PC_VC) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s'. This is a hack, but the only way to use control channel and voice channel on one transceiver. Some phones may reject this, but all my phones don't.\n", chan_type_long_name(chan_type));
+		LOGP(DAMPS, LOGL_NOTICE, "You selected '%s'. This is a hack, but the only way to use control channel and voice channel on one transceiver. Some phones may reject this, but all my phones don't.\n", chan_type_long_name(chan_type));
 	}
 
 	/* check if we selected a voice channel that i outside 20 MHz band */
 	if (chan_type == CHAN_TYPE_VC && atoi(kanal) > 666) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "You selected '%s' on channel #%s. Older phones do not support channels above #666.\n", chan_type_long_name(chan_type), kanal);
+		LOGP(DAMPS, LOGL_NOTICE, "You selected '%s' on channel #%s. Older phones do not support channels above #666.\n", chan_type_long_name(chan_type), kanal);
 	}
 
 	amps = calloc(1, sizeof(amps_t));
 	if (!amps) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "No memory!\n");
+		LOGP(DAMPS, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DAMPS, DEBUG_DEBUG, "Creating 'AMPS' instance for channel = %s of band %s (sample rate %d).\n", kanal, band, samplerate);
+	LOGP(DAMPS, LOGL_DEBUG, "Creating 'AMPS' instance for channel = %s of band %s (sample rate %d).\n", kanal, band, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&amps->sender, kanal, amps_channel2freq(atoi(kanal), 0), amps_channel2freq(atoi(kanal), 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DAMPS, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
@@ -619,7 +619,7 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 	/* init audio processing */
 	rc = dsp_init_sender(amps, tolerant);
 	if (rc < 0) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DAMPS, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
@@ -634,7 +634,7 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 //	amps_new_state(amps, STATE_BUSY);
 #endif
 
-	PDEBUG(DAMPS, DEBUG_NOTICE, "Created channel #%s (System %s) of type '%s' = %s\n", kanal, band, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
+	LOGP(DAMPS, LOGL_NOTICE, "Created channel #%s (System %s) of type '%s' = %s\n", kanal, band, chan_type_short_name(chan_type), chan_type_long_name(chan_type));
 
 	return 0;
 
@@ -650,11 +650,11 @@ void amps_destroy(sender_t *sender)
 	amps_t *amps = (amps_t *) sender;
 	transaction_t *trans;
 
-	PDEBUG(DAMPS, DEBUG_DEBUG, "Destroying 'AMPS' instance for channel = %s.\n", sender->kanal);
+	LOGP(DAMPS, LOGL_DEBUG, "Destroying 'AMPS' instance for channel = %s.\n", sender->kanal);
 
 	while ((trans = amps->trans_list)) {
 		const char *number = amps_min2number(trans->min1, trans->min2);
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Removing pending transaction for subscriber '%s'\n", number);
+		LOGP(DAMPS, LOGL_NOTICE, "Removing pending transaction for subscriber '%s'\n", number);
 		destroy_transaction(trans);
 	}
 
@@ -672,7 +672,7 @@ void amps_go_idle(amps_t *amps)
 		return;
 
 	if (amps->trans_list) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Releasing but still having transaction, please fix!\n");
+		LOGP(DAMPS, LOGL_ERROR, "Releasing but still having transaction, please fix!\n");
 		if (amps->trans_list->callref)
 			call_up_release(amps->trans_list->callref, CAUSE_NORMAL);
 		destroy_transaction(amps->trans_list);
@@ -681,14 +681,14 @@ void amps_go_idle(amps_t *amps)
 	amps_new_state(amps, STATE_IDLE);
 
 	if (amps->chan_type != CHAN_TYPE_VC) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Entering IDLE state, sending Overhead/Filler frames on %s.\n", chan_type_long_name(amps->chan_type));
 		if (amps->sender.loopback)
 			frame_length = 441; /* bits after sync (FOCC) */
 		else
 			frame_length = 247; /* bits after sync (RECC) */
 		amps_set_dsp_mode(amps, DSP_MODE_FRAME_RX_FRAME_TX, frame_length);
 	} else {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Entering IDLE state (sending silence / no RF) on %s.\n", chan_type_long_name(amps->chan_type));
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Entering IDLE state (sending silence / no RF) on %s.\n", chan_type_long_name(amps->chan_type));
 		amps_set_dsp_mode(amps, DSP_MODE_OFF, 0);
 	}
 }
@@ -698,8 +698,8 @@ static void amps_release(transaction_t *trans, uint8_t cause)
 {
 	amps_t *amps = trans->amps;
 
-	timer_stop(&trans->timer);
-	timer_start(&trans->timer, RELEASE_TIMER);
+	osmo_timer_del(&trans->timer);
+	osmo_timer_schedule(&trans->timer, RELEASE_TIMER);
 	trans_new_state(trans, TRANS_CALL_RELEASE);
 	trans->chan = 0;
 	trans->msg_type = 0;
@@ -722,14 +722,14 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 {
 	transaction_t *trans = amps->trans_list;
 	if (trans == NULL) {
-		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "Signaling Tone without transaction, please fix!\n");
+		LOGP_CHAN(DAMPS, LOGL_ERROR, "Signaling Tone without transaction, please fix!\n");
 		return;
 	}
 	
 	if (tone)
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Detected Signaling Tone with quality=%.0f.\n", quality * 100.0);
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Detected Signaling Tone with quality=%.0f.\n", quality * 100.0);
 	else
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Lost Signaling Tone signal\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Lost Signaling Tone signal\n");
 
 	switch (trans->state) {
 	case TRANS_CALL_MO_ASSIGN_CONFIRM: // should not happen
@@ -740,7 +740,7 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 	case TRANS_CALL_RELEASE:
 	case TRANS_CALL_RELEASE_SEND:
 		/* also loosing singaling tone indicates release confirm (after alerting) */
-		timer_stop(&trans->timer);
+		osmo_timer_del(&trans->timer);
 		if (trans->callref)
 			call_up_release(trans->callref, CAUSE_NORMAL);
 		destroy_transaction(trans);
@@ -751,24 +751,24 @@ void amps_rx_signaling_tone(amps_t *amps, int tone, double quality)
 	case TRANS_CALL_MT_ALERT_SEND: // should not happen
 	case TRANS_CALL_MT_ALERT_CONFIRM:
 		if (tone) {
-			timer_stop(&trans->timer);
+			osmo_timer_del(&trans->timer);
 			call_up_alerting(trans->callref);
 			amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
 			trans_new_state(trans, TRANS_CALL_MT_ANSWER_WAIT);
-			timer_start(&trans->timer, ANSWER_TO);
+			osmo_timer_schedule(&trans->timer, ANSWER_TO);
 		}
 		break;
 	case TRANS_CALL_MT_ANSWER_WAIT:
 		if (!tone) {
-			timer_stop(&trans->timer);
+			osmo_timer_del(&trans->timer);
 			if (!trans->sat_detected)
-				timer_start(&trans->timer, SAT_TO1);
+				osmo_timer_schedule(&trans->timer, SAT_TO1);
 			call_up_answer(trans->callref, amps_min2number(trans->min1, trans->min2));
 			trans_new_state(trans, TRANS_CALL);
 		}
 		break;
 	default:
-		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "Signaling Tone without active call, please fix!\n");
+		LOGP_CHAN(DAMPS, LOGL_ERROR, "Signaling Tone without active call, please fix!\n");
 	}
 }
 
@@ -776,7 +776,7 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 {
 	transaction_t *trans = amps->trans_list;
 	if (trans == NULL) {
-		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT signal without transaction, please fix!\n");
+		LOGP_CHAN(DAMPS, LOGL_ERROR, "SAT signal without transaction, please fix!\n");
 		return;
 	}
 
@@ -793,40 +793,40 @@ void amps_rx_sat(amps_t *amps, int tone, double quality)
 	 && trans->state != TRANS_CALL_MT_ALERT_CONFIRM
 	 && trans->state != TRANS_CALL_MT_ANSWER_WAIT
 	 && trans->state != TRANS_CALL) {
-		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "SAT signal without active call, please fix!\n");
+		LOGP_CHAN(DAMPS, LOGL_ERROR, "SAT signal without active call, please fix!\n");
 		return;
 	}
 
 	if (tone) {
-		PDEBUG(DAMPS, DEBUG_INFO, "Detected SAT signal with quality=%.0f.\n", quality * 100.0);
+		LOGP(DAMPS, LOGL_INFO, "Detected SAT signal with quality=%.0f.\n", quality * 100.0);
 		trans->sat_detected = 1;
 	} else {
-		PDEBUG(DAMPS, DEBUG_INFO, "Lost SAT signal\n");
+		LOGP(DAMPS, LOGL_INFO, "Lost SAT signal\n");
 		trans->sat_detected = 0;
 	}
 
 	/* initial SAT received */
 	if (tone && trans->state == TRANS_CALL_MO_ASSIGN_CONFIRM) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Confirm from mobile (SAT) received\n");
-		timer_stop(&trans->timer);
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Confirm from mobile (SAT) received\n");
+		osmo_timer_del(&trans->timer);
 		trans_new_state(trans, TRANS_CALL);
 		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_AUDIO_TX, 0);
 	}
 	if (tone && trans->state == TRANS_CALL_MT_ASSIGN_CONFIRM) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Confirm from mobile (SAT) received\n");
-		timer_stop(&trans->timer);
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Confirm from mobile (SAT) received\n");
+		osmo_timer_del(&trans->timer);
 		trans->alert_retry = 1;
 		trans_new_state(trans, TRANS_CALL_MT_ALERT);
 		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
 	}
 
 	if (tone) {
-		timer_stop(&trans->timer);
+		osmo_timer_del(&trans->timer);
 	} else {
 		if (!trans->dtx)
-			timer_start(&trans->timer, SAT_TO2);
+			osmo_timer_schedule(&trans->timer, SAT_TO2);
 		else
-			timer_stop(&trans->timer);
+			osmo_timer_del(&trans->timer);
 	}
 
 	if (amps->sender.loopback)
@@ -843,50 +843,50 @@ void amps_rx_recc(amps_t *amps, uint8_t scm, uint8_t mpci, uint32_t esn, uint32_
 
 	/* check if we are busy, so we ignore all signaling */
 	if (amps->state == STATE_BUSY) {
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Ignoring RECC messages from phone while using this channel for voice.\n");
+		LOGP_CHAN(DAMPS, LOGL_NOTICE, "Ignoring RECC messages from phone while using this channel for voice.\n");
 		return;
 	}
 
 	if (order == 13 && (ordq == 0 || ordq == 1 || ordq == 2 || ordq == 3) && msg_type == 0) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Registration %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 _register:
 		numbering(callerid, &carrier, &country, &national_number);
 		if (carrier)
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home carrier: %s\n", carrier);
+			LOGP_CHAN(DAMPS, LOGL_INFO, " -> Home carrier: %s\n", carrier);
 		if (country)
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home country: %s\n", country);
+			LOGP_CHAN(DAMPS, LOGL_INFO, " -> Home country: %s\n", country);
 		if (national_number)
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, " -> Home number: %s\n", national_number);
+			LOGP_CHAN(DAMPS, LOGL_INFO, " -> Home number: %s\n", national_number);
 		trans = create_transaction(amps, TRANS_REGISTER_ACK, min1, min2, esn, msg_type, ordq, order, 0);
 		if (!trans) {
-			PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
+			LOGP(DAMPS, LOGL_ERROR, "Failed to create transaction\n");
 			return;
 		}
 	} else
 	if (order == 13 && ordq == 3 && msg_type == 1) {
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Registration - Power Down %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Registration - Power Down %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 		goto _register;
 	} else
 	if (order == 0 && ordq == 0 && msg_type == 0) {
 		if (!dialing)
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging reply %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Paging reply %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 		else
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call %s -> %s (ESN = %s, %s, %s)\n", callerid, dialing, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Call %s -> %s (ESN = %s, %s, %s)\n", callerid, dialing, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));
 		trans = search_transaction_number(amps, min1, min2);
 		if (!trans && !dialing) {
-			PDEBUG(DAMPS, DEBUG_NOTICE, "Paging reply, but call is already gone, rejecting call\n");
+			LOGP(DAMPS, LOGL_NOTICE, "Paging reply, but call is already gone, rejecting call\n");
 			goto reject;
 		}
 		if (trans && dialing)
-			PDEBUG(DAMPS, DEBUG_NOTICE, "There is already a transaction for this phone. Cloning?\n");
+			LOGP(DAMPS, LOGL_NOTICE, "There is already a transaction for this phone. Cloning?\n");
 		vc = search_free_vc();
 		if (!vc) {
-			PDEBUG(DAMPS, DEBUG_NOTICE, "No free channel, rejecting call\n");
+			LOGP(DAMPS, LOGL_NOTICE, "No free channel, rejecting call\n");
 reject:
 			if (!trans) {
 				trans = create_transaction(amps, TRANS_CALL_REJECT, min1, min2, esn, 0, 0, 3, 0);
 				if (!trans) {
-					PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
+					LOGP(DAMPS, LOGL_ERROR, "Failed to create transaction\n");
 					return;
 				}
 			} else {
@@ -902,7 +902,7 @@ reject:
 			trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, esn, 0, 0, 0, atoi(vc->sender.kanal));
 			strncpy(trans->dialing, dialing, sizeof(trans->dialing) - 1);
 			if (!trans) {
-				PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
+				LOGP(DAMPS, LOGL_ERROR, "Failed to create transaction\n");
 				return;
 			}
 		} else {
@@ -912,13 +912,13 @@ reject:
 		/* if we support DTX and also the phone does, we set DTX state of transaction */
 		if (amps->si.word2.dtx) {
 			if ((scm & 4)) {
-				PDEBUG(DAMPS, DEBUG_INFO, " -> Use DTX for this call\n");
+				LOGP(DAMPS, LOGL_INFO, " -> Use DTX for this call\n");
 				trans->dtx = 1;
 			} else
-				PDEBUG(DAMPS, DEBUG_INFO, " -> Requested DTX, but not supported by phone\n");
+				LOGP(DAMPS, LOGL_INFO, " -> Requested DTX, but not supported by phone\n");
 		}
 	} else
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Unsupported RECC messages: ORDER: %d ORDQ: %d MSG TYPE: %d (See Table 4 of specs.)\n", order, ordq, msg_type);
+		LOGP_CHAN(DAMPS, LOGL_NOTICE, "Unsupported RECC messages: ORDER: %d ORDQ: %d MSG TYPE: %d (See Table 4 of specs.)\n", order, ordq, msg_type);
 }
 
 /*
@@ -939,7 +939,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 
 	/* 2. check if the subscriber is attached */
 //	if (!find_db(min1, min2)) {
-//		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing call to not attached subscriber, rejecting!\n");
+//		LOGP(DAMPS, LOGL_NOTICE, "Outgoing call to not attached subscriber, rejecting!\n");
 //		return -CAUSE_OUTOFORDER;
 //	}
 
@@ -952,29 +952,29 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (sender) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
+		LOGP(DAMPS, LOGL_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
 	/* 4. check if all senders are busy, return NOCHANNEL */
 	if (!search_free_vc()) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
+		LOGP(DAMPS, LOGL_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
 	/* 5. check if we have (currently) no paging channel, return NOCHANNEL */
 	amps = search_pc();
 	if (!amps) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing call, but paging channel (control channel) is currently busy, rejecting!\n");
+		LOGP(DAMPS, LOGL_NOTICE, "Outgoing call, but paging channel (control channel) is currently busy, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
+	LOGP_CHAN(DAMPS, LOGL_INFO, "Call to mobile station, paging station id '%s'\n", dialing);
 
 	/* 6. trying to page mobile station */
 	trans = create_transaction(amps, TRANS_PAGE, min1, min2, 0, 0, 0, 0, 0);
 	if (!trans) {
-		PDEBUG(DAMPS, DEBUG_ERROR, "Failed to create transaction\n");
+		LOGP(DAMPS, LOGL_ERROR, "Failed to create transaction\n");
 		return -CAUSE_TEMPFAIL;
 	}
 	trans->callref = callref;
@@ -1002,7 +1002,7 @@ void call_down_disconnect(int callref, int cause)
 	amps_t *amps;
 	transaction_t *trans;
 
-	PDEBUG(DAMPS, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DAMPS, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		amps = (amps_t *) sender;
@@ -1012,7 +1012,7 @@ void call_down_disconnect(int callref, int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DAMPS, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1027,12 +1027,12 @@ void call_down_disconnect(int callref, int cause)
 		 || trans->state == TRANS_CALL_MT_ALERT_SEND
 		 || trans->state == TRANS_CALL_MT_ALERT_CONFIRM
 		 || trans->state == TRANS_CALL_MT_ANSWER_WAIT) {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control disconnect on voice channel while alerting, releasing towards mobile station.\n");
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Call control disconnect on voice channel while alerting, releasing towards mobile station.\n");
 			amps_release(trans, cause);
 		}
 		return;
 	default:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control disconnects on control channel, removing transaction.\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Call control disconnects on control channel, removing transaction.\n");
 		call_up_release(callref, cause);
 		trans->callref = 0;
 		destroy_transaction(trans);
@@ -1047,7 +1047,7 @@ void call_down_release(int callref, int cause)
 	amps_t *amps;
 	transaction_t *trans;
 
-	PDEBUG(DAMPS, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DAMPS, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		amps = (amps_t *) sender;
@@ -1057,7 +1057,7 @@ void call_down_release(int callref, int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DAMPS, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
@@ -1068,11 +1068,11 @@ void call_down_release(int callref, int cause)
 	case DSP_MODE_AUDIO_RX_SILENCE_TX:
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 	case DSP_MODE_AUDIO_RX_FRAME_TX:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control releases on voice channel, releasing towards mobile station.\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Call control releases on voice channel, releasing towards mobile station.\n");
 		amps_release(trans, cause);
 		break;
 	default:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Call control releases on control channel, removing transaction.\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Call control releases on control channel, removing transaction.\n");
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 	}
@@ -1109,47 +1109,47 @@ void transaction_timeout(void *data)
 	switch (trans->state) {
 	case TRANS_CALL_MO_ASSIGN_CONFIRM:
 	case TRANS_CALL_MT_ASSIGN_CONFIRM:
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving initial SAT signal.\n", trans->timer.duration);
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
+		LOGP_CHAN(DAMPS, LOGL_NOTICE, "Timeout after %ld seconds not receiving initial SAT signal.\n", trans->timer.timeout.tv_sec);
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Release call towards network.\n");
 		amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 		break;
 	case TRANS_CALL:
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Timeout after %.0f seconds loosing SAT signal.\n", trans->timer.duration);
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call towards network.\n");
+		LOGP_CHAN(DAMPS, LOGL_NOTICE, "Timeout after %ld seconds loosing SAT signal.\n", trans->timer.timeout.tv_sec);
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Release call towards network.\n");
 		amps_release(amps->trans_list, CAUSE_TEMPFAIL);
 		break;
 	case TRANS_CALL_RELEASE:
 	case TRANS_CALL_RELEASE_SEND:
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Release timeout, destroying transaction\n");
+		LOGP_CHAN(DAMPS, LOGL_NOTICE, "Release timeout, destroying transaction\n");
 		destroy_transaction(trans);
 		amps_go_idle(amps);
 		break;
 	case TRANS_CALL_MT_ALERT_SEND:
 	case TRANS_CALL_MT_ALERT_CONFIRM:
 		if (trans->alert_retry++ == ALERT_TRIES) {
-			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Phone does not respond to alert order, destroying transaction\n");
+			LOGP_CHAN(DAMPS, LOGL_NOTICE, "Phone does not respond to alert order, destroying transaction\n");
 			amps_release(trans, CAUSE_TEMPFAIL);
 		} else {
-			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Phone does not respond to alert order, retrying\n");
+			LOGP_CHAN(DAMPS, LOGL_NOTICE, "Phone does not respond to alert order, retrying\n");
 			trans_new_state(trans, TRANS_CALL_MT_ALERT);
 			amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_FRAME_TX, 0);
 		}
 		break;
 	case TRANS_CALL_MT_ANSWER_WAIT:
-		PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Alerting timeout, destroying transaction\n");
+		LOGP_CHAN(DAMPS, LOGL_NOTICE, "Alerting timeout, destroying transaction\n");
 		amps_release(trans, CAUSE_NOANSWER);
 		break;
 	case TRANS_PAGE_REPLY:
 		if (trans->page_retry++ == PAGE_TRIES) {
-			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Paging timeout, destroying transaction\n");
+			LOGP_CHAN(DAMPS, LOGL_NOTICE, "Paging timeout, destroying transaction\n");
 			amps_release(trans, CAUSE_OUTOFORDER);
 		} else {
-			PDEBUG_CHAN(DAMPS, DEBUG_NOTICE, "Paging timeout, retrying\n");
+			LOGP_CHAN(DAMPS, LOGL_NOTICE, "Paging timeout, retrying\n");
 			trans_new_state(trans, TRANS_PAGE);
 		}
 		break;
 	default:
-		PDEBUG_CHAN(DAMPS, DEBUG_ERROR, "Timeout unhandled in state %d\n", trans->state);
+		LOGP_CHAN(DAMPS, LOGL_ERROR, "Timeout unhandled in state %d\n", trans->state);
 	}
 }
 
@@ -1161,18 +1161,18 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 
 	vc = search_channel(trans->chan);
 	if (!vc) {
-		PDEBUG(DAMPS, DEBUG_NOTICE, "Channel %d is not free anymore, rejecting call\n", trans->chan);
+		LOGP(DAMPS, LOGL_NOTICE, "Channel %d is not free anymore, rejecting call\n", trans->chan);
 		amps_release(trans, CAUSE_NOCHANNEL);
 		return NULL;
 	}
 
 	if (vc == amps)
-		PDEBUG(DAMPS, DEBUG_INFO, "Staying on combined control + voice channel %s\n", vc->sender.kanal);
+		LOGP(DAMPS, LOGL_INFO, "Staying on combined control + voice channel %s\n", vc->sender.kanal);
 	else
-		PDEBUG(DAMPS, DEBUG_INFO, "Moving to voice channel %s\n", vc->sender.kanal);
+		LOGP(DAMPS, LOGL_INFO, "Moving to voice channel %s\n", vc->sender.kanal);
 
 	/* switch channel... */
-	timer_start(&trans->timer, SAT_TO1);
+	osmo_timer_schedule(&trans->timer, SAT_TO1);
 	/* make channel busy */
 	amps_new_state(vc, STATE_BUSY);
 	/* relink */
@@ -1185,7 +1185,7 @@ static amps_t *assign_voice_channel(transaction_t *trans)
 		char esn_text[16];
 		sprintf(esn_text, "%u", trans->esn);
 		/* setup call */
-		PDEBUG(DAMPS, DEBUG_INFO, "Setup call to network.\n");
+		LOGP(DAMPS, LOGL_INFO, "Setup call to network.\n");
 		trans->callref = call_up_setup(callerid, trans->dialing, OSMO_CC_NETWORK_AMPS_ESN, esn_text);
 	}
 
@@ -1204,52 +1204,55 @@ again:
 
 	switch (trans->state) {
 	case TRANS_REGISTER_ACK:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending Register acknowledge\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Sending Register acknowledge\n");
 		trans_new_state(trans, TRANS_REGISTER_ACK_SEND);
 		return trans;
 	case TRANS_REGISTER_ACK_SEND:
 		destroy_transaction(trans);
 		goto again;
 	case TRANS_CALL_REJECT:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Rejecting call from mobile station\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Rejecting call from mobile station\n");
 		trans_new_state(trans, TRANS_CALL_REJECT_SEND);
 		return trans;
 	case TRANS_CALL_REJECT_SEND:
 		destroy_transaction(trans);
 		goto again;
 	case TRANS_CALL_MO_ASSIGN:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assigning channel to call from mobile station\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Assigning channel to call from mobile station\n");
 		trans_new_state(trans, TRANS_CALL_MO_ASSIGN_SEND);
 		return trans;
 	case TRANS_CALL_MO_ASSIGN_SEND:
 		vc = assign_voice_channel(trans);
 		if (vc) {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, voice connected\n");
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Assignment complete, voice connected\n");
 			/* timer and other things are processed at assign_voice_channel() */
 			trans_new_state(trans, TRANS_CALL_MO_ASSIGN_CONFIRM);
 			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_SILENCE_TX, 0);
 		}
 		return NULL;
 	case TRANS_CALL_MT_ASSIGN:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assigning channel to call to mobile station\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Assigning channel to call to mobile station\n");
 		trans_new_state(trans, TRANS_CALL_MT_ASSIGN_SEND);
 		return trans;
 	case TRANS_CALL_MT_ASSIGN_SEND:
 		vc = assign_voice_channel(trans);
 		if (vc) {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Assignment complete, waiting for SAT on VC\n");
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Assignment complete, waiting for SAT on VC\n");
 			/* timer and other things are processed at assign_voice_channel() */
 			trans_new_state(trans, TRANS_CALL_MT_ASSIGN_CONFIRM);
 			amps_set_dsp_mode(vc, DSP_MODE_AUDIO_RX_SILENCE_TX, 0);
 		}
 		return NULL;
 	case TRANS_PAGE:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Paging the phone\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Paging the phone\n");
 		trans_new_state(trans, TRANS_PAGE_SEND);
 		return trans;
 	case TRANS_PAGE_SEND:
 		trans_new_state(trans, TRANS_PAGE_REPLY);
-		timer_start(&trans->timer, (trans->page_retry == PAGE_TRIES) ? PAGE_TO2 : PAGE_TO1);
+		if (trans->page_retry == PAGE_TRIES)
+			osmo_timer_schedule(&trans->timer, PAGE_TO2);
+		else
+			osmo_timer_schedule(&trans->timer, PAGE_TO1);
 		return NULL;
 	default:
 		return NULL;
@@ -1266,11 +1269,11 @@ transaction_t *amps_tx_frame_fvc(amps_t *amps)
 
 	switch (trans->state) {
 	case TRANS_CALL_RELEASE:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Releasing call towards mobile station\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Releasing call towards mobile station\n");
 		trans_new_state(trans, TRANS_CALL_RELEASE_SEND);
 		return trans;
 	case TRANS_CALL_RELEASE_SEND:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Release call was sent, continue sending release\n");
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Release call was sent, continue sending release\n");
 		return trans;
 	case TRANS_CALL_MT_ALERT:
 		trans->chan = 0;
@@ -1278,17 +1281,17 @@ transaction_t *amps_tx_frame_fvc(amps_t *amps)
 		trans->ordq = 0;
 		// "Alert with caller ID" causes older phones to interrupt the connection for some reason, therefore we don't use order 17 when no caller ID is set
 		if (amps->send_callerid && trans->alert_retry == 1 && trans->caller_id[0]) {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting with caller ID\n");
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Sending alerting with caller ID\n");
 			trans->order = 17;
 		} else {
-			PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Sending alerting\n");
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Sending alerting\n");
 			trans->order = 1;
 		}
 		trans_new_state(trans, TRANS_CALL_MT_ALERT_SEND);
 		return trans;
 	case TRANS_CALL_MT_ALERT_SEND:
-		PDEBUG_CHAN(DAMPS, DEBUG_INFO, "Alerting was sent, continue waiting for ST or timeout\n");
-		timer_start(&trans->timer, ALERT_TO);
+		LOGP_CHAN(DAMPS, LOGL_INFO, "Alerting was sent, continue waiting for ST or timeout\n");
+		osmo_timer_schedule(&trans->timer, ALERT_TO);
 		amps_set_dsp_mode(amps, DSP_MODE_AUDIO_RX_SILENCE_TX, 0);
 		trans_new_state(trans, TRANS_CALL_MT_ALERT_CONFIRM);
 		return NULL;

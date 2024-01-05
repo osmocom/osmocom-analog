@@ -34,7 +34,7 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../libmobile/cause.h"
@@ -49,30 +49,30 @@ int golay_create(const char *kanal, double frequency, const char *device, int us
 
 	gsc = calloc(1, sizeof(*gsc));
 	if (!gsc) {
-		PDEBUG(DGOLAY, DEBUG_ERROR, "No memory!\n");
+		LOGP(DGOLAY, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DGOLAY, DEBUG_DEBUG, "Creating 'GOLAY' instance for frequency = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DGOLAY, LOGL_DEBUG, "Creating 'GOLAY' instance for frequency = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&gsc->sender, kanal, frequency, frequency, device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DGOLAY, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DGOLAY, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(gsc, samplerate, deviation, polarity);
 	if (rc < 0) {
-		PDEBUG(DGOLAY, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DGOLAY, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
 	gsc->tx = 1;
 	gsc->default_message = message;
 
-	PDEBUG(DGOLAY, DEBUG_NOTICE, "Created transmitter for frequency %s\n", kanal);
+	LOGP(DGOLAY, LOGL_NOTICE, "Created transmitter for frequency %s\n", kanal);
 
 	return 0;
 
@@ -89,7 +89,7 @@ void golay_destroy(sender_t *sender)
 {
 	gsc_t *gsc = (gsc_t *) sender;
 
-	PDEBUG(DGOLAY, DEBUG_DEBUG, "Destroying 'GOLAY' instance for frequency = %s.\n", sender->kanal);
+	LOGP(DGOLAY, LOGL_DEBUG, "Destroying 'GOLAY' instance for frequency = %s.\n", sender->kanal);
 
 	while (gsc->msg_list)
 		golay_msg_destroy(gsc, gsc->msg_list);
@@ -104,11 +104,11 @@ static gsc_msg_t *golay_msg_create(gsc_t *gsc, const char *address, const char *
 	gsc_msg_t *msg, **msgp;
 
 	if (strlen(address) != sizeof(msg->address) - 1) {
-		PDEBUG(DGOLAY, DEBUG_NOTICE, "Address has incorrect length, cannot page!\n");
+		LOGP(DGOLAY, LOGL_NOTICE, "Address has incorrect length, cannot page!\n");
 		return NULL;
 	}
 	if (strlen(text) > sizeof(msg->data) - 1) {
-		PDEBUG(DGOLAY, DEBUG_NOTICE, "Given test is too long, cannot page!\n");
+		LOGP(DGOLAY, LOGL_NOTICE, "Given test is too long, cannot page!\n");
 		return NULL;
 	}
 
@@ -126,18 +126,18 @@ static gsc_msg_t *golay_msg_create(gsc_t *gsc, const char *address, const char *
 			case '9': type = TYPE_TONE;  break;
 			case '0': type = TYPE_TONE;  break;
 			default:
-				PDEBUG(DGOLAY, DEBUG_NOTICE, "Illegal function suffix '%c' in last address digit.\n", address[6]);
+				LOGP(DGOLAY, LOGL_NOTICE, "Illegal function suffix '%c' in last address digit.\n", address[6]);
 				return NULL;
 		}
 	} else
-		PDEBUG(DGOLAY, DEBUG_INFO, "Overriding message type as defined by sender.\n");
+		LOGP(DGOLAY, LOGL_INFO, "Overriding message type as defined by sender.\n");
 
-	PDEBUG(DGOLAY, DEBUG_INFO, "Creating msg instance to page address '%s'.\n", address);
+	LOGP(DGOLAY, LOGL_INFO, "Creating msg instance to page address '%s'.\n", address);
 
 	/* create */
 	msg = calloc(1, sizeof(*msg));
 	if (!msg) {
-		PDEBUG(DGOLAY, DEBUG_ERROR, "No mem!\n");
+		LOGP(DGOLAY, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 
@@ -281,27 +281,27 @@ static char encode_alpha(char c)
 	switch (c) {
 	case 0x0a:
 	case 0x0d:
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> CR/LF character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> CR/LF character.\n");
 		c = 0x3c;
 		break;
 	case '{':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+		LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 		c = 0x3b;
 		break;
 	case '}':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+		LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 		c = 0x3d;
 		break;
 	case '\\':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+		LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 		c = 0x20;
 		break;
 	default:
 		if (c < 0x20 || c > 0x5d) {
-			PDEBUG(DGOLAY, DEBUG_DEBUG, " -> ' ' character.\n");
+			LOGP(DGOLAY, LOGL_DEBUG, " -> ' ' character.\n");
 			c = 0x20;
 		} else {
-			PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+			LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 			c = c - 0x20;
 		}
 	}
@@ -314,93 +314,93 @@ static char encode_numeric(char c)
 	switch (c) {
 	case 'u':
 	case 'U':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'U' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'U' character.\n");
 		c = 0xb;
 		break;
 	case ' ':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+		LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 		c = 0xc;
 		break;
 	case '-':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+		LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 		c = 0xd;
 		break;
 	case '=':
 	case '*':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '*' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> '*' character.\n");
 		c = 0xe;
 		break;
 	case 'a':
 	case 'A':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'A' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'A' character.\n");
 		c = 0xf0;
 		break;
 	case 'b':
 	case 'B':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'B' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'B' character.\n");
 		c = 0xf1;
 		break;
 	case 'c':
 	case 'C':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'C' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'C' character.\n");
 		c = 0xf2;
 		break;
 	case 'd':
 	case 'D':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'D' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'D' character.\n");
 		c = 0xf3;
 		break;
 	case 'e':
 	case 'E':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'E' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'E' character.\n");
 		c = 0xf4;
 		break;
 	case 'f':
 	case 'F':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'F' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'F' character.\n");
 		c = 0xf6;
 		break;
 	case 'g':
 	case 'G':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'G' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'G' character.\n");
 		c = 0xf7;
 		break;
 	case 'h':
 	case 'H':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'H' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'H' character.\n");
 		c = 0xf8;
 		break;
 	case 'j':
 	case 'J':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'J' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'J' character.\n");
 		c = 0xf9;
 		break;
 	case 'l':
 	case 'L':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'L' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'L' character.\n");
 		c = 0xfb;
 		break;
 	case 'n':
 	case 'N':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'N' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'N' character.\n");
 		c = 0xfc;
 		break;
 	case 'p':
 	case 'P':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'P' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'P' character.\n");
 		c = 0xfd;
 		break;
 	case 'r':
 	case 'R':
-		PDEBUG(DGOLAY, DEBUG_DEBUG, " -> 'r' character.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, " -> 'r' character.\n");
 		c = 0xfe;
 		break;
 	default:
 		if (c >= '0' && c <= '9') {
-			PDEBUG(DGOLAY, DEBUG_DEBUG, " -> '%c' character.\n", c);
+			LOGP(DGOLAY, LOGL_DEBUG, " -> '%c' character.\n", c);
 			c = c - '0';
 		} else {
-			PDEBUG(DGOLAY, DEBUG_DEBUG, " -> ' ' character.\n");
+			LOGP(DGOLAY, LOGL_DEBUG, " -> ' ' character.\n");
 			c = 0xc;
 		}
 	}
@@ -419,7 +419,7 @@ static int encode_address(const char *code, int *preamble, uint16_t *word1, uint
 			break;
 	}
 	if (code[i]) {
-		PDEBUG(DGOLAY, DEBUG_NOTICE, "Invalid functional address character. Only 0..9 are allowed.\n");
+		LOGP(DGOLAY, LOGL_NOTICE, "Invalid functional address character. Only 0..9 are allowed.\n");
 		return -EINVAL;
 	}
 
@@ -457,7 +457,7 @@ static int encode_address(const char *code, int *preamble, uint16_t *word1, uint
 				break;
 		}
 		if (i < 16) {
-			PDEBUG(DGOLAY, DEBUG_NOTICE, "Functional address has invlid value '%03d' for last three characters.\n", a2a1a0);
+			LOGP(DGOLAY, LOGL_NOTICE, "Functional address has invlid value '%03d' for last three characters.\n", a2a1a0);
 			return -EINVAL;
 		}
 	} else {
@@ -466,7 +466,7 @@ static int encode_address(const char *code, int *preamble, uint16_t *word1, uint
 				break;
 		}
 		if (i < 7) {
-			PDEBUG(DGOLAY, DEBUG_NOTICE, "Functional address has invlid value '%03d' for last three characters.\n", a2a1a0);
+			LOGP(DGOLAY, LOGL_NOTICE, "Functional address has invlid value '%03d' for last three characters.\n", a2a1a0);
 			return -EINVAL;
 		}
 	}
@@ -528,7 +528,7 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 
 	/* check address length */
 	if (!address || strlen(address) != 7) {
-		PDEBUG(DGOLAY, DEBUG_NOTICE, "Invalid functional address '%s' size. Only 7 digits are allowed.\n", address);
+		LOGP(DGOLAY, LOGL_NOTICE, "Invalid functional address '%s' size. Only 7 digits are allowed.\n", address);
 		return -EINVAL;
 	}
 
@@ -550,24 +550,24 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 		case '9': function = 0; break;
 		case '0': function = 1; break;
 		default:
-			PDEBUG(DGOLAY, DEBUG_NOTICE, "Illegal function suffix '%c' in last address digit.\n", address[6]);
+			LOGP(DGOLAY, LOGL_NOTICE, "Illegal function suffix '%c' in last address digit.\n", address[6]);
 			return -EINVAL;
 	}
 
 	switch (type) {
 	case TYPE_ALPHA:
 	case TYPE_NUMERIC:
-		PDEBUG(DGOLAY, DEBUG_INFO, "Coding text message for functional address '%s' and message '%s'.\n", address, message);
+		LOGP(DGOLAY, LOGL_INFO, "Coding text message for functional address '%s' and message '%s'.\n", address, message);
 		break;
 	case TYPE_VOICE:
-		PDEBUG(DGOLAY, DEBUG_INFO, "Coding voice message for functional address %s with wave file '%s'.\n", address, message);
+		LOGP(DGOLAY, LOGL_INFO, "Coding voice message for functional address %s with wave file '%s'.\n", address, message);
 		break;
 	default:
-		PDEBUG(DGOLAY, DEBUG_INFO, "Coding tone only message for functional address %s.\n", address);
+		LOGP(DGOLAY, LOGL_INFO, "Coding tone only message for functional address %s.\n", address);
 	}
 
 	/* encode preamble and store */
-	PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding preamble '%d'.\n", preamble);
+	LOGP(DGOLAY, LOGL_DEBUG, "Encoding preamble '%d'.\n", preamble);
 	golay = calc_golay(preamble_values[preamble]);
 	queue_comma(gsc, 28, golay & 1);
 	for (i = 0; i < 18; i++) {
@@ -575,7 +575,7 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 	}
 
 	/* encode start code and store */
-	PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding start code.\n");
+	LOGP(DGOLAY, LOGL_DEBUG, "Encoding start code.\n");
 	golay = calc_golay(start_code);
 	queue_comma(gsc, 28, golay & 1);
 	queue_dup(gsc, golay, 23);
@@ -584,7 +584,7 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 	queue_dup(gsc, golay, 23);
 
 	/* encode address and store */
-	PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding address words '%d' and '%d'.\n", word1, word2);
+	LOGP(DGOLAY, LOGL_DEBUG, "Encoding address words '%d' and '%d'.\n", word1, word2);
 	golay = calc_golay(word1);
 	if (function & 0x2)
 		golay ^= 0x7fffff;
@@ -599,10 +599,10 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 	/* encode message */
 	switch (type) {
 	case TYPE_ALPHA:
-		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding %d alphanumeric digits.\n", (int)strlen(message));
+		LOGP(DGOLAY, LOGL_DEBUG, "Encoding %d alphanumeric digits.\n", (int)strlen(message));
 		for (i = 0; *message; i++) {
 			if (i == MAX_ADB) {
-				PDEBUG(DGOLAY, DEBUG_NOTICE, "Message overflows %d characters, cropping message.\n", MAX_ADB * 8);
+				LOGP(DGOLAY, LOGL_NOTICE, "Message overflows %d characters, cropping message.\n", MAX_ADB * 8);
 			}
 			for (j = 0; *message && j < 8; j++) {
 				msg[j] = encode_alpha(*message++);
@@ -635,11 +635,11 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 		}
 		break;
 	case TYPE_NUMERIC:
-		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding %d numeric digits.\n", (int)strlen(message));
+		LOGP(DGOLAY, LOGL_DEBUG, "Encoding %d numeric digits.\n", (int)strlen(message));
 		shifted = 0;
 		for (i = 0; *message; i++) {
 			if (i == MAX_NDB) {
-				PDEBUG(DGOLAY, DEBUG_NOTICE, "Message overflows %d characters, cropping message.\n", MAX_NDB * 12);
+				LOGP(DGOLAY, LOGL_NOTICE, "Message overflows %d characters, cropping message.\n", MAX_NDB * 12);
 			}
 			for (j = 0; *message && j < 12; j++) {
 				/* get next digit or shifted digit */
@@ -690,7 +690,7 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 		/* store bit number for activation code. this is used to play the AC again after voice message. */
 		gsc->bit_ac = gsc->bit_num;
 		/* encode activation code and store */
-		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding activation code.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, "Encoding activation code.\n");
 		golay = calc_golay(activation_code);
 		queue_comma(gsc, 28, golay & 1);
 		queue_dup(gsc, golay, 23);
@@ -700,13 +700,13 @@ static int queue_batch(gsc_t *gsc, const char *address, enum gsc_msg_type type, 
 		break;
 	default:
 		/* encode comma after message and store */
-		PDEBUG(DGOLAY, DEBUG_DEBUG, "Encoding 'comma' sequence after message.\n");
+		LOGP(DGOLAY, LOGL_DEBUG, "Encoding 'comma' sequence after message.\n");
 		queue_comma(gsc, 121 * 8, 1);
 	}
 
 	/* check overflow */
 	if (gsc->bit_overflow) {
-		PDEBUG(DGOLAY, DEBUG_ERROR, "Bit stream (%d bits) overflows bit buffer size (%d bits), please fix!\n", gsc->bit_num, (int)sizeof(gsc->bit));
+		LOGP(DGOLAY, LOGL_ERROR, "Bit stream (%d bits) overflows bit buffer size (%d bits), please fix!\n", gsc->bit_num, (int)sizeof(gsc->bit));
 		return -EOVERFLOW;
 	}
 
@@ -741,7 +741,7 @@ int8_t get_bit(gsc_t *gsc)
 				return 2;
 			}
 			queue_reset(gsc);
-			PDEBUG(DGOLAY, DEBUG_INFO, "Done transmitting message.\n");
+			LOGP(DGOLAY, LOGL_INFO, "Done transmitting message.\n");
 			goto next_msg;
 		}
 		return gsc->bit[gsc->bit_index++];
@@ -757,7 +757,7 @@ next_msg:
 	/* encode first message in queue */
 	rc = queue_batch(gsc, msg->address, msg->type, msg->data);
 	if (rc >= 0)
-		PDEBUG(DGOLAY, DEBUG_INFO, "Transmitting message to address '%s'.\n", msg->address);
+		LOGP(DGOLAY, LOGL_INFO, "Transmitting message to address '%s'.\n", msg->address);
 	golay_msg_destroy(gsc, msg);
 	if (rc < 0)
 		goto next_msg;
@@ -823,9 +823,9 @@ int call_down_setup(int __attribute__((unused)) callref, const char *caller_id, 
 	}
 	if (!sender) {
 		if (channel)
-			PDEBUG(DGOLAY, DEBUG_NOTICE, "Cannot page, because given station not available, rejecting!\n");
+			LOGP(DGOLAY, LOGL_NOTICE, "Cannot page, because given station not available, rejecting!\n");
 		else
-			PDEBUG(DGOLAY, DEBUG_NOTICE, "Cannot page, no trasmitting station available, rejecting!\n");
+			LOGP(DGOLAY, LOGL_NOTICE, "Cannot page, no trasmitting station available, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
@@ -852,7 +852,7 @@ void call_down_answer(int __attribute__((unused)) callref)
 
 static void _release(int __attribute__((unused)) callref, int __attribute__((unused)) cause)
 {
-	PDEBUG(DGOLAY, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DGOLAY, LOGL_INFO, "Call has been disconnected by network.\n");
 }
 
 void call_down_disconnect(int callref, int cause)

@@ -1,6 +1,6 @@
 #include "../libfm/fm.h"
 #include "../libmobile/sender.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 
 /* current state of incoming call */
 enum zeit_call_state {
@@ -17,7 +17,7 @@ enum zeit_call_state {
 typedef struct zeit_call {
 	struct zeit_call	*next;
 	int			callref;		/* call reference */
-	struct timer		timer;
+	struct osmo_timer_list		timer;
 	enum zeit_call_state	state;			/* current state */
 	char			caller_id[32];		/* caller id to be displayed */
 	int			spl_time;		/* sample offset within 10 seconds */

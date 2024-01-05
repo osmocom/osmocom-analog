@@ -28,10 +28,10 @@
 #include <sys/time.h>
 #include <time.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "pocsag.h"
 #include "frame.h"
 #include "dsp.h"
@@ -195,7 +195,7 @@ void pocsag_new_state(pocsag_t *pocsag, enum pocsag_state new_state)
 {
 	if (pocsag->state == new_state)
 		return;
-	PDEBUG(DPOCSAG, DEBUG_DEBUG, "State change: %s -> %s\n", pocsag_state_name[pocsag->state], pocsag_state_name[new_state]);
+	LOGP(DPOCSAG, LOGL_DEBUG, "State change: %s -> %s\n", pocsag_state_name[pocsag->state], pocsag_state_name[new_state]);
 	pocsag->state = new_state;
 	pocsag_display_status();
 }
@@ -205,16 +205,16 @@ static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint3
 {
 	pocsag_msg_t *msg, **msgp;
 
-	PDEBUG(DPOCSAG, DEBUG_INFO, "Creating msg instance to page RIC '%d' / function '%d' (%s).\n", ric, function, pocsag_function_name[function]);
+	LOGP(DPOCSAG, LOGL_INFO, "Creating msg instance to page RIC '%d' / function '%d' (%s).\n", ric, function, pocsag_function_name[function]);
 
 	/* create */
 	msg = calloc(1, sizeof(*msg));
 	if (!msg) {
-		PDEBUG(DPOCSAG, DEBUG_ERROR, "No mem!\n");
+		LOGP(DPOCSAG, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
 	if (strlen(text) > sizeof(msg->data)) {
-		PDEBUG(DPOCSAG, DEBUG_ERROR, "Text too long!\n");
+		LOGP(DPOCSAG, LOGL_ERROR, "Text too long!\n");
 		return NULL;
 	}
 
@@ -280,14 +280,14 @@ static int pocsag_scan_or_loopback(pocsag_t *pocsag)
 		default:
 			message[0] = '\0';
 		}
-		PDEBUG_CHAN(DPOCSAG, DEBUG_NOTICE, "Transmitting %s message '%s' with RIC '%d'.\n", pocsag_function_name[pocsag->default_function], message, pocsag->scan_from);
+		LOGP_CHAN(DPOCSAG, LOGL_NOTICE, "Transmitting %s message '%s' with RIC '%d'.\n", pocsag_function_name[pocsag->default_function], message, pocsag->scan_from);
 		pocsag_msg_create(pocsag, 0, pocsag->scan_from, pocsag->default_function, message);
 		pocsag->scan_from++;
 		return 1;
 	}
 
 	if (pocsag->sender.loopback) {
-		PDEBUG(DPOCSAG, DEBUG_INFO, "Sending message for loopback test.\n");
+		LOGP(DPOCSAG, LOGL_INFO, "Sending message for loopback test.\n");
 		pocsag_msg_create(pocsag, 0, 1234567, POCSAG_FUNCTION_NUMERIC, "1234");
 		return 1;
 	}
@@ -344,23 +344,23 @@ int pocsag_create(const char *kanal, double frequency, const char *device, int u
 
 	pocsag = calloc(1, sizeof(*pocsag));
 	if (!pocsag) {
-		PDEBUG(DPOCSAG, DEBUG_ERROR, "No memory!\n");
+		LOGP(DPOCSAG, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DPOCSAG, DEBUG_DEBUG, "Creating 'POCSAG' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DPOCSAG, LOGL_DEBUG, "Creating 'POCSAG' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&pocsag->sender, kanal, frequency, frequency, device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DPOCSAG, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DPOCSAG, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(pocsag, samplerate, (double)baudrate, deviation, polarity);
 	if (rc < 0) {
-		PDEBUG(DPOCSAG, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DPOCSAG, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
@@ -374,7 +374,7 @@ int pocsag_create(const char *kanal, double frequency, const char *device, int u
 
 	pocsag_display_status();
 
-	PDEBUG(DPOCSAG, DEBUG_NOTICE, "Created 'Kanal' %s\n", kanal);
+	LOGP(DPOCSAG, LOGL_NOTICE, "Created 'Kanal' %s\n", kanal);
 
 	pocsag_scan_or_loopback(pocsag);
 
@@ -391,7 +391,7 @@ void pocsag_destroy(sender_t *sender)
 {
 	pocsag_t *pocsag = (pocsag_t *) sender;
 
-	PDEBUG(DPOCSAG, DEBUG_DEBUG, "Destroying 'POCSAG' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DPOCSAG, LOGL_DEBUG, "Destroying 'POCSAG' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	while (pocsag->msg_list)
 		pocsag_msg_destroy(pocsag->msg_list);
@@ -417,29 +417,29 @@ void pocsag_msg_send(enum pocsag_language language, const char *text)
 
 	if (!ric_string || !function_string) {
 inval:
-		PDEBUG(DNMT, DEBUG_NOTICE, "Given message MUST be in the following format: RIC,function[,<message with comma and spaces>] (function must be A = 0 = numeric, B = 1 or C = 2 = beep, D = 3 = alphanumeric)\n");
+		LOGP(DNMT, LOGL_NOTICE, "Given message MUST be in the following format: RIC,function[,<message with comma and spaces>] (function must be A = 0 = numeric, B = 1 or C = 2 = beep, D = 3 = alphanumeric)\n");
 		return;
 	}
 	ric = atoi(ric_string);
 	if (ric > 2097151) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Illegal RIC %d. Maximum allowed RIC is (2^21)-1. (2097151)\n", ric);
+		LOGP(DNMT, LOGL_NOTICE, "Illegal RIC %d. Maximum allowed RIC is (2^21)-1. (2097151)\n", ric);
 		goto inval;
 	}
 
 	if (ric == 1003832) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Illegal RIC 1003832. (Used as idle codeword)\n");
+		LOGP(DNMT, LOGL_NOTICE, "Illegal RIC 1003832. (Used as idle codeword)\n");
 		goto inval;
 	}
 
 	rc = pocsag_function_name2value(function_string);
 	if (rc < 0) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Illegal function '%s'.\n", function_string);
+		LOGP(DNMT, LOGL_NOTICE, "Illegal function '%s'.\n", function_string);
 		goto inval;
 	}
 	function = rc;
 
 	if (message && (function == 1 || function == 2)) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Message text is not allowed with function %d.\n", function);
+		LOGP(DNMT, LOGL_NOTICE, "Message text is not allowed with function %d.\n", function);
 		goto inval;
 	}
 
@@ -470,7 +470,7 @@ inval:
 	if (!message)
 		message="";
 
-	PDEBUG(DNMT, DEBUG_INFO, "Message for ID '%d/%d' with text '%s'\n", ric, function, message);
+	LOGP(DNMT, LOGL_INFO, "Message for ID '%d/%d' with text '%s'\n", ric, function, message);
 
 	pocsag = (pocsag_t *) sender_head;
 	pocsag_msg_create(pocsag, 0, ric, function, message);
@@ -505,9 +505,9 @@ int call_down_setup(int callref, const char *caller_id, enum number_type __attri
 	}
 	if (!sender) {
 		if (channel)
-			PDEBUG(DPOCSAG, DEBUG_NOTICE, "Cannot page, because given station not available, rejecting!\n");
+			LOGP(DPOCSAG, LOGL_NOTICE, "Cannot page, because given station not available, rejecting!\n");
 		else
-			PDEBUG(DPOCSAG, DEBUG_NOTICE, "Cannot page, no trasmitting station available, rejecting!\n");
+			LOGP(DPOCSAG, LOGL_NOTICE, "Cannot page, no trasmitting station available, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
@@ -548,7 +548,7 @@ void call_down_answer(int __attribute__((unused)) callref)
 
 static void _release(int __attribute__((unused)) callref, int __attribute__((unused)) cause)
 {
-	PDEBUG(DPOCSAG, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DPOCSAG, LOGL_INFO, "Call has been disconnected by network.\n");
 }
 
 void call_down_disconnect(int callref, int cause)

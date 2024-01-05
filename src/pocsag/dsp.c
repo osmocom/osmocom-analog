@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "pocsag.h"
 #include "frame.h"
 #include "dsp.h"
@@ -40,7 +40,7 @@ static void dsp_init_ramp(pocsag_t *pocsag)
         double c;
         int i;
 
-        PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Generating cosine shaped ramp table.\n");
+        LOGP_CHAN(DDSP, LOGL_DEBUG, "Generating cosine shaped ramp table.\n");
         for (i = 0; i < 256; i++) {
 		/* This is mathematically incorrect... */
                 if (i < 64)
@@ -59,7 +59,7 @@ int dsp_init_sender(pocsag_t *pocsag, int samplerate, int baudrate, double devia
 {
 	int rc;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for transceiver.\n");
 
 	/* set modulation parameters */
 	// NOTE: baudrate equals modulation, because we have a raised cosine ramp of beta = 0.5
@@ -67,12 +67,12 @@ int dsp_init_sender(pocsag_t *pocsag, int samplerate, int baudrate, double devia
 
 	pocsag->fsk_bitduration = (double)samplerate / (double)baudrate;
 	pocsag->fsk_bitstep = 1.0 / pocsag->fsk_bitduration;
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Use %.4f samples for one bit duration @ %d.\n", pocsag->fsk_bitduration, pocsag->sender.samplerate);
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Use %.4f samples for one bit duration @ %d.\n", pocsag->fsk_bitduration, pocsag->sender.samplerate);
 
 	pocsag->fsk_tx_buffer_size = pocsag->fsk_bitduration * 32.0 + 10; /* 32 bit, add some extra to prevent short buffer due to rounding */
 	pocsag->fsk_tx_buffer = calloc(sizeof(sample_t), pocsag->fsk_tx_buffer_size);
 	if (!pocsag->fsk_tx_buffer) {
-		PDEBUG_CHAN(DDSP, DEBUG_ERROR, "No memory!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "No memory!\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -94,7 +94,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(pocsag_t *pocsag)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for transceiver.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for transceiver.\n");
 
 	if (pocsag->fsk_tx_buffer) {
 		free(pocsag->fsk_tx_buffer);
@@ -180,7 +180,7 @@ static void fsk_block_decode(pocsag_t *pocsag, uint8_t bit)
 			pocsag->fsk_rx_index = 0;
 		} else
 		if (pocsag->fsk_rx_word == (uint32_t)(~CODEWORD_SYNC))
-			PDEBUG_CHAN(DDSP, DEBUG_NOTICE, "Received inverted sync, caused by wrong polarity or by radio noise. Verify correct polarity!\n");
+			LOGP_CHAN(DDSP, LOGL_NOTICE, "Received inverted sync, caused by wrong polarity or by radio noise. Verify correct polarity!\n");
 	} else {
 		pocsag->fsk_rx_word = (pocsag->fsk_rx_word << 1) | bit;
 		if (++pocsag->fsk_rx_index == 32) {

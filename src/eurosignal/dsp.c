@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "eurosignal.h"
 #include "dsp.h"
 
@@ -105,11 +105,11 @@ void dsp_init(int samplerate)
 {
 	int i;
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating phase shiftings for tones.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating phase shiftings for tones.\n");
 	for (i = 0; dsp_digits[i].digit; i++)
 		dsp_digits[i].phaseshift65536 = 65536.0 / ((double)samplerate / dsp_digits[i].frequency);
 
-	PDEBUG(DDSP, DEBUG_DEBUG, "Generating sine table for tones.\n");
+	LOGP(DDSP, LOGL_DEBUG, "Generating sine table for tones.\n");
 	for (i = 0; i < 65536; i++)
 		dsp_tone[i] = sin((double)i / 65536.0 * 2.0 * PI);
 }
@@ -119,7 +119,7 @@ int dsp_init_sender(euro_t *euro, int samplerate, int fm)
 {
 	int rc = 0;
 
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Init DSP for 'Sender'.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Init DSP for 'Sender'.\n");
 
 	/* set modulation parameters */
 	if (fm)
@@ -154,7 +154,7 @@ error:
 /* Cleanup transceiver instance. */
 void dsp_cleanup_sender(euro_t *euro)
 {
-	PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Cleanup DSP for 'Sender'.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Cleanup DSP for 'Sender'.\n");
 
 	/* cleanup demodulator */
 	fm_demod_exit(&euro->rx_demod);
@@ -201,7 +201,7 @@ static void tone_decode(euro_t *euro, sample_t *samples, int length)
 		case 'I':
 			/* pause tone */
 			if (euro->rx_digit_count == DIGIT_DETECT) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected Idle tone, starting.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected Idle tone, starting.\n");
 				euro->rx_digit_receiving = 1;
 				euro->rx_digit_index = 0;
 				euro->rx_timeout_count = 0;
@@ -213,7 +213,7 @@ static void tone_decode(euro_t *euro, sample_t *samples, int length)
 				break;
 			if (euro->rx_digit_count == DIGIT_DETECT) {
 				/* out of range tone */
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected tone out of range, aborting.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected tone out of range, aborting.\n");
 				euro->rx_digit_receiving = 0;
 			}
 			break;
@@ -225,7 +225,7 @@ static void tone_decode(euro_t *euro, sample_t *samples, int length)
 			if (euro->rx_digit_count == DIGIT_DETECT) {
 				double level;
 				level = sqrt(I[i] * I[i] + Q[i] * Q[i]) * 2;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Detected digit '%s' (level = %.0f%%)\n", digit_to_name(digit), level * 100.0);
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Detected digit '%s' (level = %.0f%%)\n", digit_to_name(digit), level * 100.0);
 				display_measurements_update(euro->dmp_tone_level, level * 100.0, 0.0);
 				euro->rx_digits[euro->rx_digit_index] = digit;
 				euro->rx_digit_index++;
@@ -243,7 +243,7 @@ static void tone_decode(euro_t *euro, sample_t *samples, int length)
 		if (euro->rx_digit_receiving && euro->rx_digit_index) {
 			euro->rx_timeout_count++;
 			if (euro->rx_timeout_count == TIMEOUT_DETECT) {
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Timeout receiving, aborting.\n");
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Timeout receiving, aborting.\n");
 				euro->rx_digit_receiving = 0;
 			}
 		}
@@ -280,18 +280,18 @@ static void tone_send(euro_t *euro, sample_t *samples, int length)
 				euro->tx_time -= PAUSE_DURATION;
 				euro_get_id(euro, euro->tx_digits);
 				euro->tx_digit_index = 0;
-				PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Sending digit '%s'\n", digit_to_name(euro->tx_digits[0]));
+				LOGP_CHAN(DDSP, LOGL_DEBUG, "Sending digit '%s'\n", digit_to_name(euro->tx_digits[0]));
 				euro->tx_phaseshift65536 = digit_to_phaseshift65536(euro->tx_digits[0]);
 			}
 		} else {
 			if (euro->tx_time >= DIGIT_DURATION) {
 				euro->tx_time -= DIGIT_DURATION;
 				if (++euro->tx_digit_index == 6) {
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Sending Idle tone'\n");
+					LOGP_CHAN(DDSP, LOGL_DEBUG, "Sending Idle tone'\n");
 					euro->tx_digits[0] = '\0';
 					euro->tx_phaseshift65536 = digit_to_phaseshift65536('I');
 				} else {
-					PDEBUG_CHAN(DDSP, DEBUG_DEBUG, "Sending digit '%s'\n", digit_to_name(euro->tx_digits[euro->tx_digit_index]));
+					LOGP_CHAN(DDSP, LOGL_DEBUG, "Sending digit '%s'\n", digit_to_name(euro->tx_digits[euro->tx_digit_index]));
 					euro->tx_phaseshift65536 = digit_to_phaseshift65536(euro->tx_digits[euro->tx_digit_index]);
 				}
 			}

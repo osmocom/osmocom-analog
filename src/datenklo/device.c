@@ -27,7 +27,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #define __USE_GNU
 #include <pthread.h>
 #include <signal.h>
@@ -122,7 +122,7 @@ static void cuse_read_interrupt(fuse_req_t req, void *data)
 	if (!device->read_locked)
 		device->lock_cb();
 
-	PDEBUG(DDEVICE, DEBUG_DEBUG, "%s received interrupt from client!\n", device->name);
+	LOGP(DDEVICE, LOGL_DEBUG, "%s received interrupt from client!\n", device->name);
 
 	if (device->read_req) {
 		device->read_req = NULL;
@@ -167,7 +167,7 @@ static void cuse_device_read(fuse_req_t req, size_t size, off_t off, struct fuse
 
 	if (device->read_req) {
 		device->unlock_cb();
-		PDEBUG(DDEVICE, DEBUG_ERROR, "%s: Got another read(), while first read() has not been replied, please fix.\n", device->name);
+		LOGP(DDEVICE, LOGL_ERROR, "%s: Got another read(), while first read() has not been replied, please fix.\n", device->name);
 		fuse_reply_err(req, EBUSY);
 		return;
 	}
@@ -182,7 +182,7 @@ static void cuse_device_read(fuse_req_t req, size_t size, off_t off, struct fuse
 
 	/* this means that we block until modem's read() returns 0 or positive value (in nonblocking io, we return -EAGAIN) */
 	if (!(fi->flags & O_NONBLOCK) && count == -EAGAIN) {
-		PDEBUG(DDEVICE, DEBUG_DEBUG, "%s has no data available, waiting for data, timer or interrupt.\n", device->name);
+		LOGP(DDEVICE, LOGL_DEBUG, "%s has no data available, waiting for data, timer or interrupt.\n", device->name);
 
 		device->read_req = req;
 		device->read_size = size;
@@ -216,7 +216,7 @@ static void cuse_write_interrupt(fuse_req_t req, void *data)
 	if (!device->write_locked)
 		device->lock_cb();
 
-	PDEBUG(DDEVICE, DEBUG_DEBUG, "%s received interrupt from client!\n", device->name);
+	LOGP(DDEVICE, LOGL_DEBUG, "%s received interrupt from client!\n", device->name);
 
 	if (device->write_req) {
 		device->write_req = NULL;
@@ -262,7 +262,7 @@ static void cuse_device_write(fuse_req_t req, const char *buf, size_t size, off_
 
 	if (device->write_req) {
 		device->unlock_cb();
-		PDEBUG(DDEVICE, DEBUG_ERROR, "%s: Got another write(), while first write() has not been replied, please fix.\n", device->name);
+		LOGP(DDEVICE, LOGL_ERROR, "%s: Got another write(), while first write() has not been replied, please fix.\n", device->name);
 		fuse_reply_err(req, EBUSY);
 		return;
 	}
@@ -271,13 +271,13 @@ static void cuse_device_write(fuse_req_t req, const char *buf, size_t size, off_
 
 	/* this means that we block until modem's write() returns 0 or positive value (in nonblocking io, we return -EAGAIN) */
 	if (!(fi->flags & O_NONBLOCK) && count == -EAGAIN) {
-		PDEBUG(DDEVICE, DEBUG_DEBUG, "%s has no buffer space available, waiting for space or interrupt.\n", device->name);
+		LOGP(DDEVICE, LOGL_DEBUG, "%s has no buffer space available, waiting for space or interrupt.\n", device->name);
 
 		device->write_req = req;
 		device->write_size = size;
 		device->write_buf = malloc(size);
 		if (!buf) {
-			PDEBUG(DDEVICE, DEBUG_ERROR, "No memory!\n");
+			LOGP(DDEVICE, LOGL_ERROR, "No memory!\n");
 			exit(0);
 		}
 		memcpy(device->write_buf, buf, size);
@@ -376,7 +376,7 @@ static void cuse_device_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_fi
 		}
 		break;
 	default:
-		PDEBUG(DDEVICE, DEBUG_NOTICE, "%s: receives unknown ioctl: 0x%x\n", device->name, cmd);
+		LOGP(DDEVICE, LOGL_NOTICE, "%s: receives unknown ioctl: 0x%x\n", device->name, cmd);
 		fuse_reply_err(req, EINVAL);
 	}
 }
@@ -432,7 +432,7 @@ static void cuse_device_flush(fuse_req_t req, struct fuse_file_info *fi)
 	(void)req;
 	(void)fi;
 	device_t *device = get_device_by_thread();
-	PDEBUG(DDEVICE, DEBUG_NOTICE, "%s: unhandled flush\n", device->name);
+	LOGP(DDEVICE, LOGL_NOTICE, "%s: unhandled flush\n", device->name);
 }
 
 static void cuse_device_fsync(fuse_req_t req, int datasync, struct fuse_file_info *fi)
@@ -441,7 +441,7 @@ static void cuse_device_fsync(fuse_req_t req, int datasync, struct fuse_file_inf
 	(void)datasync;
 	(void)fi;
 	device_t *device = get_device_by_thread();
-	PDEBUG(DDEVICE, DEBUG_NOTICE, "%s: unhandled fsync\n", device->name);
+	LOGP(DDEVICE, LOGL_NOTICE, "%s: unhandled fsync\n", device->name);
 }
 
 
@@ -478,9 +478,9 @@ static void *device_child(void *arg)
 
 	device->thread_started = 1;
 
-	PDEBUG(DDEVICE, DEBUG_INFO, "Device '%s' started.\n", device->name);
+	LOGP(DDEVICE, LOGL_INFO, "Device '%s' started.\n", device->name);
 	cuse_lowlevel_main(argc, argv, &ci, &cuse_device_clop, NULL);
-	PDEBUG(DDEVICE, DEBUG_INFO, "Device '%s' terminated.\n", device->name);
+	LOGP(DDEVICE, LOGL_INFO, "Device '%s' terminated.\n", device->name);
 
 	device->thread_stopped = 1;
 
@@ -496,7 +496,7 @@ void *device_init(void *inst, const char *name, int (*open)(void *inst, int flag
 
 	device = calloc(1, sizeof(*device));
 	if (!device) {
-		PDEBUG(DDEVICE, DEBUG_ERROR, "No memory!\n");
+		LOGP(DDEVICE, LOGL_ERROR, "No memory!\n");
 		errno = ENOMEM;
 		goto error;
 	}
@@ -514,7 +514,7 @@ void *device_init(void *inst, const char *name, int (*open)(void *inst, int flag
 
 	rc = pthread_create(&device->thread, NULL, device_child, device);
 	if (rc < 0) {
-		PDEBUG(DDEVICE, DEBUG_ERROR, "Failed to create device thread!\n");
+		LOGP(DDEVICE, LOGL_ERROR, "Failed to create device thread!\n");
 		errno = -rc;
 		goto error;
 	}

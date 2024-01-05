@@ -66,7 +66,7 @@ Create a virtual machine with the following settings:
 <ul>
 	<li>Create a virtual machine with Ubuntu (64-bit)
 	<li>Choose memory size of at least 2 GB
-	<li>Create a virtual hard drive with at least 10 GB
+	<li>Create a virtual hard drive with 25 GB
 	<li>Emulate sound with output and input
 	<li>Select USB 3.0 (xHCI) Controller
 </ul>
@@ -162,6 +162,18 @@ Installing osmocom-analog
 </p>
 
 <p>
+You need two libraries, the first is "libosmocore". It is included with Ubuntu/Debian:
+</p>
+
+<pre>
+
+# sudo apt install libosmocore-dev
+
+
+</pre>
+
+<p>
+The next library is "libosmo-cc". It is not included with Ubuntu/Debian, so you need to install it from GIT.
 Use GIT to clone latest source repository. First you need to install GIT.
 </p>
 
@@ -173,7 +185,73 @@ Use GIT to clone latest source repository. First you need to install GIT.
 </pre>
 
 <p>
-Then you can clone osmocom-analog from <a href="https://gitea.osmocom.org/cellular-infrastructure/osmocom-analog">https://gitea.osmocom.org/cellular-infrastructure/osmocom-analog</a> in your home directory.
+Then you can clone libosmo-cc from <a href="https://gitea.osmocom.org/cc/libosmo-cc">https://gitea.osmocom.org/cc/libosmo-cc</a> in your home directory.
+</p>
+
+<pre>
+
+# cd ~
+# git clone https://gitea.osmocom.org/cc/libosmo-cc
+Cloning into 'libosmo-cc'...
+...
+
+
+</pre>
+
+<p>
+Before you can compile, you need to install <b>"autoconf"</b>, <b>"gcc"</b> and <b>"make"</b>, and <b>"libtool"</b>.
+</p>
+
+<pre>
+
+# sudo apt install autoconf gcc make libtool
+
+</pre>
+
+<p>
+Change to the repository directory and run <b>"autoconf -if"</b> once. This is only needed the first time compiling. It will generate the configure script.
+</p>
+
+<pre>
+
+# cd libosmo-c
+# autoreconf -if
+...
+#
+
+</pre>
+
+<p>
+Run configure script. It will generate the make files depending on your supported libraries.
+</p>
+
+<pre>
+
+# ./configure
+
+</pre>
+
+<p>
+Run <b>"make"</b> and <b>"make install"</b> to build and install osmocom-analog. Don't forget to run <b>"ldconfig"</b>, so you library database does know it.
+</p>
+
+<pre>
+
+# make clean # always do this after you pulled from GIT server
+# make
+...
+# sudo make install
+...
+# sudo ldconfig
+# cd ..
+
+</pre>
+<p>
+Use GIT to clone latest source repository. First you need to install GIT.
+</p>
+
+<p>
+Then you can clone osmocom-analog from <a href="https://gitea.osmocom.org/cellular-infrastructure/osmocom-analog">https://gitea.osmocom.org/cellular-infrastructure/osmocom-analog</a> in your home directory. 
 </p>
 
 <pre>
@@ -183,20 +261,6 @@ Then you can clone osmocom-analog from <a href="https://gitea.osmocom.org/cellul
 Cloning into 'osmocom-analog'...
 ...
 
-
-</pre>
-
-<p>
-Before you can compile, you need to install <b>"autoconf"</b>, <b>"gcc"</b> and <b>"make"</b>.
-</p>
-
-<pre>
-
-# sudo apt install autoconf
-# sudo apt install gcc
-# sudo apt install make
-
-</pre>
 
 </pre>
 
@@ -242,6 +306,10 @@ configure: Compiling with FUSE
 
 </pre>
 
+<p style="background-color: yellow;">
+If you get something like "sytax error near unexpected token `ALSA,`", check, if pkg-config is installed. If you just installed it, run "autoreconf -if" again and then "./configure".
+</p>
+
 <p>
 Run <b>"make"</b> and <b>"make install"</b> to build and install osmocom-analog.
 </p>
@@ -253,6 +321,7 @@ Run <b>"make"</b> and <b>"make install"</b> to build and install osmocom-analog.
 ...
 # sudo make install
 ...
+# cd ..
 
 </pre>
 

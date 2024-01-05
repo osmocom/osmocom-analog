@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libsample/sample.h"
 #include "../libdtmf/dtmf_decode.h"
 #include "../libdtmf/dtmf_encode.h"

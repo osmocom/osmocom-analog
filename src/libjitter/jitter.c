@@ -77,7 +77,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "jitter.h"
 
 #define INITIAL_DELAY_INTERVAL	0.5
@@ -104,7 +104,7 @@ int jitter_create(jitter_t *jb, const char *name, double samplerate, int sample_
 	jb->extra_size = (int)(EXTRA_BUFFER * samplerate);
 	jb->extra_samples = calloc(sample_size, jb->extra_size);
 	if (!jb->extra_samples) {
-		PDEBUG(DJITTER, DEBUG_ERROR, "No memory for frame.\n");
+		LOGP(DJITTER, LOGL_ERROR, "No memory for frame.\n");
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -118,7 +118,7 @@ int jitter_create(jitter_t *jb, const char *name, double samplerate, int sample_
 
 	jitter_reset(jb);
 
-	PDEBUG(DJITTER, DEBUG_INFO, "%sCreated jitter buffer. (samplerate=%.0f, target_window=%.0fms, max_window=%.0fms, flag:latency=%s flag:repeat=%s)\n", jb->name, samplerate, target_window_duration * 1000.0, max_window_duration * 1000.0, (window_flags & JITTER_FLAG_LATENCY) ? "true" : "false", (window_flags & JITTER_FLAG_REPEAT) ? "true" : "false");
+	LOGP(DJITTER, LOGL_INFO, "%sCreated jitter buffer. (samplerate=%.0f, target_window=%.0fms, max_window=%.0fms, flag:latency=%s flag:repeat=%s)\n", jb->name, samplerate, target_window_duration * 1000.0, max_window_duration * 1000.0, (window_flags & JITTER_FLAG_LATENCY) ? "true" : "false", (window_flags & JITTER_FLAG_REPEAT) ? "true" : "false");
 
 error:
 	if (rc)
@@ -139,7 +139,7 @@ void jitter_reset(jitter_t *jb)
 {
 	jitter_frame_t *jf, *temp;
 
-	PDEBUG(DJITTER, DEBUG_INFO, "%sReset jitter buffer.\n", jb->name);
+	LOGP(DJITTER, LOGL_INFO, "%sReset jitter buffer.\n", jb->name);
 
 	/* jitter buffer locked */
 	jb->unlocked = 0;
@@ -172,7 +172,7 @@ void jitter_destroy(jitter_t *jb)
 {
 	jitter_reset(jb);
 
-	PDEBUG(DJITTER, DEBUG_INFO, "%sDestroying jitter buffer.\n", jb->name);
+	LOGP(DJITTER, LOGL_INFO, "%sDestroying jitter buffer.\n", jb->name);
 
 	if (jb->extra_samples) {
 		free(jb->extra_samples);
@@ -201,7 +201,7 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 	/* generate sequence and timestamp automatically, if enabled */
 	if (!has_sequence) {
 #ifdef DEBUG_JITTER
-		PDEBUG(DJITTER, DEBUG_DEBUG, "%sSave frame of %d samples (no seqence).\n", jb->name, length);
+		LOGP(DJITTER, LOGL_DEBUG, "%sSave frame of %d samples (no seqence).\n", jb->name, length);
 #endif
 		sequence = jb->next_sequence;
 		jb->next_sequence++;
@@ -210,7 +210,7 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 		ssrc = jb->window_ssrc;
 	} else {
 #ifdef HEAVY_DEBUG
-		PDEBUG(DJITTER, DEBUG_DEBUG, "%sSave frame of %d samples (seqence=%u timestamp=%u ssrc=0x%02x).\n", jb->name, length, sequence, timestamp, ssrc);
+		LOGP(DJITTER, LOGL_DEBUG, "%sSave frame of %d samples (seqence=%u timestamp=%u ssrc=0x%02x).\n", jb->name, length, sequence, timestamp, ssrc);
 #endif
 		jb->next_sequence = sequence + 1;
 		jb->next_timestamp = timestamp + length;
@@ -219,9 +219,9 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 	/* first packet (with this ssrc) sets window size to target_window_size */
 	if (!jb->window_valid || jb->window_ssrc != ssrc) {
 		if (!jb->window_valid)
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Initial frame after init or reset.\n", jb->name);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Initial frame after init or reset.\n", jb->name);
 		else
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s SSRC changed.\n", jb->name);
+			LOGP(DJITTER, LOGL_DEBUG, "%s SSRC changed.\n", jb->name);
 		// NOTE: Reset must be called before finding the frame location below, because there will be no frame in list anymore!
 		jitter_reset(jb);
 		jb->unlocked = 1;
@@ -241,7 +241,7 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 		offset_sequence = (int16_t)(sequence - (*jfp)->sequence);
 		/* found double entry */
 		if (offset_sequence == 0) {
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Dropping double packet (sequence = %d)\n", jb->name, sequence);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Dropping double packet (sequence = %d)\n", jb->name, sequence);
 			return;
 		}
 		/* offset is negative, so we found the position to insert frame */
@@ -252,7 +252,7 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 
 	offset_timestamp = timestamp - jb->window_timestamp;
 #ifdef HEAVY_DEBUG
-	PDEBUG(DJITTER, DEBUG_DEBUG, "%sFrame has offset of %.0fms in jitter buffer.\n", jb->name, (double)offset_timestamp * jb->sample_duration * 1000.0);
+	LOGP(DJITTER, LOGL_DEBUG, "%sFrame has offset of %.0fms in jitter buffer.\n", jb->name, (double)offset_timestamp * jb->sample_duration * 1000.0);
 #endif
 
 	/* measure delay */
@@ -262,11 +262,11 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 	/* if frame is too early (delay ceases), shift window to the future */
 	if (offset_timestamp > jb->max_window_size) {
 		if ((jb->window_flags & JITTER_FLAG_LATENCY)) {
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Frame too early: Shift jitter buffer to the future, to make the frame fit to the end. (offset_timestamp(%d) > max_window_size(%d))\n", jb->name, offset_timestamp, jb->max_window_size);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Frame too early: Shift jitter buffer to the future, to make the frame fit to the end. (offset_timestamp(%d) > max_window_size(%d))\n", jb->name, offset_timestamp, jb->max_window_size);
 			/* shift window so it fits to the end of window */
 			jb->window_timestamp = timestamp - jb->max_window_size;
 		} else {
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Frame too early: Shift jitter buffer to the future, to make the frame fit to the target delay. (offset_timestamp(%d) > max_window_size(%d))\n", jb->name, offset_timestamp, jb->max_window_size);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Frame too early: Shift jitter buffer to the future, to make the frame fit to the target delay. (offset_timestamp(%d) > max_window_size(%d))\n", jb->name, offset_timestamp, jb->max_window_size);
 			/* shift window so frame fits to the start of window + target delay */
 			jb->window_timestamp = timestamp - (uint32_t)(jb->target_window_size);
 		}
@@ -275,11 +275,11 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 	/* is frame is too late, shift window to the past. */
 	if (offset_timestamp < 0) {
 		if ((jb->window_flags & JITTER_FLAG_LATENCY)) {
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Frame too late: Shift jitter buffer to the past, and add target window size. (offset_timestamp(%d) < 0)\n", jb->name, offset_timestamp);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Frame too late: Shift jitter buffer to the past, and add target window size. (offset_timestamp(%d) < 0)\n", jb->name, offset_timestamp);
 			/* shift window so frame fits to the start of window + half of target delay */
 			jb->window_timestamp = timestamp - (uint32_t)(jb->target_window_size) / 2;
 		} else {
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Frame too late: Shift jitter buffer to the past, and add half target window size. (offset_timestamp(%d) < 0)\n", jb->name, offset_timestamp);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Frame too late: Shift jitter buffer to the past, and add half target window size. (offset_timestamp(%d) < 0)\n", jb->name, offset_timestamp);
 			/* shift window so frame fits to the start of window + target delay */
 			jb->window_timestamp = timestamp - (uint32_t)(jb->target_window_size);
 		}
@@ -287,11 +287,11 @@ void jitter_save(jitter_t *jb, void *samples, int length, int has_sequence, uint
 
 	/* insert or append frame */
 #ifdef HEAVY_DEBUG
-	PDEBUG(DJITTER, DEBUG_DEBUG, "%s Store frame\n", jb->name);
+	LOGP(DJITTER, LOGL_DEBUG, "%s Store frame\n", jb->name);
 #endif
 	jf = malloc(sizeof(*jf) + length * jb->sample_size);
 	if (!jf) {
-		PDEBUG(DJITTER, DEBUG_ERROR, "No memory for frame.\n");
+		LOGP(DJITTER, LOGL_ERROR, "No memory for frame.\n");
 		return;
 	}
 	memset(jf, 0, sizeof(*jf)); // note: clear header only
@@ -311,7 +311,7 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 	int32_t count, count2, index;
 
 #ifdef HEAVY_DEBUG
-	PDEBUG(DJITTER, DEBUG_DEBUG, "%sLoad chunk of %d samples.\n", jb->name, length);
+	LOGP(DJITTER, LOGL_DEBUG, "%sLoad chunk of %d samples.\n", jb->name, length);
 #endif
 
 	/* now unlock jitter buffer */
@@ -321,10 +321,10 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 	jb->delay_counter += jb->sample_duration * (double)length;
 	if (jb->delay_counter >= jb->delay_interval) {
 		if (jb->min_delay_value >= 0)
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Statistics: target_window_delay=%.0fms max_window_delay=%.0fms  current min_delay=%.0fms\n", jb->name, (double)jb->target_window_size * jb->sample_duration * 1000.0, (double)jb->max_window_size * jb->sample_duration * 1000.0, (double)jb->min_delay_value * jb->sample_duration * 1000.0);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Statistics: target_window_delay=%.0fms max_window_delay=%.0fms  current min_delay=%.0fms\n", jb->name, (double)jb->target_window_size * jb->sample_duration * 1000.0, (double)jb->max_window_size * jb->sample_duration * 1000.0, (double)jb->min_delay_value * jb->sample_duration * 1000.0);
 		/* delay reduction, if maximum delay is greater than target jitter window size */
 		if ((jb->window_flags & JITTER_FLAG_LATENCY) && jb->min_delay_value > jb->target_window_size) {
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Reducing current minimum delay of %.0fms, because maximum delay is greater than target window size of %.0fms.\n", jb->name, (double)jb->min_delay_value * jb->sample_duration * 1000.0, (double)jb->target_window_size * jb->sample_duration * 1000.0);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Reducing current minimum delay of %.0fms, because maximum delay is greater than target window size of %.0fms.\n", jb->name, (double)jb->min_delay_value * jb->sample_duration * 1000.0, (double)jb->target_window_size * jb->sample_duration * 1000.0);
 			/* only reduce delay to half of the target window size */
 			jb->window_timestamp += jb->min_delay_value - jb->target_window_size / 2;
 
@@ -349,9 +349,9 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 		if (count > 0) {
 #ifdef HEAVY_DEBUG
 			if (jf)
-				PDEBUG(DJITTER, DEBUG_DEBUG, "%s There is a frame ahead in buffer after %d samples. Interpolating gap.\n", jb->name, jf->timestamp - jb->window_timestamp);
+				LOGP(DJITTER, LOGL_DEBUG, "%s There is a frame ahead in buffer after %d samples. Interpolating gap.\n", jb->name, jf->timestamp - jb->window_timestamp);
 			else
-				PDEBUG(DJITTER, DEBUG_DEBUG, "%s There is no frame ahead in buffer. Interpolating gap.\n", jb->name);
+				LOGP(DJITTER, LOGL_DEBUG, "%s There is no frame ahead in buffer. Interpolating gap.\n", jb->name);
 #endif
 			/* extrapolate by playing the extrapolation buffer */
 			while (count) {
@@ -366,7 +366,7 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 						jb->extra_timeout_count++;
 						if (jb->extra_timeout_count == jb->extra_timeout_max) {
 #ifdef HEAVY_DEBUG
-							PDEBUG(DJITTER, DEBUG_DEBUG, "%s Repeated jitter buffer enough, clearing to silence.\n", jb->name);
+							LOGP(DJITTER, LOGL_DEBUG, "%s Repeated jitter buffer enough, clearing to silence.\n", jb->name);
 #endif
 							clear_extra_buffer(jb);
 						}
@@ -393,7 +393,7 @@ void jitter_load(jitter_t *jb, void *samples, int length)
 				count = jb->extra_size - jb->extra_index;
 			/* copy samples from packet to play out, increment sample pointer and decrement length */
 #ifdef HEAVY_DEBUG
-			PDEBUG(DJITTER, DEBUG_DEBUG, "%s Copy data (offset=%u count=%u) from frame (sequence=%u timestamp=%u length=%u).\n", jb->name, index, count, jf->sequence, jf->timestamp, jf->length);
+			LOGP(DJITTER, LOGL_DEBUG, "%s Copy data (offset=%u count=%u) from frame (sequence=%u timestamp=%u length=%u).\n", jb->name, index, count, jf->sequence, jf->timestamp, jf->length);
 #endif
 			memcpy(samples, (uint8_t *)jf->samples + index * jb->sample_size, count * jb->sample_size);
 			samples = (uint8_t *)samples + count * jb->sample_size;

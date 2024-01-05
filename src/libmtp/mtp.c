@@ -25,8 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "../libtimer/timer.h"
-#include "../libdebug/debug.h"
+#include <osmocom/core/timer.h>
+#include "../liblogging/logging.h"
 #include "mtp.h"
 
 static void mtp_t1(void *data)
@@ -73,10 +73,10 @@ int mtp_init(mtp_t *mtp, const char *name, void *inst, void (*mtp_receive)(void 
 	mtp->sio = sio;
 	mtp->local_pc = local_pc;
 	mtp->remote_pc = remote_pc;
-	timer_init(&mtp->t1, mtp_t1, mtp);
-	timer_init(&mtp->t2, mtp_t2, mtp);
-	timer_init(&mtp->t3, mtp_t3, mtp);
-	timer_init(&mtp->t4, mtp_t4, mtp);
+	osmo_timer_setup(&mtp->t1, mtp_t1, mtp);
+	osmo_timer_setup(&mtp->t2, mtp_t2, mtp);
+	osmo_timer_setup(&mtp->t3, mtp_t3, mtp);
+	osmo_timer_setup(&mtp->t4, mtp_t4, mtp);
 
 	return 0;
 }
@@ -86,10 +86,10 @@ void mtp_exit(mtp_t *mtp)
 	if (!mtp)
 		return;
 
-	timer_exit(&mtp->t1);
-	timer_exit(&mtp->t2);
-	timer_exit(&mtp->t3);
-	timer_exit(&mtp->t4);
+	osmo_timer_del(&mtp->t1);
+	osmo_timer_del(&mtp->t2);
+	osmo_timer_del(&mtp->t3);
+	osmo_timer_del(&mtp->t4);
 
 	mtp_flush(mtp);
 }

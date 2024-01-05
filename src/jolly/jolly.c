@@ -134,11 +134,11 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include <osmocom/cc/message.h>
 #include "jolly.h"
 #include "dsp.h"
 #include "voice.h"
@@ -146,12 +146,12 @@
 #define db2level(db)	pow(10, (double)db / 20.0)
 
 /* Timers */
-#define T_DIAL		6	/* Time between digits */
-#define T_DIAL2		1.5	/* Time between digits during call*/
-#define T_PAGING	30	/* How long do we page the mobile party */
-#define SPEECH_DELAY_PAGING 1.0	/* time before speaking paging sequence */
-#define SPEECH_DELAY_VERIFY 2.0	/* time before speaking verifying sequence */
-#define SPEECH_DELAY_RELEASE 2.0/* time before speaking release sequence */
+#define T_DIAL		6,0		/* Time between digits */
+#define T_DIAL2		1,500000	/* Time between digits during call*/
+#define T_PAGING	30,0		/* How long do we page the mobile party */
+#define SPEECH_DELAY_PAGING	1,0	/* time before speaking paging sequence */
+#define SPEECH_DELAY_VERIFY	2,0	/* time before speaking verifying sequence */
+#define SPEECH_DELAY_RELEASE	2,0	/* time before speaking release sequence */
 
 const char *jolly_state_name(enum jolly_state state)
 {
@@ -199,7 +199,7 @@ static void jolly_new_state(jolly_t *jolly, enum jolly_state new_state)
 {
 	if (jolly->state == new_state)
 		return;
-	PDEBUG_CHAN(DJOLLY, DEBUG_DEBUG, "State change: %s -> %s\n", jolly_state_name(jolly->state), jolly_state_name(new_state));
+	LOGP_CHAN(DJOLLY, LOGL_DEBUG, "State change: %s -> %s\n", jolly_state_name(jolly->state), jolly_state_name(new_state));
 	jolly->state = new_state;
 	jolly_display_status();
 }
@@ -216,11 +216,11 @@ int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step,
 
 	jolly = calloc(1, sizeof(jolly_t));
 	if (!jolly) {
-		PDEBUG(DJOLLY, DEBUG_ERROR, "No memory!\n");
+		LOGP(DJOLLY, LOGL_ERROR, "No memory!\n");
 		return -EIO;
 	}
 
-	PDEBUG(DJOLLY, DEBUG_DEBUG, "Creating 'JollyCom' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DJOLLY, LOGL_DEBUG, "Creating 'JollyCom' instance for 'Kanal' = %s (sample rate %d).\n", kanal, samplerate);
 
 	dl_freq = dl_freq * 1e6 + step * 1e3 * (double)atoi(kanal);
 	ul_freq = ul_freq * 1e6 + step * 1e3 * (double)atoi(kanal);
@@ -228,25 +228,25 @@ int jolly_create(const char *kanal, double dl_freq, double ul_freq, double step,
 	/* init general part of transceiver */
 	rc = sender_create(&jolly->sender, kanal, dl_freq, ul_freq, device, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DJOLLY, DEBUG_ERROR, "Failed to init 'Sender' processing!\n");
+		LOGP(DJOLLY, LOGL_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;
 	}
 
 	/* init audio processing */
 	rc = dsp_init_sender(jolly, nbfm, squelch_db, repeater);
 	if (rc < 0) {
-		PDEBUG(DANETZ, DEBUG_ERROR, "Failed to init signal processing!\n");
+		LOGP(DANETZ, LOGL_ERROR, "Failed to init signal processing!\n");
 		goto error;
 	}
 
 	/* timers */
-	timer_init(&jolly->timer, jolly_timeout, jolly);
-	timer_init(&jolly->speech_timer, jolly_speech_timeout, jolly);
+	osmo_timer_setup(&jolly->timer, jolly_timeout, jolly);
+	osmo_timer_setup(&jolly->speech_timer, jolly_speech_timeout, jolly);
 
 	/* go into idle state */
 	jolly_go_idle(jolly);
 
-	PDEBUG(DJOLLY, DEBUG_NOTICE, "Created 'Kanal' #%s\n", kanal);
+	LOGP(DJOLLY, LOGL_NOTICE, "Created 'Kanal' #%s\n", kanal);
 
 	return 0;
 
@@ -261,11 +261,11 @@ void jolly_destroy(sender_t *sender)
 {
 	jolly_t *jolly = (jolly_t *) sender;
 
-	PDEBUG(DJOLLY, DEBUG_DEBUG, "Destroying 'JollyCom' instance for 'Kanal' = %s.\n", sender->kanal);
+	LOGP(DJOLLY, LOGL_DEBUG, "Destroying 'JollyCom' instance for 'Kanal' = %s.\n", sender->kanal);
 
 	dsp_cleanup_sender(jolly);
-	timer_exit(&jolly->timer);
-	timer_exit(&jolly->speech_timer);
+	osmo_timer_del(&jolly->timer);
+	osmo_timer_del(&jolly->speech_timer);
 	sender_destroy(&jolly->sender);
 	free(sender);
 }
@@ -273,11 +273,11 @@ void jolly_destroy(sender_t *sender)
 /* Abort connection towards mobile station changing to IDLE state */
 static void jolly_go_idle(jolly_t *jolly)
 {
-	timer_stop(&jolly->timer);
-	timer_stop(&jolly->speech_timer);
+	osmo_timer_del(&jolly->timer);
+	osmo_timer_del(&jolly->speech_timer);
 	reset_speech_string(jolly);
 
-	PDEBUG(DJOLLY, DEBUG_INFO, "Entering IDLE state on channel %s.\n", jolly->sender.kanal);
+	LOGP(DJOLLY, LOGL_INFO, "Entering IDLE state on channel %s.\n", jolly->sender.kanal);
 	jolly->dialing[0] = '\0';
 	jolly->station_id[0] = '\0'; /* remove station ID before state change, so status is shown correctly */
 	jolly_new_state(jolly, STATE_IDLE);
@@ -286,35 +286,35 @@ static void jolly_go_idle(jolly_t *jolly)
 /* Release connection towards mobile station by sending idle tone for a while. */
 static void jolly_release(jolly_t *jolly)
 {
-	timer_stop(&jolly->timer);
-	timer_stop(&jolly->speech_timer);
+	osmo_timer_del(&jolly->timer);
+	osmo_timer_del(&jolly->speech_timer);
 	reset_speech_string(jolly);
 
-	PDEBUG(DJOLLY, DEBUG_INFO, "Sending Release sequence on channel %s.\n", jolly->sender.kanal);
-	timer_start(&jolly->speech_timer, SPEECH_DELAY_RELEASE);
+	LOGP(DJOLLY, LOGL_INFO, "Sending Release sequence on channel %s.\n", jolly->sender.kanal);
+	osmo_timer_schedule(&jolly->speech_timer, SPEECH_DELAY_RELEASE);
 	jolly_new_state(jolly, STATE_RELEASED);
 }
 
 /* Enter paging state and transmit 4 paging tones. */
 static void jolly_page(jolly_t *jolly, const char *dial_string)
 {
-	PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Entering paging state, sending paging sequence to '%s'.\n", dial_string);
+	LOGP_CHAN(DJOLLY, LOGL_INFO, "Entering paging state, sending paging sequence to '%s'.\n", dial_string);
 	/* set station ID before state change, so status is shown correctly */
 	strncpy(jolly->station_id, dial_string, sizeof(jolly->station_id) - 1);
-	timer_start(&jolly->timer, T_PAGING);
-	timer_start(&jolly->speech_timer, SPEECH_DELAY_PAGING);
+	osmo_timer_schedule(&jolly->timer, T_PAGING);
+	osmo_timer_schedule(&jolly->speech_timer, SPEECH_DELAY_PAGING);
 	jolly_new_state(jolly, STATE_IN_PAGING);
 }
 
 void speech_finished(jolly_t *jolly)
 {
-	PDEBUG(DJOLLY, DEBUG_DEBUG, "speaking finished.\n");
+	LOGP(DJOLLY, LOGL_DEBUG, "speaking finished.\n");
 	switch (jolly->state) {
 	case STATE_OUT_VERIFY:
-		timer_start(&jolly->timer, T_DIAL);
+		osmo_timer_schedule(&jolly->timer, T_DIAL);
 		break;
 	case STATE_IN_PAGING:
-		timer_start(&jolly->speech_timer, SPEECH_DELAY_PAGING);
+		osmo_timer_schedule(&jolly->speech_timer, SPEECH_DELAY_PAGING);
 		break;
 	case STATE_RELEASED:
 	 	jolly_go_idle(jolly);
@@ -331,7 +331,7 @@ void jolly_receive_dtmf(void *priv, char digit, dtmf_meas_t *meas)
 {
 	jolly_t *jolly = (jolly_t *) priv;
 
-	PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received dtmf digit '%c'  frequency %.1f %.1f  amplitude %.1f %.1f dB.\n",
+	LOGP_CHAN(DJOLLY, LOGL_INFO, "Received dtmf digit '%c'  frequency %.1f %.1f  amplitude %.1f %.1f dB.\n",
 		digit,
 		meas->frequency_low, meas->frequency_high,
 		level2db(meas->amplitude_low), level2db(meas->amplitude_high));
@@ -343,68 +343,68 @@ void jolly_receive_dtmf(void *priv, char digit, dtmf_meas_t *meas)
 	switch (jolly->state) {
 	case STATE_IDLE:
 		if (digit == '*') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received start digit, entering dialing state.\n");
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received start digit, entering dialing state.\n");
 			jolly->dialing[0] = '\0';
-			timer_start(&jolly->timer, T_DIAL);
+			osmo_timer_schedule(&jolly->timer, T_DIAL);
 			jolly_new_state(jolly, STATE_OUT_DIALING);
 			break;
 		}
 		break;
 	case STATE_OUT_DIALING:
 		if (digit == '*') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received start digit again, resetting dialing state.\n");
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received start digit again, resetting dialing state.\n");
 			jolly->dialing[0] = '\0';
-			timer_start(&jolly->timer, T_DIAL);
+			osmo_timer_schedule(&jolly->timer, T_DIAL);
 			break;
 		}
 		if (digit >= '0' && digit <= '9' && strlen(jolly->dialing) < sizeof(jolly->dialing) - 1) {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received dialed digit '%c'\n", digit);
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received dialed digit '%c'\n", digit);
 			jolly->dialing[strlen(jolly->dialing) + 1] = '\0';
 			jolly->dialing[strlen(jolly->dialing)] = digit;
-			timer_start(&jolly->timer, T_DIAL);
+			osmo_timer_schedule(&jolly->timer, T_DIAL);
 			break;
 		}
 		if (digit == '#') {
-			timer_stop(&jolly->timer);
+			osmo_timer_del(&jolly->timer);
 			if (!jolly->dialing[0]) {
-				PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received stop digit but no dial string, entering idle state.\n");
+				LOGP_CHAN(DJOLLY, LOGL_INFO, "Received stop digit but no dial string, entering idle state.\n");
 				jolly_go_idle(jolly);
 				break;
 			}
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received stop digit, entering verify state.\n");
-			timer_start(&jolly->speech_timer, SPEECH_DELAY_VERIFY);
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received stop digit, entering verify state.\n");
+			osmo_timer_schedule(&jolly->speech_timer, SPEECH_DELAY_VERIFY);
 			jolly_new_state(jolly, STATE_OUT_VERIFY);
 			break;
 		}
 		break;
 	case STATE_OUT_VERIFY:
 		if (digit == '*') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received start digit, entering dialing state.\n");
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received start digit, entering dialing state.\n");
 			reset_speech_string(jolly);
 			jolly->dialing[0] = '\0';
-			timer_start(&jolly->timer, T_DIAL);
+			osmo_timer_schedule(&jolly->timer, T_DIAL);
 			jolly_new_state(jolly, STATE_OUT_DIALING);
 			break;
 		}
 		if (digit == '#') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received ack digit, entering call state.\n");
-			timer_stop(&jolly->timer);
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received ack digit, entering call state.\n");
+			osmo_timer_del(&jolly->timer);
 			jolly->callref = call_up_setup(NULL, jolly->dialing, OSMO_CC_NETWORK_JOLLYCOM_NONE, "");
 			jolly_new_state(jolly, STATE_CALL);
 		}
 		break;
 	case STATE_CALL:
 		if (digit == '*') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received start digit, entering call dialing state.\n");
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received start digit, entering call dialing state.\n");
 			jolly->dialing[0] = '\0';
-			timer_start(&jolly->timer, T_DIAL2);
+			osmo_timer_schedule(&jolly->timer, T_DIAL2);
 			jolly_new_state(jolly, STATE_CALL_DIALING);
 			break;
 		}
 		break;
 	case STATE_CALL_DIALING:
 		if (digit == '#') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received stop digit, going idle.\n");
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received stop digit, going idle.\n");
 			call_up_release(jolly->callref, CAUSE_NORMAL);
 			jolly->callref = 0;
 			jolly_release(jolly);
@@ -413,7 +413,7 @@ void jolly_receive_dtmf(void *priv, char digit, dtmf_meas_t *meas)
 		break;
 	case STATE_IN_PAGING:
 		if (digit == '#') {
-			PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Received answer digit, entering call state.\n");
+			LOGP_CHAN(DJOLLY, LOGL_INFO, "Received answer digit, entering call state.\n");
 			call_up_answer(jolly->callref, jolly->station_id);
 			jolly_new_state(jolly, STATE_CALL);
 			break;
@@ -431,19 +431,19 @@ static void jolly_timeout(void *data)
 
 	switch (jolly->state) {
 	case STATE_OUT_DIALING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Timeout while dialing, going idle.\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Timeout while dialing, going idle.\n");
 	 	jolly_go_idle(jolly);
 		break;
 	case STATE_OUT_VERIFY:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Timeout while verifying, going idle.\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Timeout while verifying, going idle.\n");
 	 	jolly_go_idle(jolly);
 		break;
 	case STATE_CALL_DIALING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Timeout while dialing during call.\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Timeout while dialing during call.\n");
 		jolly_new_state(jolly, STATE_CALL);
 		break;
 	case STATE_IN_PAGING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Timeout while paging, going idle.\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Timeout while paging, going idle.\n");
 		call_up_release(jolly->callref, CAUSE_NOANSWER);
 		jolly->callref = 0;
 	 	jolly_go_idle(jolly);
@@ -459,15 +459,15 @@ static void jolly_speech_timeout(void *data)
 
 	switch (jolly->state) {
 	case STATE_OUT_VERIFY:
-		PDEBUG_CHAN(DJOLLY, DEBUG_DEBUG, "Start verifying speech.\n");
+		LOGP_CHAN(DJOLLY, LOGL_DEBUG, "Start verifying speech.\n");
 		set_speech_string(jolly, 'o', jolly->dialing);
 		break;
 	case STATE_IN_PAGING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_DEBUG, "Start paging speech.\n");
+		LOGP_CHAN(DJOLLY, LOGL_DEBUG, "Start paging speech.\n");
 		set_speech_string(jolly, 'i', jolly->station_id);
 		break;
 	case STATE_RELEASED:
-		PDEBUG_CHAN(DJOLLY, DEBUG_DEBUG, "Start release speech.\n");
+		LOGP_CHAN(DJOLLY, LOGL_DEBUG, "Start release speech.\n");
 		set_speech_string(jolly, 'r', "");
 	default:
 		break;
@@ -487,7 +487,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (sender) {
-		PDEBUG(DJOLLY, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
+		LOGP(DJOLLY, LOGL_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
@@ -498,11 +498,11 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DJOLLY, DEBUG_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
+		LOGP(DJOLLY, LOGL_NOTICE, "Outgoing call, but no free channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG_CHAN(DJOLLY, DEBUG_INFO, "Call to mobile station.\n");
+	LOGP_CHAN(DJOLLY, LOGL_INFO, "Call to mobile station.\n");
 
 	/* 3. trying to page mobile station */
 	jolly->callref = callref;
@@ -526,7 +526,7 @@ void call_down_disconnect(int callref, int cause)
 	sender_t *sender;
 	jolly_t *jolly;
 
-	PDEBUG(DJOLLY, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DJOLLY, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		jolly = (jolly_t *) sender;
@@ -534,7 +534,7 @@ void call_down_disconnect(int callref, int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DJOLLY, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DJOLLY, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -544,7 +544,7 @@ void call_down_disconnect(int callref, int cause)
 		return;
 	switch (jolly->state) {
 	case STATE_IN_PAGING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Outgoing disconnect, during paging, releaseing.\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Outgoing disconnect, during paging, releaseing.\n");
 	 	jolly_go_idle(jolly);
 		break;
 	default:
@@ -563,7 +563,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 	sender_t *sender;
 	jolly_t *jolly;
 
-	PDEBUG(DJOLLY, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DJOLLY, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	for (sender = sender_head; sender; sender = sender->next) {
 		jolly = (jolly_t *) sender;
@@ -571,7 +571,7 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DJOLLY, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DJOLLY, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
@@ -581,11 +581,11 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 	switch (jolly->state) {
 	case STATE_CALL:
 	case STATE_CALL_DIALING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Outgoing release, during call, releasing\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Outgoing release, during call, releasing\n");
 	 	jolly_release(jolly);
 		break;
 	case STATE_IN_PAGING:
-		PDEBUG_CHAN(DJOLLY, DEBUG_NOTICE, "Outgoing release, during paging, releaseing.\n");
+		LOGP_CHAN(DJOLLY, LOGL_NOTICE, "Outgoing release, during paging, releaseing.\n");
 	 	jolly_go_idle(jolly);
 		break;
 	default:

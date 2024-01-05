@@ -8,6 +8,7 @@ libmobile_a_SOURCES = \
 	console.c \
 	testton.c \
 	cause.c \
+	get_time.c \
 	main_mobile.c
 
 if HAVE_ALSA

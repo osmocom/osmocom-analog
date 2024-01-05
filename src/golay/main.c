@@ -27,7 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
@@ -172,7 +172,7 @@ static void myhandler(void)
 			if (tx)
 				golay_msg_send(buffer);
 			else
-				PDEBUG(DGOLAY, DEBUG_ERROR, "Failed to send message, transmitter is not enabled!\n");
+				LOGP(DGOLAY, LOGL_ERROR, "Failed to send message, transmitter is not enabled!\n");
 		}
 	}
 }
@@ -294,6 +294,7 @@ fail:
 		golay_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	options_free();

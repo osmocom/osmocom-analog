@@ -29,8 +29,8 @@
 #include <sys/stat.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
-#include "../libdebug/debug.h"
-#include "../libtimer/timer.h"
+#include "../liblogging/logging.h"
+#include <osmocom/core/timer.h>
 #include "../anetz/freiton.h"
 #include "../anetz/besetztton.h"
 #include "../liboptions/options.h"
@@ -210,6 +210,7 @@ fail:
 		jolly_destroy(sender_head);
 
 	/* exits */
+	main_mobile_exit();
 	fm_exit();
 
 	options_free();

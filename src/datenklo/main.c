@@ -26,9 +26,9 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
-#include "../libtimer/timer.h"
+#include <osmocom/core/timer.h>
 #include "../liboptions/options.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libfsk/fsk.h"
 #include "../libwave/wave.h"
 #include "../libdisplay/display.h"
@@ -80,6 +80,7 @@ void print_help(const char *arg0)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
+	logging_print_help();
 	printf(" -T --am791x-type 7910 | 7911\n");
 	printf("        Give modem chip type. (Default = 791%d)\n", am791x_type);
 	printf(" -M --mc <mode>\n");
@@ -158,13 +159,11 @@ static int handle_options(int short_option, int argi, char **argv)
 		print_help(argv[0]);
 		return 0;
 	case 'v':
-		if (!strcasecmp(argv[argi], "list")) {
-			debug_list_cat();
+		rc = parse_logging_opt(argv[argi]);
+		if (rc > 0)
 			return 0;
-		}
-		rc = parse_debug_opt(argv[argi]);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to parse debug option, please use -h for help.\n");
+			fprintf(stderr, "Failed to parse logging option, please use -h for help.\n");
 			return rc;
 		}
 		break;
@@ -265,6 +264,8 @@ int main(int argc, char *argv[])
 	int rc, argi;
 	int i;
 
+	logging_init();
+
 	/* handle options / config file */
 	add_options();
 	rc = options_config_file(argc, argv, "~/.osmocom/analog/datenklo.conf", handle_options);
@@ -324,4 +325,6 @@ fail:
 
 	return 0;
 }
+
+void osmo_cc_set_log_cat(void) {}
 

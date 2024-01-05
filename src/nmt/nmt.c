@@ -26,9 +26,10 @@
 #include <errno.h>
 #include <time.h>
 #include "../libsample/sample.h"
-#include "../libdebug/debug.h"
+#include "../liblogging/logging.h"
 #include "../libmobile/cause.h"
-#include "../libosmocc/message.h"
+#include "../libmobile/get_time.h"
+#include <osmocom/cc/message.h>
 #include "nmt.h"
 #include "transaction.h"
 #include "dsp.h"
@@ -51,13 +52,13 @@
 static int sms_ref = 0;
 
 /* Timers */
-#define PAGING_TO	1.0	/* wait for paging response: fictive value */
-#define RELEASE_TO	2.0	/* how long do we wait for release guard of the phone */
-#define DIALING_TO	1.0	/* if we have a pause during dialing, we abort the call */
-#define CHANNEL_TO	2.0	/* how long do we wait for phone to appear on assigned channel */
-#define RINGING_TO	60.0	/* how long may the phone ring */
-#define SUPERVISORY_TO1	3.0	/* 3 sec to detect after setup */
-#define SUPERVISORY_TO2	20.0	/* 20 sec lost until abort */
+#define PAGING_TO	1,0	/* wait for paging response: fictive value */
+#define RELEASE_TO	2,0	/* how long do we wait for release guard of the phone */
+#define DIALING_TO	1,0	/* if we have a pause during dialing, we abort the call */
+#define CHANNEL_TO	2,0	/* how long do we wait for phone to appear on assigned channel */
+#define RINGING_TO	60,0	/* how long may the phone ring */
+#define SUPERVISORY_TO1	3	/* 3 sec to detect after setup */
+#define SUPERVISORY_TO2	20,0	/* 20 sec lost until abort */
 #define DTMF_DURATION	0.1	/* 100ms */
 
 /* Counters */
@@ -127,7 +128,7 @@ static void nmt_new_state(nmt_t *nmt, enum nmt_state new_state)
 {
 	if (nmt->state == new_state)
 		return;
-	PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "State change: %s -> %s\n", nmt_state_name(nmt->state), nmt_state_name(new_state));
+	LOGP_CHAN(DNMT, LOGL_DEBUG, "State change: %s -> %s\n", nmt_state_name(nmt->state), nmt_state_name(new_state));
 	nmt->state = new_state;
 	nmt_display_status();
 }
@@ -226,11 +227,11 @@ const char *nmt_dir_name(enum nmt_direction dir)
 static int dialstring2number(const char *dialstring, char *ms_country, char *ms_number)
 {
 	if (strlen(dialstring) != 7) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Wrong number of digits, use 7 digits: ZXXXXXX (Z=country, X=mobile number)\n");
+		LOGP(DNMT, LOGL_NOTICE, "Wrong number of digits, use 7 digits: ZXXXXXX (Z=country, X=mobile number)\n");
 		return -1;
 	}
 	if (dialstring[0] < '0' || dialstring[0] > '9') {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Invalid country digit (first digit) of dial string\n");
+		LOGP(DNMT, LOGL_NOTICE, "Invalid country digit (first digit) of dial string\n");
 		return -1;
 	}
 	*ms_country = dialstring[0];
@@ -272,46 +273,46 @@ int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_
 
 	/* check channel matching and set deviation factor */
 	if (nmt_channel2freq(nmt_system, country, atoi(kanal), 0, &deviation_factor, &scandinavia, &tested) == 0.0) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Channel number %s invalid, use '-Y list' to get a list of available channels.\n", kanal);
+		LOGP(DNMT, LOGL_NOTICE, "Channel number %s invalid, use '-Y list' to get a list of available channels.\n", kanal);
 		return -EINVAL;
 	}
 
 	if (!tested) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** The given NMT country has not been tested yet. Please tell the Author, if it works.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** The given NMT country has not been tested yet. Please tell the Author, if it works.\n");
 	}
 
 	if (scandinavia && atoi(kanal) >= 201) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Channels numbers above 200 have been specified, but never used. These 'interleaved channels are probably not supports by the phone.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Channels numbers above 200 have been specified, but never used. These 'interleaved channels are probably not supports by the phone.\n");
 	}
 
 	if (scandinavia && atoi(kanal) >= 181 && atoi(kanal) <= 200) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Extended channel numbers (181..200) have been specified, but never been supported for sure. There is no phone to test with, so don't use it!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Extended channel numbers (181..200) have been specified, but never been supported for sure. There is no phone to test with, so don't use it!\n");
 	}
 
 	if (chan_type == CHAN_TYPE_TEST && !loopback) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel can be used for nothing but testing signal decoder.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Selected channel can be used for nothing but testing signal decoder.\n");
 	}
 
 	if (chan_type == CHAN_TYPE_CC_TC && send_clock) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Sending clock on combined CC + TC is not applicable.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Sending clock on combined CC + TC is not applicable.\n");
 	}
 
 	nmt = calloc(1, sizeof(nmt_t));
 	if (!nmt) {
-		PDEBUG(DNMT, DEBUG_ERROR, "No memory!\n");
+		LOGP(DNMT, LOGL_ERROR, "No memory!\n");
 		return -ENOMEM;
 	}
 
-	PDEBUG(DNMT, DEBUG_DEBUG, "Creating 'NMT' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
+	LOGP(DNMT, LOGL_DEBUG, "Creating 'NMT' instance for channel = %s (sample rate %d).\n", kanal, samplerate);
 
 	/* init general part of transceiver */
 	rc = sender_create(&nmt->sender, kanal, nmt_channel2freq(nmt_system, country, atoi(kanal), 0, NULL, NULL, NULL), nmt_channel2freq(nmt_system, country, atoi(kanal), 1, NULL, NULL, NULL), device, use_sdr, samplerate, rx_gain, tx_gain, pre_emphasis, de_emphasis, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
-		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init transceiver process!\n");
+		LOGP(DNMT, LOGL_ERROR, "Failed to init transceiver process!\n");
 		goto error;
 	}
 
-	timer_init(&nmt->timer, nmt_timeout, nmt);
+	osmo_timer_setup(&nmt->timer, nmt_timeout, nmt);
 	nmt->sysinfo.system = nmt_system;
 	nmt->sysinfo.chan_type = chan_type;
 	nmt->sysinfo.ms_power = ms_power;
@@ -326,35 +327,35 @@ int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_
 	/* init audio processing */
 	rc = dsp_init_sender(nmt, deviation_factor);
 	if (rc < 0) {
-		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init audio processing!\n");
+		LOGP(DNMT, LOGL_ERROR, "Failed to init audio processing!\n");
 		goto error;
 	}
 
 	/* init DMS processing */
 	rc = dms_init_sender(nmt);
 	if (rc < 0) {
-		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init DMS processing!\n");
+		LOGP(DNMT, LOGL_ERROR, "Failed to init DMS processing!\n");
 		goto error;
 	}
 
 	/* init SMS processing */
 	rc = sms_init_sender(nmt);
 	if (rc < 0) {
-		PDEBUG(DNMT, DEBUG_ERROR, "Failed to init SMS processing!\n");
+		LOGP(DNMT, LOGL_ERROR, "Failed to init SMS processing!\n");
 		goto error;
 	}
 
 	/* go into idle state */
 	nmt_go_idle(nmt);
 
-	PDEBUG(DNMT, DEBUG_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(nmt_system, chan_type), chan_type_long_name(nmt_system, chan_type));
+	LOGP(DNMT, LOGL_NOTICE, "Created channel #%s of type '%s' = %s\n", kanal, chan_type_short_name(nmt_system, chan_type), chan_type_long_name(nmt_system, chan_type));
 	if (nmt_long_name_by_short_name(nmt_system, country))
-	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using country '%s'\n", nmt_long_name_by_short_name(nmt_system, country));
-	PDEBUG(DNMT, DEBUG_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, (nmt_system == 450) ? nmt_flip_ten((traffic_area & 0xf)) : (traffic_area & 0xf), area_no);
+	LOGP(DNMT, LOGL_NOTICE, " -> Using country '%s'\n", nmt_long_name_by_short_name(nmt_system, country));
+	LOGP(DNMT, LOGL_NOTICE, " -> Using traffic area %d,%d and area no %d\n", traffic_area >> 4, (nmt_system == 450) ? nmt_flip_ten((traffic_area & 0xf)) : (traffic_area & 0xf), area_no);
 	if (nmt->supervisory)
-		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using supervisory signal %d\n", supervisory);
+		LOGP(DNMT, LOGL_NOTICE, " -> Using supervisory signal %d\n", supervisory);
 	else
-		PDEBUG(DNMT, DEBUG_NOTICE, " -> Using no supervisory signal\n");
+		LOGP(DNMT, LOGL_NOTICE, " -> Using no supervisory signal\n");
 
 	return 0;
 
@@ -392,35 +393,35 @@ void nmt_check_channels(int __attribute__((unused)) nmt_system)
 		}
 	}
 	if ((cca || ccb) && !tc) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No registration and no call is possible.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use at least one 'TC' or use combined 'CC/TC'!\n");
+		LOGP(DNMT, LOGL_NOTICE, "\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Selected channel(s) can be used for control only.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** No registration and no call is possible.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Use at least one 'TC' or use combined 'CC/TC'!\n");
 		note = 1;
 	}
 	if (tc && !(cca || ccb)) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the mobile phone is possible.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' or use combined 'CC/TC'!\n");
+		LOGP(DNMT, LOGL_NOTICE, "\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Selected channel(s) can be used for traffic only.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** No call to the mobile phone is possible.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Use one 'CC' or use combined 'CC/TC'!\n");
 		note = 1;
 	}
 	if (cca && !ccb) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control of MS type A only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type B phone is possible.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' instead!\n");
+		LOGP(DNMT, LOGL_NOTICE, "\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Selected channel(s) can be used for control of MS type A only.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** No call to the MS type B phone is possible.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Use one 'CC' instead!\n");
 		note = 1;
 	}
 	if (!cca && ccb) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Selected channel(s) can be used for control of MS type B only.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** No call to the MS type A phone is possible.\n");
-		PDEBUG(DNMT, DEBUG_NOTICE, "*** Use one 'CC' instead!\n");
+		LOGP(DNMT, LOGL_NOTICE, "\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Selected channel(s) can be used for control of MS type B only.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** No call to the MS type A phone is possible.\n");
+		LOGP(DNMT, LOGL_NOTICE, "*** Use one 'CC' instead!\n");
 		note = 1;
 	}
 	if (note)
-		PDEBUG(DNMT, DEBUG_NOTICE, "\n");
+		LOGP(DNMT, LOGL_NOTICE, "\n");
 }
 
 /* Destroy transceiver instance and unlink from list. */
@@ -428,11 +429,11 @@ void nmt_destroy(sender_t *sender)
 {
 	nmt_t *nmt = (nmt_t *) sender;
 
-	PDEBUG(DNMT, DEBUG_DEBUG, "Destroying 'NMT' instance for channel = %s.\n", sender->kanal);
+	LOGP(DNMT, LOGL_DEBUG, "Destroying 'NMT' instance for channel = %s.\n", sender->kanal);
 	dsp_cleanup_sender(nmt);
 	dms_cleanup_sender(nmt);
 	sms_cleanup_sender(nmt);
-	timer_exit(&nmt->timer);
+	osmo_timer_del(&nmt->timer);
 	sender_destroy(&nmt->sender);
 	free(nmt);
 }
@@ -440,11 +441,11 @@ void nmt_destroy(sender_t *sender)
 /* Abort connection towards mobile station by sending idle digits. */
 void nmt_go_idle(nmt_t *nmt)
 {
-	timer_stop(&nmt->timer);
+	osmo_timer_del(&nmt->timer);
 	dms_reset(nmt);
 	sms_reset(nmt);
 
-	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.system, nmt->sysinfo.chan_type));
+	LOGP_CHAN(DNMT, LOGL_INFO, "Entering IDLE state, sending idle frames on %s.\n", chan_type_long_name(nmt->sysinfo.system, nmt->sysinfo.chan_type));
 	nmt->trans = NULL; /* remove transaction before state change, so status is shown correctly */
 	nmt_new_state(nmt, STATE_IDLE);
 	nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
@@ -462,17 +463,17 @@ static void nmt_release(nmt_t *nmt)
 {
 	transaction_t *trans = nmt->trans;
 
-	timer_stop(&nmt->timer);
+	osmo_timer_del(&nmt->timer);
 
-	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Releasing connection towards mobile station.\n");
+	LOGP_CHAN(DNMT, LOGL_INFO, "Releasing connection towards mobile station.\n");
 	if (trans->callref) {
-		PDEBUG_CHAN(DNMT, DEBUG_ERROR, "Callref already set, please fix!\n");
+		LOGP_CHAN(DNMT, LOGL_ERROR, "Callref already set, please fix!\n");
 		abort();
 	}
 	nmt_new_state(nmt, STATE_MT_RELEASE);
 	nmt->tx_frame_count = 0;
 	nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
-	timer_start(&nmt->timer, RELEASE_TO);
+	osmo_timer_schedule(&nmt->timer, RELEASE_TO);
 }
 
 /* Enter paging state and transmit phone's number on calling channel */
@@ -481,9 +482,9 @@ static void nmt_page(transaction_t *trans, int try)
 	sender_t *sender;
 	nmt_t *nmt;
 
-	PDEBUG(DNMT, DEBUG_INFO, "Entering paging state (try %d), sending call to '%c,%s'.\n", try, trans->subscriber.country, trans->subscriber.number);
+	LOGP(DNMT, LOGL_INFO, "Entering paging state (try %d), sending call to '%c,%s'.\n", try, trans->subscriber.country, trans->subscriber.number);
 	trans->page_try = try;
-	timer_start(&trans->timer, PAGING_TO);
+	osmo_timer_schedule(&trans->timer, PAGING_TO);
 	/* page on all CC (CC/TC) */
 	for (sender = sender_head; sender; sender = sender->next) {
 		nmt = (nmt_t *)sender;
@@ -492,7 +493,7 @@ static void nmt_page(transaction_t *trans, int try)
 		/* page on all idle channels and on channels we previously paged */
 		if (nmt->state != STATE_IDLE && nmt->trans != trans)
 			continue;
-		PDEBUG(DNMT, DEBUG_INFO, "Paging on channel %s.\n", sender->kanal);
+		LOGP(DNMT, LOGL_INFO, "Paging on channel %s.\n", sender->kanal);
 		nmt->trans = trans; /* add transaction before state change, so status is shown correctly */
 		nmt_new_state(nmt, STATE_MT_PAGING);
 		nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
@@ -535,12 +536,12 @@ static int match_channel(nmt_t *nmt, frame_t *frame)
 	/* check channel match */
 	rc = nmt_decode_channel(nmt->sysinfo.system, frame->channel_no, &channel, &power);
 	if (rc < 0) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Frame with illegal encoded channel received, ignoring.\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Frame with illegal encoded channel received, ignoring.\n");
 		return 0;
 	}
 	/* in case of interleaved channel, ignore the missing upper bit */
 	if ((channel % 1024) != (atoi(nmt->sender.kanal) % 1024)) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Frame for different channel %d received, ignoring.\n", channel);
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Frame for different channel %d received, ignoring.\n", channel);
 		return 0;
 	}
 
@@ -559,13 +560,13 @@ static int match_area(nmt_t *nmt, frame_t *frame)
 	if (area_no == 0 && nmt->sysinfo.area_no != 0)
 		area_no = 4;
 	if (area_no != nmt->sysinfo.area_no) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Received area no (%d) does not match the base station's area no (%d), ignoring.\n", area_no, nmt->sysinfo.area_no);
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Received area no (%d) does not match the base station's area no (%d), ignoring.\n", area_no, nmt->sysinfo.area_no);
 		return 0;
 	}
 
 	traffic_area = ((frame->area_info & 0x3) << 4) | frame->traffic_area;
 	if (nmt->sysinfo.traffic_area != 0 && (nmt->sysinfo.traffic_area & 0x3f) != traffic_area) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Received 6 bits of traffic area (0x%02x) does not match the 6 bits of base station's traffic area (0x%02x), ignoring.\n", nmt->sysinfo.traffic_area & 0x3f, traffic_area);
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Received 6 bits of traffic area (0x%02x) does not match the 6 bits of base station's traffic area (0x%02x), ignoring.\n", nmt->sysinfo.traffic_area & 0x3f, traffic_area);
 		return 0;
 	}
 skip_area:
@@ -577,11 +578,11 @@ skip_area:
 static int match_subscriber(transaction_t *trans, frame_t *frame)
 {
 	if (nmt_digits2value(&trans->subscriber.country, 1) != frame->ms_country) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Received non matching subscriber counrtry, ignoring.\n");
+		LOGP(DNMT, LOGL_NOTICE, "Received non matching subscriber counrtry, ignoring.\n");
 		return 0;
 	}
 	if (nmt_digits2value(trans->subscriber.number, 6) != frame->ms_number) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Received non matching subscriber number, ignoring.\n");
+		LOGP(DNMT, LOGL_NOTICE, "Received non matching subscriber number, ignoring.\n");
 		return 0;
 	}
 
@@ -692,12 +693,12 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 		nmt_value2digits(frame->ms_country, &subscr.country, 1);
 		nmt_value2digits(frame->ms_number, subscr.number, 6);
 
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received roaming seizure from subscriber %c,%s\n", subscr.country, subscr.number);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received roaming seizure from subscriber %c,%s\n", subscr.country, subscr.number);
 
 		/* create transaction */
 		trans = create_transaction(&subscr);
 		if (!trans) {
-			PDEBUG(DNMT, DEBUG_NOTICE, "Failed to create transaction!\n");
+			LOGP(DNMT, LOGL_NOTICE, "Failed to create transaction!\n");
 			break;
 		}
 
@@ -722,12 +723,12 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 		if (frame->mt == NMT_MESSAGE_12)
 			subscr.coinbox = 1;
 
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received call from subscriber %c,%s%s\n", subscr.country, subscr.number, (subscr.coinbox) ? " (coinbox)" : "");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received call from subscriber %c,%s%s\n", subscr.country, subscr.number, (subscr.coinbox) ? " (coinbox)" : "");
 
 		/* create transaction */
 		trans = create_transaction(&subscr);
 		if (!trans) {
-			PDEBUG(DNMT, DEBUG_NOTICE, "Failed to create transaction!\n");
+			LOGP(DNMT, LOGL_NOTICE, "Failed to create transaction!\n");
 			break;
 		}
 
@@ -742,7 +743,7 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 	case NMT_MESSAGE_13a: /* line signal */
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -753,10 +754,10 @@ static void rx_idle(nmt_t *nmt, frame_t *frame)
 static void tx_roaming_ident(nmt_t *nmt, frame_t *frame)
 {
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Sending identity request.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Sending identity request.\n");
 	tx_ident(nmt, frame);
 	if (nmt->tx_frame_count == 8) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout waiting for identity reply\n");
 		nmt_release(nmt);
 	}
 }
@@ -774,16 +775,16 @@ static void rx_roaming_ident(nmt_t *nmt, frame_t *frame)
 		if (!match_subscriber(trans, frame))
 			break;
 		if (nmt->rx_frame_count < 2) {
-			PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Skipping second seizure frame\n");
+			LOGP_CHAN(DNMT, LOGL_DEBUG, "Skipping second seizure frame\n");
 			break;
 		}
 		nmt_value2digits(frame->ms_password, trans->subscriber.password, 3);
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received identity confirm (password %s).\n", trans->subscriber.password);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received identity confirm (password %s).\n", trans->subscriber.password);
 		nmt_new_state(nmt, STATE_ROAMING_CONFIRM);
 		nmt->tx_frame_count = 0;
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -791,7 +792,7 @@ static void tx_roaming_confirm(nmt_t *nmt, frame_t *frame)
 {
 	set_line_signal(nmt, frame, 3);
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'Roaming updating confirmation'.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Send 'Roaming updating confirmation'.\n");
 	if (nmt->tx_frame_count == 2)
 		nmt_release(nmt); /* continue with this frame, then release */
 }
@@ -800,7 +801,7 @@ static void rx_roaming_confirm(nmt_t *nmt, frame_t *frame)
 {
 	switch (frame->mt) {
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -811,10 +812,10 @@ static void rx_roaming_confirm(nmt_t *nmt, frame_t *frame)
 static void tx_mo_ident(nmt_t *nmt, frame_t *frame)
 {
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Sending identity request.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Sending identity request.\n");
 	tx_ident(nmt, frame);
 	if (nmt->tx_frame_count == 8) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout waiting for identity reply\n");
 		nmt_release(nmt);
 	}
 }
@@ -831,16 +832,16 @@ static void rx_mo_ident(nmt_t *nmt, frame_t *frame)
 		if (!match_subscriber(trans, frame))
 			break;
 		if (nmt->rx_frame_count < 2) {
-			PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Skipping second seizure frame\n");
+			LOGP_CHAN(DNMT, LOGL_DEBUG, "Skipping second seizure frame\n");
 			break;
 		}
 		nmt_value2digits(frame->ms_password, trans->subscriber.password, 3);
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received identity confirm (password %s).\n", trans->subscriber.password);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received identity confirm (password %s).\n", trans->subscriber.password);
 		nmt_new_state(nmt, STATE_MO_CONFIRM);
 		nmt->tx_frame_count = 0;
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -849,13 +850,13 @@ static void tx_mo_confirm(nmt_t *nmt, frame_t *frame)
 	set_line_signal(nmt, frame, 3);
 	if (++nmt->tx_frame_count <= 2) {
 		if (nmt->tx_frame_count == 1)
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'Proceed to send'.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Send 'Proceed to send'.\n");
 	} else {
 		if (nmt->tx_frame_count == 3) {
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send dial tone.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Send dial tone.\n");
 			nmt_new_state(nmt, STATE_MO_DIALING);
 			nmt_set_dsp_mode(nmt, DSP_MODE_DIALTONE);
-			timer_start(&nmt->timer, DIALING_TO);
+			osmo_timer_schedule(&nmt->timer, DIALING_TO);
 		}
 	}
 }
@@ -873,7 +874,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
-		timer_start(&nmt->timer, DIALING_TO);
+		osmo_timer_schedule(&nmt->timer, DIALING_TO);
 		/* max digits received */
 		if (len + 1 == sizeof(nmt->dialing))
 			break;
@@ -894,7 +895,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			goto not_consistent_digit;
 		nmt->dialing[len] = nmt_value2digit(frame->digit);
 		nmt->dialing[len + 1] = '\0';
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (odd)  digit %c.\n", nmt->dialing[len]);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received (odd)  digit %c.\n", nmt->dialing[len]);
 		nmt->rx_frame_count = 0;
 		/* finish dial tone after first digit */
 		if (!len)
@@ -907,7 +908,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
-		timer_start(&nmt->timer, DIALING_TO);
+		osmo_timer_schedule(&nmt->timer, DIALING_TO);
 		/* max digits received */
 		if (len + 1 == sizeof(nmt->dialing))
 			break;
@@ -931,7 +932,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			goto not_consistent_digit;
 		nmt->dialing[len] = nmt_value2digit(frame->digit);
 		nmt->dialing[len + 1] = '\0';
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (even) digit %c.\n", nmt->dialing[len]);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received (even) digit %c.\n", nmt->dialing[len]);
 		nmt->rx_frame_count = 0;
 		break;
 	case NMT_MESSAGE_15: /* idle */
@@ -939,7 +940,7 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 			break;
 		if (nmt->dialing[0] == 'A') {
 			nmt->dialing[0] = '+';
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Dialing includes international '+' sign at the beginning.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Dialing includes international '+' sign at the beginning.\n");
 		}
 		if (nmt->dialing[0] == 'B') {
 			const char *code = NULL;
@@ -979,42 +980,42 @@ static void rx_mo_dialing(nmt_t *nmt, frame_t *frame)
 				break;
 			}
 			if (code)
-				PDEBUG_CHAN(DNMT, DEBUG_INFO, "Dialing includes service code: '%c%c' = '%s'\n", nmt->dialing[0], nmt->dialing[1], code);
+				LOGP_CHAN(DNMT, LOGL_INFO, "Dialing includes service code: '%c%c' = '%s'\n", nmt->dialing[0], nmt->dialing[1], code);
 		}
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Dialing complete %s->%s, call established.\n", &trans->subscriber.country, nmt->dialing);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Dialing complete %s->%s, call established.\n", &trans->subscriber.country, nmt->dialing);
 		if (nmt->dialing[0] == 'B')
 			nmt->dialing[0] = '+';
 		/* setup call */
 		if (!strcmp(nmt->dialing, nmt->smsc_number)) {
 			/* SMS */
-			PDEBUG(DNMT, DEBUG_INFO, "Setup call to SMSC.\n");
+			LOGP(DNMT, LOGL_INFO, "Setup call to SMSC.\n");
 			trans->dms_call = 1;
 		} else {
-			PDEBUG(DNMT, DEBUG_INFO, "Setup call to network.\n");
+			LOGP(DNMT, LOGL_INFO, "Setup call to network.\n");
 			trans->callref = call_up_setup(&trans->subscriber.country, nmt->dialing, OSMO_CC_NETWORK_NMT_NONE, "");
 		}
-		timer_stop(&nmt->timer);
+		osmo_timer_del(&nmt->timer);
 		nmt_new_state(nmt, STATE_MO_COMPLETE);
 		nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
 		nmt->tx_frame_count = 0;
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 
 	return;
 
 missing_digit:
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Missing digit, aborting.\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Missing digit, aborting.\n");
 	nmt_release(nmt);
 	return;
 
 not_right_position:
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
 	return;
 
 not_consistent_digit:
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
 	return;
 }
 
@@ -1025,22 +1026,22 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 	if (++nmt->tx_frame_count <= 4) {
 		set_line_signal(nmt, frame, 6);
 		if (nmt->tx_frame_count == 1)
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'address complete'.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Send 'address complete'.\n");
 	} else {
 		if (nmt->compandor) {
 			set_line_signal(nmt, frame, 5);
 			if (nmt->tx_frame_count == 5)
-				PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
+				LOGP_CHAN(DNMT, LOGL_INFO, "Send 'compandor in'.\n");
 		} else
 			frame->mt = NMT_MESSAGE_6;
 		if (nmt->tx_frame_count == 9) {
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Connect audio.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Connect audio.\n");
 			nmt_new_state(nmt, STATE_ACTIVE);
 			nmt->active_state = ACTIVE_STATE_VOICE;
 			nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
 			if (nmt->supervisory && !trans->dms_call) {
 				super_reset(nmt);
-				timer_start(&nmt->timer, SUPERVISORY_TO1);
+				osmo_timer_schedule(&nmt->timer, SUPERVISORY_TO1,0);
 			}
 		}
 	}
@@ -1048,9 +1049,9 @@ static void tx_mo_complete(nmt_t *nmt, frame_t *frame)
 
 static void timeout_mo_dialing(nmt_t *nmt)
 {
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout while receiving digits.\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout while receiving digits.\n");
 	nmt_release(nmt);
-	PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
+	LOGP(DNMT, LOGL_INFO, "Release call towards network.\n");
 }
 
 /*
@@ -1067,16 +1068,16 @@ static void tx_mt_paging(nmt_t *nmt, frame_t *frame)
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
 	frame->additional_info = nmt_encode_area_no(nmt->sysinfo.area_no);
 	if (++nmt->tx_frame_count == 1) {
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send call to mobile.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Send call to mobile.\n");
 	} else
 		tx_idle(nmt, frame);
 }
 
 void timeout_mt_paging(transaction_t *trans)
 {
-	PDEBUG(DNMT, DEBUG_NOTICE, "No answer from mobile phone (try %d).\n", trans->page_try);
+	LOGP(DNMT, LOGL_NOTICE, "No answer from mobile phone (try %d).\n", trans->page_try);
 	if (trans->page_try == PAGE_TRIES) {
-		PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
+		LOGP(DNMT, LOGL_INFO, "Release call towards network.\n");
 		call_up_release(trans->callref, CAUSE_OUTOFORDER);
 		destroy_transaction(trans);
 		return;
@@ -1097,10 +1098,10 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 			break;
 		if (!match_subscriber(trans, frame))
 			break;
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received call acknowledgment from subscriber %c,%s.\n", trans->subscriber.country, trans->subscriber.number);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received call acknowledgment from subscriber %c,%s.\n", trans->subscriber.country, trans->subscriber.number);
 		if (trans->sms_string[0])
 			trans->dms_call = 1;
-		timer_stop(&trans->timer);
+		osmo_timer_del(&trans->timer);
 		nmt_new_state(nmt, STATE_MT_CHANNEL);
 		trans->nmt = nmt;
 		nmt->tx_frame_count = 0;
@@ -1114,7 +1115,7 @@ static void rx_mt_paging(nmt_t *nmt, frame_t *frame)
 		}
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1126,8 +1127,8 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 	/* get free channel (after releasing all channels) */
 	tc = search_free_tc(nmt);
 	if (!tc) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "TC is not free anymore.\n");
-		PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "TC is not free anymore.\n");
+		LOGP(DNMT, LOGL_INFO, "Release call towards network.\n");
 		call_up_release(trans->callref, CAUSE_NOCHANNEL);
 		trans->callref = 0;
 		nmt_release(nmt);
@@ -1138,12 +1139,12 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 
 	if (nmt != tc) {
 		/* link trans and tc together, so we can continue with channel assignment */
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Switching to TC channel #%s.\n", tc->sender.kanal);
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Switching to TC channel #%s.\n", tc->sender.kanal);
 		nmt_go_idle(nmt);
 		tc->trans = trans;
 		trans->nmt = tc;
 	} else
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Staying on CC/TC channel #%s.\n", tc->sender.kanal);
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Staying on CC/TC channel #%s.\n", tc->sender.kanal);
 	nmt_new_state(tc, STATE_MT_IDENT);
 	tc->tx_frame_count = 0;
 
@@ -1154,7 +1155,7 @@ static void tx_mt_channel(nmt_t *nmt, frame_t *frame)
 	frame->ms_country = nmt_digits2value(&trans->subscriber.country, 1);
 	frame->ms_number = nmt_digits2value(trans->subscriber.number, 6);
 	frame->tc_no = nmt_encode_tc(tc->sysinfo.system, atoi(tc->sender.kanal), tc->sysinfo.ms_power);
-	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send channel activation to mobile.\n");
+	LOGP_CHAN(DNMT, LOGL_INFO, "Send channel activation to mobile.\n");
 }
 
 static void tx_mt_ident(nmt_t *nmt, frame_t *frame)
@@ -1162,11 +1163,11 @@ static void tx_mt_ident(nmt_t *nmt, frame_t *frame)
 	transaction_t *trans = nmt->trans;
 
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Sending identity request.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Sending identity request.\n");
 	tx_ident(nmt, frame);
 	if (nmt->tx_frame_count == 8) {
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout waiting for identity reply\n");
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Release call towards network.\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout waiting for identity reply\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Release call towards network.\n");
 		call_up_release(trans->callref, CAUSE_TEMPFAIL);
 		destroy_transaction(trans);
 	}
@@ -1181,7 +1182,7 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 		if (!match_subscriber(trans, frame))
 			break;
 		nmt_value2digits(frame->ms_password, trans->subscriber.password, 3);
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received identity (password %s).\n", trans->subscriber.password);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received identity (password %s).\n", trans->subscriber.password);
 		if (trans->dms_call) {
 			nmt_new_state(nmt, STATE_MT_AUTOANSWER);
 			nmt->wait_autoanswer = 1;
@@ -1196,12 +1197,12 @@ static void rx_mt_ident(nmt_t *nmt, frame_t *frame)
 				nmt->tx_frame_count = 0;
 				nmt->tx_callerid_count = 0;
 			}
-			timer_start(&nmt->timer, RINGING_TO);
+			osmo_timer_schedule(&nmt->timer, RINGING_TO);
 			call_up_alerting(trans->callref);
 		}
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1215,14 +1216,14 @@ static void tx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 		return;
 	}
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'autoanswer order'.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Send 'autoanswer order'.\n");
 	set_line_signal(nmt, frame, 12);
 	if (nmt->tx_frame_count == 4) {
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "No reaction to autoanswer, proceed with ringing.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "No reaction to autoanswer, proceed with ringing.\n");
 		nmt_new_state(nmt, STATE_MT_RINGING);
 		nmt->tx_frame_count = 0;
 		nmt->tx_callerid_count = 0;
-		timer_start(&nmt->timer, RINGING_TO);
+		osmo_timer_schedule(&nmt->timer, RINGING_TO);
 		call_up_alerting(trans->callref);
 	}
 }
@@ -1244,18 +1245,18 @@ static void rx_mt_autoanswer(nmt_t *nmt, frame_t *frame)
 		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
 		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
 		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		if ((frame->line_signal & 0xf) != 12)
 			break;
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received acknowledge to autoanswer.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received acknowledge to autoanswer.\n");
 		nmt_new_state(nmt, STATE_MT_COMPLETE);
 		nmt->tx_frame_count = 0;
 		call_up_answer(trans->callref, &trans->subscriber.country);
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1265,11 +1266,11 @@ static void tx_mt_ringing(nmt_t *nmt, frame_t *frame)
 
 	set_line_signal(nmt, frame, 9);
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'ringing order'.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Send 'ringing order'.\n");
 	if (nmt->tx_frame_count >= 4) {
 		if (nmt->tx_callerid_count) {
 			if (nmt->tx_frame_count == 5)
-				PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'A-number'.\n");
+				LOGP_CHAN(DNMT, LOGL_INFO, "Send 'A-number'.\n");
 			nmt_encode_a_number(frame, nmt->tx_frame_count - 4, trans->caller_type, trans->caller_id, nmt->sysinfo.system, atoi(nmt->sender.kanal), nmt->sysinfo.ms_power, nmt->sysinfo.traffic_area);
 		} else
 			frame->mt = NMT_MESSAGE_6;
@@ -1302,19 +1303,19 @@ static void rx_mt_ringing(nmt_t *nmt, frame_t *frame)
 		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
 		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
 		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		if ((frame->line_signal & 0xf) != 14)
 			break;
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received 'answer' from phone.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received 'answer' from phone.\n");
 		nmt_new_state(nmt, STATE_MT_COMPLETE);
 		nmt->tx_frame_count = 0;
-		timer_stop(&nmt->timer);
+		osmo_timer_del(&nmt->timer);
 		call_up_answer(trans->callref, &trans->subscriber.country);
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1325,18 +1326,18 @@ static void tx_mt_complete(nmt_t *nmt, frame_t *frame)
 	++nmt->tx_frame_count;
 	if (nmt->compandor && !trans->dms_call) {
 		if (nmt->tx_frame_count == 1)
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'compandor in'.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Send 'compandor in'.\n");
 		set_line_signal(nmt, frame, 5);
 	} else
 		frame->mt = NMT_MESSAGE_6;
 	if (nmt->tx_frame_count == 5) {
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Connect audio.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Connect audio.\n");
 		nmt_new_state(nmt, STATE_ACTIVE);
 		nmt->active_state = ACTIVE_STATE_VOICE;
 		nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
 		if (nmt->supervisory && !trans->dms_call) {
 			super_reset(nmt);
-			timer_start(&nmt->timer, SUPERVISORY_TO1);
+			osmo_timer_schedule(&nmt->timer, SUPERVISORY_TO1,0);
 		}
 		if (trans->dms_call) {
 			time_t ti = time(NULL);
@@ -1349,8 +1350,8 @@ static void timeout_mt_ringing(nmt_t *nmt)
 {
 	transaction_t *trans = nmt->trans;
 
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout while waiting for answer of the phone.\n");
-	PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout while waiting for answer of the phone.\n");
+	LOGP(DNMT, LOGL_INFO, "Release call towards network.\n");
 	call_up_release(trans->callref, CAUSE_NOANSWER);
 	trans->callref = 0;
 	nmt_release(nmt);
@@ -1366,7 +1367,7 @@ static void tx_mo_release(nmt_t *nmt, frame_t *frame)
 
 	set_line_signal(nmt, frame, 15);
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send release.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Send release.\n");
 	if (nmt->tx_frame_count == 4)
 		destroy_transaction(trans); /* continue with this frame, then go idle */
 }
@@ -1379,7 +1380,7 @@ static void tx_mt_release(nmt_t *nmt, frame_t *frame)
 {
 	set_line_signal(nmt, frame, 15);
 	if (++nmt->tx_frame_count == 1)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send release.\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Send release.\n");
 }
 
 static void rx_mt_release(nmt_t *nmt, frame_t *frame)
@@ -1396,17 +1397,17 @@ static void rx_mt_release(nmt_t *nmt, frame_t *frame)
 		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
 		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
 		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		if ((frame->line_signal & 0xf) != 1)
 			break;
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received release guard.\n");
-		timer_stop(&nmt->timer);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received release guard.\n");
+		osmo_timer_del(&nmt->timer);
 		destroy_transaction(trans);
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1414,7 +1415,7 @@ static void timeout_mt_release(nmt_t *nmt)
 {
 	transaction_t *trans = nmt->trans;
 
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout while releasing.\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout while releasing.\n");
 	destroy_transaction(trans);
 }
 
@@ -1425,9 +1426,9 @@ static void timeout_mt_release(nmt_t *nmt)
 void nmt_rx_super(nmt_t *nmt, int tone, double quality)
 {
 	if (tone)
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Detected supervisory signal with quality=%.0f.\n", quality * 100.0);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Detected supervisory signal with quality=%.0f.\n", quality * 100.0);
 	else
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Lost supervisory signal\n");
+		LOGP_CHAN(DNMT, LOGL_INFO, "Lost supervisory signal\n");
 
 	if (nmt->sender.loopback)
 		return;
@@ -1437,20 +1438,20 @@ void nmt_rx_super(nmt_t *nmt, int tone, double quality)
 		return;
 
 	if (tone)
-		timer_stop(&nmt->timer);
+		osmo_timer_del(&nmt->timer);
 	else
-		timer_start(&nmt->timer, SUPERVISORY_TO2);
+		osmo_timer_schedule(&nmt->timer, SUPERVISORY_TO2);
 }
 
-static void timeout_active(nmt_t *nmt, double duration)
+static void timeout_active(nmt_t *nmt, int duration)
 {
 	transaction_t *trans = nmt->trans;
 
 	if (duration == SUPERVISORY_TO1)
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout after %.0f seconds not receiving supervisory signal.\n", duration);
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout after %d seconds not receiving supervisory signal.\n", duration);
 	else
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Timeout after %.0f seconds loosing supervisory signal.\n", duration);
-	PDEBUG_CHAN(DNMT, DEBUG_INFO, "Release call towards network.\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Timeout after %d seconds loosing supervisory signal.\n", duration);
+	LOGP_CHAN(DNMT, LOGL_INFO, "Release call towards network.\n");
 	call_up_release(trans->callref, CAUSE_TEMPFAIL);
 	trans->callref = 0;
 	nmt_release(nmt);
@@ -1463,7 +1464,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 
 	/* restart timer on every reception of frame */
 	if (nmt->supervisory)
-		timer_start(&nmt->timer, SUPERVISORY_TO2);
+		osmo_timer_schedule(&nmt->timer, SUPERVISORY_TO2);
 
 	switch (frame->mt) {
 	case NMT_MESSAGE_13a: /* line signal */
@@ -1475,17 +1476,17 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 		 || ((frame->line_signal >> 12) & 0xf) != ((frame->line_signal >> 8) & 0xf)
 		 || ((frame->line_signal >> 8) & 0xf) != ((frame->line_signal >> 4) & 0xf)
 		 || ((frame->line_signal >> 4) & 0xf) != (frame->line_signal & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		switch ((frame->line_signal & 0xf)) {
 		case 5:
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Register Recall is not supported.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Register Recall is not supported.\n");
 			break;
 		case 8:
 			if (nmt->active_state != ACTIVE_STATE_VOICE)
 				break;
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received 'MFT in' request.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Received 'MFT in' request.\n");
 			nmt->active_state = ACTIVE_STATE_MFT_IN;
 			nmt->tx_frame_count = 0;
 			nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
@@ -1494,7 +1495,7 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 		case 7:
 			if (nmt->active_state != ACTIVE_STATE_MFT)
 				break;
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received 'MFT out' request.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Received 'MFT out' request.\n");
 			nmt->active_state = ACTIVE_STATE_MFT_OUT;
 			nmt->tx_frame_count = 0;
 			nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
@@ -1511,17 +1512,17 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 		if ((nmt->mft_num & 1))
 			break;
 		if ((frame->digit >> 12) != 0x00) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		if (((frame->digit >> 8) & 0xf) != ((frame->digit >> 4) & 0xf)
 		 || ((frame->digit >> 4) & 0xf) != (frame->digit & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		digit = nmt_value2digit(frame->digit);
 		dtmf_encode_set_tone(&nmt->dtmf, digit, DTMF_DURATION, 0.0);
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (odd)  digit %c.\n", digit);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received (odd)  digit %c.\n", digit);
 		nmt->mft_num++;
 		break;
 	case NMT_MESSAGE_14b: /* digits */
@@ -1534,21 +1535,21 @@ static void rx_active(nmt_t *nmt, frame_t *frame)
 		if (!(nmt->mft_num & 1))
 			break;
 		if ((frame->digit >> 12) != 0xff) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Position information of digit does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		if (((frame->digit >> 8) & 0xf) != ((frame->digit >> 4) & 0xf)
 		 || ((frame->digit >> 4) & 0xf) != (frame->digit & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Digit repetition in frame does not match, ignoring due to corrupt frame.\n");
 			break;
 		}
 		digit = nmt_value2digit(frame->digit);
 		dtmf_encode_set_tone(&nmt->dtmf, digit, DTMF_DURATION, 0.0);
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received (even) digit %c.\n", digit);
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received (even) digit %c.\n", digit);
 		nmt->mft_num++;
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1558,7 +1559,7 @@ static void tx_active(nmt_t *nmt, frame_t *frame)
 	case ACTIVE_STATE_MFT_IN:
 		set_line_signal(nmt, frame, 4);
 		if (++nmt->tx_frame_count == 1)
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'MFT in acknowledge'.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Send 'MFT in acknowledge'.\n");
 		if (nmt->tx_frame_count > 4) {
 			nmt->active_state = ACTIVE_STATE_MFT;
 			nmt_set_dsp_mode(nmt, DSP_MODE_DTMF);
@@ -1567,7 +1568,7 @@ static void tx_active(nmt_t *nmt, frame_t *frame)
 	case ACTIVE_STATE_MFT_OUT:
 		set_line_signal(nmt, frame, 10);
 		if (++nmt->tx_frame_count == 1)
-			PDEBUG_CHAN(DNMT, DEBUG_INFO, "Send 'MFT out acknowledge'.\n");
+			LOGP_CHAN(DNMT, LOGL_INFO, "Send 'MFT out acknowledge'.\n");
 		if (nmt->tx_frame_count > 4) {
 			nmt->active_state = ACTIVE_STATE_VOICE;
 			nmt_set_dsp_mode(nmt, DSP_MODE_AUDIO);
@@ -1589,18 +1590,18 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 	frame_t frame;
 	int rc;
 
-	PDEBUG_CHAN(DDSP, DEBUG_INFO, "RX Level: %.0f%% Quality=%.0f%%\n", level * 100.0, quality * 100.0);
+	LOGP_CHAN(DDSP, LOGL_INFO, "RX Level: %.0f%% Quality=%.0f%%\n", level * 100.0, quality * 100.0);
 
 	rc = decode_frame(nmt->sysinfo.system, &frame, bits, (nmt->sender.loopback) ? MTX_TO_XX : XX_TO_MTX, (nmt->state == STATE_MT_PAGING));
 	if (rc < 0) {
-		PDEBUG_CHAN(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received invalid frame.\n");
+		LOGP_CHAN(DNMT, (nmt->sender.loopback) ? LOGL_NOTICE : LOGL_DEBUG, "Received invalid frame.\n");
 		return;
 	}
 
 	/* frame counter */
 	nmt->rx_frame_count += frames_elapsed;
 
-	PDEBUG_CHAN(DNMT, (nmt->sender.loopback) ? DEBUG_NOTICE : DEBUG_DEBUG, "Received frame %s\n", nmt_frame_name(frame.mt));
+	LOGP_CHAN(DNMT, (nmt->sender.loopback) ? LOGL_NOTICE : LOGL_DEBUG, "Received frame %s\n", nmt_frame_name(frame.mt));
 
 	if (nmt->sender.loopback)
 		return;
@@ -1619,15 +1620,15 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 		 || ((frame.line_signal >> 12) & 0xf) != ((frame.line_signal >> 8) & 0xf)
 		 || ((frame.line_signal >> 8) & 0xf) != ((frame.line_signal >> 4) & 0xf)
 		 || ((frame.line_signal >> 4) & 0xf) != (frame.line_signal & 0xf)) {
-			PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
+			LOGP_CHAN(DNMT, LOGL_NOTICE, "Line signal repetition in frame does not match, ignoring due to corrupt frame.\n");
 			return;
 		}
-		PDEBUG_CHAN(DNMT, DEBUG_INFO, "Received clearing by mobile phone in state %s.\n", nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_INFO, "Received clearing by mobile phone in state %s.\n", nmt_state_name(nmt->state));
 		nmt_new_state(nmt, STATE_MO_RELEASE);
 		nmt->tx_frame_count = 0;
 		nmt_set_dsp_mode(nmt, DSP_MODE_FRAME);
 		if (nmt->trans->callref) {
-			PDEBUG(DNMT, DEBUG_INFO, "Release call towards network.\n");
+			LOGP(DNMT, LOGL_INFO, "Release call towards network.\n");
 			call_up_release(nmt->trans->callref, CAUSE_NORMAL);
 			nmt->trans->callref = 0;
 		}
@@ -1672,7 +1673,7 @@ void nmt_receive_frame(nmt_t *nmt, const char *bits, double quality, double leve
 		rx_active(nmt, &frame);
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame.mt), nmt_state_name(nmt->state));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame.mt), nmt_state_name(nmt->state));
 	}
 }
 
@@ -1692,7 +1693,7 @@ static void nmt_timeout(void *data)
 		timeout_mt_release(nmt);
 		break;
 	case STATE_ACTIVE:
-		timeout_active(nmt, nmt->timer.duration);
+		timeout_active(nmt, nmt->timer.timeout.tv_sec);
 		break;
 	default:
 		break;
@@ -1785,9 +1786,9 @@ const char *nmt_get_frame(nmt_t *nmt)
 	bits = encode_frame(nmt->sysinfo.system, &frame, debug);
 
 	if (debug)
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
 	if (debug && nmt->tx_last_frame_idle)
-		PDEBUG_CHAN(DNMT, DEBUG_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
 	return bits;
 }
 
@@ -1807,14 +1808,14 @@ int _out_setup(int callref, const char *caller_id, enum number_type caller_type,
 
 	/* 1. split number into country and subscriber parts */
 	if (dialstring2number(dialing, &subscr.country, subscr.number)) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
+		LOGP(DNMT, LOGL_NOTICE, "Outgoing call to invalid number '%s', rejecting!\n", dialing);
 		return -CAUSE_INVALNUMBER;
 	}
 
 	/* 2. check if given number is already in a call, return BUSY */
 	trans = get_transaction_by_number(&subscr);
 	if (trans) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call to busy number, rejecting!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Outgoing call to busy number, rejecting!\n");
 		return -CAUSE_BUSY;
 	}
 
@@ -1827,20 +1828,20 @@ int _out_setup(int callref, const char *caller_id, enum number_type caller_type,
 			break;
 	}
 	if (!sender) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call, but no free calling channel, rejecting!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Outgoing call, but no free calling channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 	if (!search_free_tc(NULL)) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing call, but no free traffic channel, rejecting!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Outgoing call, but no free traffic channel, rejecting!\n");
 		return -CAUSE_NOCHANNEL;
 	}
 
-	PDEBUG(DNMT, DEBUG_INFO, "Call to mobile station, paging station id '%c%s'\n", subscr.country, subscr.number);
+	LOGP(DNMT, LOGL_INFO, "Call to mobile station, paging station id '%c%s'\n", subscr.country, subscr.number);
 
 	/* 4. trying to page mobile station */
 	trans = create_transaction(&subscr);
 	if (!trans) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Failed to create transaction, rejecting!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Failed to create transaction, rejecting!\n");
 		return -CAUSE_TEMPFAIL;
 	}
 	trans->callref = callref;
@@ -1879,11 +1880,11 @@ void call_down_disconnect(int callref, int cause)
 	transaction_t *trans;
 	nmt_t *nmt;
 
-	PDEBUG(DNMT, DEBUG_INFO, "Call has been disconnected by network.\n");
+	LOGP(DNMT, LOGL_INFO, "Call has been disconnected by network.\n");
 
 	trans = get_transaction_by_callref(callref);
 	if (!trans) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing disconnect, but no callref!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Outgoing disconnect, but no callref!\n");
 		call_up_release(callref, CAUSE_INVALCALLREF);
 		return;
 	}
@@ -1901,12 +1902,12 @@ void call_down_disconnect(int callref, int cause)
 		return;
 	switch (nmt->state) {
 	case STATE_MT_RINGING:
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Outgoing disconnect, during ringing, releasing!\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Outgoing disconnect, during ringing, releasing!\n");
 		trans->callref = 0;
 	 	nmt_release(nmt);
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Outgoing disconnect, when phone is in call setup, releasing!\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Outgoing disconnect, when phone is in call setup, releasing!\n");
 		trans->callref = 0;
 	 	nmt_release(nmt);
 		break;
@@ -1921,11 +1922,11 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 	transaction_t *trans;
 	nmt_t *nmt;
 
-	PDEBUG(DNMT, DEBUG_INFO, "Call has been released by network, releasing call.\n");
+	LOGP(DNMT, LOGL_INFO, "Call has been released by network, releasing call.\n");
 
 	trans = get_transaction_by_callref(callref);
 	if (!trans) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Outgoing release, but no callref!\n");
+		LOGP(DNMT, LOGL_NOTICE, "Outgoing release, but no callref!\n");
 		/* don't send release, because caller already released */
 		return;
 	}
@@ -1940,15 +1941,15 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 
 	switch (nmt->state) {
 	case STATE_ACTIVE:
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Outgoing release, during active call, releasing!\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Outgoing release, during active call, releasing!\n");
 	 	nmt_release(nmt);
 		break;
 	case STATE_MT_RINGING:
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Outgoing release, during ringing, releasing!\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Outgoing release, during ringing, releasing!\n");
 	 	nmt_release(nmt);
 		break;
 	default:
-		PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Outgoing release, when phone is in call setup, releasing!\n");
+		LOGP_CHAN(DNMT, LOGL_NOTICE, "Outgoing release, when phone is in call setup, releasing!\n");
 	 	nmt_release(nmt);
 		break;
 	}
@@ -1983,7 +1984,7 @@ void call_down_clock(void) {}
 /* SMS layer releases */
 void sms_release(nmt_t *nmt)
 {
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Outgoing release, by SMS layer!\n");
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Outgoing release, by SMS layer!\n");
  	nmt_release(nmt);
 }
 
@@ -1994,7 +1995,7 @@ int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t __attr
 	if (!orig_address[0])
 		orig_address = &nmt->trans->subscriber.country;
 
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Received SMS from '%s' to '%s' (ref=%d)\n", orig_address, dest_address, ref);
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Received SMS from '%s' to '%s' (ref=%d)\n", orig_address, dest_address, ref);
 	printf("SMS received '%s' -> '%s': %s\n", orig_address, dest_address, message);
 	snprintf(sms, sizeof(sms) - 1, "%s,%s,%s", orig_address, dest_address, message);
 	sms[sizeof(sms) - 1] = '\0';
@@ -2004,7 +2005,7 @@ int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t __attr
 
 void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
 {
-	PDEBUG_CHAN(DNMT, DEBUG_NOTICE, "Got SMS deliver report (ref=%d)\n", ref);
+	LOGP_CHAN(DNMT, LOGL_NOTICE, "Got SMS deliver report (ref=%d)\n", ref);
 	if (error)
 		printf("SMS failed! (cause=%d)\n", cause);
 	else {
@@ -2026,11 +2027,11 @@ void deliver_sms(const char *sms)
 	message = p;
 	if (!caller_id || !number || !message) {
 inval:
-		PDEBUG(DNMT, DEBUG_NOTICE, "Given SMS MUST be in the following format: [i|n|s|u]<caller ID>,<7 digits number>,<message with comma and spaces> (i, n, s, u indicate the type of number)\n");
+		LOGP(DNMT, LOGL_NOTICE, "Given SMS MUST be in the following format: [i|n|s|u]<caller ID>,<7 digits number>,<message with comma and spaces> (i, n, s, u indicate the type of number)\n");
 		return;
 	}
 	if (strlen(number) != 7) {
-		PDEBUG(DNMT, DEBUG_NOTICE, "Given number must be 7 digits\n");
+		LOGP(DNMT, LOGL_NOTICE, "Given number must be 7 digits\n");
 		goto inval;
 	}
 
@@ -2058,12 +2059,12 @@ inval:
 			caller_type = TYPE_UNKNOWN;
 	}
 
-	PDEBUG(DNMT, DEBUG_INFO, "SMS from '%s' for subscriber '%s' with message '%s'\n", caller_id, number, message);
+	LOGP(DNMT, LOGL_INFO, "SMS from '%s' for subscriber '%s' with message '%s'\n", caller_id, number, message);
 	printf("SMS sending '%s' -> '%s': %s\n", caller_id, number, message);
 
 	rc = sms_out_setup(number, caller_id, caller_type, message);
 	if (rc < 0) {
-		PDEBUG(DNMT, DEBUG_INFO, "SMS delivery failed with cause '%d'\n", -rc);
+		LOGP(DNMT, LOGL_INFO, "SMS delivery failed with cause '%d'\n", -rc);
 		return;
 	}
 }

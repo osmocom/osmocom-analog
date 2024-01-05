@@ -50,7 +50,7 @@ typedef struct transaction {
 	int8_t			release_cause;		/* reason for release, (c-netz coding) */
 	int			try;			/* counts resending messages */
 	int			repeat;			/* counts repeating messages */
-	struct timer		timer;			/* for varous timeouts */
+	struct osmo_timer_list		timer;			/* for varous timeouts */
 	int			mo_call;		/* flags a moile originating call */
 	int			mt_call;		/* flags a moile terminating call */
 	int			page_failed;		/* failed to get a response from MS */
