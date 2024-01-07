@@ -77,7 +77,7 @@ int no_l16 = 0;
 int send_patterns = 1;
 static int release_on_disconnect = 1;
 int loopback = 0;
-int rt_prio = 1;
+int rt_prio = 0;
 int fast_math = 0;
 const char *write_tx_wave = NULL;
 const char *write_rx_wave = NULL;
@@ -691,9 +691,6 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 	if (console_open_audio(buffer_size, dsp_interval))
 		return;
 
-	if (!loopback)
-		print_aaimage();
-
 	/* real time priority */
 	if (rt_prio > 0) {
 		struct sched_param schedp;
@@ -702,9 +699,14 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 		memset(&schedp, 0, sizeof(schedp));
 		schedp.sched_priority = rt_prio;
 		rc = sched_setscheduler(0, SCHED_RR, &schedp);
-		if (rc)
+		if (rc) {
 			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
+			return;
+		}
 	}
+
+	if (!loopback)
+		print_aaimage();
 
 	/* prepare terminal */
 	tcgetattr(0, &term_orig);

@@ -48,7 +48,7 @@ enum paging_signal;
 void *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
-int rt_prio = 1;
+int rt_prio = 0;
 
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
@@ -331,8 +331,10 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 			memset(&schedp, 0, sizeof(schedp));
 			schedp.sched_priority = rt_prio;
 			rc = sched_setscheduler(0, SCHED_RR, &schedp);
-			if (rc)
+			if (rc) {
 				fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
+				goto error;
+			}
 		}
 
 		double tx_frequencies[1], rx_frequencies[1];

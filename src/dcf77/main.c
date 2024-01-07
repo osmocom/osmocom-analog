@@ -57,7 +57,7 @@ static int region = -1, region_advance;
 static int double_amplitude = 0;
 static int test_tone = 0;
 static int dsp_interval = 1; /* ms */
-static int rt_prio = 1;
+static int rt_prio = 0;
 static int fast_math = 0;
 
 /* not static, in case we add libtimer some day, then compiler hits an error */
@@ -539,6 +539,19 @@ int main(int argc, char *argv[])
 			timestamp = dcf77_start_weather((time_t)timestamp, region, region_advance);
 	}
 
+	/* set real time prio */
+	if (rt_prio) {
+		struct sched_param schedp;
+
+		memset(&schedp, 0, sizeof(schedp));
+		schedp.sched_priority = rt_prio;
+		rc = sched_setscheduler(0, SCHED_RR, &schedp);
+		if (rc) {
+			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
+			goto error;
+		}
+	}
+
 	print_aaimage();
 	printf("DCF77 ready.\n");
 
@@ -549,17 +562,6 @@ int main(int argc, char *argv[])
 	term.c_cc[VMIN]=1;
 	term.c_cc[VTIME]=2;
 	tcsetattr(0, TCSANOW, &term);
-
-	/* set real time prio */
-	if (rt_prio) {
-		struct sched_param schedp;
-
-		memset(&schedp, 0, sizeof(schedp));
-		schedp.sched_priority = rt_prio;
-		rc = sched_setscheduler(0, SCHED_RR, &schedp);
-		if (rc)
-			fprintf(stderr, "Error setting SCHED_RR with prio %d\n", rt_prio);
-	}
 
 	signal(SIGINT, sighandler);
 	signal(SIGHUP, sighandler);
