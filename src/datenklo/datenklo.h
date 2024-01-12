@@ -53,6 +53,7 @@ typedef struct datenklo {
 	int		auto_rts_cd;		/* CD was indicated */
 	int		output_off;		/* output stopped by flow control */
 	struct osmo_timer_list	vtimer;			/* VTIME timer */
+	int		vtimer_us;		/* time to stat / flag to stop */
 	int		vtimeout;		/* when timeout has fired */
 
 	/* data fifos */

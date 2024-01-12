@@ -68,6 +68,7 @@ typedef struct am791x {
 
 	/* timers */
 	struct osmo_timer_list	tx_timer, rx_timer;
+	double		tx_timer_f, rx_timer_f;		/* time to stat / flag to stop */
 	double		t_rcon;
 	double		t_rcoff;
 	double		t_brcon;
@@ -104,4 +105,5 @@ void am791x_dtr(am791x_t *am791x, int dtr);
 void am791x_rts(am791x_t *am791x, int rts);
 void am791x_brts(am791x_t *am791x, int brts);
 void am791x_ring(am791x_t *am791x, int ring);
+void am791x_add_del_timers(am791x_t *am791x);
 

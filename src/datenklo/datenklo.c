@@ -1093,7 +1093,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 	if (vmin && vtime) {
 		/* first: start timer */
 		if (!datenklo->vtimeout)
-			osmo_timer_schedule(&datenklo->vtimer, vtime/10,(vtime % 10) * 100000);
+			datenklo->vtimer_us = vtime * 100000; /* start timer in main loop */
 		/* no data: block (in blocking IO) */
 		if (fill == 0) {
 			/* special value to tell device there is no data right now, we have to block */
@@ -1106,7 +1106,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 		}
 		/* enough data or timeout or nonblocking IO: stop timer and return what we have */
 		datenklo->vtimeout = 0;
-		osmo_timer_del(&datenklo->vtimer);
+		datenklo->vtimer_us = -1; /* stop timer in main loop */
 	}
 	/* both MIN and TIME are zero */
 	if (!vmin && !vtime) {
@@ -1119,7 +1119,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 	if (!vmin && vtime) {
 		/* first: start timer */
 		if (!datenklo->vtimeout)
-			osmo_timer_schedule(&datenklo->vtimer, vtime/10,(vtime % 10) * 100000);
+			datenklo->vtimer_us = vtime * 100000; /* start timer in main loop */
 		if (fill == 0) {
 			/* no data and no timeout: block (in blocking IO) */
 			if (!datenklo->vtimeout) {
@@ -1132,7 +1132,7 @@ static ssize_t dk_read(void *inst, char *buf, size_t size, int flags)
 		}
 		/* data: stop timer and return what we have */
 		datenklo->vtimeout = 0;
-		osmo_timer_del(&datenklo->vtimer);
+		datenklo->vtimer_us = -1; /* stop timer in main loop */
 	}
 	/* MIN is nonzero, TIME is zero */
 	if (vmin && !vtime) {
@@ -1522,7 +1522,15 @@ void datenklo_main(datenklo_t *datenklo, int loopback)
 		if (num_chan > 1)
 			process_auto_rts(datenklo->slave);
 
-		/* process timers */
+		/* Timers may only be processed in main thread, because libosmocore has timer lists for individual threads. */
+		if (datenklo->vtimer_us < 0)
+			osmo_timer_del(&datenklo->vtimer);
+		if (datenklo->vtimer_us > 0)
+			osmo_timer_schedule(&datenklo->vtimer, datenklo->vtimer_us / 1000000,datenklo->vtimer_us % 1000000);
+		datenklo->vtimer_us = 0;
+
+		am791x_add_del_timers(&datenklo->am791x);
+
 		osmo_select_main(1);
 
 #ifdef HAVE_ALSA

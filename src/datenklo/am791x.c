@@ -587,7 +587,6 @@ static void set_flag(int *flag_p, int value, const char *name)
 /*
  * state machine according to datasheet
  */
-
 static void go_main_channel_tx(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Enable transmitter on main channel\n");
@@ -601,7 +600,8 @@ static void go_main_channel_tx(am791x_t *am791x)
 	/* activate TD now and set CTS timer (RCON) */
 	set_flag(&am791x->block_td, 0, "TD RELEASED");
 	set_flag(&am791x->tx_silence, 0, "RESET SILENCE");
-	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_rcon));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->tx_timer_f = am791x->t_rcon;
 	new_tx_state(am791x, AM791X_STATE_RCON);
 	set_filters(am791x);
 	/* check CD to be blocked */
@@ -652,7 +652,8 @@ static void tx_data_done(am791x_t *am791x)
 	if (!am791x->fullduplex) {
 		set_flag(&am791x->squelch, 1, "SET SQUELCH (ON)");
 	}
-	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_rcoff));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->tx_timer_f = am791x->t_rcoff;
 }
 
 static void rcoff_done(am791x_t *am791x)
@@ -667,11 +668,13 @@ static void rcoff_done(am791x_t *am791x)
 		return;
 	}
 	if (!am791x->sto) {
-		osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_sq - am791x->t_rcoff));
+		/* Flag timer, because it must be added in main thread. */
+		am791x->tx_timer_f = am791x->t_sq - am791x->t_rcoff;
 		new_tx_state(am791x, AM791X_STATE_SQ_OFF);
 		return;
 	}
-	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_sto - am791x->t_rcoff));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->tx_timer_f = am791x->t_sto - am791x->t_rcoff;
 	new_tx_state(am791x, AM791X_STATE_STO_OFF);
 }
 
@@ -695,7 +698,8 @@ static void sto_done(am791x_t *am791x)
 	LOGP(DAM791X, LOGL_DEBUG, "STO over\n");
 
 	set_flag(&am791x->tx_sto, 0, "stop STO");
-	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_sq - am791x->t_sto));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->tx_timer_f = am791x->t_sq - am791x->t_sto;
 	new_tx_state(am791x, AM791X_STATE_SQ_OFF);
 }
 
@@ -711,7 +715,8 @@ static void go_back_channel_tx(am791x_t *am791x)
 	/* activate BTD now and set BCTS timer (BRCON) */
 	set_flag(&am791x->block_btd, 0, "BTD RELEASED");
 	set_flag(&am791x->tx_silence, 0, "RESET SILENCE");
-	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_brcon));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->tx_timer_f = am791x->t_brcon;
 	new_tx_state(am791x, AM791X_STATE_BRCON);
 	set_filters(am791x);
 	/* check BCD to be blocked */
@@ -747,7 +752,8 @@ static void tx_bdata_done(am791x_t *am791x)
 
 	set_flag(&am791x->block_btd, 1, "BTD IGNORED");
 	set_flag(&am791x->tx_silence, 1, "SET SILENCE");
-	osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->t_brcoff));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->tx_timer_f = am791x->t_brcoff;
 }
 
 static void brcoff_done(am791x_t *am791x)
@@ -793,7 +799,8 @@ static void handle_tx_state(am791x_t *am791x)
 			rcon_release_rts(am791x);
 			break;
 		}
-		if (!osmo_timer_pending(&am791x->tx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->tx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->tx_timer) && am791x->tx_timer_f == 0.0)) {
 			rcon_done(am791x);
 			break;
 		}
@@ -805,19 +812,22 @@ static void handle_tx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_RCOFF:
-		if (!osmo_timer_pending(&am791x->tx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->tx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->tx_timer) && am791x->tx_timer_f == 0.0)) {
 			rcoff_done(am791x);
 			break;
 		}
 		break;
 	case AM791X_STATE_STO_OFF:
-		if (!osmo_timer_pending(&am791x->tx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->tx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->tx_timer) && am791x->tx_timer_f == 0.0)) {
 			sto_done(am791x);
 			break;
 		}
 		break;
 	case AM791X_STATE_SQ_OFF:
-		if (!osmo_timer_pending(&am791x->tx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->tx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->tx_timer) && am791x->tx_timer_f == 0.0)) {
 			sq_done(am791x);
 			break;
 		}
@@ -828,7 +838,8 @@ static void handle_tx_state(am791x_t *am791x)
 			brcon_release_brts(am791x);
 			break;
 		}
-		if (!osmo_timer_pending(&am791x->tx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->tx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->tx_timer) && am791x->tx_timer_f == 0.0)) {
 			brcon_done(am791x);
 			break;
 		}
@@ -840,7 +851,8 @@ static void handle_tx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_BRCOFF:
-		if (!osmo_timer_pending(&am791x->tx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->tx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->tx_timer) && am791x->tx_timer_f == 0.0)) {
 			brcoff_done(am791x);
 			break;
 		}
@@ -854,7 +866,8 @@ static void go_main_channel_rx(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Enable receiver on main channel\n");
 
-	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_cdon));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->rx_timer_f = am791x->t_cdon;
 	new_rx_state(am791x, AM791X_STATE_CDON);
 }
 
@@ -876,7 +889,8 @@ static void cdon_no_cd(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Carrier is gone\n");
 
-	osmo_timer_del(&am791x->rx_timer);
+	/* Flag timer, because it must be deleted in main thread. */
+	am791x->rx_timer_f = -1;
 	new_rx_state(am791x, AM791X_STATE_INIT);
 }
 
@@ -884,7 +898,8 @@ static void rx_data_done(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Carrier lost\n");
 
-	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_cdoff));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->rx_timer_f = am791x->t_cdoff;
 	new_rx_state(am791x, AM791X_STATE_CDOFF);
 }
 
@@ -906,7 +921,8 @@ static void cdoff_cd(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Carrier recovered\n");
 
-	osmo_timer_del(&am791x->rx_timer);
+	/* Flag timer, because it must be deleted in main thread. */
+	am791x->rx_timer_f = -1;
 	new_rx_state(am791x, AM791X_STATE_DATA);
 }
 
@@ -914,7 +930,8 @@ static void go_back_channel_rx(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Enable receiver on back channel\n");
 
-	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_bcdon));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->rx_timer_f = am791x->t_bcdon;
 	new_rx_state(am791x, AM791X_STATE_BCDON);
 }
 
@@ -936,7 +953,8 @@ static void bcdon_no_cd(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Carrier is gone\n");
 
-	osmo_timer_del(&am791x->rx_timer);
+	/* Flag timer, because it must be deleted in main thread. */
+	am791x->rx_timer_f = -1;
 	new_rx_state(am791x, AM791X_STATE_INIT);
 }
 
@@ -944,7 +962,8 @@ static void rx_bdata_done(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Carrier lost\n");
 
-	osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->t_bcdoff));
+	/* Flag timer, because it must be added in main thread. */
+	am791x->rx_timer_f = am791x->t_bcdoff;
 	new_rx_state(am791x, AM791X_STATE_BCDOFF);
 }
 
@@ -967,7 +986,8 @@ static void bcdoff_cd(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_DEBUG, "Carrier recovered\n");
 
-	osmo_timer_del(&am791x->rx_timer);
+	/* Flag timer, because it must be deleted in main thread. */
+	am791x->rx_timer_f = -1;
 	new_rx_state(am791x, AM791X_STATE_BDATA);
 }
 
@@ -994,7 +1014,8 @@ static void handle_rx_state(am791x_t *am791x)
 		break;
 	/* all main channel states ... */
 	case AM791X_STATE_CDON:
-		if (!osmo_timer_pending(&am791x->rx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->rx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->rx_timer) && am791x->rx_timer_f == 0.0)) {
 			cdon_done(am791x);
 			break;
 		}
@@ -1010,7 +1031,8 @@ static void handle_rx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_CDOFF:
-		if (!osmo_timer_pending(&am791x->rx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->rx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->rx_timer) && am791x->rx_timer_f == 0.0)) {
 			cdoff_done(am791x);
 			break;
 		}
@@ -1021,7 +1043,8 @@ static void handle_rx_state(am791x_t *am791x)
 		break;
 	/* all back channel states ... */
 	case AM791X_STATE_BCDON:
-		if (!osmo_timer_pending(&am791x->rx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->rx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->rx_timer) && am791x->rx_timer_f == 0.0)) {
 			bcdon_done(am791x);
 			break;
 		}
@@ -1037,7 +1060,8 @@ static void handle_rx_state(am791x_t *am791x)
 		}
 		break;
 	case AM791X_STATE_BCDOFF:
-		if (!osmo_timer_pending(&am791x->rx_timer)) {
+		/* If timer is about to be switched off, of if it already has been switched off. */
+		if (am791x->rx_timer_f < 0.0 || (!osmo_timer_pending(&am791x->rx_timer) && am791x->rx_timer_f == 0.0)) {
 			bcdoff_done(am791x);
 			break;
 		}
@@ -1191,8 +1215,10 @@ void am791x_reset(am791x_t *am791x)
 {
 	LOGP(DAM791X, LOGL_INFO, "Reset!\n");
 
-	osmo_timer_del(&am791x->tx_timer);
-	osmo_timer_del(&am791x->rx_timer);
+	/* Flag timer, because it must be deleted in main thread. */
+	am791x->tx_timer_f = -1.0;
+	/* Flag timer, because it must be deleted in main thread. */
+	am791x->rx_timer_f = -1.0;
 
 	if (am791x->f0_tx) {
 		fsk_mod_cleanup(&am791x->fsk_tx);
@@ -1264,5 +1290,21 @@ void am791x_ring(am791x_t *am791x, int ring)
 
 	am791x->line_ring = ring;
 	handle_state(am791x);
+}
+
+void am791x_add_del_timers(am791x_t *am791x)
+{
+	/* Timers may only be processed in main thread, because libosmocore has timer lists for individual threads. */
+	if (am791x->tx_timer_f < 0.0)
+		osmo_timer_del(&am791x->tx_timer);
+	if (am791x->tx_timer_f > 0.0)
+		osmo_timer_schedule(&am791x->tx_timer, FLOAT_TO_TIMEOUT(am791x->tx_timer_f));
+	am791x->tx_timer_f = 0.0;
+
+	if (am791x->rx_timer_f < 0.0)
+		osmo_timer_del(&am791x->rx_timer);
+	if (am791x->rx_timer_f > 0.0)
+		osmo_timer_schedule(&am791x->rx_timer, FLOAT_TO_TIMEOUT(am791x->rx_timer_f));
+	am791x->rx_timer_f = 0.0;
 }
 
