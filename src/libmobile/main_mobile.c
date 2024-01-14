@@ -28,7 +28,6 @@
 #include <termios.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "main_mobile.h"
 #include "../liblogging/logging.h"
 #include "sender.h"
 #include <osmocom/core/timer.h>

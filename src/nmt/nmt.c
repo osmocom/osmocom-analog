@@ -29,6 +29,7 @@
 #include "../liblogging/logging.h"
 #include "../libmobile/cause.h"
 #include "../libmobile/get_time.h"
+#include "../libmobile/console.h"
 #include <osmocom/cc/message.h>
 #include "nmt.h"
 #include "transaction.h"
@@ -782,6 +783,7 @@ static void rx_roaming_ident(nmt_t *nmt, frame_t *frame)
 		LOGP_CHAN(DNMT, LOGL_INFO, "Received identity confirm (password %s).\n", trans->subscriber.password);
 		nmt_new_state(nmt, STATE_ROAMING_CONFIRM);
 		nmt->tx_frame_count = 0;
+		console_inscription(&trans->subscriber.country);
 		break;
 	default:
 		LOGP_CHAN(DNMT, LOGL_DEBUG, "Dropping message %s in state %s\n", nmt_frame_name(frame->mt), nmt_state_name(nmt->state));

@@ -46,6 +46,7 @@
 #include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
+#include "../libmobile/console.h"
 #include <osmocom/cc/message.h>
 #include "amps.h"
 #include "dsp.h"
@@ -862,6 +863,7 @@ _register:
 			LOGP(DAMPS, LOGL_ERROR, "Failed to create transaction\n");
 			return;
 		}
+		console_inscription(callerid);
 	} else
 	if (order == 13 && ordq == 3 && msg_type == 1) {
 		LOGP_CHAN(DAMPS, LOGL_INFO, "Registration - Power Down %s (ESN = %s, %s, %s)\n", callerid, esn_to_string(esn), amps_scm(scm), amps_mpci(mpci));

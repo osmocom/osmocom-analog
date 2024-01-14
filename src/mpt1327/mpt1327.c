@@ -75,6 +75,7 @@
 #include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
+#include "../libmobile/console.h"
 #include <osmocom/cc/message.h>
 #include "mpt1327.h"
 #include "dsp.h"
@@ -1139,11 +1140,17 @@ void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *co
 {
 	mpt1327_unit_t *unit;
 	mpt1327_t *tc;
+	char station_id[8];
 
 	switch (codeword->type) {
 	case MPT_RQR: /* register */
 		mpt1327_reset_sync(mpt1327); /* message complete */
 		unit = get_unit(codeword->params[MPT_PFIX], codeword->params[MPT_IDENT1]);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+		snprintf(station_id, sizeof(station_id), "%03d%04d", unit->prefix, unit->ident);
+#pragma GCC diagnostic pop
+		console_inscription(station_id);
 		LOGP_CHAN(DMPT1327, LOGL_INFO, "Radio Unit (Prefix:%d Ident:%d) registers\n", unit->prefix, unit->ident);
 		if (unit->tc)
 			_cancel_pending_call(mpt1327, unit);

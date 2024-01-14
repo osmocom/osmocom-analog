@@ -147,6 +147,7 @@
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
 #include "../libmobile/get_time.h"
+#include "../libmobile/console.h"
 #include <osmocom/cc/message.h>
 #include "cnetz.h"
 #include "database.h"
@@ -1190,6 +1191,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			LOGP(DCNETZ, LOGL_NOTICE, "Ignoring Attachment from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
+		console_inscription(rufnummer);
 		trans = create_transaction(cnetz, TRANS_EM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit, cnetz->rf_level_db);
 		if (!trans) {
 			LOGP(DCNETZ, LOGL_ERROR, "Failed to create transaction\n");
@@ -1212,6 +1214,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			LOGP(DCNETZ, LOGL_NOTICE, "Ignoring Roaming from subscriber '%s', because we are busy becoming SpK.\n", rufnummer);
 			break;
 		}
+		console_inscription(rufnummer);
 		trans = create_transaction(cnetz, TRANS_UM, telegramm->futln_nationalitaet, telegramm->futln_heimat_fuvst_nr, telegramm->futln_rest_nr, telegramm->chipkarten_futelg_bit, telegramm->erweitertes_frequenzbandbit, cnetz->rf_level_db);
 		if (!trans) {
 			LOGP(DCNETZ, LOGL_ERROR, "Failed to create transaction\n");

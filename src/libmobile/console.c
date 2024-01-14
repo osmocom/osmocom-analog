@@ -35,7 +35,6 @@
 #include <osmocom/cc/helper.h>
 #include <osmocom/cc/rtp.h>
 #include "testton.h"
-#include "../libmobile/main_mobile.h"
 #include "console.h"
 #include "cause.h"
 #include "../libmobile/call.h"
@@ -627,5 +626,19 @@ void process_console(int c)
 		}
 	}
 #endif
+}
+
+/* Call this for every inscription. If the console's dial string is empty, it is set to the number that has been inscribed. */
+int console_inscription(const char *station_id)
+{
+	if (console.loopback || !console.number_max_length)
+		return -EINVAL;
+
+	if (console.station_id[0])
+		return 1;
+
+	strncpy(console.station_id, station_id, sizeof(console.station_id) - 1);
+	process_ui(-1);
+	return 0;
 }
 

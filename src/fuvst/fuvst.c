@@ -40,6 +40,7 @@
 #include "../libmobile/call.h"
 #include "../libmobile/cause.h"
 #include "../libmobile/get_time.h"
+#include "../libmobile/console.h"
 #include <osmocom/core/timer.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/cc/message.h>
@@ -432,13 +433,18 @@ typedef struct transaction {
 
 transaction_t *trans_list = NULL;
 
-const char *transaction2rufnummer(transaction_t *trans)
+static const char *nut2rufnummer(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
 {
 	static char rufnummer[32]; /* make GCC happy (overflow check) */
 
-	sprintf(rufnummer, "%d%d%05d", trans->futln_nat, trans->futln_fuvst, trans->futln_rest);
+	sprintf(rufnummer, "%d%d%05d", futln_nat, futln_fuvst, futln_rest);
 
 	return rufnummer;
+}
+
+static const char *transaction2rufnummer(transaction_t *trans)
+{
+	return nut2rufnummer(trans->futln_nat, trans->futln_fuvst, trans->futln_rest);
 }
 
 const char *state_name(enum call_state state)
@@ -925,6 +931,7 @@ static void message_receive(fuvst_t *zzk, uint8_t ident, uint8_t opcode, uint8_t
 	case OPCODE_EBAF: /* enter BS (inscription) */
 		decode_ebaf(data, len, &T, &U, &N, &s, &u, &b, &l);
 		add_db(N, U, T, l);
+		console_inscription(nut2rufnummer(N, U, T));
 		len = encode_ebpqu(&opcode, &data);
 		message_send(ident, opcode, data, len);
 		break;

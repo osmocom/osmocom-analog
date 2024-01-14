@@ -36,7 +36,6 @@
 #include "cause.h"
 #include "sender.h"
 #include "call.h"
-#include "main_mobile.h"
 #include "console.h"
 
 #define DISC_TIMEOUT	30, 0

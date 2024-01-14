@@ -28,6 +28,7 @@
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
 #include "../libmobile/cause.h"
+#include "../libmobile/console.h"
 #include <osmocom/cc/message.h>
 #include "r2000.h"
 //#include "transaction.h"
@@ -657,6 +658,7 @@ static void rx_idle(r2000_t *r2000, frame_t *frame)
 		LOGP_CHAN(DR2000, LOGL_INFO, " -> Mobile ID: %d'\n", r2000->subscriber.mor);
 		LOGP_CHAN(DR2000, LOGL_INFO, " (Use '%s' as dial string to call the station mobile.)'\n", subscriber2string(&r2000->subscriber));
 
+		console_inscription(subscriber2string(&r2000->subscriber));
 		r2000_new_state(r2000, STATE_INSCRIPTION);
 		break;
 	case 1:
