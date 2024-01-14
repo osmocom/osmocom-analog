@@ -11065,15 +11065,11 @@ static int16_t released[] = {
 
 jolly_voice_t jolly_voice;
 
-#define CHUNK	8
 #define GAIN	2.5
 
 int init_voice(int samplerate)
 {
-	samplerate_t srstate;
-	sample_t spl_in[CHUNK], *spl_out;
-	int i, s, j, chunk, count, output_num;
-	int rc;
+	int i;
 
 	jolly_voice.spl[0] = (sample_t *)digit_0;
 	jolly_voice.size[0] = sizeof(digit_0) / sizeof(int16_t);
@@ -11102,27 +11098,25 @@ int init_voice(int samplerate)
 	jolly_voice.spl[12] = (sample_t *)released;
 	jolly_voice.size[12] = sizeof(released) / sizeof(int16_t);
 
-	rc = init_samplerate(&srstate, 8000.0, (double)samplerate, 3300.0);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to init sample rate conversion!\n");
-		return -1;
-	}
-
 	for (i = 0; i < 13; i++) {
+		samplerate_t srstate;
+		sample_t spl_in[jolly_voice.size[i]], *spl_out;
+		int s, output_num;
+		int rc;
+
+		rc = init_samplerate(&srstate, 8000.0, (double)samplerate, 3300.0);
+		if (rc < 0) {
+			fprintf(stderr, "Failed to init sample rate conversion!\n");
+			return -1;
+		}
+
 		output_num = samplerate_upsample_output_num(&srstate, jolly_voice.size[i]);
 		spl_out = calloc(output_num, sizeof(*spl_out));
-		count = 0;
-		for (s = 0; s < jolly_voice.size[i]; s += CHUNK) {
-			chunk = jolly_voice.size[i] - s;
-			if (chunk > CHUNK)
-				chunk = CHUNK;
-			for (j = 0; j < chunk; j++)
-				spl_in[j] = (double)(((int16_t *)(jolly_voice.spl[i]))[s + j]) / 32767.0 * GAIN;
-			samplerate_upsample(&srstate, spl_in, chunk, spl_out + count, output_num);
-			count += output_num;
-		}
+		for (s = 0; s < jolly_voice.size[i]; s ++)
+			spl_in[s] = (double)(((int16_t *)(jolly_voice.spl[i]))[s]) / 32767.0 * GAIN;
+		samplerate_upsample(&srstate, spl_in, jolly_voice.size[i], spl_out, output_num);
 		jolly_voice.spl[i] = spl_out;
-		jolly_voice.size[i] = count;
+		jolly_voice.size[i] = output_num;
 	}
 
 	return 0;
