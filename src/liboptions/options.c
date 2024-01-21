@@ -25,6 +25,8 @@
 #include "options.h"
 #include "../liblogging/logging.h"
 
+const char *selected_config_file = NULL;
+
 typedef struct option {
 	struct option *next;
 	int short_option;
@@ -62,11 +64,11 @@ void option_add(int short_option, const char *long_option, int parameter_count)
 	option_t *option;
 
 	/* check if option already exists or is not allowed */
+	if (!strcmp(long_option, "config") || !strcmp(long_option, "no-config")) {
+		LOGP(DOPTIONS, LOGL_ERROR, "Option '%s' is not allowed to add, please fix!\n", option->long_option);
+		abort();
+	}
 	for (option = option_head; option; option = option->next) {
-		if (!strcmp(option->long_option, "config")) {
-			LOGP(DOPTIONS, LOGL_ERROR, "Option '%s' is not allowed to add, please fix!\n", option->long_option);
-			abort();
-		}
 		if (option->short_option == short_option
 		 || !strcmp(option->long_option, long_option)) {
 			LOGP(DOPTIONS, LOGL_ERROR, "Option '%s' added twice, please fix!\n", option->long_option);
@@ -87,7 +89,7 @@ void option_add(int short_option, const char *long_option, int parameter_count)
 	option_tailp = &(option->next);
 }
 
-int options_config_file(int argc, char *argv[], const char *config_file, int (*handle_options)(int short_option, int argi, char *argv[]))
+int options_config_file(int argc, char *argv[], const char *_config_file, int (*handle_options)(int short_option, int argi, char *argv[]))
 {
 	static const char *home;
 	char config[256];
@@ -101,16 +103,24 @@ int options_config_file(int argc, char *argv[], const char *config_file, int (*h
 
 	/* select for alternative config file */
 	if (argc > 2 && !strcmp(argv[1], "--config"))
-		config_file = argv[2];
+		selected_config_file = argv[2];
+	else
+		selected_config_file = _config_file;
+
+	/* select for alternative config file */
+	if (argc > 1 && !strcmp(argv[1], "--no-config")) {
+		selected_config_file = NULL;
+		return 1;
+	}
 
 	/* add home directory */
-	if (config_file[0] == '~' && config_file[1] == '/') {
+	if (selected_config_file[0] == '~' && selected_config_file[1] == '/') {
 		home = getenv("HOME");
 		if (home == NULL)
 			return 1;
-		sprintf(config, "%s/%s", home, config_file + 2);
+		sprintf(config, "%s/%s", home, selected_config_file + 2);
 	} else
-		strcpy(config, config_file);
+		strcpy(config, selected_config_file);
 		
 	/* open config file */
 	fp = fopen(config, "r");
@@ -210,12 +220,12 @@ int options_config_file(int argc, char *argv[], const char *config_file, int (*h
 			}
 		}
 		if (!option) {
-			LOGP(DOPTIONS, LOGL_ERROR, "Given option '%s' in config file '%s' at line %d is not a valid option, use '-h' for help!\n", opt, config_file, line);
+			LOGP(DOPTIONS, LOGL_ERROR, "Given option '%s' in config file '%s' at line %d is not a valid option, use '-h' for help!\n", opt, selected_config_file, line);
 			rc = -EINVAL;
 			goto done;
 		}
 		if (option->parameter_count != i) {
-			LOGP(DOPTIONS, LOGL_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, config_file, line,  option->parameter_count);
+			LOGP(DOPTIONS, LOGL_ERROR, "Given option '%s' in config file '%s' at line %d requires %d parameter(s), use '-h' for help!\n", opt, selected_config_file, line,  option->parameter_count);
 			return -EINVAL;
 		}
 		rc = handle_options(option->short_option, 0, args);
@@ -252,6 +262,8 @@ int options_command_line(int argc, char *argv[], int (*handle_options)(int short
 			argi += 1;
 			continue;
 		}
+		if (!strcmp(argv[argi], "--no-config"))
+			continue;
 		if (argv[argi][0] == '-') {
 			if (argv[argi][1] != '-') {
 				if (strlen(argv[argi]) != 2) {

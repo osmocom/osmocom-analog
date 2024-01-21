@@ -240,6 +240,9 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" --config [~/]<path to config file>\n");
 	printf("        Give a config file to use. If it starts with '~/', path is at home dir.\n");
 	printf("        Each line in config file is one option, '-' or '--' must not be given!\n");
+	printf("        Default: '%s'\n", selected_config_file);
+	printf(" --no-config\n");
+	printf("        Even if a config file exists, don't use it.\n");
 	logging_print_help();
 	printf(" -k --kanal <channel>\n");
 	printf(" -k --channel <channel>\n");
