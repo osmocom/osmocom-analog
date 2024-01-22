@@ -44,6 +44,13 @@ int send_callerid = 0;
 int dcc = 0, scc = 0, sid = 0, regh = 1, regr = 1, pureg = 0, pdreg = 0, locaid = -1, regincr = 300, bis = 0;
 int tolerant = 0;
 
+static void print_location_area_note(void)
+{
+	/*      -                                                                             - */
+	printf("	Warning: Older phones may not like this and show 'No Service'!\n");
+	printf("	Note: This feature was added 1995 to the standard, it might not work.\n");
+}
+
 void print_help(const char *arg0)
 {
 	if (!tacs)
@@ -97,14 +104,14 @@ void print_help(const char *arg0)
 	printf("        many second the phone waits before it re-registers.\n");
 	printf(" -S --sysinfo pureg=0 | pureg=1\n");
 	printf("        If 1, phone registers on every power on (default = '%d')\n", pureg);
-	printf("	Warning: Older phones may not like this and show 'No Service'!\n");
+	print_location_area_note();
 	printf(" -S --sysinfo pdreg=0 | pdreg=1\n");
 	printf("        If 1, phone de-registers on every power down (default = '%d')\n", pureg);
-	printf("	Warning: Older phones may not like this and show 'No Service'!\n");
+	print_location_area_note();
 	printf(" -S --sysinfo locaid=<location area ID > | locaid=-1 to disable\n");
 	printf("        (default = '%d')\n", locaid);
 	printf("        If it changes, phone re-registers.\n");
-	printf("	Warning: Older phones may not like this and show 'No Service'!\n");
+	print_location_area_note();
 	printf(" -S --sysinfo regh=0 | regh=1\n");
 	printf("        If 1, phone registers only if System ID matches (default = '%d')\n", regh);
 	printf(" -S --sysinfo regr=0 | regr=1\n");
