@@ -82,7 +82,7 @@ struct cnetz {
 	int			response_valid;		/* expect authorizaton response */
 	uint64_t		response;		/* authorization response */
 	int			warteschlange;		/* use queue */
-	int			metering;		/* use metering pulses in seconds 0 = off */
+	int			metering;		/* send metering units in seconds 0 = off */
 
 	/* all cnetz states */
 	enum cnetz_state	state;			/* main state of sender */

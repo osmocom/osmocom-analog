@@ -56,6 +56,7 @@ typedef struct bnetz {
 	/* system info */
 	int			gfs;			/* 'Gruppenfreisignal' */
 	int			metering;		/* use metering pulses in seconds 0 = off, < 0 = force */
+	struct timeval		metering_tv;		/* time to repeat metering pulse (current call) */
 
 	/* switch sender to channel 19 */
 	char			paging_file[256];	/* if set, write to given file to switch to channel 19 or back */

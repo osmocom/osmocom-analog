@@ -1434,7 +1434,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 }
 
 /* Call control answers call toward station mobile. */
-void call_down_answer(int callref)
+void call_down_answer(int callref, struct timeval __attribute__((unused)) *tv_meter)
 {
 	sender_t *sender;
 	r2000_t *r2000;

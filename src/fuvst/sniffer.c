@@ -263,7 +263,7 @@ void call_down_clock(void) {}
 
 int call_down_setup(int __attribute__((unused)) callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char __attribute__((unused)) *dialing) { return 0; }
 
-void call_down_answer(int __attribute__((unused)) callref) { }
+void call_down_answer(int __attribute__((unused)) callref, struct timeval __attribute__((unused)) *tv_meter) { }
 
 void call_down_disconnect(int __attribute__((unused)) callref, int __attribute__((unused)) cause) { }
 

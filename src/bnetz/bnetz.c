@@ -48,7 +48,7 @@
 
 #define TRENN_COUNT		5		/* min. 720 ms release 'Trennsignal' (according to FTZ 1727 Pfl 32 Clause 3.2.2.2.6) */
 
-#define METERING_DURATION	0,140000	/* duration of metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.1) */
+#define METERING_DURATION_US	140000		/* duration of metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.1) */
 #define METERING_START		1,0		/* start metering 1 second after call start */
 
 const char *bnetz_state_name(enum bnetz_state state)
@@ -419,9 +419,12 @@ void bnetz_receive_tone(bnetz_t *bnetz, int bit)
 			osmo_timer_del(&bnetz->timer);
 			bnetz_new_state(bnetz, BNETZ_GESPRAECH);
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
-			/* start metering pulses if forced */
-			if (bnetz->metering < 0)
+			/* start metering pulses, if forced (mobile terminating call) */
+			if (bnetz->metering < 0) {
+				bnetz->metering_tv.tv_sec = abs(bnetz->metering);
+				bnetz->metering_tv.tv_usec = 0;
 				osmo_timer_schedule(&bnetz->timer, METERING_START);
+			}
 			call_up_answer(bnetz->callref, bnetz->station_id);
 			break;
 		}
@@ -584,9 +587,6 @@ void bnetz_receive_telegramm(bnetz_t *bnetz, uint16_t telegramm)
 				osmo_timer_del(&bnetz->timer);
 				bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
 				bnetz_new_state(bnetz, BNETZ_GESPRAECH);
-				/* start metering pulses if enabled and supported by phone or if forced */
-				if (bnetz->metering < 0 || (bnetz->metering > 0 && (bnetz->dial_type == DIAL_TYPE_METER || bnetz->dial_type == DIAL_TYPE_METER_MUENZ)))
-					osmo_timer_schedule(&bnetz->timer, METERING_START);
 
 				/* setup call */
 				LOGP(DBNETZ, LOGL_INFO, "Setup call to network.\n");
@@ -635,6 +635,7 @@ lets see, if noise will not generate a release signal....
 static void bnetz_timeout(void *data)
 {
 	bnetz_t *bnetz = data;
+	int to_sec, to_usec;
 
 	switch (bnetz->state) {
 	case BNETZ_WAHLABRUF:
@@ -673,12 +674,21 @@ static void bnetz_timeout(void *data)
 		case DSP_MODE_AUDIO:
 			/* turn on merting pulse */
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO_METER);
-			osmo_timer_schedule(&bnetz->timer, METERING_DURATION);
+			osmo_timer_schedule(&bnetz->timer, 0, METERING_DURATION_US);
 			break;
 		case DSP_MODE_AUDIO_METER:
 			/* turn off and wait given seconds for next metering cycle */
 			bnetz_set_dsp_mode(bnetz, DSP_MODE_AUDIO);
-			osmo_timer_schedule(&bnetz->timer, (double)abs(bnetz->metering) - METERING_DURATION);
+			/* if metering has been disabled due to disconnect (must be at least 1s) */
+			if (!bnetz->metering_tv.tv_sec)
+				break;
+			to_sec = bnetz->metering_tv.tv_sec;
+			to_usec = bnetz->metering_tv.tv_usec - METERING_DURATION_US;
+			if (to_usec < 0) {
+				to_usec += 1000000;
+				to_sec--;
+			}
+			osmo_timer_schedule(&bnetz->timer, to_sec, to_usec);
 			break;
 		default:
 			break;
@@ -726,8 +736,35 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	return 0;
 }
 
-void call_down_answer(int __attribute__((unused)) callref)
+void call_down_answer(int callref, struct timeval *tv_meter)
 {
+	sender_t *sender;
+	bnetz_t *bnetz;
+
+	LOGP(DBNETZ, LOGL_INFO, "Call has been answered by network.\n");
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		bnetz = (bnetz_t *) sender;
+		if (bnetz->callref == callref)
+			break;
+	}
+	if (!sender) {
+		LOGP(DBNETZ, LOGL_NOTICE, "Incoming answer, but no callref!\n");
+		return;
+	}
+
+	/* At least tone second! */
+	if (tv_meter->tv_sec) {
+		LOGP(DBNETZ, LOGL_INFO, "Network starts metering pulses every %lu.%03lu seconds.\n", tv_meter->tv_sec, tv_meter->tv_usec / 1000);
+		memcpy(&bnetz->metering_tv, tv_meter, sizeof(bnetz->metering_tv));
+		osmo_timer_schedule(&bnetz->timer, METERING_START);
+	} else if (bnetz->metering < 0 || (bnetz->metering > 0 && (bnetz->dial_type == DIAL_TYPE_METER || bnetz->dial_type == DIAL_TYPE_METER_MUENZ))) {
+		/* start metering pulses if enabled and supported by phone or if forced (mobile origninating call) */
+		LOGP(DBNETZ, LOGL_INFO, "Command line options starts metering pulses every %d seconds.\n", abs(bnetz->metering));
+		bnetz->metering_tv.tv_sec = abs(bnetz->metering);
+		bnetz->metering_tv.tv_usec = 0;
+		osmo_timer_schedule(&bnetz->timer, METERING_START);
+	}
 }
 
 /* Call control sends disconnect (with tones).
@@ -753,8 +790,12 @@ void call_down_disconnect(int callref, int cause)
 	}
 
 	/* Release when not active */
-	if (bnetz->state == BNETZ_GESPRAECH)
+	if (bnetz->state == BNETZ_GESPRAECH) {
+		/* stop metering */
+		bnetz->metering_tv.tv_sec = 0;
+		bnetz->metering_tv.tv_usec = 0;
 		return;
+	}
 	switch (bnetz->state) {
 	case BNETZ_SELEKTIVRUF_EIN:
 	case BNETZ_SELEKTIVRUF_AUS:

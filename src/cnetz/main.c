@@ -122,8 +122,10 @@ void print_help(const char *arg0)
 	printf("        Enable queue support. If no channel is available, calls will be kept\n");
 	printf("        in a queue for maximum of 60 seconds. (default = %d)\n", warteschlange);
 	printf(" -G --gebuehren <seconds> | 0\n");
-	printf("        Increment  metering counter every given number of seconds.\n");
+	printf("        Increment metering counter every given number of seconds.\n");
 	printf("        To turn off, use 0. (default = %d)\n", metering);
+	printf("        If metering pulses are sent via Osmo-CC interface, pulses are always\n");
+	printf("        increment metering counter. This overrides this option.\n");
 	printf(" -V --voice-deviation <2400..4000 Hz>\n");
 	printf("        It is unclear what the actual voice deviation is. Please increase, if\n");
 	printf("        mobile's earpiece is too quiet and the microphone is too loud.\n");

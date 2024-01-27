@@ -1869,7 +1869,7 @@ int sms_out_setup(char *dialing, const char *caller_id, enum number_type caller_
 	return _out_setup(0, caller_id, caller_type, dialing, sms);
 }
 
-void call_down_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref, struct timeval __attribute__((unused)) *tv_meter)
 {
 }
 

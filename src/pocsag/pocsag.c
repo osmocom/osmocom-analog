@@ -541,7 +541,7 @@ void pocsag_msg_done(pocsag_t *pocsag)
 	pocsag_scan_or_loopback(pocsag);
 }
 
-void call_down_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref, struct timeval __attribute__((unused)) *tv_meter)
 {
 }
 

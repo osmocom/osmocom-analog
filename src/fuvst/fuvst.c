@@ -1360,7 +1360,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	return 0;
 }
 
-void call_down_answer(int callref)
+void call_down_answer(int callref, struct timeval __attribute__((unused)) *tv_meter)
 {
 	transaction_t *trans;
 	uint8_t opcode, *data;

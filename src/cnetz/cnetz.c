@@ -667,8 +667,35 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	return 0;
 }
 
-void call_down_answer(int __attribute__((unused)) callref)
+void call_down_answer(int callref, struct timeval *tv_meter)
 {
+	sender_t *sender;
+	cnetz_t *cnetz;
+	transaction_t *trans;
+
+	LOGP(DCNETZ, LOGL_INFO, "Call has been answered by network.\n");
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		cnetz = (cnetz_t *) sender;
+		trans = search_transaction_callref(cnetz, callref);
+		if (trans)
+			break;
+	}
+	if (!sender) {
+		LOGP(DCNETZ, LOGL_NOTICE, "Incoming answer, but no callref!\n");
+		return;
+	}
+
+	/* At least tone second! */
+	if (tv_meter->tv_sec) {
+		LOGP(DCNETZ, LOGL_INFO, "Network starts metering pulses every %lu.%03lu seconds.\n", tv_meter->tv_sec, tv_meter->tv_usec / 1000);
+		trans->meter_start = get_time();
+		trans->metering_time = (double)tv_meter->tv_sec + (double)tv_meter->tv_usec / 1000000.0;
+	} else if (cnetz->metering) {
+		LOGP(DCNETZ, LOGL_INFO, "Command line options starts metering pulses every %d seconds.\n", cnetz->metering);
+		trans->meter_start = get_time();
+		trans->metering_time = (double)cnetz->metering;
+	}
 }
 
 /* Call control sends disconnect (with tones).
@@ -700,6 +727,8 @@ void call_down_disconnect(int callref, int cause)
 
 	switch (cnetz->dsp_mode) {
 	case DSP_MODE_SPK_V:
+		/* stop metering */
+		trans->meter_end = get_time();
 		return;
 	case DSP_MODE_SPK_K:
 		LOGP(DCNETZ, LOGL_INFO, "Call control disconnects on speech channel, releasing towards mobile station.\n");
@@ -1667,11 +1696,11 @@ const telegramm_t *cnetz_transmit_telegramm_spk_v(cnetz_t *cnetz)
 
 	memset(&telegramm, 0, sizeof(telegramm));
 
-	if (cnetz->metering) {
-		double now = get_time();
-		if (!trans->call_start)
-			trans->call_start = now;
-		meter = (now - trans->call_start) / (double)cnetz->metering + 1;
+	if (trans->metering_time) {
+		/* get end time. if not set, use current time. (still running) */
+		double end = (trans->meter_end) ? : get_time();
+		/* add one unit, because when metering is started, the first unit is counted. */
+		meter = (end - trans->meter_start) / (double)trans->metering_time + 1.0;
 	}
 
 	telegramm.max_sendeleistung = cnetz_power2bits(cnetz->ms_power);

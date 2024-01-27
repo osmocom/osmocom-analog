@@ -58,6 +58,8 @@ void print_help(const char *arg0)
 	printf("        Pulses will be sent on outgoing calls only and only if mobile station\n");
 	printf("        requests it. Use negative value to force metering pulses for all calls.\n");
 	printf("        (default = %d)\n", metering);
+	printf("        If metering pulses are sent via Osmo-CC interface, pulses are always\n");
+	printf("        sent, if mobile station requests it. This overrides this option.\n");
 	printf(" -P --paging tone | notone | positive | negative | <file>=<on>:<off>\n");
 	printf("        Send a tone, give a signal or write to a file when switching to\n");
 	printf("        channel 19. (paging the phone).\n");

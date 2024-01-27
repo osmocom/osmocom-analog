@@ -660,9 +660,10 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 {
 	process_t *process;
 	uint8_t coding, location, progress, isdn_cause, socket_cause;
-	uint16_t sip_cause;
+	uint16_t sip_cause, metering_connect_units, metering_unit_period_decisecs;
 	uint8_t type, plan, present, screen, caller_type;
 	char caller_id[33], number[33];
+	struct timeval tv_meter = {};
 	const char *suffix, *invalid;
 	int rc;
 
@@ -702,6 +703,13 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		}
 		osmo_cc_free_msg(msg);
 		return;
+	}
+
+	/* get metering information */
+	rc = osmo_cc_get_ie_metering(msg, 0, &metering_connect_units, &metering_unit_period_decisecs);
+	if (rc >= 0) {
+		tv_meter.tv_sec = metering_unit_period_decisecs / 10;
+		tv_meter.tv_usec = (metering_unit_period_decisecs % 10) / 10;
 	}
 
 	switch(msg->type) {
@@ -852,7 +860,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 			goto nego_failed;
 		new_state_process(callref, PROCESS_CONNECT);
 		LOGP(DCALL, LOGL_INFO, "Call answered\n");
-		call_down_answer(callref);
+		call_down_answer(callref, &tv_meter);
 		indicate_answer_ack(callref);
 		break;
 	case OSMO_CC_MSG_DISC_REQ:

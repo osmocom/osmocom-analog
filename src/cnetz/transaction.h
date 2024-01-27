@@ -54,7 +54,9 @@ typedef struct transaction {
 	int			mo_call;		/* flags a moile originating call */
 	int			mt_call;		/* flags a moile terminating call */
 	int			page_failed;		/* failed to get a response from MS */
-	double			call_start;		/* when did the call start? (used for metering) */
+	double			metering_time;		/* time between units (0.0 if no metering set) */
+	double			meter_start;		/* when did the metering start? (0.0 if not yet started) */
+	double			meter_end;		/* when did the metering end? (0.0 if not yet ended) */
 	int			queue_position;		/* to find next transaction in queue */
 	double			rf_level_db;		/* level of first contact, so we can detect correct channel at multiple receptions */
 } transaction_t;

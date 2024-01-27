@@ -358,7 +358,7 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	return 0;
 }
 
-void call_down_answer(int __attribute__((unused)) callref)
+void call_down_answer(int __attribute__((unused)) callref, struct timeval __attribute__((unused)) *tv_meter)
 {
 }
 

@@ -31,7 +31,7 @@ void call_tone_recall(int callref, int on);
 
 /* send messages */
 int call_down_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing);
-void call_down_answer(int callref);
+void call_down_answer(int callref, struct timeval *tv_meter);
 void call_down_disconnect(int callref, int cause);
 void call_down_release(int callref, int cause);
 
