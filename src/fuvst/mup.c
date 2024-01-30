@@ -640,7 +640,7 @@ void decode_ebaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, ui
 	*b = (data[5] >> 6) & 0x1;
 	*l = data[5] >> 7;
 
-	LOGP(DMUP, LOGL_INFO, "(BS EBAF) Einbuchauftrag: FuTln=%d,%d,%d (0161-%d%d%05d)\n", *N, *U, *T, *N, *U, *T);
+	LOGP(DMUP, LOGL_INFO, "(BS EBAF) Einbuchauftrag: FuTln=%d,%d,%d (0161-%d%d%05d) reader=%s\n", *N, *U, *T, *N, *U, *T, (b) ? "chip" : "magent");
 }
 
 /* ack to inscription */
@@ -1108,7 +1108,7 @@ void encode_sadau(uint8_t *opcode)
 }
 
 /* ack "Aktivdatei" */
-int decode_sadqf(uint8_t *data, int len, uint16_t *S, uint8_t *E, uint8_t *l, uint16_t *T, uint8_t *U, uint8_t *N)
+int decode_sadqf(uint8_t *data, int len, uint16_t *S, uint8_t *E, uint8_t *b, uint16_t *T, uint8_t *U, uint8_t *N)
 {
 	int i, n = 0;
 
@@ -1120,7 +1120,7 @@ int decode_sadqf(uint8_t *data, int len, uint16_t *S, uint8_t *E, uint8_t *l, ui
 	*S = ((data[1] & 0xf) << 4) | data[0];
 	*E = data[1] >> 7;
 	for (i = 0; i < 3; i++) {
-		l[n] = (data[1] >> (6 - i)) & 0x1;
+		b[n] = (data[1] >> (6 - i)) & 0x1;
 		T[n] = (data[3 + (i * 3)] << 8) | data[2 + (i * 3)];
 		U[n] = data[4 + (i * 3)] & 0x1f;
 		N[n] = data[4 + (i * 3)] >> 5;
@@ -1130,7 +1130,7 @@ int decode_sadqf(uint8_t *data, int len, uint16_t *S, uint8_t *E, uint8_t *l, ui
 
 	LOGP(DMUP, LOGL_INFO, "(BS SADQF) Aktivdateiquittung der BS:\n");
 	for (i = 0; i < n; i++)
-		LOGP(DMUP, LOGL_INFO, " %d: FuTln=%d,%d,%d (0161-%d%d%05d)\n", i + 1, N[i], U[i], T[i], N[i], U[i], T[i]);
+		LOGP(DMUP, LOGL_INFO, " %d: FuTln=%d,%d,%d (0161-%d%d%05d) reader=%s\n", i + 1, N[i], U[i], T[i], N[i], U[i], T[i], (b[i]) ? "chip" : "magent");
 
 	return n;
 }

@@ -306,6 +306,7 @@ typedef struct cnetz_database {
 	uint8_t			futln_fuvst;
 	uint16_t		futln_rest;
 	uint8_t			chip;
+	int32_t			sicherungscode;
 } cnetz_db_t;
 
 static cnetz_db_t *cnetz_db_head;
@@ -362,7 +363,7 @@ static void flush_db(void)
 	}
 }
 
-static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, uint8_t chip)
+static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, uint8_t chip, int32_t sicherungscode)
 {
         cnetz_db_t *db, **dbp;
 
@@ -380,8 +381,9 @@ static void add_db(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest, 
 	db->futln_fuvst = futln_fuvst;
 	db->futln_rest = futln_rest;
 	db->chip = chip;
+	db->sicherungscode = sicherungscode;
 
-	LOGP(DDB, LOGL_INFO, "Adding subscriber '%d,%d,%d' to database.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+	LOGP(DDB, LOGL_INFO, "Adding subscriber '%d,%d,%d' to database. (reader=%s, sicherungs-code=%d)\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->chip) ? "chip" : "magent", db->sicherungscode);
 
 	/* attach to end of list */
 	dbp = &cnetz_db_head;
@@ -855,7 +857,7 @@ static void message_receive(fuvst_t *zzk, uint8_t ident, uint8_t opcode, uint8_t
 	uint16_t s = 0;
 	uint8_t u = 0, b = 0, l = 0;
 	uint16_t T_array[3];
-	uint8_t U_array[3], N_array[3], l_array[3];
+	uint8_t U_array[3], N_array[3], b_array[3];
 	int i, num;
 	char number[17];
 
@@ -930,7 +932,7 @@ static void message_receive(fuvst_t *zzk, uint8_t ident, uint8_t opcode, uint8_t
 		break;
 	case OPCODE_EBAF: /* enter BS (inscription) */
 		decode_ebaf(data, len, &T, &U, &N, &s, &u, &b, &l);
-		add_db(N, U, T, l);
+		add_db(N, U, T, b, (!l || !b) ? s : -1);
 		console_inscription(nut2rufnummer(N, U, T));
 		len = encode_ebpqu(&opcode, &data);
 		message_send(ident, opcode, data, len);
@@ -1087,11 +1089,11 @@ outgoing:
 		config_send(ident, PJ, D, L);
 		break;
 	case OPCODE_SADQF: /* transfer of inscription list (aktivdatei) */
-		num = decode_sadqf(data, len, &s, &e, l_array, T_array, U_array, N_array);
+		num = decode_sadqf(data, len, &s, &e, b_array, T_array, U_array, N_array);
 		if (s == 0)
 			flush_db();
 		for (i = 0; i < num; i++)
-			add_db(N_array[i], U_array[i], T_array[i], l_array[i]);
+			add_db(N_array[i], U_array[i], T_array[i], b_array[i], -1);
 		len = encode_ebpqu(&opcode, &data);
 		message_send(ident, opcode, data, len);
 		break;
@@ -1454,7 +1456,7 @@ void dump_info(void)
 	}
 
 	while (db) {
-		LOGP(DDB, LOGL_NOTICE, " - Subscriber '%d,%d,%d' is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest);
+		LOGP(DDB, LOGL_NOTICE, " - Subscriber '%d,%d,%d' (reader=%s, sicherungs-code=%d) is attached.\n", db->futln_nat, db->futln_fuvst, db->futln_rest, (db->chip) ? "chip" : "magent", db->sicherungscode);
 		db = db->next;
 	}
 }
