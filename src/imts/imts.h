@@ -127,7 +127,7 @@ typedef struct imts {
 
 const char *mts_number_valid(const char *number);
 void imts_list_channels(void);
-double imts_channel2freq(const char *kanal, int uplink);
+double imts_channel2freq(const char *kanal, int uplink, int *band, int *canada_only, int *channels_24);
 int imts_init(void);
 int imts_create(const char *channel, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int ptt, double fast_seize, enum mode mode, const char *operator, double length_1, double length_2, double length_3);
 void imts_destroy(sender_t *sender);

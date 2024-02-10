@@ -67,47 +67,61 @@ static const char *band_name[] = {
 
 static struct channel_info {
 	int		band;		/* which band it belongs to */
-	char		*name;		/* name of channel */
+	const char	*name;		/* name of channel */
+	const char	*channel;	/* number of channel */
 	double		downlink_mhz;	/* base station frequency */
 	double		uplink_mhz;	/* mobile station frequency */
 	int		canada_only;	/* channel used in canada only */
+	int		channels_24;	/* only available for 24 channel mobiles */
 } channel_info[] = {
-	{ VHF_LOW,	"ZO",	35.26,		43.26,		0 },
-	{ VHF_LOW,	"ZF",	35.30,		43.30,		0 },
-	{ VHF_LOW,	"ZM",	35.38,		43.38,		0 },
-	{ VHF_LOW,	"ZH",	35.34,		43.34,		0 },
-	{ VHF_LOW,	"ZA",	35.42,		43.32,		0 },
-	{ VHF_LOW,	"ZY",	35.46,		43.46,		0 },
-	{ VHF_LOW,	"ZR",	35.50,		43.50,		0 },
-	{ VHF_LOW,	"ZB",	35.54,		43.54,		0 },
-	{ VHF_LOW,	"ZW",	35.62,		43.62,		0 },
-	{ VHF_LOW,	"ZL",	35.66,		43.66,		0 },
-	{ VHF_HIGH,	"JJ",	152.48,		157.74,		1 },
-	{ VHF_HIGH,	"JL",	152.51,		157.77,		0 },
-	{ VHF_HIGH,	"YL",	152.54,		157.80,		0 },
-	{ VHF_HIGH,	"JP",	152.57,		157.83,		0 },
-	{ VHF_HIGH,	"YP",	152.60,		157.86,		0 },
-	{ VHF_HIGH,	"YJ",	152.63,		157.89,		0 },
-	{ VHF_HIGH,	"YK",	152.66,		157.92,		0 },
-	{ VHF_HIGH,	"JS",	152.69,		157.95,		0 },
-	{ VHF_HIGH,	"YS",	152.72,		157.98,		0 },
-	{ VHF_HIGH,	"YR",	152.75,		158.01,		0 },
-	{ VHF_HIGH,	"JK",	152.78,		158.04,		0 },
-	{ VHF_HIGH,	"JR",	152.81,		158.07,		0 },
-	{ VHF_HIGH,	"JW",	152.84,		158.10,		1 },
-	{ UHF,		"QC",	454.375,	459.375,	0 },
-	{ UHF,		"QJ",	454.40,		459.40,		0 },
-	{ UHF,		"QD",	454.425,	459.425,	0 },
-	{ UHF,		"QA",	454.45,		459.45,		0 },
-	{ UHF,		"QE",	454.475,	459.475,	0 },
-	{ UHF,		"QP",	454.50,		459.50,		0 },
-	{ UHF,		"QK",	454.525,	459.525,	0 },
-	{ UHF,		"QB",	454.55,		459.55,		0 },
-	{ UHF,		"QO",	454.575,	459.575,	0 },
-	{ UHF,		"QR",	454.60,		459.60,		0 },
-	{ UHF,		"QY",	454.625,	459.625,	0 },
-	{ UHF,		"QF",	454.65,		459.65,		0 },
-	{ 0, NULL, 0.0, 0.0, 0}
+	{ VHF_LOW,	"ZO",	NULL,	35.26,		43.26,		0,	0 },
+	{ VHF_LOW,	"ZF",	NULL,	35.30,		43.30,		0,	0 },
+	{ VHF_LOW,	"ZM",	NULL,	35.38,		43.38,		0,	0 },
+	{ VHF_LOW,	"ZH",	NULL,	35.34,		43.34,		0,	0 },
+	{ VHF_LOW,	"ZA",	NULL,	35.42,		43.32,		0,	0 },
+	{ VHF_LOW,	"ZY",	NULL,	35.46,		43.46,		0,	0 },
+	{ VHF_LOW,	"ZR",	NULL,	35.50,		43.50,		0,	0 },
+	{ VHF_LOW,	"ZB",	NULL,	35.54,		43.54,		0,	0 },
+	{ VHF_LOW,	"ZW",	NULL,	35.62,		43.62,		0,	0 },
+	{ VHF_LOW,	"ZL",	NULL,	35.66,		43.66,		0,	0 },
+	{ VHF_HIGH,	"JJ",	"1",	152.48,		157.74,		1,	0 },
+	{ VHF_HIGH,	"JL",	"3",	152.51,		157.77,		0,	0 },
+	{ VHF_HIGH,	"YL",	"5",	152.54,		157.80,		0,	0 },
+	{ VHF_HIGH,	"JP",	"7",	152.57,		157.83,		0,	0 },
+	{ VHF_HIGH,	"YP",	"9",	152.60,		157.86,		0,	0 },
+	{ VHF_HIGH,	"YJ",	"11",	152.63,		157.89,		0,	0 },
+	{ VHF_HIGH,	"YK",	"13",	152.66,		157.92,		0,	0 },
+	{ VHF_HIGH,	"JS",	"15",	152.69,		157.95,		0,	0 },
+	{ VHF_HIGH,	"YS",	"17",	152.72,		157.98,		0,	0 },
+	{ VHF_HIGH,	"YR",	"19",	152.75,		158.01,		0,	0 },
+	{ VHF_HIGH,	"JK",	"21",	152.78,		158.04,		0,	0 },
+	{ VHF_HIGH,	"JR",	"23",	152.81,		158.07,		0,	0 },
+	{ VHF_HIGH,	"JW",	"25",	152.84,		158.10,		1,	0 },
+	{ VHF_HIGH,	"XJ",	"2",	152.495,	157.755,	0,	1 },
+	{ VHF_HIGH,	"XK",	"4",	152.525,	157.785,	0,	1 },
+	{ VHF_HIGH,	"XL",	"6",	152.555,	157.815,	0,	1 },
+	{ VHF_HIGH,	"XP",	"8",	152.585,	157.845,	0,	1 },
+	{ VHF_HIGH,	"XR",	"10",	152.615,	157.875,	0,	1 },
+	{ VHF_HIGH,	"XS",	"12",	152.645,	157.905,	0,	1 },
+	{ VHF_HIGH,	"XT",	"14",	152.675,	157.935,	0,	1 },
+	{ VHF_HIGH,	"XU",	"16",	152.705,	157.965,	0,	1 },
+	{ VHF_HIGH,	"XV",	"18",	152.735,	157.995,	0,	1 },
+	{ VHF_HIGH,	"XW",	"20",	152.765,	158.025,	0,	1 },
+	{ VHF_HIGH,	"XX",	"22",	152.795,	158.055,	0,	1 },
+	{ VHF_HIGH,	"XY",	"24",	152.825,	158.085,	0,	1 },
+	{ UHF,		"QC",	"31",	454.375,	459.375,	0,	0 },
+	{ UHF,		"QJ",	"32",	454.40,		459.40,		0,	0 },
+	{ UHF,		"QD",	"33",	454.425,	459.425,	0,	0 },
+	{ UHF,		"QA",	"34",	454.45,		459.45,		0,	0 },
+	{ UHF,		"QE",	"35",	454.475,	459.475,	0,	0 },
+	{ UHF,		"QP",	"36",	454.50,		459.50,		0,	0 },
+	{ UHF,		"QK",	"37",	454.525,	459.525,	0,	0 },
+	{ UHF,		"QB",	"38",	454.55,		459.55,		0,	0 },
+	{ UHF,		"QO",	"39",	454.575,	459.575,	0,	0 },
+	{ UHF,		"QR",	"40",	454.60,		459.60,		0,	0 },
+	{ UHF,		"QY",	"41",	454.625,	459.625,	0,	0 },
+	{ UHF,		"QF",	"42",	454.65,		459.65,		0,	0 },
+	{ 0, NULL, NULL, 0.0, 0.0, 0, 0}
 };
 
 void imts_list_channels(void)
@@ -119,10 +133,13 @@ void imts_list_channels(void)
 		if (last_band != channel_info[i].band) {
 			last_band = channel_info[i].band;
 			printf("\n%s:\n\n", band_name[channel_info[i].band]);
-			printf("Channel\t\tDownlink\tUplink\t\tCountry\n");
+			printf("Channel\t\tDownlink\tUplink\t\tComment\n");
 			printf("----------------------------------------------------------------\n");
 		}
-		printf("%s\t\t%.3f MHz\t%.3f MHz\t%s\n", channel_info[i].name, channel_info[i].downlink_mhz, channel_info[i].uplink_mhz, (channel_info[i].canada_only) ? "USA + Canada" : "USA");
+		printf("%s", channel_info[i].name);
+		if (channel_info[i].channel)
+			printf(" (%s)", channel_info[i].channel);
+		printf("\t\t%.3f MHz\t%.3f MHz\t%s%s\n", channel_info[i].downlink_mhz, channel_info[i].uplink_mhz, (channel_info[i].canada_only) ? "Canada only" : "", (channel_info[i].channels_24) ? "24-Cannel only" : "");
 	}
 	printf("\n");
 }
@@ -221,12 +238,19 @@ static void imts_new_state(imts_t *imts, enum imts_state new_state)
 
 /* Convert channel name to frequency number of base station.
    Set 'uplink' to 1 to get frequency of mobile station. */
-double imts_channel2freq(const char *kanal, int uplink)
+double imts_channel2freq(const char *kanal, int uplink, int *band, int *canada_only, int *channels_24)
 {
 	int i;
 
 	for (i = 0; channel_info[i].name; i++) {
-		if (!strcasecmp(channel_info[i].name, kanal)) {
+		if (!strcasecmp(channel_info[i].name, kanal)
+		 || (channel_info[i].channel && !strcmp(channel_info[i].channel, kanal))) {
+			if (band)
+				*band = channel_info[i].band;
+			if (canada_only)
+				*canada_only = channel_info[i].canada_only;
+			if (channels_24)
+				*channels_24 = channel_info[i].channels_24;
 			if (uplink == 2)
 				return (channel_info[i].downlink_mhz - channel_info[i].uplink_mhz) * 1e6;
 			else if (uplink)
@@ -237,30 +261,6 @@ double imts_channel2freq(const char *kanal, int uplink)
 	}
 
 	return 0.0;
-}
-
-int imts_channel2band(const char *kanal)
-{
-	int i;
-
-	for (i = 0; channel_info[i].name; i++) {
-		if (!strcasecmp(channel_info[i].name, kanal))
-			return channel_info[i].band;
-	}
-
-	return 0.0;
-}
-
-double imts_is_canada_only(const char *kanal)
-{
-	int i;
-
-	for (i = 0; channel_info[i].name; i++) {
-		if (!strcasecmp(channel_info[i].name, kanal))
-			return channel_info[i].canada_only;
-	}
-
-	return 0;
 }
 
 /* check if number is a valid station ID */
@@ -293,24 +293,30 @@ static void imts_detector_test(imts_t *imts, double length_1, double length_2, d
 int imts_create(const char *kanal, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int pre_emphasis, int de_emphasis, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback, double squelch_db, int ptt, double fast_seize, enum mode mode, const char *operator, double length_1, double length_2, double length_3)
 {
 	imts_t *imts;
+	int band, canada_only, channels_24;
 	int rc;
 
-	if (imts_channel2freq(kanal, 0) == 0.0) {
+	if (imts_channel2freq(kanal, 0, &band, &canada_only, &channels_24) == 0.0) {
 		LOGP(DIMTS, LOGL_ERROR, "Channel number %s invalid.\n", kanal);
 		return -EINVAL;
 	}
-	if (imts_is_canada_only(kanal)) {
+	if (canada_only) {
 		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' was only available in Canada with Canadian phones.\n", kanal);
 		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 	}
-	if (mode == MODE_IMTS && imts_channel2band(kanal) == VHF_LOW) {
+	if (channels_24) {
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
+		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' only works with phones that support 24 channels.\n", kanal);
+		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
+	}
+	if (mode == MODE_IMTS && band == VHF_LOW) {
 		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' was only available at MTS network.\n", kanal);
 		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 		return -EINVAL;
 	}
-	if (mode == MODE_MTS && imts_channel2band(kanal) == UHF) {
+	if (mode == MODE_MTS && band == UHF) {
 		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
 		LOGP(DIMTS, LOGL_NOTICE, "Given channel '%s' was only available at IMTS network.\n", kanal);
 		LOGP(DIMTS, LOGL_NOTICE, "*******************************************************************************\n");
@@ -332,7 +338,7 @@ int imts_create(const char *kanal, const char *device, int use_sdr, int samplera
 
 	/* init general part of transceiver */
 	/* do not enable emphasis, since it is done by imts code, not by common sender code */
-	rc = sender_create(&imts->sender, kanal, imts_channel2freq(kanal, 0), imts_channel2freq(kanal, 1), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
+	rc = sender_create(&imts->sender, kanal, imts_channel2freq(kanal, 0, NULL, NULL, NULL), imts_channel2freq(kanal, 1, NULL, NULL, NULL), device, use_sdr, samplerate, rx_gain, tx_gain, 0, 0, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback, PAGING_SIGNAL_NONE);
 	if (rc < 0) {
 		LOGP(DIMTS, LOGL_ERROR, "Failed to init 'Sender' processing!\n");
 		goto error;

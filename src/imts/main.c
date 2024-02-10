@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
 		}
-		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], imts_channel2freq(kanal[i], 0) / 1e6, imts_channel2freq(kanal[i], 1) / 1e6, imts_channel2freq(kanal[i], 2) / 1e6);
+		printf("Base station on channel %s ready, please tune transmitter to %.3f MHz and receiver to %.3f MHz. (%.3f MHz offset)\n", kanal[i], imts_channel2freq(kanal[i], 0, NULL, NULL, NULL) / 1e6, imts_channel2freq(kanal[i], 1, NULL, NULL, NULL) / 1e6, imts_channel2freq(kanal[i], 2, NULL, NULL, NULL) / 1e6);
 	}
 
 	main_mobile_loop((mode == MODE_IMTS) ? "imts" : "mts", &quit, NULL, station_id);
