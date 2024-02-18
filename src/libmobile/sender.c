@@ -331,7 +331,7 @@ static void gain_samples(sample_t *samples, int length, double gain)
 }
 
 /* Handle audio streaming of one transceiver. */
-void process_sender_audio(sender_t *sender, int *quit, int buffer_size)
+void process_sender_audio(sender_t *sender, int *quit, sample_t **samples, uint8_t **power, int buffer_size)
 {
 	sender_t *inst;
 	int rc, count;
@@ -342,15 +342,9 @@ void process_sender_audio(sender_t *sender, int *quit, int buffer_size)
 
 	/* count instances for audio channel */
 	for (num_chan = 0, inst = sender; inst; num_chan++, inst = inst->slave);
-	sample_t buff[num_chan][buffer_size], *samples[num_chan];
-	uint8_t pbuff[num_chan][buffer_size], *power[num_chan];
 	enum paging_signal paging_signal[num_chan];
 	int on[num_chan];
 	double rf_level_db[num_chan];
-	for (i = 0; i < num_chan; i++) {
-		samples[i] = buff[i];
-		power[i] = pbuff[i];
-	}
 
 #ifdef DEBUG_TIME_CONSUMPTION
 	t1 = get_time();

@@ -361,6 +361,8 @@ void fsk_demod_cleanup(fsk_demod_t *fsk)
 //#define DEBUG_MODULATOR
 //#define DEBUG_FILTER
 
+#define CHUNK 1024
+
 /* Demodulates bits
  *
  * If bit is received, callback function send_bit() is called.
@@ -375,15 +377,21 @@ void fsk_demod_cleanup(fsk_demod_t *fsk)
  */
 void fsk_demod_receive(fsk_demod_t *fsk, sample_t *sample, int length)
 {
-	sample_t I[length], Q[length], frequency[length], f;
+	sample_t I[CHUNK], Q[CHUNK], frequency[CHUNK], f;
 	int i;
 	int bit;
 	double level, quality;
 
-	/* demod samples to offset around center frequency */
-	fm_demodulate_real(&fsk->demod, frequency, length, sample, I, Q);
-
 	for (i = 0; i < length; i++) {
+		/* this is called on first sample and subsequently every sample defined by CHUNK */
+		if (i % CHUNK == 0) {
+			length -= i;
+			i = 0;
+			/* demod CHUNK samples to offset around center frequency */
+			fm_demodulate_real(&fsk->demod, frequency, (length > CHUNK) ? CHUNK : length, sample, I, Q);
+			sample += CHUNK;
+		}
+
 		f = frequency[i];
 		if (f < 0)
 			bit = fsk->low_bit;

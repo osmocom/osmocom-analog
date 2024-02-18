@@ -617,6 +617,7 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 	sender_t *sender;
 	double last_time_call = 0, begin_time, now, sleep;
 	struct termios term, term_orig;
+	int num_chan, i;
 	int c;
 	int rc;
 
@@ -693,6 +694,15 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 	if (console_open_audio(buffer_size, dsp_interval))
 		return;
 
+	/* alloc memory for audio processing */
+	for (num_chan = 0, sender = sender_head; sender; num_chan++, sender = sender->next);
+	sample_t *samples[num_chan];
+	uint8_t *powers[num_chan];
+	for (i = 0; i < num_chan; i++) {
+		samples[i] = calloc(buffer_size, sizeof(**samples));
+		powers[i] = calloc(buffer_size, sizeof(**powers));
+	}
+
 	/* real time priority */
 	if (rt_prio > 0) {
 		struct sched_param schedp;
@@ -739,7 +749,7 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 			/* do not process audio for an audio slave, since it is done by audio master */
 			if (sender->master) /* if master is set, we are an audio slave */
 				continue;
-			process_sender_audio(sender, quit, buffer_size);
+			process_sender_audio(sender, quit, samples, powers, buffer_size);
 		}
 
 		/* process audio for call instances */
@@ -854,6 +864,11 @@ next_char:
 	signal(SIGHUP, SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGPIPE, SIG_DFL);
+
+	for (i = 0; i < num_chan; i++) {
+		free(samples[i]);
+		free(powers[i]);
+	}
 
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);
