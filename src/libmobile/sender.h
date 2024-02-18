@@ -100,7 +100,7 @@ void sender_set_fm(sender_t *sender, double max_deviation, double max_modulation
 void sender_set_am(sender_t *sender, double max_modulation, double speech_deviation, double max_display, double modulation_index);
 int sender_open_audio(int buffer_size, double interval);
 int sender_start_audio(void);
-void process_sender_audio(sender_t *sender, int *quit, int buffer_size);
+void process_sender_audio(sender_t *sender, int *quit, sample_t **samples, uint8_t **power, int buffer_size);
 void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int count);
 void sender_receive(sender_t *sender, sample_t *samples, int count, double rf_level_db);
 void sender_paging(sender_t *sender, int on);
