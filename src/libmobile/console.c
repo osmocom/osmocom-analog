@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/param.h>
@@ -143,26 +144,31 @@ static void free_console(void)
 	console.callref = 0;
 }
 
-void up_audio(struct osmo_cc_session_codec *codec, uint8_t __attribute__((unused)) marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len)
+static void up_audio(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
 {
-	int count = len / 2;
-	sample_t samples[count];
-
 	/* save audio from transceiver to jitter buffer */
 	if (console.sound) {
-		int16_to_samples_speech(samples, (int16_t *)data, count);
-		jitter_save(&console.dejitter, samples, count, 1, sequence_number, timestamp, ssrc);
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(codec->decoder, &console, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (!jf)
+			return;
+		jitter_save(&console.dejitter, jf);
 		return;
 	}
 	/* if echo test is used, send echo back to mobile */
 	if (console.echo_test) {
-		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 0, 1, count, &console);
+		osmo_cc_rtp_send_ts(codec, payload, payload_len, marker, sequence, timestamp);
 		return;
 	}
 	/* if no sound is used, send test tone to mobile */
 	if (console.state == CONSOLE_CONNECT) {
-		get_test_patterns((int16_t *)data, count);
-		osmo_cc_rtp_send(codec, (uint8_t *)data, count * 2, 0, 1, count, &console);
+		int16_t spl[160];
+		uint8_t *payload;
+		int payload_len;
+		get_test_patterns(spl, 160);
+		codec->encoder((uint8_t *)spl, 160 * 2, &payload, &payload_len, &console);
+		osmo_cc_rtp_send(codec, payload, payload_len, 0, 1, 160);
+		free(payload);
 		return;
 	}
 }
@@ -377,7 +383,7 @@ int console_init(const char *audiodev, int samplerate, int buffer, int loopback,
 		goto error;
 	}
 
-	rc = jitter_create(&console.dejitter, "console", 8000, sizeof(sample_t), 0.050, 0.200, JITTER_FLAG_NONE);
+	rc = jitter_create(&console.dejitter, "console", 8000, 0.040, 0.200, JITTER_FLAG_NONE);
 	if (rc < 0) {
 		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init dejitter buffer!\n");
 		goto error;
@@ -583,7 +589,11 @@ void process_console(int c)
 	if (count > 0) {
 		/* load and upsample */
 		input_num = samplerate_upsample_input_num(&console.srstate, count);
-		jitter_load(&console.dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&console.dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
 		samplerate_upsample(&console.srstate, samples, input_num, samples, count);
 		/* write to sound device */
 		samples_list[0] = samples;
@@ -608,8 +618,6 @@ void process_console(int c)
 		int i;
 
 		count = samplerate_downsample(&console.srstate, samples, count);
-		if (console.loopback == 3)
-			jitter_save(&console.dejitter, samples, count, 0, 0, 0, 0);
 		/* put samples into ring buffer */
 		for (i = 0; i < count; i++) {
 			console.tx_buffer[console.tx_buffer_pos] = samples[i];
@@ -618,9 +626,12 @@ void process_console(int c)
 				console.tx_buffer_pos = 0;
 				/* only if we have a call */
 				if (console.callref && console.codec) {
-					int16_t data[160];
-					samples_to_int16_speech(data, console.tx_buffer, 160);
-					osmo_cc_rtp_send(console.codec, (uint8_t *)data, 160 * 2, 0, 1, 160, &console);
+					int16_t spl[160];
+					uint8_t *payload;
+					int payload_len;
+					samples_to_int16_speech(spl, console.tx_buffer, 160);
+					console.codec->encoder((uint8_t *)spl, 160 * 2, &payload, &payload_len, &console);
+					osmo_cc_rtp_send(console.codec, payload, payload_len, 0, 1, 160);
 				}
 			}
 		}

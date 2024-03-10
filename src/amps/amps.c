@@ -1080,28 +1080,6 @@ void call_down_release(int callref, int cause)
 	}
 }
 
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	sender_t *sender;
-	amps_t *amps;
-
-	for (sender = sender_head; sender; sender = sender->next) {
-		amps = (amps_t *) sender;
-		if (amps->trans_list && amps->trans_list->callref == callref)
-			break;
-	}
-	if (!sender)
-		return;
-
-	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX) {
-		compress_audio(&amps->cstate, samples, count);
-		jitter_save(&amps->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
-	}
-}
-
-void call_down_clock(void) {}
-
 /* Timeout handling */
 void transaction_timeout(void *data)
 {

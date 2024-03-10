@@ -85,7 +85,7 @@ int dsp_init_sender(mpt1327_t *mpt1327, double squelch_db)
 	mpt1327->dmp_frame_quality = display_measurements_add(&mpt1327->sender.dispmeas, "Frame Quality", "%.1f %% (last)", DISPLAY_MEAS_LAST, DISPLAY_MEAS_LEFT, 0.0, 100.0, 100.0);
 
 	/* repeater */
-	rc = jitter_create(&mpt1327->repeater_dejitter, "repeater", mpt1327->sender.samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
+	rc = jitter_create(&mpt1327->repeater_dejitter, "repeater", mpt1327->sender.samplerate, 0.050, 0.500, JITTER_FLAG_NONE);
 	if (rc < 0) {
 		LOGP(DDSP, LOGL_ERROR, "Failed to create and init repeater buffer!\n");
 		goto error;
@@ -234,9 +234,14 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 
 	if (mpt1327->dsp_mode == DSP_MODE_TRAFFIC) {
 		/* if repeater mode, store sample in jitter buffer */
-		if (mpt1327->repeater)
-			jitter_save(&mpt1327->repeater_dejitter, samples, length, 0, 0, 0, 0);
-
+		if (mpt1327->repeater)  {
+			jitter_frame_t *jf;
+			jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)samples, length * sizeof(*samples), 0, mpt1327->repeater_sequence, mpt1327->repeater_timestamp, 123);
+			if (jf)
+				jitter_save(&mpt1327->repeater_dejitter, jf);
+			mpt1327->repeater_sequence += 1;
+			mpt1327->repeater_timestamp += length;
+		}
 		if (mpt1327->unit && mpt1327->unit->callref) {
 			int count;
 
@@ -291,13 +296,17 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 
 	if (mpt1327->dsp_mode == DSP_MODE_TRAFFIC) {
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		/* if repeater mode, sum samples from jitter buffer to samples */
 		if (mpt1327->repeater) {
 			sample_t uplink[length];
 			int i;
-			jitter_load(&mpt1327->repeater_dejitter, uplink, length);
+			jitter_load_samples(&mpt1327->repeater_dejitter, (uint8_t *)uplink, length, sizeof(*uplink), NULL, NULL);
 			for (i = 0; i < length; i++)
 				samples[i] += uplink[i];
 		}
@@ -334,9 +343,11 @@ void mpt1327_set_dsp_mode(mpt1327_t *mpt1327, enum dsp_mode mode, int repeater)
 		mpt1327->sync_word = 0xc4d7;
 	if (mode == DSP_MODE_TRAFFIC)
 		mpt1327->sync_word = 0x3b28;
+	if (mode == DSP_MODE_TRAFFIC && mpt1327->dsp_mode != mode)
+		jitter_reset(&mpt1327->sender.dejitter);
 
 	if (repeater)
-		jitter_reset(&mpt1327->repeater_dejitter);
+ 		jitter_reset(&mpt1327->repeater_dejitter);
 	mpt1327->repeater = repeater;
 
 	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", mpt1327_dsp_mode_name(mpt1327->dsp_mode), mpt1327_dsp_mode_name(mode));
@@ -349,4 +360,25 @@ void mpt1327_reset_sync(mpt1327_t *mpt1327)
 	mpt1327->rx_sync = 0;
 	mpt1327->rx_mute = 0;
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	mpt1327_unit_t *unit;
+
+	unit = find_unit_callref(callref);
+	if (!unit)
+		return;
+	if (!unit->tc)
+		return;
+
+	if (unit->tc->state == STATE_BUSY && unit->tc->dsp_mode == DSP_MODE_TRAFFIC) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&unit->tc->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

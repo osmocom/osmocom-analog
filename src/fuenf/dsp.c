@@ -604,7 +604,11 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	if (fuenf->state == FUENF_STATE_DURCHSAGE && fuenf->callref) {
 		memset(power, 1, length);
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 	} else {
 		/* send if something has to be sent. else turn transmitter off */
@@ -645,4 +649,28 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 		fuenf->sender.rxbuf_pos = 0;
 
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	sender_t *sender;
+	fuenf_t *fuenf;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		fuenf = (fuenf_t *) sender;
+		if (fuenf->callref == callref)
+			break;
+	}
+	if (!sender)
+		return;
+
+	if (fuenf->state == FUENF_STATE_DURCHSAGE) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&fuenf->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

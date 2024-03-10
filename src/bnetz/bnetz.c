@@ -857,27 +857,5 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 	}
 }
 
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	sender_t *sender;
-	bnetz_t *bnetz;
-
-	for (sender = sender_head; sender; sender = sender->next) {
-		bnetz = (bnetz_t *) sender;
-		if (bnetz->callref == callref)
-			break;
-	}
-	if (!sender)
-		return;
-
-	if (bnetz->dsp_mode == DSP_MODE_AUDIO
-	 || bnetz->dsp_mode == DSP_MODE_AUDIO_METER) {
-		jitter_save(&bnetz->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
-	}
-}
-
-void call_down_clock(void) {}
-
 void dump_info(void) {}
 

@@ -1957,28 +1957,6 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 	}
 }
 
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	transaction_t *trans;
-	nmt_t *nmt;
-
-	trans = get_transaction_by_callref(callref);
-	if (!trans)
-		return;
-	nmt = trans->nmt;
-	if (!nmt)
-		return;
-
-	if (nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF) {
-		if (nmt->compandor)
-			compress_audio(&nmt->cstate, samples, count);
-		jitter_save(&nmt->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
-	}
-}
-
-void call_down_clock(void) {}
-
 /*
  * SMS layer messages
  */

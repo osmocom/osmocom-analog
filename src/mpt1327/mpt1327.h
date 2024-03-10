@@ -118,6 +118,8 @@ typedef struct mpt1327 {
 	/* dsp states */
 	int			repeater;		/* in repeater mode the received audio is repeated */
 	jitter_t		repeater_dejitter;	/* forwarding audio */
+	uint16_t		repeater_sequence;	/* sequence & ts for jitter buffer */
+	uint32_t		repeater_timestamp;
 	int			pressel_on;		/* set if somebody transmitting on TC */
 	enum dsp_mode		dsp_mode;		/* current mode: audio, durable tone 0 or 1, paging */
 	fsk_mod_t		fsk_mod;		/* fsk processing */
@@ -153,4 +155,5 @@ void mpt1327_destroy(sender_t *sender);
 void mpt1327_receive_codeword(mpt1327_t *mpt1327, uint64_t bits, double quality, double level);
 int mpt1327_send_codeword(mpt1327_t *mpt1327, uint64_t *bits);
 void mpt1327_signal_indication(mpt1327_t *mpt1327);
+mpt1327_unit_t *find_unit_callref(uint32_t callref);
 

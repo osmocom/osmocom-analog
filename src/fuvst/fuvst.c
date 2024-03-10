@@ -1259,7 +1259,11 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 		v27_modem_send(&fuvst->modem, samples, length);
 	else {
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 	}
 }
@@ -1295,7 +1299,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double __at
 }
 
 /* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
 {
 	sender_t *sender;
 	fuvst_t *fuvst;
@@ -1308,8 +1312,12 @@ void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_
 	if (!sender)
 		return;
 
-	if (fuvst->callref)
-		jitter_save(&fuvst->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
+	if (fuvst->callref) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&fuvst->sender.dejitter, jf);
+	}
 }
 
 void call_down_clock(void) {}

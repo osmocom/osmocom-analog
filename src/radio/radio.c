@@ -106,8 +106,8 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 			LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
 			goto error;
 		}
-		jitter_create(&radio->tx_dejitter[0], "left", radio->tx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
-		jitter_create(&radio->tx_dejitter[1], "right", radio->tx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
+		jitter_create(&radio->tx_dejitter[0], "left", radio->tx_audio_samplerate, 0.050, 0.500, JITTER_FLAG_NONE);
+		jitter_create(&radio->tx_dejitter[1], "right", radio->tx_audio_samplerate, 0.050, 0.500, JITTER_FLAG_NONE);
 		radio->tx_audio_mode = AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
@@ -173,8 +173,8 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 			LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
 			goto error;
 		}
-		jitter_create(&radio->rx_dejitter[0], "left", radio->rx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
-		jitter_create(&radio->rx_dejitter[1], "right", radio->rx_audio_samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
+		jitter_create(&radio->rx_dejitter[0], "left", radio->rx_audio_samplerate, 0.050, 0.500, JITTER_FLAG_NONE);
+		jitter_create(&radio->rx_dejitter[1], "right", radio->rx_audio_samplerate, 0.050, 0.500, JITTER_FLAG_NONE);
 		radio->rx_audio_mode |= AUDIO_MODE_AUDIODEV;
 #else
 		rc = -ENOTSUP;
@@ -442,6 +442,7 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	sample_t *audio_samples[2];
 	sample_t *signal_samples[3];
 	uint8_t *signal_power;
+	jitter_frame_t *jf;
 
 	if (signal_num > radio->buffer_size) {
 		LOGP(DRADIO, LOGL_ERROR, "signal_num > buffer_size, please fix!.\n");
@@ -494,11 +495,19 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 			else
 				return 0;
 		}
-		jitter_save(&radio->tx_dejitter[0], audio_samples[0], rc, 0, 0, 0 ,0);
-		jitter_load(&radio->tx_dejitter[0], audio_samples[0], audio_num);
+		jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)audio_samples[0], rc * sizeof(*(audio_samples[0])), 0, radio->tx_sequence[0], radio->tx_timestamp[0], 123);
+		if (jf)
+			jitter_save(&radio->tx_dejitter[0], jf);
+		radio->tx_sequence[0] += 1;
+		radio->tx_timestamp[0] += rc;
+		jitter_load_samples(&radio->tx_dejitter[0], (uint8_t *)audio_samples[0], audio_num, sizeof(*(audio_samples[0])), NULL, NULL);
 		if (radio->tx_audio_channels == 2) {
-			jitter_save(&radio->tx_dejitter[1], audio_samples[1], rc, 0, 0, 0 ,0);
-			jitter_load(&radio->tx_dejitter[1], audio_samples[1], audio_num);
+			jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)audio_samples[1], rc * sizeof(*(audio_samples[1])), 0, radio->tx_sequence[1], radio->tx_timestamp[1], 123);
+			if (jf)
+				jitter_save(&radio->tx_dejitter[1], jf);
+			radio->tx_sequence[1] += 1;
+			radio->tx_timestamp[1] += rc;
+			jitter_load_samples(&radio->tx_dejitter[1], (uint8_t *)audio_samples[1], audio_num, sizeof(*(audio_samples[1])), NULL, NULL);
 		}
 		break;
 #endif
@@ -616,6 +625,7 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 	int audio_num;
 	sample_t *samples[3];
 	double p;
+	jitter_frame_t *jf;
 
 	if (signal_num > radio->buffer_size) {
 		LOGP(DRADIO, LOGL_ERROR, "signal_num > buffer_size, please fix!.\n");
@@ -728,13 +738,22 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 		wave_write(&radio->wave_rx_rec, samples, audio_num);
 #ifdef HAVE_ALSA
 	if ((radio->rx_audio_mode & AUDIO_MODE_AUDIODEV)) {
-		jitter_save(&radio->rx_dejitter[0], samples[0], audio_num, 0, 0, 0 ,0);
-		if (radio->rx_audio_channels == 2)
-			jitter_save(&radio->rx_dejitter[1], samples[1], audio_num, 0, 0, 0 ,0);
+		jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)samples[0], audio_num * sizeof(*(samples[0])), 0, radio->rx_sequence[0], radio->rx_timestamp[0], 123);
+		if (jf)
+			jitter_save(&radio->rx_dejitter[0], jf);
+		radio->rx_sequence[0] += 1;
+		radio->rx_timestamp[0] += audio_num;
+		if (radio->rx_audio_channels == 2) {
+			jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)samples[1], audio_num * sizeof(*(samples[1])), 0, radio->rx_sequence[1], radio->rx_timestamp[1], 123);
+			if (jf)
+				jitter_save(&radio->rx_dejitter[1], jf);
+			radio->rx_sequence[1] += 1;
+			radio->rx_timestamp[1] += audio_num;
+		}
 		audio_num = sound_get_tosend(radio->rx_sound, radio->signal_buffer_size);
-		jitter_load(&radio->rx_dejitter[0], samples[0], audio_num);
+		jitter_load_samples(&radio->rx_dejitter[0], (uint8_t *)samples[0], audio_num, sizeof(*samples), NULL, NULL);
 		if (radio->rx_audio_channels == 2)
-			jitter_load(&radio->rx_dejitter[1], samples[1], audio_num);
+			jitter_load_samples(&radio->rx_dejitter[1], (uint8_t *)samples[1], audio_num, sizeof(*samples), NULL, NULL);
 		audio_num = sound_write(radio->rx_sound, samples, NULL, audio_num, NULL, NULL, radio->rx_audio_channels);
 		if (audio_num < 0) {
 			LOGP(DRADIO, LOGL_ERROR, "Failed to write to sound device (rc = %d)!\n", audio_num);

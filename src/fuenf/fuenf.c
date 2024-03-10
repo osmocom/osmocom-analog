@@ -270,10 +270,6 @@ void fuenf_rx_function(fuenf_t *fuenf, enum fuenf_funktion funktion)
 	LOGP_CHAN(DFUENF, LOGL_INFO, "Received function '%s'.\n", fuenf_funktion_name[funktion]);
 }
 
-void call_down_clock(void)
-{
-}
-
 /* Call control starts call towards transmitter. */
 int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
@@ -387,24 +383,6 @@ void call_down_disconnect(int callref, int cause)
 void call_down_release(int callref, int cause)
 {
 	_release(callref, cause);
-}
-
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	sender_t *sender;
-	fuenf_t *fuenf;
-
-	for (sender = sender_head; sender; sender = sender->next) {
-		fuenf = (fuenf_t *) sender;
-		if (fuenf->callref == callref)
-			break;
-	}
-	if (!sender)
-		return;
-
-	if (fuenf->state == FUENF_STATE_DURCHSAGE)
-		jitter_save(&fuenf->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
 }
 
 void dump_info(void) {}

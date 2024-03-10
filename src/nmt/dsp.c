@@ -461,7 +461,13 @@ again:
 	case DSP_MODE_AUDIO:
 	case DSP_MODE_DTMF:
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
+		if (nmt->compandor)
+			compress_audio(&nmt->cstate, samples, input_num);
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		/* send after dejitter, so audio is flushed */
 		if (nmt->dms.tx_frame_valid) {
@@ -522,6 +528,32 @@ void nmt_set_dsp_mode(nmt_t *nmt, enum dsp_mode mode)
 	}
 
 	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", nmt_dsp_mode_name(nmt->dsp_mode), nmt_dsp_mode_name(mode));
+	if ((mode == DSP_MODE_AUDIO || mode == DSP_MODE_DTMF) && (nmt->dsp_mode != DSP_MODE_AUDIO && nmt->dsp_mode != DSP_MODE_DTMF))
+		jitter_reset(&nmt->sender.dejitter);
+
 	nmt->dsp_mode = mode;
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	transaction_t *trans;
+	nmt_t *nmt;
+
+	trans = get_transaction_by_callref(callref);
+	if (!trans)
+		return;
+	nmt = trans->nmt;
+	if (!nmt)
+		return;
+
+	if (nmt->dsp_mode == DSP_MODE_AUDIO || nmt->dsp_mode == DSP_MODE_DTMF) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&nmt->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

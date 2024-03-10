@@ -32,8 +32,8 @@
 #include "sender.h"
 #include <osmocom/core/timer.h>
 #include <osmocom/core/select.h>
-#include "call.h"
 #include <osmocom/cc/endpoint.h>
+#include "call.h"
 #include "console.h"
 #include "get_time.h"
 #ifdef HAVE_SDR

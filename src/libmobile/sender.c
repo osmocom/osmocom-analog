@@ -149,15 +149,15 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 		goto error;
 	}
 
-	rc = jitter_create(&sender->dejitter, sender->kanal, 8000, sizeof(sample_t), JITTER_AUDIO);
+	rc = jitter_create(&sender->dejitter, sender->kanal, 8000, JITTER_AUDIO);
 	if (rc < 0) {
 		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init audio buffer!\n");
 		goto error;
 	}
 
-	rc = jitter_create(&sender->loop_dejitter, sender->kanal, samplerate, sizeof(sample_t), JITTER_AUDIO);
+	rc = jitter_create(&sender->loop_dejitter, sender->kanal, samplerate, JITTER_AUDIO);
 	if (rc < 0) {
-		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init audio buffer!\n");
+		LOGP(DSENDER, LOGL_ERROR, "Failed to create and init loop audio buffer!\n");
 		goto error;
 	}
 
@@ -374,7 +374,7 @@ cant_recover:
 		for (i = 0, inst = sender; inst; i++, inst = inst->slave) {
 			/* load TX data from audio loop or from sender instance */
 			if (inst->loopback == 3)
-				jitter_load(&inst->loop_dejitter, samples[i], count);
+				jitter_load_samples(&inst->loop_dejitter, (uint8_t *)samples[i], count, sizeof(*(samples[i])), NULL, NULL);
 			else
 				sender_send(inst, samples[i], power[i], count);
 			/* internal loopback: loop back TX audio to RX */
@@ -458,8 +458,14 @@ cant_recover:
 				display_wave(&inst->dispwav, samples[i], count, inst->max_display);
 				sender_receive(inst, samples[i], count, rf_level_db[i]);
 			}
-			if (inst->loopback == 3)
-				jitter_save(&inst->loop_dejitter, samples[i], count, 0, 0, 0, 0);
+			if (inst->loopback == 3) {
+				jitter_frame_t *jf;
+				jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)samples[i], count * sizeof(*(samples[i])), 0, inst->loop_sequence, inst->loop_timestamp, 123);
+				if (jf)
+					jitter_save(&inst->loop_dejitter, jf);
+				inst->loop_sequence += 1;
+				inst->loop_timestamp += count;
+			}
 		}
 	}
 #ifdef DEBUG_TIME_CONSUMPTION

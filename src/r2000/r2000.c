@@ -1530,29 +1530,5 @@ void call_down_release(int callref, int __attribute__((unused)) cause)
 	}
 }
 
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	sender_t *sender;
-	r2000_t *r2000;
-
-	for (sender = sender_head; sender; sender = sender->next) {
-		r2000 = (r2000_t *) sender;
-	       	if (r2000->callref == callref)
-			break;
-	}
-	if (!sender)
-		return;
-
-	if (r2000->dsp_mode == DSP_MODE_AUDIO_TX
-	 || r2000->dsp_mode == DSP_MODE_AUDIO_TX_RX) {
-		if (r2000->compandor)
-			compress_audio(&r2000->cstate, samples, count);
-		jitter_save(&r2000->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
-	}
-}
-
-void call_down_clock(void) {}
-
 void dump_info(void) {}
 

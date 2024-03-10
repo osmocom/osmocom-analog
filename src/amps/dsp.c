@@ -488,7 +488,12 @@ again:
 	case DSP_MODE_AUDIO_RX_AUDIO_TX:
 		memset(power, 1, length);
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
+		compress_audio(&amps->cstate, samples, input_num);
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		/* pre-emphasis */
 		if (amps->pre_emphasis)
@@ -956,6 +961,8 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 		sat_reset(amps, "Disable FVC");
 		LOGP_CHAN(DDSP, LOGL_INFO, "Change mode from FVC to OFF\n");
 	}
+	if (mode == DSP_MODE_AUDIO_RX_AUDIO_TX && amps->dsp_mode != mode)
+		jitter_reset(&amps->sender.dejitter);
 
 	LOGP_CHAN(DDSP, LOGL_DEBUG, "Reset FSK frame transmitter, due to setting dsp mode.\n");
 
@@ -973,4 +980,28 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 	amps->fsk_tx_frame[0] = '\0';
 	amps->fsk_tx_frame_pos = 0;
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	sender_t *sender;
+	amps_t *amps;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		amps = (amps_t *) sender;
+		if (amps->trans_list && amps->trans_list->callref == callref)
+			break;
+	}
+	if (!sender)
+		return;
+
+	if (amps->dsp_mode == DSP_MODE_AUDIO_RX_AUDIO_TX) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&amps->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

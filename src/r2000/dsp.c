@@ -348,7 +348,13 @@ again:
 	case DSP_MODE_AUDIO_TX_RX:
 		memset(power, 1, length);
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
+		if (r2000->compandor)
+			compress_audio(&r2000->cstate, samples, input_num);
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		iir_process(&r2000->super_tx_hp, samples, length);
 		/* do pre-emphasis */
@@ -409,6 +415,7 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 	 && (r2000->dsp_mode != DSP_MODE_AUDIO_TX && r2000->dsp_mode != DSP_MODE_AUDIO_TX_RX)) {
 		r2000->super_tx_word_length = 0;
 		fsk_mod_reset(&r2000->super_fsk_mod);
+		jitter_reset(&r2000->sender.dejitter);
 	}
 
 	if (super >= 0) {
@@ -422,4 +429,29 @@ void r2000_set_dsp_mode(r2000_t *r2000, enum dsp_mode mode, int super)
 
 	r2000->dsp_mode = mode;
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	sender_t *sender;
+	r2000_t *r2000;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		r2000 = (r2000_t *) sender;
+	       	if (r2000->callref == callref)
+			break;
+	}
+	if (!sender)
+		return;
+
+	if (r2000->dsp_mode == DSP_MODE_AUDIO_TX
+	 || r2000->dsp_mode == DSP_MODE_AUDIO_TX_RX) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&r2000->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

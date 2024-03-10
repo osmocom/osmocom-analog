@@ -390,20 +390,22 @@ static void process_timeout(void *data)
 	}
 }
 
-void down_audio(struct osmo_cc_session_codec *codec, uint8_t __attribute__((unused)) marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *data, int len)
+static void down_audio(struct osmo_cc_session_codec *codec, uint8_t marker, uint16_t sequence_number, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
 {
 	process_t *process = codec->media->session->priv;
-	sample_t samples[len / 2];
+//	sample_t samples[len / 2];
 
 	/* if we are disconnected, ignore audio */
 	if (!process || process->pattern != PATTERN_NONE)
 		return;
+#if 0
 	int16_to_samples_speech(samples, (int16_t *)data, len / 2);
 #ifdef DEBUG_LEVEL
 	double lev = level_of(samples, len / 2);
 	printf("festnetz-level: %s                  %.4f\n", debug_db(lev), (20 * log10(lev)));
 #endif
-	call_down_audio(process->callref, sequence_number, timestamp, ssrc, samples, len / 2);
+#endif
+	call_down_audio(codec->decoder, process, process->callref, marker, sequence_number, timestamp, ssrc, payload, payload_len);
 }
 
 static void indicate_setup(process_t *process, const char *callerid, const char *dialing, uint8_t network_type, const char *network_id)
@@ -602,12 +604,14 @@ void call_tone_recall(int callref, int on)
 }
 
 /* forward audio to OSMO-CC or call instance */
-void call_up_audio(int callref, sample_t *samples, int count)
+void call_up_audio(int callref, sample_t *samples, int len)
 {
 	process_t *process;
-	int16_t data[count];
+	int16_t spl[len];
+	uint8_t *payload;
+	int payload_len;
 
-	if (count != 160) {
+	if (len != 160) {
 		fprintf(stderr, "Samples must be 160, please fix!\n");
 		abort();
 	}
@@ -619,13 +623,21 @@ void call_up_audio(int callref, sample_t *samples, int count)
 	if (!process || process->pattern != PATTERN_NONE)
 		return;
 
+	/* no codec negotiated (yet) */
+	if (!process->codec)
+		return;
+
 	/* forward audio */
 #ifdef DEBUG_LEVEL
-	double lev = level_of(samples, count);
+	double lev = level_of(samples, len);
 	printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
 #endif
-	samples_to_int16_speech(data, samples, count);
-	osmo_cc_rtp_send(process->codec, (uint8_t *)data, count * 2, 0, 1, count, process);
+	/* real to integer */
+	samples_to_int16_speech(spl, samples, len);
+	/* encode and send via RTP */
+	process->codec->encoder((uint8_t *)spl, len * 2, &payload, &payload_len, process);
+	osmo_cc_rtp_send(process->codec, payload, payload_len, 0, 1, len);
+	free(payload);
 	/* don't destroy process here in case of an error */
 }
 
@@ -638,17 +650,21 @@ void call_clock(void)
 
 	while(process) {
 		if (process->pattern != PATTERN_NONE) {
-			int16_t data[160];
+			int16_t spl[160];
+			uint8_t *payload;
+			int payload_len;
 			/* try to get patterns, else copy the samples we got */
-			get_process_patterns(process, data, 160);
+			get_process_patterns(process, spl, 160);
 #ifdef DEBUG_LEVEL
 			sample_t samples[160];
-			int16_to_samples(samples, (int16_t *)data->data, 160);
+			int16_to_samples(samples, (int16_t *)spl->data, 160);
 			double lev = level_of(samples, 160);
 			printf("   mobil-level: %s%.4f\n", debug_db(lev), (20 * log10(lev)));
-			samples_to_int16(data, samples, 160);
+			samples_to_int16(spl, samples, 160);
 #endif
-			osmo_cc_rtp_send(process->codec, (uint8_t *)data, 160 * 2, 0, 1, 160, process);
+			/* encode and send via RTP */
+			process->codec->encoder((uint8_t *)spl, 160 * 2, &payload, &payload_len, process);
+			osmo_cc_rtp_send(process->codec, (uint8_t *)spl, 160 * 2, 0, 1, 160);
 			/* don't destroy process here in case of an error */
 		}
 		process = process->next;
@@ -660,7 +676,7 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 {
 	process_t *process;
 	uint8_t coding, location, progress, isdn_cause, socket_cause;
-	uint16_t sip_cause, metering_connect_units, metering_unit_period_decisecs;
+	uint16_t sip_cause, metering_connect_units;
 	uint8_t type, plan, present, screen, caller_type;
 	char caller_id[33], number[33];
 	struct timeval tv_meter = {};
@@ -705,12 +721,8 @@ void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref,
 		return;
 	}
 
-	/* get metering information */
-	rc = osmo_cc_get_ie_metering(msg, 0, &metering_connect_units, &metering_unit_period_decisecs);
-	if (rc >= 0) {
-		tv_meter.tv_sec = metering_unit_period_decisecs / 10;
-		tv_meter.tv_usec = (metering_unit_period_decisecs % 10) / 10;
-	}
+	/* get metering information, tv_meter elements are 0, if no metering info available */
+	osmo_cc_get_ie_metering(msg, 0, &metering_connect_units, &tv_meter);
 
 	switch(msg->type) {
 	case OSMO_CC_MSG_SETUP_REQ:

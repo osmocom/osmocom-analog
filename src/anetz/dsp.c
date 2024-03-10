@@ -367,7 +367,11 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 		break;
 	case DSP_MODE_AUDIO:
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		break;
 	case DSP_MODE_TONE:
@@ -404,6 +408,9 @@ const char *anetz_dsp_mode_name(enum dsp_mode mode)
 void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode, int detect_reset)
 {
 	LOGP_CHAN(DDSP, LOGL_DEBUG, "DSP mode %s -> %s\n", anetz_dsp_mode_name(anetz->dsp_mode), anetz_dsp_mode_name(mode));
+	if (mode == DSP_MODE_AUDIO && anetz->dsp_mode != mode)
+		jitter_reset(&anetz->sender.dejitter);
+
 	anetz->dsp_mode = mode;
 	/* reset sequence paging */
 	anetz->paging_tone = 0;
@@ -413,4 +420,28 @@ void anetz_set_dsp_mode(anetz_t *anetz, enum dsp_mode mode, int detect_reset)
 	if (detect_reset)
 		anetz->tone_detected = -1;
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	sender_t *sender;
+	anetz_t *anetz;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		anetz = (anetz_t *) sender;
+		if (anetz->callref == callref)
+			break;
+	}
+	if (!sender)
+		return;
+
+	if (anetz->dsp_mode == DSP_MODE_AUDIO) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&anetz->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

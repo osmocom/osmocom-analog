@@ -579,28 +579,6 @@ static void cnetz_release(transaction_t *trans, uint8_t cause)
 	osmo_timer_del(&trans->timer);
 }
 
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	sender_t *sender;
-	cnetz_t *cnetz;
-
-	for (sender = sender_head; sender; sender = sender->next) {
-		cnetz = (cnetz_t *) sender;
-		if (cnetz->trans_list && cnetz->trans_list->callref == callref)
-			break;
-	}
-	if (!sender)
-		return;
-
-	if (cnetz->dsp_mode == DSP_MODE_SPK_V) {
-		/* store as is, since we convert rate when processing FSK frames */
-		jitter_save(&cnetz->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
-	}
-}
-
-void call_down_clock(void) {}
-
 int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, enum number_type __attribute__((unused)) caller_type, const char *dialing)
 {
 	cnetz_t *ogk, *spk;

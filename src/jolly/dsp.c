@@ -113,7 +113,7 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	/* repeater */
 	jolly->repeater = repeater;
 	jolly->repeater_max = (int)((double)jolly->sender.samplerate * REPEATER_TIME);
-	rc = jitter_create(&jolly->repeater_dejitter, "repeater", jolly->sender.samplerate, sizeof(sample_t), 0.050, 0.500, JITTER_FLAG_NONE);
+	rc = jitter_create(&jolly->repeater_dejitter, "repeater", jolly->sender.samplerate, 0.050, 0.500, JITTER_FLAG_NONE);
 	if (rc < 0) {
 		LOGP(DDSP, LOGL_ERROR, "Failed to create and init repeater buffer!\n");
 		goto error;
@@ -318,8 +318,14 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 	}
 
 	/* if repeater mode, store sample in jitter buffer */
-	if (jolly->repeater)
-		jitter_save(&jolly->repeater_dejitter, samples, length, 0, 0, 0, 0);
+	if (jolly->repeater) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(NULL, NULL, (uint8_t *)samples, length * sizeof(*samples), 0, jolly->repeater_sequence, jolly->repeater_timestamp, 123);
+		if (jf)
+			jitter_save(&jolly->repeater_dejitter, jf);
+		jolly->repeater_sequence += 1;
+		jolly->repeater_timestamp += length;
+	}
 
 	/* downsample, decode DTMF */
 	count = samplerate_downsample(&jolly->sender.srstate, samples, length);
@@ -369,7 +375,11 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	case STATE_CALL_DIALING:
 		memset(power, 1, length);
 		input_num = samplerate_upsample_input_num(&sender->srstate, length);
-		jitter_load(&sender->dejitter, samples, input_num);
+		{
+			int16_t spl[input_num];
+			jitter_load_samples(&sender->dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
+			int16_to_samples_speech(samples, spl, input_num);
+		}
 		samplerate_upsample(&sender->srstate, samples, input_num, samples, length);
 		break;
 	case STATE_OUT_VERIFY:
@@ -394,9 +404,33 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	if (jolly->repeater) {
 		sample_t uplink[length];
 		int i;
-		jitter_load(&jolly->repeater_dejitter, uplink, length);
+		jitter_load_samples(&jolly->repeater_dejitter, (uint8_t *)uplink, length, sizeof(*uplink), NULL, NULL);
 		for (i = 0; i < length; i++)
 			samples[i] += uplink[i];
 	}
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	sender_t *sender;
+	jolly_t *jolly;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		jolly = (jolly_t *) sender;
+		if (jolly->callref == callref)
+			break;
+	}
+	if (!sender)
+		return;
+
+	if (jolly->state == STATE_CALL || jolly->state == STATE_CALL_DIALING) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&jolly->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

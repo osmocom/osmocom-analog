@@ -23,7 +23,7 @@ AC_CHECK_LIB([m], [main], [], [echo "Failed to find lib!" ; exit -1])
 AC_CHECK_LIB([pthread], [main], [], [echo "Failed to find lib!" ; exit -1])
 
 PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 1.6.0)
-PKG_CHECK_MODULES(LIBOSMOCC, libosmocc >= 1.0.0)
+PKG_CHECK_MODULES(LIBOSMOCC, libosmocc >= 2.0.0)
 
 with_sdr=no
 soapy_0_8_0_or_higher=

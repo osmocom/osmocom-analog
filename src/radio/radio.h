@@ -45,7 +45,11 @@ typedef struct radio {
 	void		*tx_sound;		/* sound card process */
 	void		*rx_sound;		/* sound card process */
 	jitter_t	tx_dejitter[2];		/* jitter buffer when reading from sound card */
+	uint16_t	tx_sequence[2];		/* sequence & ts for jitter buffer */
+	uint32_t	tx_timestamp[2];
 	jitter_t	rx_dejitter[2];		/* jitter buffer when writing to sound card */
+	uint16_t	rx_sequence[2];		/* sequence & ts for jitter buffer */
+	uint32_t	rx_timestamp[2];
 	sample_t	*testtone[2];		/* test tone sample */
 	int		testtone_length;
 	int		testtone_pos;

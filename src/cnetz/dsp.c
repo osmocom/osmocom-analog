@@ -49,7 +49,7 @@
 #define BLOCK_BITS	198	/* duration of one time slot including pause at beginning and end */
 
 #ifdef TEST_SCRAMBLE
-jitter_t scrambler_test_jb;
+test_echo_t scrambler_test_echo = {};
 scrambler_t scrambler_test_scrambler1;
 scrambler_t scrambler_test_scrambler2;
 #endif
@@ -168,9 +168,9 @@ int dsp_init_sender(cnetz_t *cnetz, int measure_speed, double clock_speed[2], en
 	cnetz->offset_range = ceil(cnetz->fsk_bitduration);
 
 #ifdef TEST_SCRAMBLE
-	rc = jitter_create(&scrambler_test_jb, "scramble", cnetz->sender.samplerate, sizeof(sample_t), JITTER_AUDIO);
+	rc = test_echo_alloc(&scrambler_test_echo, cnetz->sender.samplerate / 20);
 	if (rc < 0) {
-		LOGP_CHAN(DDSP, LOGL_ERROR, "Failed to init jitter buffer for scrambler test!\n");
+		LOGP_CHAN(DDSP, LOGL_ERROR, "Failed to init echo buffer for scrambler test!\n");
 		exit(0);
 	}
 	scrambler_setup(&scrambler_test_scrambler1, cnetz->sender.samplerate);
@@ -573,7 +573,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 #ifdef TEST_UNSCRAMBLE
 	scrambler(&scrambler_test_scrambler1, samples, length);
 #endif
-	jitter_save(&scrambler_test_jb, samples, length, 0, 0, 0, 0);
+	test_echo_store(&scrambler_test_echo, samples, length);
 	return;
 #endif
 
@@ -589,8 +589,10 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 static int shrink_speech(cnetz_t *cnetz, sample_t *speech_buffer)
 {
 	int speech_length;
+	int16_t spl[100];
 
-	jitter_load(&cnetz->sender.dejitter, speech_buffer, 100);
+	jitter_load_samples(&cnetz->sender.dejitter, (uint8_t *)spl, 100, sizeof(*spl), jitter_conceal_s16, NULL);
+	int16_to_samples_speech(speech_buffer, spl, 100);
 	/* 1. compress dynamics */
 	compress_audio(&cnetz->cstate, speech_buffer, 100);
 	/* 2. upsample */
@@ -795,7 +797,7 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	calc_clock_speed(cnetz, length, 1, 0);
 
 #ifdef TEST_SCRAMBLE
-	jitter_load(&scrambler_test_jb, samples, length);
+	test_echo_load(&scrambler_test_echo, samples, length);
 	scrambler(&scrambler_test_scrambler2, samples, length);
 	return;
 #endif
@@ -864,6 +866,9 @@ void cnetz_set_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode)
 		LOGP_CHAN(DDSP, LOGL_INFO, "DSP mode %s -> %s\n", cnetz_dsp_mode_name(cnetz->dsp_mode), cnetz_dsp_mode_name(mode));
 		cnetz->dsp_mode = mode;
 	}
+	if (mode == DSP_MODE_SPK_V && cnetz->dsp_mode != mode)
+		jitter_reset(&cnetz->sender.dejitter);
+
 	/* we must get rid of partly received frame */
 	fsk_demod_reset(&cnetz->fsk_demod);
 }
@@ -878,4 +883,28 @@ void cnetz_set_sched_dsp_mode(cnetz_t *cnetz, enum dsp_mode mode, int timeslot)
 	cnetz->sched_dsp_mode = mode;
 	cnetz->sched_dsp_mode_ts = timeslot;
 }
+
+/* Receive audio from call instance. */
+void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t sequence, uint8_t marker, uint32_t timestamp, uint32_t ssrc, uint8_t *payload, int payload_len)
+{
+	sender_t *sender;
+	cnetz_t *cnetz;
+
+	for (sender = sender_head; sender; sender = sender->next) {
+		cnetz = (cnetz_t *) sender;
+		if (cnetz->trans_list && cnetz->trans_list->callref == callref)
+			break;
+	}
+	if (!sender)
+		return;
+
+	if (cnetz->dsp_mode == DSP_MODE_SPK_V) {
+		jitter_frame_t *jf;
+		jf = jitter_frame_alloc(decoder, decoder_priv, payload, payload_len, marker, sequence, timestamp, ssrc);
+		if (jf)
+			jitter_save(&cnetz->sender.dejitter, jf);
+	}
+}
+
+void call_down_clock(void) {}
 

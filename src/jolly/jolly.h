@@ -30,6 +30,8 @@ typedef struct jolly {
 	/* dsp states */
 	int			repeater;		/* mix audio of RX signal to TX signal */
 	jitter_t		repeater_dejitter;	/* forwarding audio */
+	uint16_t		repeater_sequence;	/* sequence & ts for jitter buffer */
+	uint32_t		repeater_timestamp;
 	int			repeater_count;		/* counter to count down repeater's "transmitter on" */
 	int			repeater_max;		/* duration in samples */
 	squelch_t		squelch;		/* squelch detection process */

@@ -59,7 +59,7 @@ typedef struct sender {
 	emphasis_t		estate;			/* pre and de emphasis */
 
 	/* loopback test */
-	int			loopback;		/* 0 = off, 1 = internal, 2 = external */
+	int			loopback;		/* 0 = off, 1 = internal, 2 = external, 3 = audio loop */
 
 	/* record and playback */
 	const char		*write_rx_wave;		/* file name pointers */
@@ -71,9 +71,11 @@ typedef struct sender {
 	wave_play_t		wave_rx_play;		/* wave playback (as rx) */
 	wave_play_t		wave_tx_play;		/* wave playback (as tx) */
 
-	/* audio buffer for audio to send to transmitter (also used as loopback buffer) */
+	/* audio buffer for audio to send to transmitter */
 	jitter_t		dejitter;
 	jitter_t		loop_dejitter;
+	uint16_t		loop_sequence;		/* sequence + ts for loopback mode */
+	uint32_t		loop_timestamp;
 
 	/* audio buffer for audio to send to caller (20ms = 160 samples @ 8000Hz) */
 	sample_t		rxbuf[160];
@@ -105,4 +107,5 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int count)
 void sender_receive(sender_t *sender, sample_t *samples, int count, double rf_level_db);
 void sender_paging(sender_t *sender, int on);
 sender_t *get_sender_by_empfangsfrequenz(double freq);
+void sender_conceal(uint8_t *_spl, int len, void __attribute__((unused)) *priv);
 

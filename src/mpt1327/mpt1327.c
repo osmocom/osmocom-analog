@@ -1648,25 +1648,8 @@ void call_down_release(int callref, __attribute__((unused)) int cause)
 	unit->callref = 0;
 }
 
-/* Receive audio from call instance. */
-void call_down_audio(int callref, uint16_t sequence, uint32_t timestamp, uint32_t ssrc, sample_t *samples, int count)
-{
-	mpt1327_unit_t *unit;
-
-	unit = find_unit_callref(callref);
-	if (!unit)
-		return;
-	if (!unit->tc)
-		return;
-
-	if (unit->tc->state == STATE_BUSY && unit->tc->dsp_mode == DSP_MODE_TRAFFIC)
-		jitter_save(&unit->tc->sender.dejitter, samples, count, 1, sequence, timestamp, ssrc);
-}
-
 void dump_info(void)
 {
 	dump_units();
 }
-
-void call_down_clock(void) {}
 
