@@ -247,7 +247,7 @@ static void print_measurements(int on)
 				memset(line_color + width - MAX_UNIT_LEN, 4, MAX_UNIT_LEN); /* blue */
 			else
 				memset(line_color + width - MAX_UNIT_LEN, 3, MAX_UNIT_LEN); /* yellow */
-			memcpy(line + width - MAX_UNIT_LEN + 1, text, MAX(strlen(text), MAX_UNIT_LEN));
+			memcpy(line + width - MAX_UNIT_LEN + 1, text, MIN(strlen(text), MAX_UNIT_LEN - 1));
 			display_line(on, width);
 		}
 	}
