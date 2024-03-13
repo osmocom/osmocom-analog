@@ -36,7 +36,7 @@ typedef struct sound {
 	int pchannels, cchannels;
 	int channels;			/* required number of channels */
 	int samplerate;			/* required sample rate */
-	char *audiodev;			/* required device */
+	char *caudiodev, *paudiodev;	/* required device */
 	double spl_deviation;		/* how much deviation is one sample step */
 #ifdef HAVE_MOBILE
 	double paging_phaseshift;	/* phase to shift every sample */
@@ -127,22 +127,14 @@ static int dev_open(sound_t *sound)
 {
 	int rc, rc_rec, rc_play;
 
-	rc_play = snd_pcm_open(&sound->phandle, sound->audiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	rc_rec = snd_pcm_open(&sound->chandle, sound->audiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	if (rc_play < 0 && rc_rec < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s'! (%s)\n", sound->audiodev, snd_strerror(rc_play));
-		LOGP(DSOUND, LOGL_ERROR, "Run 'aplay -l' to get a list of available cards and devices.\n");
-		LOGP(DSOUND, LOGL_ERROR, "Then use 'hw:<card>:<device>' for audio device.\n");
-		return rc_play;
-	}
-	if (rc_play < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_play));
-		return rc_play;
-	}
-	if (rc_rec < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports both direction audio.\n", sound->audiodev, snd_strerror(rc_rec));
-		return rc_rec;
-	}
+	rc_play = snd_pcm_open(&sound->phandle, sound->paudiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	rc_rec = snd_pcm_open(&sound->chandle, sound->caudiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	if (rc_play < 0)
+		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports playing audio.\n", sound->paudiodev, snd_strerror(rc_play));
+	if (rc_rec < 0)
+		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports capturing audio.\n", sound->caudiodev, snd_strerror(rc_rec));
+	if (rc_play < 0 || rc_rec < 0)
+		return (rc_play < 0) ? rc_play : rc_rec;
 
 	rc = set_hw_params(sound->phandle, sound->samplerate, &sound->pchannels);
 	if (rc < 0) {
@@ -193,6 +185,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 {
 	sound_t *sound;
 	const char *env;
+	char *p;
 	int rc;
 
 	if (channels < 1 || channels > 2) {
@@ -206,7 +199,13 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 		return NULL;
 	}
 
-	sound->audiodev = strdup(audiodev); // is feed when closed
+	sound->paudiodev = strdup(audiodev); // is feed when closed
+	if ((p = strchr(sound->paudiodev, '/'))) {
+		*p++ = '\0';
+		sound->caudiodev = p;
+	} else {
+		sound->caudiodev = sound->paudiodev;
+	}
 	sound->channels = channels;
 	sound->samplerate = samplerate;
 	sound->spl_deviation = max_deviation / 32767.0;
@@ -261,7 +260,7 @@ void sound_close(void *inst)
 	sound_t *sound = (sound_t *)inst;
 
 	dev_close(sound);
-	free(sound->audiodev);
+	free(sound->paudiodev);
 	free(sound);
 }
 

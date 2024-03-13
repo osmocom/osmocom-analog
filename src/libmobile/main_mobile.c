@@ -247,8 +247,9 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" -k --kanal <channel>\n");
 	printf(" -k --channel <channel>\n");
 	printf("        Channel (German = Kanal) number of \"Sender\" (German = Transceiver)\n");
-	printf(" -a --audio-device hw:<card>,<device>\n");
+	printf(" -a --audio-device hw:<card>,<device>[/hw:<card>.<rec-device>]\n");
 	printf("        Sound card and device number (default = '%s')\n", dsp_device[0]);
+	printf("        You may specify a different recording device by using '/'.\n");
 	printf("        Don't set it for SDR!\n");
 	printf(" -s --samplerate <rate>\n");
 	printf("        Sample rate of sound device (default = '%d')\n", dsp_samplerate);
@@ -276,8 +277,9 @@ void main_mobile_print_help(const char *arg0, const char *ext_usage)
 	printf(" -e --echo-test\n");
 	printf("        Use echo test, to send back audio from mobile phone's microphone to\n");
 	printf("        the speaker. (German: 'Blasprobe').\n");
-	printf(" -c --call-device hw:<card>,<device>\n");
+	printf(" -c --call-device hw:<card>,<device>[/hw:<card>.<rec-device>]\n");
 	printf("        Sound card and device number for headset (default = '%s')\n", call_device);
+	printf("        You may specify a different recording device by using '/'.\n");
 	printf("    --call-samplerate <rate>\n");
 	printf("        Sample rate of sound device for headset (default = '%d')\n", call_samplerate);
 	printf("    --call-buffer <ms>\n");
