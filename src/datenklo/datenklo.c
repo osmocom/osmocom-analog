@@ -1672,6 +1672,9 @@ next_char:
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGPIPE, SIG_DFL);
 
+	display_measurements_on(0);
+	display_wave_on(0);
+
 	pthread_mutex_unlock(&mutex);
 }
 
