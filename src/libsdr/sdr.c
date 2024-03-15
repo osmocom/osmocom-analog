@@ -137,7 +137,7 @@ static void show_spectrum(const char *direction, double halfbandwidth, double ce
 		LOGP(DSDR, LOGL_INFO, "Frequency P = %.4f MHz (Paging Frequency)\n", paging_frequency / 1e6);
 }
 
-void *sdr_open(const char __attribute__((__unused__)) *device, double *tx_frequency, double *rx_frequency, int *am, int channels, double paging_frequency, int samplerate, int buffer_size, double interval, double max_deviation, double max_modulation, double modulation_index)
+void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute__((__unused__)) *device, double *tx_frequency, double *rx_frequency, int *am, int channels, double paging_frequency, int samplerate, int buffer_size, double interval, double max_deviation, double max_modulation, double modulation_index)
 {
 	sdr_t *sdr;
 	int threads = 1, oversample = 1; /* always use threads */

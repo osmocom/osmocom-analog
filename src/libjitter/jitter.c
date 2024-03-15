@@ -282,7 +282,7 @@ void jitter_save(jitter_t *jb, jitter_frame_t *jf)
 
 	offset_timestamp = jf->timestamp - jb->window_timestamp;
 #ifdef HEAVY_DEBUG
-	LOGP(DJITTER, LOGL_DEBUG, "%sFrame has offset of %.0fms in jitter buffer.\n", jb->name, (double)offset_timestamp * jb->sample_duration * 1000.0);
+	LOGP(DJITTER, LOGL_DEBUG, "%s Frame has offset of %.0fms in jitter buffer.\n", jb->name, (double)offset_timestamp * jb->sample_duration * 1000.0);
 #endif
 
 	/* measure delay */
@@ -348,7 +348,7 @@ int32_t jitter_offset(jitter_t *jb)
 	jb->unlocked = true;
 
 	/* get timestamp of chunk that is not in the past */
-	while ((jf = jb->frame_list)) {
+	for (jf = jb->frame_list; jf; jf = jf->next) {
 		offset_timestamp = jf->timestamp - jb->window_timestamp;
 		if (offset_timestamp >= 0)
 			break;
@@ -446,6 +446,9 @@ copy_chunk:
 		tocopy = jb->spl_len - jb->spl_pos;
 		if (tocopy > len)
 			tocopy = len;
+#ifdef HEAVY_DEBUG
+		LOGP(DJITTER, LOGL_DEBUG, "%s loading %d samples: from valid sample buffer.\n", jb->name, tocopy);
+#endif
 		/* advance jitter buffer */
 		jitter_advance(jb, tocopy);
 		memcpy(spl, jb->spl_buf + jb->spl_pos * sample_size, tocopy * sample_size);
@@ -469,6 +472,9 @@ copy_chunk:
 		/* only process as much samples as need */
 		if (offset > len)
 			offset = len;
+#ifdef HEAVY_DEBUG
+		LOGP(DJITTER, LOGL_DEBUG, "%s concealing %d samples: from invalid sample buffer.\n", jb->name, offset);
+#endif
 		/* advance jitter buffer */
 		jitter_advance(jb, offset);
 		/* if there is no buffer, allocate 20ms, filled with 0 */
@@ -501,6 +507,9 @@ copy_chunk:
 		jitter_reset(jb);
 		return;
 	}
+#ifdef HEAVY_DEBUG
+	LOGP(DJITTER, LOGL_DEBUG, "%s loading new frame to sample buffer.\n", jb->name);
+#endif
 	/* get data from frame */
 	jitter_frame_get(jf, &decoder, &decoder_priv, &payload, &payload_len, NULL, NULL, NULL, NULL);
 	/* free previous buffer */

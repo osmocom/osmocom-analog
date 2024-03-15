@@ -32,6 +32,7 @@
 static int KEEP_FRAMES=8;		/* minimum frames not to read, to prevent reading from buffer before data has been received (seems to be a bug in ALSA) */
 
 typedef struct sound {
+	enum sound_direction direction;
 	snd_pcm_t *phandle, *chandle;
 	int pchannels, cchannels;
 	int channels;			/* required number of channels */
@@ -125,49 +126,57 @@ error:
 
 static int dev_open(sound_t *sound)
 {
-	int rc, rc_rec, rc_play;
+	int rc, rc_rec = 0, rc_play = 0;
 
-	rc_play = snd_pcm_open(&sound->phandle, sound->paudiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	rc_rec = snd_pcm_open(&sound->chandle, sound->caudiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	if (rc_play < 0)
-		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports playing audio.\n", sound->paudiodev, snd_strerror(rc_play));
-	if (rc_rec < 0)
-		LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports capturing audio.\n", sound->caudiodev, snd_strerror(rc_rec));
+	if (sound->direction == SOUND_DIR_PLAY || sound->direction == SOUND_DIR_DUPLEX) {
+		rc_play = snd_pcm_open(&sound->phandle, sound->paudiodev, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+		if (rc_play < 0)
+			LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for playback! (%s) Please select a device that supports playing audio.\n", sound->paudiodev, snd_strerror(rc_play));
+	}
+	if (sound->direction == SOUND_DIR_REC || sound->direction == SOUND_DIR_DUPLEX) {
+		rc_rec = snd_pcm_open(&sound->chandle, sound->caudiodev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+		if (rc_rec < 0)
+			LOGP(DSOUND, LOGL_ERROR, "Failed to open '%s' for capture! (%s) Please select a device that supports capturing audio.\n", sound->caudiodev, snd_strerror(rc_rec));
+	}
 	if (rc_play < 0 || rc_rec < 0)
 		return (rc_play < 0) ? rc_play : rc_rec;
 
-	rc = set_hw_params(sound->phandle, sound->samplerate, &sound->pchannels);
-	if (rc < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "Failed to set playback hw params\n");
-		return rc;
-	}
-	if (sound->pchannels < sound->channels) {
-		LOGP(DSOUND, LOGL_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
-		return rc;
-	}
-	LOGP(DSOUND, LOGL_DEBUG, "Playback with %d channels.\n", sound->pchannels);
+	if (sound->direction == SOUND_DIR_PLAY || sound->direction == SOUND_DIR_DUPLEX) {
+		rc = set_hw_params(sound->phandle, sound->samplerate, &sound->pchannels);
+		if (rc < 0) {
+			LOGP(DSOUND, LOGL_ERROR, "Failed to set playback hw params\n");
+			return rc;
+		}
+		if (sound->pchannels < sound->channels) {
+			LOGP(DSOUND, LOGL_ERROR, "Sound card only supports %d channel for playback.\n", sound->pchannels);
+			return rc;
+		}
+		LOGP(DSOUND, LOGL_DEBUG, "Playback with %d channels.\n", sound->pchannels);
 
-	rc = set_hw_params(sound->chandle, sound->samplerate, &sound->cchannels);
-	if (rc < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "Failed to set capture hw params\n");
-		return rc;
-	}
-	if (sound->cchannels < sound->channels) {
-		LOGP(DSOUND, LOGL_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
-		return -EIO;
-	}
-	LOGP(DSOUND, LOGL_DEBUG, "Capture with %d channels.\n", sound->cchannels);
-
-	rc = snd_pcm_prepare(sound->phandle);
-	if (rc < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
-		return rc;
+		rc = snd_pcm_prepare(sound->phandle);
+		if (rc < 0) {
+			LOGP(DSOUND, LOGL_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+			return rc;
+		}
 	}
 
-	rc = snd_pcm_prepare(sound->chandle);
-	if (rc < 0) {
-		LOGP(DSOUND, LOGL_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
-		return rc;
+	if (sound->direction == SOUND_DIR_REC || sound->direction == SOUND_DIR_DUPLEX) {
+		rc = set_hw_params(sound->chandle, sound->samplerate, &sound->cchannels);
+		if (rc < 0) {
+			LOGP(DSOUND, LOGL_ERROR, "Failed to set capture hw params\n");
+			return rc;
+		}
+		if (sound->cchannels < sound->channels) {
+			LOGP(DSOUND, LOGL_ERROR, "Sound card only supports %d channel for capture.\n", sound->cchannels);
+			return -EIO;
+		}
+		LOGP(DSOUND, LOGL_DEBUG, "Capture with %d channels.\n", sound->cchannels);
+
+		rc = snd_pcm_prepare(sound->chandle);
+		if (rc < 0) {
+			LOGP(DSOUND, LOGL_ERROR, "cannot prepare audio interface for use (%s)\n", snd_strerror(rc));
+			return rc;
+		}
 	}
 
 	return 0;
@@ -181,7 +190,7 @@ static void dev_close(sound_t *sound)
 		snd_pcm_close(sound->chandle);
 }
 
-void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int __attribute__((unused)) *am, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) buffer_size, double __attribute__((unused)) interval, double max_deviation, double __attribute__((unused)) max_modulation, double __attribute__((unused)) modulation_index)
+void *sound_open(int direction, const char *audiodev, double __attribute__((unused)) *tx_frequency, double __attribute__((unused)) *rx_frequency, int __attribute__((unused)) *am, int channels, double __attribute__((unused)) paging_frequency, int samplerate, int __attribute((unused)) buffer_size, double __attribute__((unused)) interval, double max_deviation, double __attribute__((unused)) max_modulation, double __attribute__((unused)) modulation_index)
 {
 	sound_t *sound;
 	const char *env;
@@ -206,6 +215,7 @@ void *sound_open(const char *audiodev, double __attribute__((unused)) *tx_freque
 	} else {
 		sound->caudiodev = sound->paudiodev;
 	}
+	sound->direction = direction;
 	sound->channels = channels;
 	sound->samplerate = samplerate;
 	sound->spl_deviation = max_deviation / 32767.0;
@@ -248,6 +258,9 @@ int sound_start(void *inst)
 {
 	sound_t *sound = (sound_t *)inst;
 	int16_t buff[2];
+
+	if (sound->direction != SOUND_DIR_REC && sound->direction != SOUND_DIR_DUPLEX)
+		return -EINVAL;
 
 	/* trigger capturing */
 	snd_pcm_readi(sound->chandle, buff, 1);
@@ -318,6 +331,9 @@ int sound_write(void *inst, sample_t **samples, uint8_t __attribute__((unused)) 
 	int16_t buff[num << 1];
 	int rc;
 	int i, ii;
+
+	if (sound->direction != SOUND_DIR_PLAY && sound->direction != SOUND_DIR_DUPLEX)
+		return -EINVAL;
 
 	if (sound->pchannels == 2) {
 		/* two channels */
@@ -403,6 +419,9 @@ int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf
 	int32_t max[2], a;
 	int in, rc;
 	int i, ii;
+
+	if (sound->direction != SOUND_DIR_REC && sound->direction != SOUND_DIR_DUPLEX)
+		return -EINVAL;
 
 	/* get samples in rx buffer */
 	in = snd_pcm_avail(sound->chandle);
@@ -500,6 +519,9 @@ int sound_get_tosend(void *inst, int buffer_size)
 	int rc;
 	snd_pcm_sframes_t delay;
 	int tosend;
+
+	if (sound->direction != SOUND_DIR_PLAY && sound->direction != SOUND_DIR_DUPLEX)
+		return -EINVAL;
 
 	rc = snd_pcm_delay(sound->phandle, &delay);
 	if (rc < 0) {

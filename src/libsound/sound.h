@@ -1,7 +1,13 @@
 
 enum paging_signal;
 
-void *sound_open(const char *audiodev, double *tx_frequency, double *rx_frequency, int *am, int channels, double paging_frequency, int samplerate, int buffer_size, double interval, double max_deviation, double max_modulation, double modulation_index);
+enum sound_direction {
+	SOUND_DIR_PLAY,
+	SOUND_DIR_REC,
+	SOUND_DIR_DUPLEX,
+};
+
+void *sound_open(int direction, const char *audiodev, double *tx_frequency, double *rx_frequency, int *am, int channels, double paging_frequency, int samplerate, int buffer_size, double interval, double max_deviation, double max_modulation, double modulation_index);
 int sound_start(void *inst);
 void sound_close(void *inst);
 int sound_write(void *inst, sample_t **samples, uint8_t **power, int num, enum paging_signal *paging_signal, int *on, int channels);

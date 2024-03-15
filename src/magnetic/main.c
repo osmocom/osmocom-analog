@@ -268,7 +268,7 @@ inval_number:
 
 #ifdef HAVE_ALSA
 	/* open audio device */
-	sound = sound_open(dsp_audiodev, NULL, NULL, NULL, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 1.0, 0.0, 2.0);
+	sound = sound_open(SOUND_DIR_PLAY, dsp_audiodev, NULL, NULL, NULL, 1, 0.0, dsp_samplerate, buffer_size, 1.0, 1.0, 0.0, 2.0);
 	if (!sound) {
 		rc = -EIO;
 		LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");

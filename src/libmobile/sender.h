@@ -44,7 +44,7 @@ typedef struct sender {
 	/* audio */
 	void			*audio;
 	char			device[64];		/* audio device name (alsa or sdr) */
-	void			*(*audio_open)(const char *, double *, double *, int *, int, double, int, int, double, double, double, double);
+	void			*(*audio_open)(int, const char *, double *, double *, int *, int, double, int, int, double, double, double, double);
 	int 			(*audio_start)(void *);
 	void 			(*audio_close)(void *);
 	int			(*audio_write)(void *, sample_t **, uint8_t **, int, enum paging_signal *, int *, int);

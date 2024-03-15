@@ -342,7 +342,7 @@ static void tx_bas(sample_t *sample_bas, __attribute__((__unused__)) sample_t *s
 		tx_frequencies[0] = frequency;
 		rx_frequencies[0] = frequency;
 		am[0] = 0;
-		sdr = sdr_open(NULL, tx_frequencies, rx_frequencies, am, 0, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
+		sdr = sdr_open(0, NULL, tx_frequencies, rx_frequencies, am, 0, 0.0, dsp_samplerate, buffer_size, 1.0, 0.0, 0.0, 0.0);
 		if (!sdr)
 			goto error;
 		sdr_start(sdr);

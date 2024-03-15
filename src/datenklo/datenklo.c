@@ -1397,7 +1397,7 @@ int datenklo_open_audio(datenklo_t *datenklo, const char *audiodev, int buffer, 
 
 #ifdef HAVE_ALSA
 	/* init sound */
-	datenklo->audio = sound_open(audiodev, NULL, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->buffer_size, 1.0, 1.0, 4000.0, 2.0);
+	datenklo->audio = sound_open(SOUND_DIR_DUPLEX, audiodev, NULL, NULL, NULL, channels, 0.0, datenklo->samplerate, datenklo->buffer_size, 1.0, 1.0, 4000.0, 2.0);
 	if (!datenklo->audio) {
 		LOGP(DDATENKLO, LOGL_ERROR, "No sound device!\n");
 		return -EIO;

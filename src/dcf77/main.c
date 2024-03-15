@@ -413,13 +413,19 @@ static int get_char()
 
 int soundif_open(const char *audiodev, int samplerate, int buffer_size)
 {
+	enum sound_direction direction = SOUND_DIR_DUPLEX;
+
 	if (!audiodev || !audiodev[0]) {
 		LOGP(DDSP, LOGL_ERROR, "No audio device given!\n");
 		return -EINVAL;
 	}
 
 	/* open audiodev */
-	soundif = sound_open(audiodev, NULL, NULL, NULL, (double_amplitude) ? 2 : 1, 0.0, samplerate, buffer_size, 1.0, 1.0, 0.0, 2.0);
+	if (tx && !rx)
+		direction = SOUND_DIR_PLAY;
+	if (rx && !tx)
+		direction = SOUND_DIR_REC;
+	soundif = sound_open(direction, audiodev, NULL, NULL, NULL, (double_amplitude) ? 2 : 1, 0.0, samplerate, buffer_size, 1.0, 1.0, 0.0, 2.0);
 	if (!soundif) {
 		LOGP(DDSP, LOGL_ERROR, "Failed to open sound device!\n");
 		return -EIO;
@@ -451,34 +457,38 @@ void soundif_work(int buffer_size)
 	int rc;
 	int i;
 
-	/* encode and write */
-	count = sound_get_tosend(soundif, buffer_size);
-	if (count < 0) {
-		LOGP(DDSP, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
-		return;
-	}
-	if (count) {
-		dcf77_encode(dcf77, samples[0], count);
-		if (double_amplitude) {
-			for (i = 0; i < count; i++)
-				samples[1][i] = -samples[0][i];
-		}
-		rc = sound_write(soundif, samples, NULL, count, NULL, NULL, (double_amplitude) ? 2 : 1);
-		if (rc < 0) {
-			LOGP(DDSP, LOGL_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
+	if (tx) {
+		/* encode and write */
+		count = sound_get_tosend(soundif, buffer_size);
+		if (count < 0) {
+			LOGP(DDSP, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", count);
 			return;
 		}
+		if (count) {
+			dcf77_encode(dcf77, samples[0], count);
+			if (double_amplitude) {
+				for (i = 0; i < count; i++)
+					samples[1][i] = -samples[0][i];
+			}
+			rc = sound_write(soundif, samples, NULL, count, NULL, NULL, (double_amplitude) ? 2 : 1);
+			if (rc < 0) {
+				LOGP(DDSP, LOGL_ERROR, "Failed to write TX data to audio device (rc = %d)\n", rc);
+				return;
+			}
+		}
 	}
 
-	/* read */
-	count = sound_read(soundif, samples, buffer_size, 1, rf_level_db);
-	if (count < 0) {
-		LOGP(DDSP, LOGL_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
-		return;
-	}
+	if (rx) {
+		/* read */
+		count = sound_read(soundif, samples, buffer_size, 1, rf_level_db);
+		if (count < 0) {
+			LOGP(DDSP, LOGL_ERROR, "Failed to read from audio device (rc = %d)!\n", count);
+			return;
+		}
 
-	/* decode */
-	dcf77_decode(dcf77, samples[0], count);
+		/* decode */
+		dcf77_decode(dcf77, samples[0], count);
+	}
 }
 
 int main(int argc, char *argv[])

@@ -404,7 +404,7 @@ int console_open_audio(int __attribute__((unused)) buffer_size, double __attribu
 #ifdef HAVE_ALSA
 	/* open sound device for call control */
 	/* use factor 1.4 of speech level for complete range of sound card */
-	console.sound = sound_open(console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, buffer_size, interval, 1.4, 4000.0, 2.0);
+	console.sound = sound_open(SOUND_DIR_DUPLEX, console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, buffer_size, interval, 1.4, 4000.0, 2.0);
 	if (!console.sound) {
 		LOGP(DSENDER, LOGL_ERROR, "No sound device!\n");
 		return -EIO;

@@ -235,7 +235,7 @@ int sender_open_audio(int buffer_size, double interval)
 		}
 
 		/* open device */
-		master->audio = master->audio_open(master->device, tx_f, rx_f, am, channels, paging_frequency, master->samplerate, buffer_size, interval, (master->max_deviation) ?: 1.0, master->max_modulation, master->modulation_index);
+		master->audio = master->audio_open(SOUND_DIR_DUPLEX, master->device, tx_f, rx_f, am, channels, paging_frequency, master->samplerate, buffer_size, interval, (master->max_deviation) ?: 1.0, master->max_modulation, master->modulation_index);
 		if (!master->audio) {
 			LOGP(DSENDER, LOGL_ERROR, "No device for transceiver!\n");
 			return -EIO;

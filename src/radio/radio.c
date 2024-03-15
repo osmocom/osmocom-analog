@@ -100,7 +100,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		/* open audio device */
 		radio->tx_audio_samplerate = 48000;
 		radio->tx_audio_channels = (stereo) ? 2 : 1;
-		radio->tx_sound = sound_open(tx_audiodev, NULL, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
+		radio->tx_sound = sound_open(SOUND_DIR_PLAY, tx_audiodev, NULL, NULL, NULL, radio->tx_audio_channels, 0.0, radio->tx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
 		if (!radio->tx_sound) {
 			rc = -EIO;
 			LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
@@ -164,10 +164,7 @@ int radio_init(radio_t *radio, int buffer_size, int samplerate, double frequency
 		radio->rx_audio_samplerate = 48000;
 		radio->rx_audio_channels = (stereo) ? 2 : 1;
 		/* check if we use same device */
-		if (radio->tx_sound && !strcmp(tx_audiodev, rx_audiodev))
-			radio->rx_sound = radio->tx_sound;
-		else
-			radio->rx_sound = sound_open(rx_audiodev, NULL, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
+		radio->rx_sound = sound_open(SOUND_DIR_REC, rx_audiodev, NULL, NULL, NULL, radio->rx_audio_channels, 0.0, radio->rx_audio_samplerate, radio->buffer_size, 1.0, 1.0, 0.0, 2.0);
 		if (!radio->rx_sound) {
 			rc = -EIO;
 			LOGP(DRADIO, LOGL_ERROR, "Failed to open sound device!\n");
