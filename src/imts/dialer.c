@@ -213,7 +213,7 @@ static void process_signal(int buffer_size)
 
 int main(int argc, char *argv[])
 {
-	int i, d, p, pulses, tone = 0;
+	int i, d, p, parity, pulses, tone = 0;
 	int buffer_size;
 	int rc, argi;
 
@@ -267,13 +267,14 @@ int main(int argc, char *argv[])
 		dial_string[d].tone = TONE_CONNECT; dial_string[d++].length = 0.050 * (double)dsp_samplerate; /* seize */
 		dial_string[d].console = '-';
 		dial_string[d].tone = TONE_GUARD; dial_string[d++].length = 1.000 * (double)dsp_samplerate; /* pause */
+		parity = 0;
 		for (i = 0; station_id[i]; i++) {
 			pulses = station_id[i] - '0';
 			if (pulses == 0)
 				pulses = 10;
 			dial_string[d].console = station_id[i];
 			for (p = 1; p <= pulses; p++) {
-				if ((p & 1) == 1)
+				if ((++parity & 1) == 1)
 					tone = TONE_SILENCE;
 				else
 					tone = TONE_GUARD;
