@@ -1,8 +1,11 @@
 #include <stdio.h>
 
 const char *aaimage[] = {
-	"@W",
-	"IMTS / MTS is back!",
+	"",
+	"@WMTS - 'Mobile Telephone Service'",
+	"IMTS - 'Interim Mobile Telephone Service'",
+	"@w was soon changed to@W",
+	"IMTS - 'Improved Mobile Telephone Service'",
 	"",
 	NULL
 };
