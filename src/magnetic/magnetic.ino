@@ -26,8 +26,9 @@
 
 /* Use a clock speed of 8 MHz. If you change it, also change the fuses!!!!
  * The CLKPS bits are set to 0 by software, so that 8 MHz clock is not divided.
- *
- * Press switch 1 to emulate card, press switch 2 to emulate BSA44 service card.
+ */
+
+/* Press switch 1 to emulate card, press switch 2 to emulate BSA44 service card.
  * The LED will do short flashs, to indicate that power is on.
  *
  * Hold a switch while powering on, to enter test mode. The LED will light up.
@@ -38,11 +39,11 @@
  * 
  * To enter programming mode, press both buttons simultaniously.
  * The LED will continously blink, to indicate programming mode.
- * Press switch 1 to select subscriber number or switch 1 to select security code.
+ * Press switch 1 to change subscriber number or switch 2 to change security code.
  * The LED will then show the digit values by blinking. It can be aborted with any switch.
  * After short blinking, a long blink shows that the first digit can be entered.
  * Press switch 1 1-10 times to enter the digit. When done, press switch 2 and continue
- * with the next digit. When all digits are entered, press switch 2 again.
+ * with the next digit. When all digits are entered, press switch 2 twice to confirm.
  * A soft flash of the LED (fading in and out) will indicate that the new digits are stored.
  * A false input will abort the programming procedure and restart with continuous blinking.
  * To abort programming mode, press both buttuns simultaniously.
