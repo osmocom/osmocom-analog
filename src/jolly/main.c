@@ -51,7 +51,7 @@ const char *aaimage[] = { NULL };
 
 void print_help(const char *arg0)
 {
-	main_mobile_print_help(arg0, "[-F <downlink MHz>,<uplink MHz>] ");
+	main_mobile_print_help(arg0, "[-F <downlink MHz>,<uplink MHz>,<step KHz>] ");
 	/*      -                                                                             - */
 	printf(" -F --frequency <downlink MHz>,<uplink MHz>,<step KHz>\n");
 	printf("        Downlink and uplink frequency to use for channel 0.\n");
