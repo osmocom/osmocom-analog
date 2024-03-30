@@ -206,9 +206,11 @@ int main(int argc, char *argv[])
 		print_help(argv[0]);
 		return 0;
 	}
-	if (!strcasecmp(kanal[0], "list")) {
-		bos_list_channels();
-		goto fail;
+	for (i = 0; i < num_kanal; i++) {
+		if (!strcasecmp(kanal[i], "list")) {
+			bos_list_channels();
+			goto fail;
+		}
 	}
 	if (use_sdr) {
 		/* set device */

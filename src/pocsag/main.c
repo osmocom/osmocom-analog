@@ -56,7 +56,7 @@ static uint32_t scan_to = 0;
 
 void print_help(const char *arg0)
 {
-	main_mobile_print_help(arg0, "-k 466.230 | -k list");
+	main_mobile_print_help(arg0, "-k 466.230 | -k list ");
 	/*      -                                                                             - */
 	printf(" -T --tx\n");
 	printf("        Transmit POCSAG signal on given channel, to page a receiver. (default)\n");
@@ -285,9 +285,11 @@ int main(int argc, char *argv[])
 		print_help(argv[0]);
 		return 0;
 	}
-	if (!strcasecmp(kanal[0], "list")) {
-		pocsag_list_channels();
-		goto fail;
+	for (i = 0; i < num_kanal; i++) {
+		if (!strcasecmp(kanal[i], "list")) {
+			pocsag_list_channels();
+			goto fail;
+		}
 	}
 	if (use_sdr) {
 		/* set device */
