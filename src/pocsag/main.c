@@ -244,7 +244,7 @@ int msg_receive(const char *text)
 
 static const struct number_lengths number_lengths[] = {
 	{ 7, "RIC with default function" },
-	{ 8, "RIC with function (append 0..3)" },
+	{ 8, "RIC with function (append 0..3 or A..D)" },
 	{ 0, NULL }
 };
 
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 	init_besetzton();
 
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, pocsag_number_valid);
+	main_mobile_init("0123456789ABCD", number_lengths, NULL, pocsag_number_valid);
 
 	/* handle options / config file */
 	add_options();

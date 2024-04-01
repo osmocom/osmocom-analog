@@ -144,16 +144,19 @@ const char *pocsag_number_valid(const char *number)
 
 	/* assume that the number has valid length(s) and digits */
 
-	for (i = 0; i < 7; i++)
+	for (i = 0; i < 7; i++) {
+		if (number[i] < '0' || number[i] > '9')
+			return "Illegal RIC digit (Use 0..9 only)";
 		ric = ric * 10 + number[i] - '0';
+	}
 	if (ric > 2097151)
-			return "Maximum allowed RIC is (2^21)-1. (2097151)";
+		return "Maximum allowed RIC is (2^21)-1. (2097151)";
 
 	if ((ric & 0xfffffff8) == 2007664)
-			return "Illegal RIC. (Used for idle codeword)";
+		return "Illegal RIC. (Used for idle codeword)";
 
-	if (number[7] && (number[7] < '0' || number[7] > '3'))
-			return "Illegal function digit #8 (Use 0..3 only)";
+	if (number[7] && !(number[7] >= '0' && number[7] <= '3') && !(number[7] >= 'A' && number[7] <= 'D'))
+		return "Illegal function digit #8 (Use 0..3 only)";
 	return NULL;
 }
 
@@ -516,6 +519,10 @@ int call_down_setup(int callref, const char *caller_id, enum number_type __attri
 		ric = ric * 10 + dialing[i] - '0';
 	if (dialing[7] >= '0' && dialing[7] <= '3')
 		function = dialing[7]- '0';
+	else if (dialing[7] >= 'a' && dialing[7] <= 'd')
+		function = dialing[7]- 'A';
+	else if (dialing[7] >= 'A' && dialing[7] <= 'D')
+		function = dialing[7]- 'A';
 	else
 		function = pocsag->default_function;
 
