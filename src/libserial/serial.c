@@ -78,7 +78,7 @@ serial_t *serial_open(const char *serial_device, int serial_baud, int serial_dat
 		serial_errnostr = "Enable or disable RTS/CTS?";
 		return NULL;
 	}
-	if (serial_parity != 'n' && serial_parity != 'e' && serial_parity != 'o') {
+	if (serial_parity != 'n' && serial_parity != 'e' && serial_parity != 'o' && serial_parity != 's' && serial_parity != 'm' && serial_parity != '0' && serial_parity != '1') {
 		serial_errno = -EINVAL;
 		serial_errnostr = "Unsopported parity.";
 		return NULL;
@@ -145,6 +145,10 @@ serial_t *serial_open(const char *serial_device, int serial_baud, int serial_dat
 					((serial->databits == 8) ? CS8 : 0) |
 					((serial->parity == 'e') ? PARENB : 0) |
 					((serial->parity == 'o') ? (PARENB | PARODD) : 0) |
+					((serial->parity == 's') ? (PARENB | CMSPAR) : 0) |
+					((serial->parity == 'm') ? (PARENB | CMSPAR | PARODD) : 0) |
+					((serial->parity == '0') ? (PARENB | CMSPAR) : 0) |
+					((serial->parity == '1') ? (PARENB | CMSPAR | PARODD) : 0) |
 					((serial->stopbits == 2) ? CSTOPB : 0) |
 					((serial->rtscts =='e' ) ? CRTSCTS : 0) | 
 					((serial->rtscts =='d' ) ? CLOCAL : 0) ;
