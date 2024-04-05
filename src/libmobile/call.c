@@ -664,7 +664,8 @@ void call_clock(void)
 #endif
 			/* encode and send via RTP */
 			process->codec->encoder((uint8_t *)spl, 160 * 2, &payload, &payload_len, process);
-			osmo_cc_rtp_send(process->codec, (uint8_t *)spl, 160 * 2, 0, 1, 160);
+			osmo_cc_rtp_send(process->codec, payload, payload_len, 0, 1, 160);
+			free(payload);
 			/* don't destroy process here in case of an error */
 		}
 		process = process->next;
