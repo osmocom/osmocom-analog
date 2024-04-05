@@ -155,7 +155,7 @@ static void receive_bit(void *inst, int bit)
 }
 
 /* Destroy transceiver instance and unlink from list. */
-void sniffer_destroy(sender_t *sender)
+static void sniffer_destroy(sender_t *sender)
 {
 	sniffer_t *sniffer = (sniffer_t *) sender;
 

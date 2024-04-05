@@ -68,8 +68,11 @@ wave_rec_t wave_tx_rec;
 
 /* dummy functions */
 int num_kanal = 1; /* only one channel used for debugging */
+void *get_sender_by_empfangsfrequenz(void);
 void *get_sender_by_empfangsfrequenz() { return NULL; }
+void display_measurements_add(void);
 void display_measurements_add() {}
+void display_measurements_update(void);
 void display_measurements_update() {}
 
 #define OPT_METERING	1000

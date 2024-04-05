@@ -385,7 +385,7 @@ again:
 	}
 }
 
-const char *r2000_dsp_mode_name(enum dsp_mode mode)
+static const char *r2000_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

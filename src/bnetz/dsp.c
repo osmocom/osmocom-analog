@@ -396,7 +396,7 @@ again:
 	}
 }
 
-const char *bnetz_dsp_mode_name(enum dsp_mode mode)
+static const char *bnetz_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

@@ -671,7 +671,7 @@ void decode_abaf(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N)
 static char digit2char[16] = "0123456789a*#bcd";
 
 /* MO call */
-void _decode_outgoing(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, char *number)
+static void _decode_outgoing(uint8_t *data, int len, uint16_t *T, uint8_t *U, uint8_t *N, char *number)
 {
 	int i;
 

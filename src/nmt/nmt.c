@@ -65,7 +65,7 @@ static int sms_ref = 0;
 /* Counters */
 #define PAGE_TRIES	3	/* How many time do we try to page the phone */
 
-const char *nmt_state_name(enum nmt_state state)
+static const char *nmt_state_name(enum nmt_state state)
 {
 	static char invalid[16];
 
@@ -110,7 +110,7 @@ const char *nmt_state_name(enum nmt_state state)
 	return invalid;
 }
 
-void nmt_display_status(void)
+static void nmt_display_status(void)
 {
 	sender_t *sender;
 	nmt_t *nmt;
@@ -1799,7 +1799,7 @@ const char *nmt_get_frame(nmt_t *nmt)
  */
 
 /* Call control starts call towards mobile station. */
-int _out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing, const char *sms)
+static int _out_setup(int callref, const char *caller_id, enum number_type caller_type, const char *dialing, const char *sms)
 {
 	sender_t *sender;
 	nmt_t *nmt;
@@ -1864,7 +1864,7 @@ int call_down_setup(int callref, const char *caller_id, enum number_type caller_
 {
 	return _out_setup(callref, caller_id, caller_type, dialing, NULL);
 }
-int sms_out_setup(char *dialing, const char *caller_id, enum number_type caller_type, const char *sms)
+static int sms_out_setup(char *dialing, const char *caller_id, enum number_type caller_type, const char *sms)
 {
 	return _out_setup(0, caller_id, caller_type, dialing, sms);
 }

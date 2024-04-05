@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "congestion.h"
 
 static int16_t pattern[] = {
 	0xfffd, 0x0004, 0xfffb, 0x0004, 0xfffe, 0x0001, 0x0001, 0xfffe,

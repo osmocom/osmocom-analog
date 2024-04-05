@@ -1,4 +1,5 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(FUSE_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes) \
+	$(FUSE_CFLAGS)
 
 bin_PROGRAMS = \
 	datenklo

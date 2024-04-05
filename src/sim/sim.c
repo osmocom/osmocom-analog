@@ -419,7 +419,7 @@ static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 /* message buffer handling */
 
 /* get space for return message */
-uint8_t *alloc_msg(sim_sim_t *sim, int size)
+static uint8_t *alloc_msg(sim_sim_t *sim, int size)
 {
 	/* we add 4, because we push 4 bytes (ICL and L2 header later) */
 	if (size + 4 > (int)sizeof(sim->block_tx_data))
@@ -428,7 +428,7 @@ uint8_t *alloc_msg(sim_sim_t *sim, int size)
 }
 
 /* push space in front of a message */
-uint8_t *push_msg(uint8_t *data, int length, int offset)
+static uint8_t *push_msg(uint8_t *data, int length, int offset)
 {
 	int i;
 

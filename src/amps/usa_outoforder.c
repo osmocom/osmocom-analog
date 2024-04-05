@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "outoforder.h"
 
 static int16_t pattern[] = {
 	0xfeae, 0xfde4, 0xfe26, 0xfea7, 0xfe94, 0xfe8a, 0xfeb4, 0xfe3b,

@@ -230,7 +230,7 @@ static uint8_t cnetz_power2bits(int power)
 	}
 }
 
-const char *cnetz_state_name(enum cnetz_state state)
+static const char *cnetz_state_name(enum cnetz_state state)
 {
 	static char invalid[16];
 
@@ -273,7 +273,7 @@ static void cnetz_new_state(cnetz_t *cnetz, enum cnetz_state new_state)
 }
 
 /* Convert ISDN cause to 'Ausloesegrund' of C-Netz mobile station */
-uint8_t cnetz_cause_isdn2cnetz(int cause)
+static uint8_t cnetz_cause_isdn2cnetz(int cause)
 {
 	switch (cause) {
 	case CAUSE_NORMAL:

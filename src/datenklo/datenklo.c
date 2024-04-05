@@ -1246,7 +1246,7 @@ static void dk_unlock(void)
 }
 
 /* signal handler to exit */
-void sighandler(int sigset)
+static void sighandler(int sigset)
 {
 	if (sigset == SIGHUP)
 		return;

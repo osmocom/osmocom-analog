@@ -672,7 +672,7 @@ void call_clock(void)
 }
 
 /* messages received from fixed network */
-void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref, osmo_cc_msg_t *msg)
+static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t callref, osmo_cc_msg_t *msg)
 {
 	process_t *process;
 	uint8_t coding, location, progress, isdn_cause, socket_cause;

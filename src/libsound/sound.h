@@ -13,4 +13,6 @@ void sound_close(void *inst);
 int sound_write(void *inst, sample_t **samples, uint8_t **power, int num, enum paging_signal *paging_signal, int *on, int channels);
 int sound_read(void *inst, sample_t **samples, int num, int channels, double *rf_level_db);
 int sound_get_tosend(void *inst, int buffer_size);
+int sound_is_stereo_capture(void *inst);
+int sound_is_stereo_playback(void *inst);
 

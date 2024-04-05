@@ -449,7 +449,7 @@ static const char *transaction2rufnummer(transaction_t *trans)
 	return nut2rufnummer(trans->futln_nat, trans->futln_fuvst, trans->futln_rest);
 }
 
-const char *state_name(enum call_state state)
+static const char *state_name(enum call_state state)
 {
 	static char invalid[16];
 
@@ -478,7 +478,7 @@ const char *state_name(enum call_state state)
 	return invalid;
 }
 
-void display_status(void)
+static void display_status(void)
 {
 	sender_t *sender;
 	fuvst_t *fuvst;
@@ -515,7 +515,7 @@ static void new_call_state(transaction_t *trans, enum call_state new_state)
 	display_status();
 }
 
-transaction_t *search_transaction_number(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
+static transaction_t *search_transaction_number(uint8_t futln_nat, uint8_t futln_fuvst, uint16_t futln_rest)
 {
 	transaction_t *trans = trans_list;
 
@@ -533,7 +533,7 @@ transaction_t *search_transaction_number(uint8_t futln_nat, uint8_t futln_fuvst,
 	return NULL;
 }
 
-transaction_t *search_transaction_ident(uint8_t ident)
+static transaction_t *search_transaction_ident(uint8_t ident)
 {
 	transaction_t *trans = trans_list;
 
@@ -549,7 +549,7 @@ transaction_t *search_transaction_ident(uint8_t ident)
 	return NULL;
 }
 
-transaction_t *search_transaction_callref(int callref)
+static transaction_t *search_transaction_callref(int callref)
 {
 	transaction_t *trans = trans_list;
 
@@ -601,7 +601,7 @@ static void destroy_transaction(transaction_t *trans)
 }
 
 /* Timeout handling */
-void trans_timeout(void *data)
+static void trans_timeout(void *data)
 {
 	transaction_t *trans = data;
 
@@ -722,7 +722,7 @@ static fuvst_t *get_spk(uint8_t Q)
 }
 
 /* Convert 'Ausloesegrund' of C-Netz base station to ISDN cause */
-int cnetz_fufst2cause(uint8_t X)
+static int cnetz_fufst2cause(uint8_t X)
 {
 	switch (X) {
 	case 0:		/* undefiniert */
@@ -745,7 +745,7 @@ int cnetz_fufst2cause(uint8_t X)
 }
 
 /* Convert ISDN cause to 'Ausloesegrund' of C-Netz mobile station */
-uint8_t cnetz_cause2futln(int cause)
+static uint8_t cnetz_cause2futln(int cause)
 {
 	switch (cause) {
 	case CAUSE_NORMAL:

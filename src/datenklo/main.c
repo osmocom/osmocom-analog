@@ -27,6 +27,7 @@
 #include <math.h>
 #include "../libsample/sample.h"
 #include <osmocom/core/timer.h>
+#include <osmocom/cc/misc.h>
 #include "../liboptions/options.h"
 #include "../liblogging/logging.h"
 #include "../libfsk/fsk.h"
@@ -49,6 +50,7 @@
 
 /* dummy functions */
 int num_kanal = 1; /* only one channel used for debugging */
+void *get_sender_by_empfangsfrequenz(void);
 void *get_sender_by_empfangsfrequenz() { return "void"; }
 
 static datenklo_t datenklo[MAX_DEVICES];
@@ -71,7 +73,7 @@ const char *write_rx_wave = NULL;
 const char *read_tx_wave = NULL;
 const char *read_rx_wave = NULL;
 
-void print_help(const char *arg0)
+static void print_help(const char *arg0)
 {
 	printf("Usage: %s [options] -M <mode>\n\n", arg0);
 	/*      -                                                                             - */
@@ -235,7 +237,7 @@ static int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
-const char *inc_dev_name(const char *dev_name)
+static const char *inc_dev_name(const char *dev_name)
 {
 	char *new_name, *number;
 	int integer;
@@ -326,5 +328,5 @@ fail:
 	return 0;
 }
 
-void osmo_cc_set_log_cat(void) {}
+void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 

@@ -318,7 +318,7 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	fsk_mod_send(&mpt1327->fsk_mod, samples, length, 0);
 }
 
-const char *mpt1327_dsp_mode_name(enum dsp_mode mode)
+static const char *mpt1327_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

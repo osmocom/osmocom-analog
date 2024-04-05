@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "stations.h"
 
 static struct bnetz_stations {
 	const char	*standort;
@@ -221,7 +222,7 @@ static struct bnetz_stations {
 	{ NULL,				0,	NULL }
 };
 
-double lat_from_coordinates(const char *string)
+static double lat_from_coordinates(const char *string)
 {
 	if (strlen(string) != 11)
 		abort();
@@ -242,7 +243,7 @@ double lat_from_coordinates(const char *string)
 		(double)(string[4] - '0') / 60.0;
 }
 
-double lon_from_coordinates(const char *string)
+static double lon_from_coordinates(const char *string)
 {
 	if (strlen(string) != 11)
 		abort();

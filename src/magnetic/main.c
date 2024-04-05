@@ -32,6 +32,7 @@
 #include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libaaimage/aaimage.h"
+#include <osmocom/cc/misc.h>
 #include "iso7811.h"
 
 int num_kanal = 1;
@@ -54,7 +55,7 @@ static const char *sicherung = "12345";
 #define CNETZ_SWITCH_ON		27	/* switch closing during lead-out, in digit-duration */ 
 #define CNETZ_SWITCH_OFF	42	/* switch opening during lead-out, in digit-duration */ 
 
-void print_help(const char *arg0)
+static void print_help(const char *arg0)
 {
 	printf("Usage: %s [options] -a hw:0,0 <number> | service\n", arg0);
 	/*      -                                                                             - */
@@ -81,7 +82,7 @@ void print_help(const char *arg0)
 	printf("\n'service': BSA44 service card (to unlock phone after battery replacement)\n");
 }
 
-void add_options(void)
+static void add_options(void)
 {
 	option_add('h', "help", 0);
 	option_add('v', "debug", 1);
@@ -92,7 +93,7 @@ void add_options(void)
 	option_add('S', "sicherung", 1);
 };
 
-int handle_options(int short_option, int argi, char **argv)
+static int handle_options(int short_option, int argi, char **argv)
 {
 	int rc;
 
@@ -131,7 +132,7 @@ int handle_options(int short_option, int argi, char **argv)
 	return 1;
 }
 
-void sighandler(int sigset)
+static void sighandler(int sigset)
 {
 	if (sigset == SIGHUP)
 		return;
@@ -364,6 +365,6 @@ done:
 	return 0;
 }
 
-void osmo_cc_set_log_cat(void) {}
+void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 
 #endif /* ARDUINO */

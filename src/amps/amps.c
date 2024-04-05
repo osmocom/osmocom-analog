@@ -342,7 +342,7 @@ const char *amps_scm(uint8_t scm)
 	return text;
 }
 
-const char *amps_mpci(uint8_t mpci)
+static const char *amps_mpci(uint8_t mpci)
 {
 	switch (mpci) {
 	case 0:
@@ -359,7 +359,7 @@ const char *amps_mpci(uint8_t mpci)
 
 }
 
-const char *amps_state_name(enum amps_state state)
+static const char *amps_state_name(enum amps_state state)
 {
 	static char invalid[16];
 

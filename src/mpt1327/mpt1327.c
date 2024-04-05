@@ -153,7 +153,7 @@ static mpt1327_unit_t *unit_list = NULL;
 #define UNIT_CALL_CLEAR		(1 << 12)	/* established call */
 #define UNIT_CANCEL_ACK		(1 << 13)	/* need to ack cancelation */
 
-const char *unit_state_name(uint64_t state)
+static const char *unit_state_name(uint64_t state)
 {
 	static char invalid[32];
 
@@ -194,7 +194,7 @@ const char *unit_state_name(uint64_t state)
 	return invalid;
 }
 
-void unit_new_state(mpt1327_unit_t *unit, uint64_t new_state)
+static void unit_new_state(mpt1327_unit_t *unit, uint64_t new_state)
 {
 	LOGP(DMPT1327, LOGL_DEBUG, "Radio Unit (Prefix:%d Ident:%d) state: %s -> %s\n", unit->prefix, unit->ident, unit_state_name(unit->state), unit_state_name(new_state));
 	unit->state = new_state;
@@ -202,7 +202,7 @@ void unit_new_state(mpt1327_unit_t *unit, uint64_t new_state)
 
 static void unit_timeout(void *data);
 
-mpt1327_unit_t *get_unit(uint8_t prefix, uint16_t ident)
+static mpt1327_unit_t *get_unit(uint8_t prefix, uint16_t ident)
 {
 	mpt1327_unit_t **unitp;
 
@@ -224,7 +224,7 @@ mpt1327_unit_t *get_unit(uint8_t prefix, uint16_t ident)
 	return *unitp;
 }
 
-mpt1327_unit_t *find_unit_state(uint32_t state, mpt1327_t *tc)
+static mpt1327_unit_t *find_unit_state(uint32_t state, mpt1327_t *tc)
 {
 	mpt1327_unit_t *unit;
 
@@ -315,7 +315,7 @@ void flush_units(void)
 	}
 }
 
-void dump_units(void)
+static void dump_units(void)
 {
 	mpt1327_unit_t *unit = unit_list;
 
@@ -421,7 +421,7 @@ double mpt1327_channel2freq(enum mpt1327_band band, int channel, int uplink)
 }
 
 /* convert channel to chan field */
-uint16_t mpt1327_channel2chan(enum mpt1327_band band, int channel)
+static uint16_t mpt1327_channel2chan(enum mpt1327_band band, int channel)
 {
 	uint16_t chan = 0;
 
@@ -544,7 +544,7 @@ static mpt1327_t *search_cc(void)
 
 }
 
-const char *mpt1327_state_name(enum mpt1327_state state)
+static const char *mpt1327_state_name(enum mpt1327_state state)
 {
 	static char invalid[16];
 
@@ -561,7 +561,7 @@ const char *mpt1327_state_name(enum mpt1327_state state)
 	return invalid;
 }
 
-void mpt1327_display_status(void)
+static void mpt1327_display_status(void)
 {
 	sender_t *sender;
 	mpt1327_t *mpt1327;
@@ -784,7 +784,7 @@ static int gtc_aloha_number(int length)
  * a dummy slot is used to allow radio unit to allow multi slot response to a
  * request from TSC.
  */
-int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codeword)
+static int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codeword)
 {
 	mpt1327_unit_t *unit;
 
@@ -1029,7 +1029,7 @@ int mpt1327_send_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codewo
  * a SYNC is sent the next request will send the an ADDR codeword. this will
  * repeat until the repeat counter reaches 0.
  */
-int mpt1327_send_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t __attribute__((unused)) *codeword)
+static int mpt1327_send_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t __attribute__((unused)) *codeword)
 {
 	mpt1327_unit_t *unit;
 	mpt1327_t *cc;
@@ -1136,7 +1136,7 @@ static void _cancel_pending_call(mpt1327_t *mpt1327, mpt1327_unit_t *unit)
 	}
 }
 
-void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codeword)
+static void mpt1327_receive_codeword_control(mpt1327_t *mpt1327, mpt1327_codeword_t *codeword)
 {
 	mpt1327_unit_t *unit;
 	mpt1327_t *tc;
@@ -1438,7 +1438,7 @@ answer:
 	}
 }
 
-void mpt1327_receive_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t *codeword)
+static void mpt1327_receive_codeword_traffic(mpt1327_t *mpt1327, mpt1327_codeword_t *codeword)
 {
 	mpt1327_unit_t *unit;
 

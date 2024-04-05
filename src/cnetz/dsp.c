@@ -54,7 +54,7 @@ scrambler_t scrambler_test_scrambler1;
 scrambler_t scrambler_test_scrambler2;
 #endif
 
-const char *cnetz_dsp_mode_name(enum dsp_mode mode)
+static const char *cnetz_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

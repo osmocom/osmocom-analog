@@ -169,7 +169,7 @@ void pocsag_exit(void)
 {
 }
 
-const char *print_ric(pocsag_msg_t *msg)
+static const char *print_ric(pocsag_msg_t *msg)
 {
 	static char text[16];
 

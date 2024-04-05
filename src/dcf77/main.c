@@ -33,6 +33,7 @@
 #include "../libsample/sample.h"
 #include "../libsound/sound.h"
 #include "../libaaimage/aaimage.h"
+#include <osmocom/cc/misc.h>
 #include "dcf77.h"
 #include "cities.h"
 
@@ -61,6 +62,7 @@ static int rt_prio = 0;
 static int fast_math = 0;
 
 /* not static, in case we add libtimer some day, then compiler hits an error */
+double get_time(void);
 double get_time(void)
 {
 	static struct timespec tv;
@@ -138,7 +140,7 @@ static void print_usage(const char *app)
 	printf("Usage: %s [-a hw:0,0] [<options>]\n", app);
 }
 
-void print_help(void)
+static void print_help(void)
 {
 	/*      -                                                                             - */
 	printf(" -h --help\n");
@@ -411,7 +413,7 @@ static int get_char()
                 return -1;
 }
 
-int soundif_open(const char *audiodev, int samplerate, int buffer_size)
+static int soundif_open(const char *audiodev, int samplerate, int buffer_size)
 {
 	enum sound_direction direction = SOUND_DIR_DUPLEX;
 
@@ -434,13 +436,13 @@ int soundif_open(const char *audiodev, int samplerate, int buffer_size)
 	return 0;
 }
 
-void soundif_start(void)
+static void soundif_start(void)
 {
 	sound_start(soundif);
 	LOGP(DDSP, LOGL_DEBUG, "Starting audio stream!\n");
 }
 
-void soundif_close(void)
+static void soundif_close(void)
 {
 	/* close audiodev */
 	if (soundif) {
@@ -449,7 +451,7 @@ void soundif_close(void)
 	}
 }
 
-void soundif_work(int buffer_size)
+static void soundif_work(int buffer_size)
 {
 	int count;
 	sample_t buff1[buffer_size], buff2[buffer_size], *samples[2] = { buff1, buff2 };
@@ -654,5 +656,5 @@ error:
 	return 0;
 }
 
-void osmo_cc_set_log_cat(void) {}
+void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 

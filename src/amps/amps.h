@@ -171,6 +171,7 @@ struct amps {
 	int			when_count;		/* counter of the filler frame */
 };
 
+void amps_display_status(void);
 void amps_channel_list(void);
 int amps_channel_by_short_name(const char *short_name);
 const char *chan_type_short_name(enum amps_chan_type chan_type);

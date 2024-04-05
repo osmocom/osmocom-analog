@@ -680,7 +680,7 @@ static struct nmt_parameter {
 /* Depending on P-value, direction and additional info, frame index (used for
  * nmt_frame[]) is decoded.
  */
-enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction, int callack)
+static enum nmt_mt decode_frame_mt(const uint8_t *digits, enum nmt_direction direction, int callack)
 {
 	if (direction == MS_TO_MTX || direction == BS_TO_MTX || direction == XX_TO_MTX) {
 		/* MS/BS TO MTX */

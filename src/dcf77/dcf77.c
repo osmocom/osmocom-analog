@@ -1131,8 +1131,9 @@ static void rx_frame(dcf77_rx_t *rx, uint64_t frame)
 	}
 }
 
+#if 0
 /* test routing for test data */
-void rx_frame_test(dcf77_t *dcf77, const char *string)
+static void rx_frame_test(dcf77_t *dcf77, const char *string)
 {
 	uint64_t frame = 0;
 	int i;
@@ -1144,6 +1145,7 @@ void rx_frame_test(dcf77_t *dcf77, const char *string)
 
 	rx_frame(&dcf77->rx, frame);
 }
+#endif
 
 /* receive one symbol = one second */
 static void rx_symbol(dcf77_t *dcf77, char symbol)

@@ -37,7 +37,7 @@
 #define PAGING_TO	30,0	/* Nach dieser Zeit ist der Operator genervt... */
 #define RELEASE_TO	3,0	/* Release time, so station keeps blocked for a while */
 
-const char *anetz_state_name(enum anetz_state state)
+static const char *anetz_state_name(enum anetz_state state)
 {
 	static char invalid[16];
 
@@ -58,7 +58,7 @@ const char *anetz_state_name(enum anetz_state state)
 	return invalid;
 }
 
-void anetz_display_status(void)
+static void anetz_display_status(void)
 {
 	sender_t *sender;
 	anetz_t *anetz;

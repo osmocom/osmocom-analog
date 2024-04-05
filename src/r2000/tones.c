@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include "tones.h"
 
 static int16_t pattern[] = {
 	0x0000, 0x1483,

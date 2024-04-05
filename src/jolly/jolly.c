@@ -153,7 +153,7 @@
 #define SPEECH_DELAY_VERIFY	2,0	/* time before speaking verifying sequence */
 #define SPEECH_DELAY_RELEASE	2,0	/* time before speaking release sequence */
 
-const char *jolly_state_name(enum jolly_state state)
+static const char *jolly_state_name(enum jolly_state state)
 {
 	static char invalid[16];
 
@@ -180,7 +180,7 @@ const char *jolly_state_name(enum jolly_state state)
 	return invalid;
 }
 
-void jolly_display_status(void)
+static void jolly_display_status(void)
 {
 	sender_t *sender;
 	jolly_t *jolly;

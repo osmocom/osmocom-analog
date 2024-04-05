@@ -417,8 +417,6 @@ void main_mobile_add_options(void)
 #endif
 };
 
-void print_help(const char *arg0);
-
 int main_mobile_handle_options(int short_option, int argi, char **argv)
 {
 	double gain_db;

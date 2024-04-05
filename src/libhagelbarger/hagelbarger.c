@@ -25,7 +25,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "stdint.h"
+#include <stdint.h>
+#include "hagelbarger.h"
 
 /* enable to debug the process of parity check */
 //#define DEBUG_HAGEL

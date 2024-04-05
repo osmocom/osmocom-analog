@@ -53,7 +53,7 @@ static void assert(int condition, char *why)
 	}
 }
 
-void ok(void)
+static void ok(void)
 {
 	printf("\n OK ;->\n\n");
 	sleep(1);
@@ -61,7 +61,7 @@ void ok(void)
 
 static uint8_t dms_buffer[256];
 static int dms_buffer_count;
-void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
+void dms_send(nmt_t __attribute__((unused)) *nmt, const uint8_t *data, int length, int __attribute__((unused)) eight_bits)
 {
 	int i;
 
@@ -80,12 +80,12 @@ void dms_send(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 	assert(!memcmp(data, test_mt_sms_data, length), "Expecting SMS binary data to match");
 }
 
-void sms_release(nmt_t *nmt)
+void sms_release(nmt_t __attribute__((unused)) *nmt)
 {
 	printf("(got release from SMS layer)\n");
 }
 
-int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_type, uint8_t orig_plan, int msg_ref, const char *dest_address, uint8_t dest_type, uint8_t dest_plan, const char *message)
+int sms_submit(nmt_t __attribute__((unused)) *nmt, uint8_t __attribute__((unused)) ref, const char __attribute__((unused)) *orig_address, uint8_t __attribute__((unused)) orig_type, uint8_t __attribute__((unused)) orig_plan, int __attribute__((unused)) msg_ref, const char __attribute__((unused)) *dest_address, uint8_t __attribute__((unused)) dest_type, uint8_t __attribute__((unused)) dest_plan, const char *message)
 {
 	strcpy((char *)dms_buffer, message);
 	dms_buffer_count = strlen(message);
@@ -93,7 +93,7 @@ int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t orig_t
 	return 0;
 }
 
-void sms_deliver_report(nmt_t *nmt, uint8_t ref, int error, uint8_t cause)
+void sms_deliver_report(nmt_t __attribute__((unused)) *nmt, uint8_t __attribute__((unused)) ref, int __attribute__((unused)) error, uint8_t __attribute__((unused)) cause)
 {
 	printf("(got deliver report from SMS layer)\n");
 }
@@ -132,10 +132,10 @@ int main(void)
 
 	printf("(submitting SMS 7-bit encoded)\n");
 	dms_buffer_count = 0;
-	for (i = 0; i < sizeof(test_mo_sms_data1); i++)
+	for (i = 0; i < (int)sizeof(test_mo_sms_data1); i++)
 		dms_receive(nmt, test_mo_sms_data1 + i, 1, 1);
 
-	assert(dms_buffer_count == strlen(test_mo_sms_text1), "Expecting SMS text length to match");
+	assert(dms_buffer_count == (int)strlen(test_mo_sms_text1), "Expecting SMS text length to match");
 	assert(!memcmp(dms_buffer, test_mo_sms_text1, dms_buffer_count), "Expecting SMS text to match");
 
 	sms_cleanup_sender(nmt);
@@ -149,10 +149,10 @@ int main(void)
 
 	printf("(submitting SMS 8-bit encoded)\n");
 	dms_buffer_count = 0;
-	for (i = 0; i < sizeof(test_mo_sms_data2); i++)
+	for (i = 0; i < (int)sizeof(test_mo_sms_data2); i++)
 		dms_receive(nmt, test_mo_sms_data2 + i, 1, 1);
 
-	assert(dms_buffer_count == strlen(test_mo_sms_text2), "Expecting SMS text length to match");
+	assert(dms_buffer_count == (int)strlen(test_mo_sms_text2), "Expecting SMS text length to match");
 	assert(!memcmp(dms_buffer, test_mo_sms_text2, dms_buffer_count), "Expecting SMS text to match");
 
 	sms_cleanup_sender(nmt);

@@ -386,7 +386,7 @@ void sender_send(sender_t *sender, sample_t *samples, uint8_t *power, int length
 	}
 }
 
-const char *anetz_dsp_mode_name(enum dsp_mode mode)
+static const char *anetz_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

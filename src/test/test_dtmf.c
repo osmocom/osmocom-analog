@@ -49,7 +49,7 @@ static void check_level(sample_t *samples, const char *desc, double target, int 
 
 static char got_digit;
 
-static void recv_digit(void *inst, char digit, dtmf_meas_t *meas)
+static void recv_digit(void __attribute__((unused)) *inst, char digit, dtmf_meas_t *meas)
 {
 	printf("decoded digit '%c'  frequency %.1f %.1f  amplitude %.1f %.1f dB\n", digit, meas->frequency_low, meas->frequency_high, level2db(meas->amplitude_low), level2db(meas->amplitude_high));
 	got_digit = digit;

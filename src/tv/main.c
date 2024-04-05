@@ -39,6 +39,7 @@ enum paging_signal;
 #include "../libsdr/sdr.h"
 #endif
 #include "../liboptions/options.h"
+#include <osmocom/cc/misc.h>
 #include "bas.h"
 #include "tv_modulate.h"
 #include "channels.h"
@@ -50,6 +51,7 @@ int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 int rt_prio = 0;
 
+void *get_sender_by_empfangsfrequenz(void);
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
 static double __attribute__((__unused__)) modulation = 0.7; /* level of modulation for I/Q amplitudes */
@@ -68,7 +70,7 @@ static const char *wave_file = NULL;
 /* global variable to quit main loop */
 int quit = 0;
 
-void sighandler(int sigset)
+static void sighandler(int sigset)
 {
 	if (sigset == SIGHUP)
 		return;
@@ -81,7 +83,7 @@ void sighandler(int sigset)
 	quit = 1;
 }
 
-void print_help(const char *arg0)
+static void print_help(const char *arg0)
 
 {
 	printf("Usage: %s -f <frequency> | -c <channel>  <command>\n", arg0);
@@ -571,5 +573,5 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void osmo_cc_set_log_cat(void) {}
+void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 

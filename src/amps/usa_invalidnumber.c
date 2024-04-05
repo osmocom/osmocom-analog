@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "invalidnumber.h"
 
 static int16_t pattern[] = {
 	0xfffe, 0x0001, 0xffff, 0x0001, 0xffff, 0x0002, 0xfffe, 0x0002,

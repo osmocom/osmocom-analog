@@ -1,4 +1,5 @@
-AM_CPPFLAGS = -Wall -Wextra -g $(all_includes) $(SOAPY_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes) \
+	$(SOAPY_CFLAGS)
 
 noinst_LIBRARIES = libsdr.a
 

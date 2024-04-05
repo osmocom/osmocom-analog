@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "channels.h"
 
 static struct tv_channels {
 	const char	*channel;

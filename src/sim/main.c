@@ -34,6 +34,7 @@
 #include "../liboptions/options.h"
 #include "../libserial/serial.h"
 #include "../libaaimage/aaimage.h"
+#include <osmocom/cc/misc.h>
 #include "sim.h"
 #include "sniffer.h"
 #include "eeprom.h"
@@ -62,7 +63,7 @@ static const char *auth = NULL;
 
 #define TIMEOUT	0.2
 
-void print_help(const char *arg0)
+static void print_help(const char *arg0)
 {
 	printf("Usage: %s [options] <command>\n", arg0);
 	/*      -                                                                             - */
@@ -113,7 +114,7 @@ void print_help(const char *arg0)
 #define OPT_SONDER	258
 #define OPT_WARTUNG	259
 
-void add_options(void)
+static void add_options(void)
 {
 	option_add('h', "help", 0);
 	option_add('v', "debug", 1);
@@ -131,7 +132,7 @@ void add_options(void)
 	option_add('A', "auth", 1);
 };
 
-int handle_options(int short_option, int argi, char **argv)
+static int handle_options(int short_option, int argi, char **argv)
 {
 	int rc;
 
@@ -228,7 +229,7 @@ size_t eeprom_length(void)
 
 /* main loop for interfacing serial with sim / sniffer */
 
-int main_loop(serial_t *serial, int sniffer)
+static int main_loop(serial_t *serial, int sniffer)
 {
 	int rc, cts = 0, last_cts = 0;
 	uint8_t byte;
@@ -312,7 +313,7 @@ int main_loop(serial_t *serial, int sniffer)
 	return quit;
 }
 
-void sighandler(int sigset)
+static void sighandler(int sigset)
 {
 	if (sigset == SIGHUP)
 		return;
@@ -501,6 +502,6 @@ error:
 	return 0;
 }
 
-void osmo_cc_set_log_cat(void) {}
+void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 
 #endif /* ARDUINO */

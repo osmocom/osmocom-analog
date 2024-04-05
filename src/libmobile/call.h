@@ -9,6 +9,9 @@ enum number_type {
 	TYPE_INTERNATIONAL,
 };
 
+void encode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg);
+void decode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg);
+
 int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[], int no_l16);
 void call_exit(void);
 int call_handle(void);
@@ -42,4 +45,7 @@ void call_down_audio(void *decoder, void *decoder_priv, int callref, uint16_t se
 /* clock to transmit to */
 void call_clock(void); /* from main loop */
 void call_down_clock(void); /* towards mobile implementation */
+
+/* display call states */
+void dump_info(void);
 

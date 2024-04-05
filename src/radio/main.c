@@ -35,6 +35,7 @@ enum paging_signal;
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
 #include "../liboptions/options.h"
+#include <osmocom/cc/misc.h>
 #include "radio.h"
 
 #define DEFAULT_LO_OFFSET -1000000.0
@@ -45,6 +46,7 @@ int num_kanal = 1; /* only one channel used for debugging */
 int rt_prio = 0;
 int fast_math = 0;
 
+void *get_sender_by_empfangsfrequenz(void);
 void *get_sender_by_empfangsfrequenz() { return NULL; }
 
 static double frequency = 0.0;
@@ -70,7 +72,7 @@ static int rds2 = 0;
 /* global variable to quit main loop */
 int quit = 0;
 
-void sighandler(int sigset)
+static void sighandler(int sigset)
 {
 	if (sigset == SIGHUP)
 		return;
@@ -100,7 +102,7 @@ static int get_char()
 		return -1;
 }
 
-void print_help(const char *arg0)
+static void print_help(const char *arg0)
 
 {
 	printf("Usage: %s --sdr-soapy|--sdr-uhd <sdr options> -f <frequency> -M <modulation> -R|-T [options]\n", arg0);
@@ -531,5 +533,5 @@ error:
 	return 0;
 }
 
-void osmo_cc_set_log_cat(void) {}
+void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 

@@ -81,7 +81,7 @@ const char *param_aga(uint64_t value)
 	return "<invalid>";
 }
 
-const char *param_power(uint64_t value)
+static const char *param_power(uint64_t value)
 {
 	switch (value) {
 	case 0:
@@ -114,7 +114,7 @@ const char *param_crins(uint64_t value)
 	return "<invalid>";
 }
 
-const char *param_invitation(uint64_t value)
+static const char *param_invitation(uint64_t value)
 {
 	switch (value) {
 	case 3:
@@ -387,7 +387,7 @@ static const char *get_frame_def(uint8_t message, int dir)
 	return NULL;
 }
 
-const char *r2000_dir_name(int dir)
+static const char *r2000_dir_name(int dir)
 {
 	return (dir == REL_TO_SM) ? "REL->SM" : "SM->REL";
 }

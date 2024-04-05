@@ -51,7 +51,7 @@
 #define METERING_DURATION_US	140000		/* duration of metering pulse (according to FTZ 1727 Pfl 32 Clause 3.2.6.6.1) */
 #define METERING_START		1,0		/* start metering 1 second after call start */
 
-const char *bnetz_state_name(enum bnetz_state state)
+static const char *bnetz_state_name(enum bnetz_state state)
 {
 	static char invalid[16];
 
@@ -80,7 +80,7 @@ const char *bnetz_state_name(enum bnetz_state state)
 	return invalid;
 }
 
-void bnetz_display_status(void)
+static void bnetz_display_status(void)
 {
 	sender_t *sender;
 	bnetz_t *bnetz;

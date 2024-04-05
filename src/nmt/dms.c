@@ -106,7 +106,7 @@ static const char *print_ct_dt(uint8_t s, uint8_t n, uint8_t *data, int eight_bi
 }
 
 /* link DMS frame to list of TX frames */
-void link_dms_frame(nmt_t *nmt, struct dms_frame *frame)
+static void link_dms_frame(nmt_t *nmt, struct dms_frame *frame)
 {
 	dms_t *dms = &nmt->dms;
 	struct dms_frame **framep;
@@ -121,7 +121,7 @@ void link_dms_frame(nmt_t *nmt, struct dms_frame *frame)
 }
 
 /* unlink DMS frame from list of TX frames */
-void unlink_dms_frame(nmt_t *nmt, struct dms_frame *frame)
+static void unlink_dms_frame(nmt_t *nmt, struct dms_frame *frame)
 {
 	dms_t *dms = &nmt->dms;
 	struct dms_frame **framep;

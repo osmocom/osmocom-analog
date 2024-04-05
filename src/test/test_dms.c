@@ -20,7 +20,7 @@ static void assert(int condition, char *why)
 	}
 }
 
-void ok(void)
+static void ok(void)
 {
 	printf("\n OK ;->\n\n");
 	sleep(1);
@@ -39,7 +39,7 @@ static const uint8_t test_null[][8] = {
 
 static char ack_bits[77];
 
-void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
+void dms_receive(nmt_t __attribute__((unused)) *nmt, const uint8_t *data, int length, int __attribute__((unused)) eight_bits)
 {
 	printf("(getting %d digits from DMS layer)\n", length);
 
@@ -49,11 +49,11 @@ void dms_receive(nmt_t *nmt, const uint8_t *data, int length, int eight_bits)
 	check_length = length;
 }
 
-void dms_all_sent(nmt_t *nmt)
+void dms_all_sent(nmt_t __attribute__((unused)) *nmt)
 {
 }
 
-nmt_t *alloc_nmt(void)
+static nmt_t *alloc_nmt(void)
 {
 	nmt_t *nmt;
 
@@ -65,7 +65,7 @@ nmt_t *alloc_nmt(void)
 	return nmt;
 }
 
-void free_nmt(nmt_t *nmt)
+static void free_nmt(nmt_t *nmt)
 {
 	dms_cleanup_sender(nmt);
 	free(nmt);

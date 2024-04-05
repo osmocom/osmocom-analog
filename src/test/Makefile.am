@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -Wall -g $(all_includes)
+AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes)
 
 noinst_PROGRAMS = \
 	test_filter \

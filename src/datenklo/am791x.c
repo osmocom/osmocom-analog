@@ -300,13 +300,13 @@ void am791x_list_mc(enum am791x_type type)
 }
 
 /* init STO signal */
-void init_sto(am791x_t *am791x)
+static void init_sto(am791x_t *am791x)
 {
 	am791x->sto_phaseshift65536 = 900 / (double)am791x->samplerate * 65536.0;
 }
 
 /* transmit STO signal, use phase from FSK modulator, to avoid phase jumps */
-int send_sto(am791x_t *am791x, sample_t *sample, int length)
+static int send_sto(am791x_t *am791x, sample_t *sample, int length)
 {
 	fsk_mod_t *fsk = &am791x->fsk_tx;
 	int count = 0;

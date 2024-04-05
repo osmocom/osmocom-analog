@@ -92,9 +92,6 @@ static console_t console;
 
 extern osmo_cc_endpoint_t *ep;
 
-void encode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg);
-void decode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg);
-
 static struct osmo_cc_helper_audio_codecs codecs[] = {
 	{ "L16", 8000, 1, encode_l16, decode_l16 },
 	{ NULL, 0, 0, NULL, NULL},

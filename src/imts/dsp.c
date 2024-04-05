@@ -526,7 +526,7 @@ void sender_receive(sender_t *sender, sample_t *samples, int length, double rf_l
 
 }
 
-const char *imts_dsp_mode_name(enum dsp_mode mode)
+static const char *imts_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

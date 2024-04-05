@@ -136,7 +136,7 @@ const char *r2000_number_valid(const char *number)
 	return NULL;
 }
 
-const char *r2000_state_name(enum r2000_state state)
+static const char *r2000_state_name(enum r2000_state state)
 {
 	static char invalid[16];
 
@@ -187,7 +187,7 @@ const char *r2000_state_name(enum r2000_state state)
 
 static const char *print_subscriber_subscr(r2000_subscriber_t *subscr);
 
-void r2000_display_status(void)
+static void r2000_display_status(void)
 {
 	sender_t *sender;
 	r2000_t *r2000;
@@ -362,7 +362,7 @@ static int match_subscriber(r2000_t *r2000, frame_t *frame)
 }
 
 /* convert nconv to supervisory digit to be transmitted to phone */
-uint8_t r2000_encode_super(r2000_t *r2000)
+static uint8_t r2000_encode_super(r2000_t *r2000)
 {
 	uint8_t super, nconv, relais;
 
@@ -533,7 +533,7 @@ void r2000_go_idle(r2000_t *r2000)
 }
 
 /* release towards station mobile */
-void r2000_release(r2000_t *r2000)
+static void r2000_release(r2000_t *r2000)
 {
 	if (r2000->state == STATE_IDLE
 	 || r2000->state == STATE_OUT_ASSIGN

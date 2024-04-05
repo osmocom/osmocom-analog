@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "tones.h"
 
 static int16_t pattern_ringback[] = {
 	0x000b, 0x0008, 0x000d, 0x000e, 0x000d, 0x0012, 0x0011, 0xffcd,

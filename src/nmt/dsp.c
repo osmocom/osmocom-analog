@@ -498,7 +498,7 @@ again:
 	}
 }
 
-const char *nmt_dsp_mode_name(enum dsp_mode mode)
+static const char *nmt_dsp_mode_name(enum dsp_mode mode)
 {
         static char invalid[16];
 

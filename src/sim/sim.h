@@ -139,6 +139,9 @@ enum l2_cmd {
 #define APP_NETZ_C	3
 #define APP_RUFN_GEBZ	4
 
+/* defined for main.c */
+size_t eeprom_length(void);
+
 int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const char *karten, const char *sonder, const char *wartung);
 void decode_ebdt(uint8_t *data, char *futln, char *sicherung, char *karten, char *sonder, char *wartung);
 int directory_size(void);

@@ -145,7 +145,7 @@ static void fuenf_display_status(void)
 	display_status_end();
 }
 
-void fuenf_new_state(fuenf_t *fuenf, enum fuenf_state new_state)
+static void fuenf_new_state(fuenf_t *fuenf, enum fuenf_state new_state)
 {
 	if (fuenf->state == new_state)
 		return;

@@ -177,7 +177,7 @@ void imts_list_channels(void)
 #define RECEIVE_TIME	0.200		/* Time until detecting receive signal (Guard tone) from mobile */
 #define ANSWER_TIME	0.200		/* Time until detecting answer signal (Connect tone) from mobile */
 
-const char *imts_state_name(enum imts_state state)
+static const char *imts_state_name(enum imts_state state)
 {
 	static char invalid[16];
 

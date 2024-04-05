@@ -28,6 +28,8 @@ struct number_lengths {
 	const char *usage;
 };
 
+void print_help(const char *);
+
 const char *mobile_number_remove_prefix(const char *number);
 const char *mobile_number_check_length(const char *number);
 const char *mobile_number_check_digits(const char *number);
@@ -56,6 +58,4 @@ extern int quit;
 void sighandler(int sigset);
 
 void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), const char *station_id);
-
-void dump_info(void);
 
