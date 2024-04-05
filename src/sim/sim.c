@@ -31,7 +31,9 @@
 #ifdef ARDUINO
 #define LOGP(cat, level, fmt, arg...) while(0)
 #define EINVAL 22
-static uint32_t my_strtoul(const char *nptr, char **endptr, int base)
+#endif
+
+static uint32_t my_strtoul(const char *nptr, char __attribute__((unused)) **endptr, int __attribute__((unused)) base)
 {
 	uint32_t number = 0;
 
@@ -40,9 +42,6 @@ static uint32_t my_strtoul(const char *nptr, char **endptr, int base)
 
 	return number;
 }
-#else
-#define my_strtoul strtoul
-#endif
 
 static void my_ultostr(char *nptr, uint32_t value, int zeros)
 {
@@ -143,7 +142,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 			if (futln[i] < '0' || futln[i] > '9')
 				break;
 		}
-		temp = my_strtoul(futln, NULL, 0);
+		temp = my_strtoul(futln, NULL, 10);
 		if (i < 5 || temp > 65535) {
 			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' has invalid last digits. (Must be '00000' .. '65535')\n", futln);
 			return -EINVAL;
@@ -153,7 +152,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	}
 
 	if (sicherung) {
-		temp = my_strtoul(sicherung, NULL, 0);
+		temp = my_strtoul(sicherung, NULL, 10);
 		if (temp > 65535) {
 			LOGP(DSIM7, LOGL_NOTICE, "Given security code '%s' has invalid digits. (Must be '0' .. '65535')\n", sicherung);
 			return -EINVAL;
@@ -163,7 +162,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	}
 
 	if (karten) {
-		temp = my_strtoul(karten, NULL, 0);
+		temp = my_strtoul(karten, NULL, 10);
 		if (temp > 7) {
 			LOGP(DSIM7, LOGL_NOTICE, "Given card number '%s' has invalid digit. (Must be '0' .. '7')\n", karten);
 			return -EINVAL;
@@ -172,7 +171,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	}
 
 	if (sonder) {
-		temp = my_strtoul(sonder, NULL, 0);
+		temp = my_strtoul(sonder, NULL, 10);
 		if (temp > 8191) {
 			LOGP(DSIM7, LOGL_NOTICE, "Given spacial code '%s' has invalid digits. (Must be '0' .. '8191')\n", sonder);
 			return -EINVAL;
@@ -182,7 +181,7 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 	}
 
 	if (wartung) {
-		temp = my_strtoul(wartung, NULL, 0);
+		temp = my_strtoul(wartung, NULL, 10);
 		if (temp > 65535) {
 			LOGP(DSIM7, LOGL_NOTICE, "Given maintenance code '%s' has invalid digits. (Must be '0' .. '65535')\n", wartung);
 			return -EINVAL;
