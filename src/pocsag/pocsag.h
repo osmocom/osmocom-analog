@@ -34,6 +34,7 @@ typedef struct pocsag_msg {
 	int			data_index;		/* current character transmitting */
 	int			bit_index;		/* current bit transmitting */
 	int			repeat;			/* how often the message is sent */
+	char			padding;		/* EOT or other padding */
 } pocsag_msg_t;
 
 /* instance of pocsag transmitter/receiver */
@@ -46,6 +47,7 @@ typedef struct pocsag {
 	enum pocsag_language	language;		/* special characters */
 	enum pocsag_function	default_function;	/* default function, if not given by caller */
 	const char 		*default_message;	/* default message, if caller has no caller ID */
+	char			padding;		/* EOT or other padding */
 
 	/* tx states */
 	enum pocsag_state	state;			/* state (idle, preamble, message) */
@@ -98,7 +100,7 @@ int pocsag_init(void);
 void pocsag_exit(void);
 void pocsag_new_state(pocsag_t *pocsag, enum pocsag_state new_state);
 void pocsag_msg_receive(enum pocsag_language language, const char *channel, uint32_t ric, enum pocsag_function function, const char *message);
-int pocsag_create(const char *kanal, double frequency, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int tx, int rx, enum pocsag_language language, int baudrate, double deviation, double polarity, enum pocsag_function function, const char *message, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
+int pocsag_create(const char *kanal, double frequency, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int tx, int rx, enum pocsag_language language, int baudrate, double deviation, double polarity, enum pocsag_function function, const char *message, char padding, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
 void pocsag_destroy(sender_t *sender);
 void pocsag_msg_send(enum pocsag_language language, const char *text);
 void pocsag_msg_destroy(pocsag_msg_t *msg);

@@ -228,6 +228,7 @@ static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint3
 	msg->repeat = 0;
 	strncpy(msg->data, text, sizeof(msg->data));
 	msg->data_length = (strlen(text) < sizeof(msg->data)) ? strlen(text) : sizeof(msg->data);
+	msg->padding = pocsag->padding;
 
 	/* link */
 	msg->pocsag = pocsag;
@@ -340,7 +341,7 @@ void pocsag_msg_receive(enum pocsag_language language, const char *channel, uint
 }
 
 /* Create transceiver instance and link to a list. */
-int pocsag_create(const char *kanal, double frequency, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int tx, int rx, enum pocsag_language language, int baudrate, double deviation, double polarity, enum pocsag_function function, const char *message, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
+int pocsag_create(const char *kanal, double frequency, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int tx, int rx, enum pocsag_language language, int baudrate, double deviation, double polarity, enum pocsag_function function, const char *message, char padding, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback)
 {
 	pocsag_t *pocsag;
 	int rc;
@@ -374,6 +375,7 @@ int pocsag_create(const char *kanal, double frequency, const char *device, int u
 	pocsag->default_message = message;
 	pocsag->scan_from = scan_from;
 	pocsag->scan_to = scan_to;
+	pocsag->padding = padding;
 
 	pocsag_display_status();
 

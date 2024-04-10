@@ -237,7 +237,7 @@ static uint32_t encode_alpha(pocsag_msg_t *msg)
 
 	/* fill remaining digit space with 0x04 (EOT) */
 	while (bits <= 13) {
-		word = (word << 7) | 0x10;
+		word = (word << 7) | msg->padding;
 		bits += 7;
 	}
 

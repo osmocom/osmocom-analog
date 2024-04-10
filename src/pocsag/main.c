@@ -50,6 +50,7 @@ static double polarity = -1;
 static int polarity_given = 0;
 static enum pocsag_function function = POCSAG_FUNCTION_NUMERIC;
 static const char *message = "1234";
+static char padding = 4;
 static enum pocsag_language language = LANGUAGE_DEFAULT;
 static uint32_t scan_from = 0;
 static uint32_t scan_to = 0;
@@ -87,6 +88,8 @@ void print_help(const char *arg0)
 	printf("        time. The upper 5 digits of the RIC are sent as message, if numeric\n");
 	printf("        function was selected. The upper 3 digits of the RIC are sent as\n");
 	printf("        message (2 digits hexadecimal), if alphanumeric function was selected.\n");
+	printf("    --padding 4 | 0 | ...\n");
+	printf("        Text message padding uses 4 (EOT) by default. Old pagers want 0 (NUL).\n");
 	printf("\n");
 	printf("File: %s\n", MSG_SEND);
 	printf("        Write \"<ric>,0,message\" to it to send a numerical message.\n");
@@ -96,6 +99,8 @@ void print_help(const char *arg0)
 	main_mobile_print_station_id();
 	main_mobile_print_hotkeys();
 }
+
+#define OPT_PADDING	256
 
 static void add_options(void)
 {
@@ -109,6 +114,7 @@ static void add_options(void)
 	option_add('M', "message", 1);
 	option_add('L', "language", 0);
 	option_add('S', "scan", 2);
+	option_add(OPT_PADDING, "padding", 1);
 }
 
 static int handle_options(int short_option, int argi, char **argv)
@@ -187,6 +193,9 @@ static int handle_options(int short_option, int argi, char **argv)
 			fprintf(stderr, "Given RIC to scan to is out of range!\n");
 			return -EINVAL;
 		}
+		break;
+	case OPT_PADDING:
+		padding = atoi(argv[argi++]);
 		break;
 	default:
 		return main_mobile_handle_options(short_option, argi, argv);
@@ -343,7 +352,7 @@ int main(int argc, char *argv[])
 			printf("Invalid channel '%s', Use '-k list' to get a list of all channels.\n\n", kanal[i]);
 			goto fail;
 		}
-		rc = pocsag_create(kanal[i], frequency, dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, tx, rx, language, baudrate, deviation, polarity, function, message, scan_from, scan_to, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
+		rc = pocsag_create(kanal[i], frequency, dsp_device[i], use_sdr, dsp_samplerate, rx_gain, tx_gain, tx, rx, language, baudrate, deviation, polarity, function, message, padding, scan_from, scan_to, write_rx_wave, write_tx_wave, read_rx_wave, read_tx_wave, loopback);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to create \"Sender\" instance. Quitting!\n");
 			goto fail;
