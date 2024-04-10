@@ -244,7 +244,7 @@ again:
 	mod->ramp = ramp;
 }
 
-/* init FM demodulator */
+/* init FM demodulator, bandwidth is the 2 * (deviation + modulation) */
 int fm_demod_init(fm_demod_t *demod, double samplerate, double offset, double bandwidth)
 {
 	if (!has_init) {

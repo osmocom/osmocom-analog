@@ -127,7 +127,7 @@ void am_modulate_complex(am_mod_t *mod, sample_t *amplitude, uint8_t *power, int
 	mod->phase = phase;
 }
 
-/* init AM demodulator */
+/* init AM demodulator, the bandwidth is the demodulated bandwidth (bandwidth of one side band) */
 int am_demod_init(am_demod_t *demod, double samplerate, double offset, double bandwidth, double gain)
 {
 	memset(demod, 0, sizeof(*demod));

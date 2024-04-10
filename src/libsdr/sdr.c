@@ -482,9 +482,9 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 			LOGP(DSDR, LOGL_DEBUG, "Frequency #%d: RX offset: %.6f MHz\n", c, rx_offset / 1e6);
 			sdr->chan[c].am = am[c];
 			if (am[c])
-				rc = am_demod_init(&sdr->chan[c].am_demod, samplerate, rx_offset, bandwidth, 1.0 / modulation_index);
+				rc = am_demod_init(&sdr->chan[c].am_demod, samplerate, rx_offset, bandwidth / 2.0, 1.0 / modulation_index); /* bandwidth is only one side band */
 			else
-				rc = fm_demod_init(&sdr->chan[c].fm_demod, samplerate, rx_offset, bandwidth / 2.0);
+				rc = fm_demod_init(&sdr->chan[c].fm_demod, samplerate, rx_offset, bandwidth); /* bandwidth are deviation and both side bands */
 			if (rc < 0)
 				goto error;
 		}
