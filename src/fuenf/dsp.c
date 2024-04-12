@@ -161,7 +161,7 @@ void dsp_cleanup_sender(fuenf_t *fuenf)
 		free(fuenf->rx_tone_filter_spl);
 }
 
-//#define DEBUG
+//#define DEBUG_CODER
 
 /* receive digits and decode */
 static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
@@ -185,7 +185,7 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 		/* get amplitude (a is a sqaure of the amplitude for faster math) */
 		a = (I[i] * I[i] + Q[i] * Q[i]) * 2.0 * 2.0 / TONE_LEVEL / TONE_LEVEL;
 
-#ifdef DEBUG
+#ifdef DEBUG_CODER
 		if (i == 0) printf("%s %.5f   ", debug_amplitude(frequency[i] / (DIGIT_FREQ_MAX - DIGIT_FREQ_MIN) * 2.0), f);
 		if (i == 0) printf("%s %.5f   ", debug_amplitude(sqrt(a)), sqrt(a));
 #endif
@@ -197,12 +197,13 @@ static void digit_decode(fuenf_t *fuenf, sample_t *samples, int length)
 
 		/* digit lound enough ? */
 		if (a >= RX_MIN_LEVEL * RX_MIN_LEVEL && d < DSP_NUM_DIGITS) {
-#ifdef DEBUG
+#ifdef DEBUG_CODER
 			if (i == 0 && d < DSP_NUM_DIGITS) printf("digit=%d (%d == no digit detected)", d, DSP_NUM_DIGITS);
 #endif
 		} else
 			d = -1;
-#ifdef DEBUG
+#ifdef DEBUG_CODER
+		sffd
 		if (i == 0) printf("\n");
 #endif
 
@@ -491,7 +492,7 @@ int dsp_setup(fuenf_t *fuenf, const char *rufzeichen, enum fuenf_funktion funkti
 		index++;
 	}
 
-#ifndef DEBUG
+#ifndef DEBUG_CODER
 	if (funktion == FUENF_FUNKTION_RUF) {
 		LOGP_CHAN(DDSP, LOGL_DEBUG, " -> Adding call signal of %.0f Hz.\n", digit_freq[REPEAT_DIGIT]);
 		for (i = 0; i < TX_NUM_KANAL; i++) {

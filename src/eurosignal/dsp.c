@@ -160,7 +160,7 @@ void dsp_cleanup_sender(euro_t *euro)
 	fm_demod_exit(&euro->rx_demod);
 }
 
-//#define DEBUG
+//#define DEBUG_DECODER
 
 static void tone_decode(euro_t *euro, sample_t *samples, int length)
 {
@@ -179,14 +179,14 @@ static void tone_decode(euro_t *euro, sample_t *samples, int length)
 	for (i = 0; i < length; i++) {
 		/* get frequency */
 		f = frequency[i] + (FREQUENCY_MIN + FREQUENCY_MAX) / 2.0;
-#ifdef DEBUG
+#ifdef DEBUG_DECODER
 		if (i == 0) printf("%s %.5f   ", debug_amplitude(frequency[i] / (FREQUENCY_MAX - FREQUENCY_MIN) * 2.0), f);
 #endif
 		for (d = 0; dsp_digits[d].digit; d++) {
 			if (f >= dsp_digits[d].frequency - FREQUENCY_TOL && f <= dsp_digits[d].frequency + FREQUENCY_TOL)
 				break;
 		}
-#ifdef DEBUG
+#ifdef DEBUG_DECODER
 		if (i == 0) printf("%c\n", dsp_digits[d].digit);
 #endif
 
