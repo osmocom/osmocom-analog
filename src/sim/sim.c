@@ -609,8 +609,8 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 		switch (rufn) {
 		case 0: /* send bitmap for service mode */ 
 			memset(data, 0xff, 24);
-			data[0] = 5; /* 5 entries */
-			data[1] = 0x07; /* upper 5 bits = 0 */
+			data[0] = 6; /* 6 entries */
+			data[1] = 0x03; /* upper 6 bits = 0 */
 			break;
 		case 1: /* FUTLN */
 			data[0] = eeprom_read(EEPROM_FUTLN_H + sim->card);
@@ -646,6 +646,10 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			decode_ebdt(data, NULL, NULL, NULL, NULL, number);
 			encode_directory(data, number, "Wartungsschl.");
 			LOGP(DSIM7, LOGL_INFO, "service mode: maintenance = %s\n", number);
+			break;
+		case 6: /* sim version */
+			encode_directory(data, SIM_VERSION, SIM_VERSION_NAME);
+			LOGP(DSIM7, LOGL_INFO, "service mode: display SIM version = %s\n", SIM_VERSION);
 			break;
 		}
 		tx_sdu(sim, 0, data, 24);

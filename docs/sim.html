@@ -427,11 +427,12 @@ Turn on the phone and you will be asked for a PIN.
 Enter the PIN 9991 to alter the first subscriber data.
 Enter the PIN 9992 .. 9998 to alter second to eighth subscriber data.
 The subscriber data is shown in the telephone directory and can be altered by changing the numbers in that directory.
+Also the SIM software version is shown on entry 06 of the telephone directory, but it cannot be changed.
 The Bosch OF 7 does not like to store numbers less than 3 digits. Put zeroes in front, if you want to store a value less than 1000.
 </p>
 
 <p>
-The default subscriber data and where to change them in the telephone directory:
+The default subscriber data and SIM version and where to change them in the telephone directory:
 <br><br>
 <table class="sim">
 <tr><th>Entry</th><th>Name</th><th>Number</th></tr>
@@ -440,9 +441,12 @@ The default subscriber data and where to change them in the telephone directory:
 <tr><td>03</td><td>Kartenkennung</td><td>3</td></tr>
 <tr><td>04</td><td>Sonderheitsschl.</td><td>0</td></tr>
 <tr><td>05</td><td>Wartungsschl.</td><td>65535</td></tr>
+<tr><td>06</td><td>SIM software version</td><td>xxx **</td></tr>
 </table>
 <br>
 (*) When PIN 9991 was entered.
+<br>
+(**) This value represents the software version and cannot be changed.
 </p>
 
 
