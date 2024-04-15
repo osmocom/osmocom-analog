@@ -201,7 +201,45 @@ void station_list(void)
 
 	printf("List of all base stations:\n");
 	for (i = 0; anetz_stations[i].standort; i++) {
-		printf("%s (%.2f° N %.2f° E)\n", anetz_stations[i].standort, lat_from_coordinates(anetz_stations[i].coordinates), lon_from_coordinates(anetz_stations[i].coordinates));
+		printf("%s (%.2f deg N %.2f deg E)\n", anetz_stations[i].standort, lat_from_coordinates(anetz_stations[i].coordinates), lon_from_coordinates(anetz_stations[i].coordinates));
+		if (anetz_stations[i].kanal21) {
+			if (anetz_stations[i].kanal22)
+				printf("\tPrefix 21: Channel %d\n", anetz_stations[i].kanal21);
+			else if (anetz_stations[i].kanal23)
+				printf("\tPrefix 21-22: Channel %d\n", anetz_stations[i].kanal21);
+			else if (anetz_stations[i].kanal24)
+				printf("\tPrefix 21-23: Channel %d\n", anetz_stations[i].kanal21);
+			else if (anetz_stations[i].kanal25)
+				printf("\tPrefix 21-24: Channel %d\n", anetz_stations[i].kanal21);
+			else
+				printf("\tPrefix 21-25: Channel %d\n", anetz_stations[i].kanal21);
+		}
+		if (anetz_stations[i].kanal22) {
+			if (anetz_stations[i].kanal23)
+				printf("\tPrefix 22: Channel %d\n", anetz_stations[i].kanal22);
+			else if (anetz_stations[i].kanal24)
+				printf("\tPrefix 22-23: Channel %d\n", anetz_stations[i].kanal22);
+			else if (anetz_stations[i].kanal25)
+				printf("\tPrefix 22-24: Channel %d\n", anetz_stations[i].kanal22);
+			else
+				printf("\tPrefix 22-25: Channel %d\n", anetz_stations[i].kanal22);
+		}
+		if (anetz_stations[i].kanal23) {
+			if (anetz_stations[i].kanal24)
+				printf("\tPrefix 23: Channel %d\n", anetz_stations[i].kanal23);
+			else if (anetz_stations[i].kanal25)
+				printf("\tPrefix 23-24: Channel %d\n", anetz_stations[i].kanal23);
+			else
+				printf("\tPrefix 23-25: Channel %d\n", anetz_stations[i].kanal23);
+		}
+		if (anetz_stations[i].kanal24) {
+			if (anetz_stations[i].kanal25)
+				printf("\tPrefix 24: Channel %d\n", anetz_stations[i].kanal24);
+			else
+				printf("\tPrefix 24-25: Channel %d\n", anetz_stations[i].kanal24);
+		}
+		if (anetz_stations[i].kanal25)
+			printf("\tPrefix 25: Channel %d\n", anetz_stations[i].kanal25);
 	}
 }
 
