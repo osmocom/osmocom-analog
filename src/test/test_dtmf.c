@@ -65,7 +65,8 @@ int main(void)
 
 	fm_init(0);
 
-	dtmf_decode_init(&dtmf_dec, NULL, recv_digit, SAMPLERATE, db2level(0), db2level(-30.0));
+	/* decoder uses a strict frequency offset of 0.1 percent. */
+	dtmf_decode_init(&dtmf_dec, NULL, recv_digit, SAMPLERATE, db2level(0), db2level(-30.0), 0.1);
 
 	for (f = 0; f < 8; f++) {
 		printf("Testing filter with frequency %.0f Hz:\n", test_frequency[f]);

@@ -1,6 +1,8 @@
 #include "../libfm/fm.h"
 
-typedef struct ftmf_meas {
+#define DTMF_FREQ_MARGIN_PERCENT_DEFAULT	3	/* 1.8 .. 3.5 % */
+
+typedef struct dtmf_meas {
 	double		frequency_low;
 	double		frequency_high;
 	double		amplitude_low;
@@ -28,7 +30,7 @@ typedef struct dtmf_dec {
 	dtmf_meas_t	meas;			/* measurements */
 } dtmf_dec_t;
 
-int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv, char digit, dtmf_meas_t *meas), int samplerate, double max_amplitude, double min_amplitude);
+int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv, char digit, dtmf_meas_t *meas), int samplerate, double max_amplitude, double min_amplitude, double freq_margin);
 void dtmf_decode_exit(dtmf_dec_t *dtmf);
 void dtmf_decode_reset(dtmf_dec_t *dtmf);
 void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length);

@@ -41,7 +41,7 @@
 
 static const char dtmf_digit[] = "     123A456B789C*0#D";
 
-int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv, char digit, dtmf_meas_t *meas), int samplerate, double max_amplitude, double min_amplitude)
+int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv, char digit, dtmf_meas_t *meas), int samplerate, double max_amplitude, double min_amplitude, double freq_margin)
 {
 	int rc;
 
@@ -49,7 +49,7 @@ int dtmf_decode_init(dtmf_dec_t *dtmf, void *priv, void (*recv_digit)(void *priv
 	dtmf->priv = priv;
 	dtmf->recv_digit = recv_digit;
 	dtmf->samplerate = samplerate;
-	dtmf->freq_margin = 1.03; /* 1.8 .. 3.5 % */
+	dtmf->freq_margin = freq_margin;
 	dtmf->max_amplitude = max_amplitude;
 	dtmf->min_amplitude = min_amplitude;
 	dtmf->forward_twist = db2level(4.0);
@@ -118,7 +118,7 @@ void dtmf_decode(dtmf_dec_t *dtmf, sample_t *samples, int length)
 	int amplitude_ok, twist_ok;
 	int i;
 
-	margin = dtmf->freq_margin;
+	margin = dtmf->freq_margin / 100.0 + 1.0;
 	min_amplitude = dtmf->min_amplitude;
 	max_amplitude = dtmf->max_amplitude;
 	forward_twist = dtmf->forward_twist;

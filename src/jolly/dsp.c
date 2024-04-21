@@ -90,7 +90,7 @@ int dsp_init_sender(jolly_t *jolly, int nbfm, double squelch_db, int repeater)
 	/* init dtmf audio processing.
 	 * each frequency may be +6 dB deviation, which means a total deviation of +12 dB is allowed for detection.
 	 * also we allow a minimum of -30 dB for each tone. */
-	rc = dtmf_decode_init(&jolly->dtmf, jolly, jolly_receive_dtmf, 8000, db2level(6.0), db2level(-30.0));
+	rc = dtmf_decode_init(&jolly->dtmf, jolly, jolly_receive_dtmf, 8000, db2level(6.0), db2level(-30.0), DTMF_FREQ_MARGIN_PERCENT_DEFAULT);
 	if (rc < 0) {
 		LOGP(DDSP, LOGL_ERROR, "Failed to init DTMF decoder!\n");
 		goto error;
