@@ -204,7 +204,7 @@ void pocsag_new_state(pocsag_t *pocsag, enum pocsag_state new_state)
 }
 
 /* Create msg instance */
-static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint32_t ric, enum pocsag_function function, const char *text)
+static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint32_t ric, enum pocsag_function function, const char *message, size_t message_length)
 {
 	pocsag_msg_t *msg, **msgp;
 
@@ -216,9 +216,9 @@ static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint3
 		LOGP(DPOCSAG, LOGL_ERROR, "No mem!\n");
 		abort();
 	}
-	if (strlen(text) > sizeof(msg->data)) {
+	if (message_length > sizeof(msg->data)) {
 		LOGP(DPOCSAG, LOGL_ERROR, "Text too long!\n");
-		return NULL;
+		message_length = sizeof(msg->data);
 	}
 
 	/* init */
@@ -226,8 +226,8 @@ static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint3
 	msg->ric = ric;
 	msg->function = function;
 	msg->repeat = 0;
-	strncpy(msg->data, text, sizeof(msg->data));
-	msg->data_length = (strlen(text) < sizeof(msg->data)) ? strlen(text) : sizeof(msg->data);
+	memcpy(msg->data, message, message_length);
+	msg->data_length = message_length;
 	msg->padding = pocsag->padding;
 
 	/* link */
@@ -285,14 +285,14 @@ static int pocsag_scan_or_loopback(pocsag_t *pocsag)
 			message[0] = '\0';
 		}
 		LOGP_CHAN(DPOCSAG, LOGL_NOTICE, "Transmitting %s message '%s' with RIC '%d'.\n", pocsag_function_name[pocsag->default_function], message, pocsag->scan_from);
-		pocsag_msg_create(pocsag, 0, pocsag->scan_from, pocsag->default_function, message);
+		pocsag_msg_create(pocsag, 0, pocsag->scan_from, pocsag->default_function, message, strlen(message));
 		pocsag->scan_from++;
 		return 1;
 	}
 
 	if (pocsag->sender.loopback) {
 		LOGP(DPOCSAG, LOGL_INFO, "Sending message for loopback test.\n");
-		pocsag_msg_create(pocsag, 0, 1234567, POCSAG_FUNCTION_NUMERIC, "1234");
+		pocsag_msg_create(pocsag, 0, 1234567, POCSAG_FUNCTION_NUMERIC, "1234", 4);
 		return 1;
 	}
 
@@ -406,25 +406,46 @@ void pocsag_destroy(sender_t *sender)
 }
 
 /* application sends us a message, we need to deliver */
-void pocsag_msg_send(enum pocsag_language language, const char *text)
+void pocsag_msg_send(enum pocsag_language language, const char *text, size_t text_length)
 {
-	char buffer[strlen(text) + 1], *p = buffer, *ric_string, *function_string, *message;
+	char ric_string[text_length + 1];
+	char function_string[text_length + 1];
+	char message[text_length];
 	uint32_t ric;
 	uint8_t function;
 	pocsag_t *pocsag;
-	int i, j, k;
+	int message_length = 0;
+	int i, ii, j, k;
 	int rc;
 
-	strcpy(buffer, text);
-	ric_string = strsep(&p, ",");
-	function_string = strsep(&p, ",");
-	message = p;
-
-	if (!ric_string || !function_string) {
+	for (i = 0; text_length; i++) {
+		if (*text == ',')
+			break;
+		ric_string[i] = *text++;
+		text_length--;
+	}
+	ric_string[i] = '\0';
+	if (!text_length) {
 inval:
 		LOGP(DNMT, LOGL_NOTICE, "Given message MUST be in the following format: RIC,function[,<message with comma and spaces>] (function must be A = 0 = numeric, B = 1 or C = 2 = beep, D = 3 = alphanumeric)\n");
 		return;
 	}
+	text++;
+	text_length--;
+	for (i = 0; text_length; i++) {
+		if (*text == ',')
+			break;
+		function_string[i] = *text++;
+		text_length--;
+	}
+	function_string[i] = '\0';
+	if (text_length) {
+		text++;
+		text_length--;
+		memcpy(message, text, text_length);
+		message_length = text_length;
+	}
+
 	ric = atoi(ric_string);
 	if (ric > 2097151) {
 		LOGP(DNMT, LOGL_NOTICE, "Illegal RIC %d. Maximum allowed RIC is (2^21)-1. (2097151)\n", ric);
@@ -443,42 +464,43 @@ inval:
 	}
 	function = rc;
 
-	if (message && (function == 1 || function == 2)) {
+	if (message_length && (function == 1 || function == 2)) {
 		LOGP(DNMT, LOGL_NOTICE, "Message text is not allowed with function %d.\n", function);
 		goto inval;
 	}
 
-	if (message && language != LANGUAGE_DEFAULT) {
+	if (message_length && language != LANGUAGE_DEFAULT) {
 		i = 0;
-		p = message;
-		while (*p) {
+		/* input counter is ii, output counter is i */
+		for (ii = 0; ii < message_length; i++) {
 			/* encode special chracter */
 			for (j = 0; pocsag_lang[j][0]; j++) {
 				for (k = 0; pocsag_lang[j][k + 1]; k++) {
-					/* implies that (p[k] == '\0') causes to break */
-					if (p[k] != pocsag_lang[j][k + 1])
+					/* break if input buffer ends */
+					if (ii + k == message_length)
+						break;
+					/* break if string does not match */
+					if (message[ii + k] != pocsag_lang[j][k + 1])
 						break;
 				}
+				/* break, if k-loop was completed */
 				if (!pocsag_lang[j][k + 1])
 					break;
 			}
-			/* if character matches */
+			/* if character matches (k-loop was completed, j-loop not) */
 			if (pocsag_lang[j][0]) {
-				message[i++] = pocsag_lang[j][0];
-				p += k;
+				message[i] = pocsag_lang[j][0];
+				ii += k;
 			} else
-				message[i++] = *p++;
+				message[i] = message[ii++];
 		}
-		message[i] = '\0';
+		message_length = i;
 	}
 
-	if (!message)
-		message="";
-
-	LOGP(DNMT, LOGL_INFO, "Message for ID '%d/%d' with text '%s'\n", ric, function, message);
+	LOGP(DNMT, LOGL_INFO, "Message for ID '%d/%d' with text '%s'\n", ric, function, print_message(message, message_length));
 
 	pocsag = (pocsag_t *) sender_head;
-	pocsag_msg_create(pocsag, 0, ric, function, message);
+	pocsag_msg_create(pocsag, 0, ric, function, message, message_length);
 }
 
 void call_down_clock(void)
@@ -535,7 +557,7 @@ int call_down_setup(int callref, const char *caller_id, enum number_type __attri
 		message = pocsag->default_message;
 
 	/* create call process to page station */
-	msg = pocsag_msg_create(pocsag, callref, ric, function, message);
+	msg = pocsag_msg_create(pocsag, callref, ric, function, message, strlen(message));
 	if (!msg)
 		return -CAUSE_INVALNUMBER;
 	return -CAUSE_NORMAL;

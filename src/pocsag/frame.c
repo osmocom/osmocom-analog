@@ -38,7 +38,7 @@
 static const char numeric[16] = "0123456789RU -][";
 static const char hex[16] = "0123456789abcdef";
 
-static const char *ctrlchar[32] = {
+static const char *ctrl_char[33] = {
 	"<NUL>",
 	"<SOH>",
 	"<STX>",
@@ -71,7 +71,36 @@ static const char *ctrlchar[32] = {
 	"<GS>",
 	"<RS>",
 	"<US>",
+	"<DEL>",
 };
+
+const char *print_message(const char *message, int message_length)
+{
+	static char message_print[1024];
+	const char *c;
+	int i, ii, clen;
+
+	/* i is input counter, ii is output counter */
+	for (i = 0, ii = 0; i < message_length; i++) {
+		if (message[i] >= 0 && message[i] <= 31)
+			c = ctrl_char[(int)message[i]];
+		else if (message[i] == 127)
+			c = ctrl_char[(int)message[32]];
+		else {
+			message_print[ii++] = message[i];
+			continue;
+		}
+		clen = strlen(c);
+		if (ii + clen == sizeof(message_print))
+			break;
+		memcpy(message_print + ii, c, clen);
+		ii += clen;
+	}
+	message_print[ii++] = '\0';
+
+	return message_print;
+}
+
 
 static uint32_t pocsag_crc(uint32_t word)
 {
@@ -371,11 +400,8 @@ int64_t get_codeword(pocsag_t *pocsag)
 			/* encode address */
 			word = encode_address(msg);
 			/* link message, if there is data to be sent */
-			if ((msg->function == POCSAG_FUNCTION_NUMERIC || msg->function == POCSAG_FUNCTION_ALPHA) && msg->data_length) {
-				char text[msg->data_length + 1];
-				memcpy(text, msg->data, msg->data_length);
-				text[msg->data_length] = '\0';
-				LOGP_CHAN(DPOCSAG, LOGL_INFO, " -> Message text is \"%s\".\n", text);
+			if (msg->function == POCSAG_FUNCTION_NUMERIC || msg->function == POCSAG_FUNCTION_ALPHA) {
+				LOGP_CHAN(DPOCSAG, LOGL_INFO, " -> Message text is \"%s\".\n", print_message(msg->data, msg->data_length));
 				pocsag->current_msg = msg;
 				msg->data_index = 0;
 				msg->bit_index = 0;
@@ -420,31 +446,18 @@ int64_t get_codeword(pocsag_t *pocsag)
 
 static void done_rx_msg(pocsag_t *pocsag)
 {
+	const char *text;
+
 	if (!pocsag->rx_msg_valid)
 		return;
 
 	pocsag->rx_msg_valid = 0;
 
 	LOGP_CHAN(DPOCSAG, LOGL_INFO, "Received message from RIC '%d' / function '%d' (%s)\n", pocsag->rx_msg_ric, pocsag->rx_msg_function, pocsag_function_name[pocsag->rx_msg_function]);
-	{
-		char text[pocsag->rx_msg_data_length * 5 + 1];
-		int i, j;
-		for (i = 0, j = 0; i < pocsag->rx_msg_data_length; i++) {
-			if (pocsag->rx_msg_data[i] == 127) {
-				strcpy(text + j, "<DEL>");
-				j += strlen(text + j);
-			} else
-			if (pocsag->rx_msg_data[i] < 32) {
-				strcpy(text + j, ctrlchar[(int)pocsag->rx_msg_data[i]]);
-				j += strlen(text + j);
-			} else
-				text[j++] = pocsag->rx_msg_data[i];
-		}
-		text[j] = '\0';
-		if ((pocsag->rx_msg_function == POCSAG_FUNCTION_NUMERIC || pocsag->rx_msg_function == POCSAG_FUNCTION_ALPHA) && text[0])
-			LOGP_CHAN(DPOCSAG, LOGL_INFO, " -> Message text is \"%s\".\n", text);
-		pocsag_msg_receive(pocsag->language, pocsag->sender.kanal, pocsag->rx_msg_ric, pocsag->rx_msg_function, text);
-	}
+	text = print_message(pocsag->rx_msg_data, pocsag->rx_msg_data_length);
+	if (pocsag->rx_msg_function == POCSAG_FUNCTION_NUMERIC || pocsag->rx_msg_function == POCSAG_FUNCTION_ALPHA)
+		LOGP_CHAN(DPOCSAG, LOGL_INFO, " -> Message text is \"%s\".\n", text);
+	pocsag_msg_receive(pocsag->language, pocsag->sender.kanal, pocsag->rx_msg_ric, pocsag->rx_msg_function, text);
 }
 
 void put_codeword(pocsag_t *pocsag, uint32_t word, int8_t slot, int8_t subslot)

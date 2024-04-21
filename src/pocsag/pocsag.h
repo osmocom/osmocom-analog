@@ -102,7 +102,7 @@ void pocsag_new_state(pocsag_t *pocsag, enum pocsag_state new_state);
 void pocsag_msg_receive(enum pocsag_language language, const char *channel, uint32_t ric, enum pocsag_function function, const char *message);
 int pocsag_create(const char *kanal, double frequency, const char *device, int use_sdr, int samplerate, double rx_gain, double tx_gain, int tx, int rx, enum pocsag_language language, int baudrate, double deviation, double polarity, enum pocsag_function function, const char *message, char padding, uint32_t scan_from, uint32_t scan_to, const char *write_rx_wave, const char *write_tx_wave, const char *read_rx_wave, const char *read_tx_wave, int loopback);
 void pocsag_destroy(sender_t *sender);
-void pocsag_msg_send(enum pocsag_language language, const char *text);
+void pocsag_msg_send(enum pocsag_language language, const char *text, size_t text_length);
 void pocsag_msg_destroy(pocsag_msg_t *msg);
 void pocsag_get_id(pocsag_t *euro, char *id);
 void pocsag_receive_id(pocsag_t *euro, char *id);

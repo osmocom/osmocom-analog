@@ -224,10 +224,9 @@ static void myhandler(void)
 		}
 		/* send msg */
 		if (i < pos) {
-			buffer[i] = '\0';
 			pos = 0;
 			if (tx)
-				pocsag_msg_send(language, buffer);
+				pocsag_msg_send(language, buffer, i);
 			else
 				LOGP(DPOCSAG, LOGL_ERROR, "Failed to send message, transmitter is not enabled!\n");
 		}
