@@ -368,16 +368,12 @@ int64_t get_codeword(pocsag_t *pocsag)
 			default:
 				word = CODEWORD_IDLE; /* should never happen */
 			}
-			/* if message is complete, reset index. if message is not to be repeated, remove message */
+			/* if message is complete, reset index and remove message */
 			if (msg->data_index == msg->data_length) {
 				pocsag->current_msg = NULL;
 				msg->data_index = 0;
-				if (msg->repeat)
-					msg->repeat--;
-				else {
-					pocsag_msg_destroy(msg);
-					pocsag_msg_done(pocsag);
-				}
+				pocsag_msg_destroy(msg);
+				pocsag_msg_done(pocsag);
 			}
 			/* prevent 'use-after-free' from this point on */
 			msg = NULL;
@@ -406,13 +402,9 @@ int64_t get_codeword(pocsag_t *pocsag)
 				msg->data_index = 0;
 				msg->bit_index = 0;
 			} else {
-				/* if message is not to be repeated, remove message */
-				if (msg->repeat)
-					msg->repeat--;
-				else {
-					pocsag_msg_destroy(msg);
-					pocsag_msg_done(pocsag);
-				}
+				/* remove message */
+				pocsag_msg_destroy(msg);
+				pocsag_msg_done(pocsag);
 				/* prevent 'use-after-free' from this point on */
 				msg = NULL;
 			}

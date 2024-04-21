@@ -33,7 +33,6 @@ typedef struct pocsag_msg {
 	int			data_length;		/* length of message that is not 0-terminated */
 	int			data_index;		/* current character transmitting */
 	int			bit_index;		/* current bit transmitting */
-	int			repeat;			/* how often the message is sent */
 	char			padding;		/* EOT or other padding */
 } pocsag_msg_t;
 

@@ -225,7 +225,6 @@ static pocsag_msg_t *pocsag_msg_create(pocsag_t *pocsag, uint32_t callref, uint3
 	msg->callref = callref;
 	msg->ric = ric;
 	msg->function = function;
-	msg->repeat = 0;
 	memcpy(msg->data, message, message_length);
 	msg->data_length = message_length;
 	msg->padding = pocsag->padding;
