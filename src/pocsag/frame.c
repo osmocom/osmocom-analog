@@ -38,7 +38,7 @@
 static const char numeric[16] = "0123456789RU -][";
 static const char hex[16] = "0123456789abcdef";
 
-static const char *ctrl_char[33] = {
+static const char *ctrl_char[32] = {
 	"<NUL>",
 	"<SOH>",
 	"<STX>",
@@ -71,8 +71,9 @@ static const char *ctrl_char[33] = {
 	"<GS>",
 	"<RS>",
 	"<US>",
-	"<DEL>",
 };
+
+static const char *del_char = "<DEL>";
 
 const char *print_message(const char *message, int message_length)
 {
@@ -85,7 +86,7 @@ const char *print_message(const char *message, int message_length)
 		if (message[i] >= 0 && message[i] <= 31)
 			c = ctrl_char[(int)message[i]];
 		else if (message[i] == 127)
-			c = ctrl_char[(int)message[32]];
+			c = del_char;
 		else {
 			message_print[ii++] = message[i];
 			continue;
@@ -101,6 +102,50 @@ const char *print_message(const char *message, int message_length)
 	return message_print;
 }
 
+int scan_message(const char *message_input, int message_input_length, char *message_output, int message_output_length)
+{
+	int i, ii, j, clen;
+
+	/* i is input counter, ii is output counter */
+	for (i = 0, ii = 0; i < message_input_length; ii++) {
+		if (ii == message_output_length)
+			break;
+		if (message_input[i] == '<') {
+			/* maybe a control character ? */
+			for (j = 0; j < 32; j++) {
+				clen = strlen(ctrl_char[j]);
+				/* skip, if control sequence would not fit into the input buffer */
+				if (clen <= message_input_length - i && !memcmp(message_input + i, ctrl_char[j], clen)) {
+					/* found control sequence, so break the loop */
+					break;
+				}
+			}
+			if (j < 32) {
+				/* if loop was not completed, use the found character */
+				message_output[ii] = j;
+				i += clen;
+			} else {
+				clen = strlen(del_char);
+				/* skip, if control sequence would not fit into the input buffer */
+				if (clen <= i - message_input_length && !memcmp(message_input + i, del_char, clen)) {
+					/* found control sequence, copy DEL character */
+					message_output[ii] = 127;
+					i += clen;
+				} else {
+					/* found no control sequence, copy '<' character */
+					message_output[ii] = '<';
+					i++;
+				}
+			}
+		} else {
+			/* no control character */
+			message_output[ii] = message_input[i];
+			i++;
+		}
+	}
+
+	return ii;
+}
 
 static uint32_t pocsag_crc(uint32_t word)
 {

@@ -94,6 +94,14 @@ void print_help(const char *arg0)
 	printf("File: %s\n", MSG_SEND);
 	printf("        Write \"<ric>,0,message\" to it to send a numerical message.\n");
 	printf("        Write \"<ric>,3,message\" to it to send an alphanumerical message.\n");
+	printf("        alphanumeric messages may contain any character except LF and CR.\n");
+	printf("        Any control character can be sent by using pointed brackets:\n");
+	printf("          '<NUL>' '<SOH>' '<STX>' '<ETX>' '<EOT>' '<ENQ>' '<ACK>' '<BEL>'\n");
+	printf("          '<BS>'  '<HT>'  '<LF>'  '<VT>'  '<FF>'  '<CR>'  '<SO>'  '<SI>'\n");
+	printf("          '<DLE>  '<DC1>' '<DC2'  '<DC3>' '<DC4>' '<NAK>' '<SYN>' '<ETB>'\n");
+	printf("          '<CAN>' '<EM>'  '<SUB>' '<ESC>' '<FS>'  '<GS>'  '<RS>'  '<US>'\n");
+	printf("          '<DEL>  Example: Hello,<LF><CR>World!'\n");
+
 	printf("File: %s\n", MSG_RECEIVED);
 	printf("        Read from it to see received messages.\n");
 	main_mobile_print_station_id();

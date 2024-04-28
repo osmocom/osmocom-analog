@@ -441,8 +441,7 @@ inval:
 	if (text_length) {
 		text++;
 		text_length--;
-		memcpy(message, text, text_length);
-		message_length = text_length;
+		message_length = scan_message(text, text_length, message, sizeof(message));
 	}
 
 	ric = atoi(ric_string);
