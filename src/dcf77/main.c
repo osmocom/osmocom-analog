@@ -661,3 +661,6 @@ error:
 
 void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 
+void *get_sender_by_empfangsfrequenz(void);
+void *get_sender_by_empfangsfrequenz(void) { return NULL; }
+

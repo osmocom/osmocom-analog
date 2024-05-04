@@ -58,6 +58,8 @@ AS_IF([test "x$with_alsa" != "xyes" -a "x$with_sdr" != "xyes"],[AC_MSG_NOTICE( W
 
 SOAPY_CFLAGS="$soapy_0_8_0_or_higher"
 
+AM_CONDITIONAL(HAVE_MOBILE, true)
+
 AC_CONFIG_FILES([src/liblogging/Makefile
     src/liboptions/Makefile
     src/libmobile/Makefile

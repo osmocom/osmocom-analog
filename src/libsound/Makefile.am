@@ -6,3 +6,8 @@ libsound_a_SOURCES = \
 	sound_alsa.c
 
 AM_CPPFLAGS += -DHAVE_ALSA
+
+if HAVE_MOBILE
+AM_CPPFLAGS += -DHAVE_MOBILE
+endif
+

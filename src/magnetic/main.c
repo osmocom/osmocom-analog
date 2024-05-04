@@ -367,4 +367,11 @@ done:
 
 void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 
+void display_measurements_add(void);
+void *display_measurements_update(void);
+void *get_sender_by_empfangsfrequenz(void);
+void display_measurements_add(void) {}
+void *display_measurements_update(void) { return NULL; }
+void *get_sender_by_empfangsfrequenz(void) { return NULL; }
+
 #endif /* ARDUINO */
