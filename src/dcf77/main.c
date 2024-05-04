@@ -651,6 +651,9 @@ error:
 
 	dcf77_exit();
 
+	display_measurements_on(0);
+	display_wave_on(0);
+
 	options_free();
 
 	return 0;
