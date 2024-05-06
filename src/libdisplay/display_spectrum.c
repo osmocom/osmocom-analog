@@ -354,7 +354,7 @@ void display_spectrum(float *samples, int length)
 					screen[k][j] = ':';
 					screen_color[k][j] = 12;
 				}
-				sprintf(print_channel, "Ch%s", mark->kanal);
+				sprintf(print_channel, "Ch(%s)", mark->kanal);
 				for (o = 0; o < (int)strlen(print_channel); o++) {
 					s = j - strlen(print_channel) + o;
 					if (s >= 0 && s < width) {

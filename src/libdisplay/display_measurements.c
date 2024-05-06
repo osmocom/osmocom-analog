@@ -119,8 +119,8 @@ static void print_measurements(int on)
 	for (disp = meas_head; disp; disp = disp->next) {
 		memset(line, ' ', width);
 		memset(line_color, 7, width);
-		sprintf(line, "(chan %s", disp->kanal);
-		*strchr(line, '\0') = ')';
+		sprintf(line, "Channel: %s", disp->kanal);
+		*strchr(line, '\0') = ' ';
 		display_line(on, width);
 		for (param = disp->param; param; param = param->next) {
 			memset(line, ' ', width);

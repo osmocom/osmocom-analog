@@ -206,8 +206,8 @@ void display_wave(dispwav_t *disp, sample_t *samples, int length, double range)
 						screen[k][j] = '|';
 				}
 			}
-			sprintf(screen[0], "(chan %s", disp->kanal);
-			*strchr(screen[0], '\0') = ')';
+			sprintf(screen[0], "Channel: %s", disp->kanal);
+			*strchr(screen[0], '\0') = ' ';
 			lock_logging();
 			enable_limit_scroll(false);
 			printf("\0337\033[H");
