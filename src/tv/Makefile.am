@@ -1,5 +1,4 @@
-AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes) \
-	$(IMAGEMAGICK_CFLAGS)
+AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes)
 
 bin_PROGRAMS = \
 	osmotv
@@ -28,7 +27,7 @@ osmotv_LDADD = \
 	$(top_builddir)/src/liblogging/liblogging.a \
 	$(LIBOSMOCORE_LIBS) \
 	$(ALSA_LIBS) \
-	$(IMAGEMAGICK_LIBS) \
+	$(IMAGEMAGICK6_LIBS) $(IMAGEMAGICK7_LIBS) \
 	-lm
 
 if HAVE_SDR
@@ -49,9 +48,5 @@ endif
 
 if HAVE_SDR
 AM_CPPFLAGS += -DHAVE_SDR
-endif
-
-if HAVE_MAGICK
-AM_CPPFLAGS += -DHAVE_MAGICK
 endif
 

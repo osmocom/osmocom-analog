@@ -5,25 +5,46 @@
 
 int save_depth = 16;
 
-#ifdef HAVE_MAGICK
+#if defined(HAVE_MAGICK6) || (HAVE_MAGICK7)
+
+#if defined(HAVE_MAGICK6)
+#include <magick/MagickCore.h>
+#endif
+#if defined(HAVE_MAGICK7)
 #include <MagickCore/MagickCore.h>
+#endif
 
 /* load given image to memory. return short RGB values */
 unsigned short *load_img(int *width, int *height, const char *filename, int index)
 {
 	Image *image = NULL;
 	ImageInfo *imageinfo = NULL;
+#if defined(HAVE_MAGICK6)
+	ExceptionInfo exception;
+#endif
+#if defined(HAVE_MAGICK7)
 	ExceptionInfo *exception;
+#endif
 	unsigned short *img = NULL;
 
 	MagickCoreGenesis(NULL, MagickFalse);
 //	InitializeMagick(NULL);
 	imageinfo = CloneImageInfo(0);
+#if defined(HAVE_MAGICK6)
+	GetExceptionInfo(&exception);
+#endif
+#if defined(HAVE_MAGICK7)
 	exception = AcquireExceptionInfo();
+#endif
 
 	sprintf(imageinfo->filename, filename, index);
 
+#if defined(HAVE_MAGICK6)
+	image = ReadImage(imageinfo, &exception);
+#endif
+#if defined(HAVE_MAGICK7)
 	image = ReadImage(imageinfo, exception);
+#endif
 	if (!image) {
 //		printf("failed to read image '%s' via *magick\n", filename);
 		goto exit;
@@ -48,8 +69,10 @@ exit:
 	if (imageinfo)
 		DestroyImageInfo(imageinfo);
 
+#if defined(HAVE_MAGICK7)
 	if (exception)
 		DestroyExceptionInfo(exception);
+#endif
 
 	MagickCoreTerminus();
 //	DestroyMagick();
@@ -63,18 +86,33 @@ int save_img(unsigned short *img, int width, int height, int alpha, const char *
 	int rc = -1;
 	Image *image = NULL;
 	ImageInfo *imageinfo = NULL;
+#if defined(HAVE_MAGICK6)
+	ExceptionInfo exception;
+#endif
+#if defined(HAVE_MAGICK7)
 	ExceptionInfo *exception;
+#endif
 
 	MagickCoreGenesis(NULL, MagickFalse);
 //	InitializeMagick(NULL);
 	imageinfo = CloneImageInfo(0);
+#if defined(HAVE_MAGICK6)
+	GetExceptionInfo(&exception);
+#endif
+#if defined(HAVE_MAGICK7)
 	exception = AcquireExceptionInfo();
+#endif
 
 	imageinfo->quality = 100;
 	if (strlen(filename) >= 4 && !strcmp(filename + strlen(filename) - 4, ".png"))
 		imageinfo->quality = 1;
 
+#if defined(HAVE_MAGICK6)
+	image=ConstituteImage(width, height, (alpha)?"RGBA":"RGB", ShortPixel, img, &exception);
+#endif
+#if defined(HAVE_MAGICK7)
 	image=ConstituteImage(width, height, (alpha)?"RGBA":"RGB", ShortPixel, img, exception);
+#endif
 	if (!image) {
 		printf("%s:failed to prepare to write image\n", __func__);
 		goto exit;
@@ -84,7 +122,12 @@ int save_img(unsigned short *img, int width, int height, int alpha, const char *
 	image->depth = save_depth;
 
 	sprintf(image->filename, filename, index); /* ACHTUNG: nicht imageinfo!!! */
+#if defined(HAVE_MAGICK6)
+	if (!WriteImage(imageinfo, image)) {
+#endif
+#if defined(HAVE_MAGICK7)
 	if (!WriteImage(imageinfo, image, exception)) {
+#endif
 		printf("%s:failed to write image\n", __func__);
 		goto exit;
 	}
@@ -98,8 +141,10 @@ exit:
 	if (imageinfo)
 		DestroyImageInfo(imageinfo);
 
+#if defined(HAVE_MAGICK7)
 	if (exception)
 		DestroyExceptionInfo(exception);
+#endif
 
 	MagickCoreTerminus();
 //	DestroyMagick();
@@ -262,12 +307,6 @@ int save_img_array(double *array, int width, int height, int alpha, const char *
 	unsigned short *img = NULL;
 	int components;
 
-#ifndef HAVE_MAGICK
-	if (alpha) {
-		printf("%s:warning, cannot save alpha component with PPM support only\n", __func__);
-		alpha = 0;
-	}
-#endif
 	components = (alpha) ? 4 : 3;
 
 	img = (unsigned short *)malloc(width * height * components * 2);
