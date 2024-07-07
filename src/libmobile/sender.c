@@ -143,7 +143,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 		}
 	}
 
-	rc = init_samplerate(&sender->srstate, 8000.0, (double)samplerate, 3300.0);
+	rc = init_samplerate(&sender->srstate, 8000.0, (double)samplerate, 3400.0);
 	if (rc < 0) {
 		LOGP(DSENDER, LOGL_ERROR, "Failed to init sample rate conversion!\n");
 		goto error;

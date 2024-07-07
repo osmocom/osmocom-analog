@@ -11104,7 +11104,7 @@ int init_voice(int samplerate)
 		int s, output_num;
 		int rc;
 
-		rc = init_samplerate(&srstate, 8000.0, (double)samplerate, 3300.0);
+		rc = init_samplerate(&srstate, 8000.0, (double)samplerate, 3400.0);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to init sample rate conversion!\n");
 			return -1;
