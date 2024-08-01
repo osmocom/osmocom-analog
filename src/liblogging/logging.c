@@ -22,7 +22,6 @@
 #include <errno.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/application.h>
-#include <osmocom/cc/misc.h>
 #include "logging.h"
 
 int loglevel = LOGL_INFO;
@@ -249,7 +248,9 @@ void logging_init(void)
 		.num_cat = log_categories_size,
 	};
 
+#ifdef DLCC
 	osmo_cc_set_log_cat(DLCC);
+#endif
 
 	osmo_init_logging2(NULL, &log_info);
 	log_set_print_timestamp(osmo_stderr_target, 0);

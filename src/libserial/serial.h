@@ -24,8 +24,8 @@ typedef struct _serial {
 
 serial_t *serial_open(const char *serial_device, int serial_baud, int serial_databits, char serial_parity, int serial_stopbits, char serial_xonxoff, char serial_rtscts, int serial_getbreak, float serial_txtimeout, float serial_rxtimeout);
 void serial_close(serial_t *serial);
-int serial_read(serial_t *serial, uint8_t *buffer, int size);
-int serial_write(serial_t *serial, uint8_t *buffer, int size);
+int serial_read(serial_t *serial, uint8_t *buffer, size_t size);
+int serial_write(serial_t *serial, const uint8_t *buffer, size_t size);
 int serial_timeout(serial_t *serial, double serial_txtimeout, double serial_rxtimeout);
 int serial_cts(serial_t *serial);
 int serial_dsr(serial_t *serial);

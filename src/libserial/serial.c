@@ -29,7 +29,7 @@
 #include "serial.h"
 
 /*
-serial = serial_open("/dev/ttyS0",9600,8,n,1,'d','e',1,2);
+serial = serial_open("/dev/ttyS0",9600,8,'n',1,'d','e',0,1,2);
 
 the return value will be a "serial handle" (!NOT THE FILE HANDLE) for all routines. on failure, a NULL will be returned.
 
@@ -42,6 +42,7 @@ char parity;		n=no,e=even,o=odd
 int stopbits;		1-2
 char xonxoff;		e=disable,e=enable
 char rtscts;		e=disable,e=enable
+int serial_getbreak	get or ignore break
 float txtimeout;	seconds timeout for transmit
 float rxtimeout;	seconds timeout for receive
 
@@ -120,7 +121,6 @@ serial_t *serial_open(const char *serial_device, int serial_baud, int serial_dat
 		serial->rtscts = serial_rtscts;
 		serial->txtimeout = serial_txtimeout;
 		serial->rxtimeout = serial_rxtimeout;
-
 
 		if ((serial->handle = open(serial->device, O_RDWR | O_NONBLOCK)) >= 0) {
 			if (isatty(serial->handle)) {
@@ -235,7 +235,7 @@ reads until buffer "size" has reached or until timeout has occurred.
 "read" gives the number of bytes read.
 */
 
-int serial_read(serial_t *serial, uint8_t *buffer, int size)
+int serial_read(serial_t *serial, uint8_t *buffer, size_t size)
 {
 	int n;
 
@@ -259,7 +259,7 @@ writes until buffer "size" has reached or until timeout has occurred.
 "wrote" gives the number of bytes written.
 */
 
-int serial_write(serial_t *serial, uint8_t *buffer, int size)
+int serial_write(serial_t *serial, const uint8_t *buffer, size_t size)
 {
 	int n;
 	fd_set Desc;
