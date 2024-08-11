@@ -9,7 +9,6 @@ matesimulator_SOURCES = \
 matesimulator_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/liboptions/liboptions.a \
-	$(top_builddir)/src/libdebug/libdebug.a \
 	$(top_builddir)/src/libwave/libwave.a \
 	$(top_builddir)/src/libsample/libsample.a \
 	$(top_builddir)/src/liblogging/liblogging.a \
