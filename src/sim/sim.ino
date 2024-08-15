@@ -1,4 +1,4 @@
-                                                                                                                                                         /* SIM card for ATMEL
+/* C-Netz SIM card emulator for ATMEL
  *
  * (C) 2020 by Andreas Eversberg <jolly@eversberg.eu>
  * All Rights Reserved

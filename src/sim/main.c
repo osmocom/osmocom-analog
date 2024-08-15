@@ -49,10 +49,10 @@ static int baudrate = 9600;
 
 static const char *eeprom_name = NULL;
 static const char *futln = NULL;
-static const char *sicherung = NULL;
-static const char *karten = NULL;
-static const char *sonder = NULL;
-static const char *wartung = NULL;
+static int sicherung = -1;
+static int karten = -1;
+static int sonder = -1;
+static int wartung = -1;
 static const char *pin = NULL;
 #define MAX_DIR_COUNT 64
 static int dir_count = 0;
@@ -89,13 +89,13 @@ static void print_help(const char *arg0)
 	printf(" -F --futln <phone number>\n");
 	printf("        Give 7 digits subscriber ID (default = '%s')\n", FUTLN_DEFAULT);
 	printf(" --sicherung <security code>\n");
-	printf("        Card's security code for simple authentication (default = '%s')\n", SICHERUNG_DEFAULT);
+	printf("        Card's security code for simple authentication (default = '%d')\n", SICHERUNG_DEFAULT);
 	printf(" --kartenkennung <card ID>\n");
-	printf("        Card's ID. Not relevant! (default = '%s')\n", KARTEN_DEFAULT);
+	printf("        Card's ID. Not relevant! (default = '%d')\n", KARTEN_DEFAULT);
 	printf(" --sonder <special code>\n");
-	printf("        Special codes are used for service cards (default = '%s')\n", SONDER_DEFAULT);
+	printf("        Special codes are used for service cards (default = '%d')\n", SONDER_DEFAULT);
 	printf(" --wartung <maitenance code>\n");
-	printf("        May define features of service cards (default = '%s')\n", WARTUNG_DEFAULT);
+	printf("        May define features of service cards (default = '%d')\n", WARTUNG_DEFAULT);
 	printf(" -P --pin <pin> | 0000\n");
 	printf("        Give 4 .. 8 digits of pin. Use '0000' to disable. (default = '%s')\n", PIN_DEFAULT);
 	printf("        This will also reset the PIN error counter and unlocks the card.\n");
@@ -165,16 +165,16 @@ static int handle_options(int short_option, int argi, char **argv)
 		futln = options_strdup(argv[argi]);
 		break;
 	case OPT_SICHERUNG:
-		sicherung = options_strdup(argv[argi]);
+		sicherung = atoi(argv[argi]);
 		break;
 	case OPT_KARTEN:
-		karten = options_strdup(argv[argi]);
+		karten = atoi(argv[argi]);
 		break;
 	case OPT_SONDER:
-		sonder = options_strdup(argv[argi]);
+		sonder = atoi(argv[argi]);
 		break;
 	case OPT_WARTUNG:
-		wartung = options_strdup(argv[argi]);
+		wartung = atoi(argv[argi]);
 		break;
 	case 'P':
 		pin = options_strdup(argv[argi]);

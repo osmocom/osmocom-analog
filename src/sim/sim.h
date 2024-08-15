@@ -1,13 +1,13 @@
 
 #define SIM_VERSION_NAME	"TelecardVersion"
-#define SIM_VERSION		"3"
-#define JOLLY_NAME		"Jolly"
+#define SIM_VERSION		"4"
+#define JOLLY_NAME		"Jolly   Zuhause"
 #define JOLLY_PHONE		"04644973171"
 #define FUTLN_DEFAULT		"2222001"
-#define SICHERUNG_DEFAULT	"3103"
-#define KARTEN_DEFAULT		"3"
-#define SONDER_DEFAULT		"0"
-#define WARTUNG_DEFAULT		"65535"
+#define SICHERUNG_DEFAULT	3103
+#define KARTEN_DEFAULT		3
+#define SONDER_DEFAULT		0
+#define WARTUNG_DEFAULT		65535
 #define PIN_DEFAULT		"0000"
 #define AUTH_DEFAULT		((uint64_t)0x000000000badefee)
 
@@ -26,6 +26,13 @@ enum block_state {
 	BLOCK_STATE_CONTROL,
 	BLOCK_STATE_LENGTH,
 	BLOCK_STATE_DATA,
+};
+
+enum sim_mode {
+	SIM_MODE_NONE = 0,	/* SIM from EEPROM */
+	SIM_MODE_PHONEBOOK,	/* SIM that contains the phonebook */
+	SIM_MODE_PIN,		/* entering SIM via PIN */
+	SIM_MODE_ERROR,		/* SIM via PIN failed */
 };
 
 #define MAX_PIN_TRY	3
@@ -53,25 +60,28 @@ typedef struct sim_sim {
 	int			resync_sent;
 
 	/* ICL layer states */
-	int			icl_online;
-	int			icl_master;
-	int			icl_chaining;
-	int			icl_error;
+	uint8_t			icl_online;
+	uint8_t			icl_master;
+	uint8_t			icl_chaining;
+	uint8_t			icl_error;
 
 	/* layer 7 states */
-	int			addr_src;
-	int			addr_dst;
-	int			sh_appl_count;		/* counts applications for SH_APPL */
+	uint8_t			addr_src;
+	uint8_t			addr_dst;
+	uint8_t			sh_appl_count;		/* counts applications for SH_APPL */
 
 	/* CNETZ states */
-	int			pin_required;		/* pin required an not yet validated */
-	int			program_mode;		/* program mode active (special PIN entered) */
-	int			pin_len;		/* length of pin (4 .. 8) */
-	int			pin_try;		/* number of tries left (0 == card locked) */
-	int			app;			/* currently selected APP number */
-	int			app_locked;		/* application locked */
-	int			gebz_locked;		/* metering counter and phonebook locked */
-	int			gebz_full;		/* metering counter full (does this really happen?) */
+	uint8_t			pin_required;		/* pin required an not yet validated */
+	enum sim_mode		sim_mode;		/* sim mode active (programming mode) */
+	char	 		pin_program_futln[9];	/* PIN program mode: FUTLN string with maximum of 8 characters */
+	int32_t	 		pin_program_values[4];	/* PIN program mode: other 4 values */
+	uint8_t			pin_program_index;	/* PIN program mode: strin to be entered */
+	uint8_t			pin_len;		/* length of pin (4 .. 8) */
+	uint8_t			pin_try;		/* number of tries left (0 == card locked) */
+	uint8_t			app;			/* currently selected APP number */
+	uint8_t			app_locked;		/* application locked */
+	uint8_t			gebz_locked;		/* metering counter and phonebook locked */
+	uint8_t			gebz_full;		/* metering counter full (does this really happen?) */
 } sim_sim_t;
 
 /* layer 2 */
@@ -142,7 +152,7 @@ enum l2_cmd {
 /* defined for main.c */
 size_t eeprom_length(void);
 
-int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const char *karten, const char *sonder, const char *wartung);
+int encode_ebdt(uint8_t *data, const char *futln, int32_t sicherung, int32_t karten, int32_t sonder, int32_t wartung);
 void decode_ebdt(uint8_t *data, char *futln, char *sicherung, char *karten, char *sonder, char *wartung);
 int directory_size(void);
 int save_directory(int location, uint8_t *data);

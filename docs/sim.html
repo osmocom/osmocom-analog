@@ -391,7 +391,7 @@ This way it is possible to even emulate service cards ("Wartungskarten"), to put
 <p>
 If the PIN is disabled (default), the first card with first subscriber data is emulates.
 To select different card with dfferent subscriber data, change the PIN to 0001 .. 0008.
-Refer to the phone's manual on how to change the PIN.
+Refer to the phone's manual on how to enable, disable or change the PIN.
 E.g. if you store the PIN 0000 or 0001, the first card with the first subscriber data is emulated.
 E.g. if you store the PIN 0005, the fifth card with the fifth subscriber data is emulated.
 In all cases, there is no PIN required when you turn on the phone.
@@ -413,7 +413,7 @@ In all cases, there is no PIN required when you turn on the phone.
 
 <p>
 You may want to use a PIN to select the card whenever you turn on the phone.
-Use the phone to enable a PIN that does not start with "000".
+Use the phone to enable a PIN that does not start with "000", "888", "999".
 When you restart your phone, you may enter that PIN, to select the first card.
 Alternatively you may enter the PIN 0000 or 0001, to select the first card, no matter what the PIN was.
 Or you may enter the PIN 0002 .. 0008, to select second to eighth card.
@@ -422,13 +422,31 @@ Or you may enter the PIN 0002 .. 0008, to select second to eighth card.
 <p>
 You may also alter each of the 8 different subscriber data store on the SIM.
 In order to do that, you need to set a PIN, so the phone will ask for a PIN whenever it is turned on.
-Choose any PIN you like, but not a PIN stat starts with 000.
-Turn on the phone and you will be asked for a PIN.
+Choose any PIN you like, but not a PIN that startw with "000", "888", "999".
+Reset the phone and you will be asked for a PIN.
+<br><br>
+Altering subscriber data via phonebook funcion:<br>
 Enter the PIN 9991 to alter the first subscriber data.
 Enter the PIN 9992 .. 9998 to alter second to eighth subscriber data.
 The subscriber data is shown in the telephone directory and can be altered by changing the numbers in that directory.
 Also the SIM software version is shown on entry 06 of the telephone directory, but it cannot be changed.
 The Bosch OF 7 does not like to store numbers less than 3 digits. Put zeroes in front, if you want to store a value less than 1000.
+<br><br>
+Altering subscriber data via PIN input:<br>
+Enter the PIN 8881 to alter the first subscriber data.
+Enter the PIN 8882 .. 8888 to alter second to eighth subscriber data.
+After that the phone displays that the PIN was wrong and prompts for another PIN.
+With this trick the PIN prompt is used to input the subscriber data.
+Now enter all 5 values of subscriber data, value by value.
+Whenever you entered one value, the phone display that the PIN was wrong and prompts for the next value.
+If the value is less than 4 digits, add zeros in front of it to make it at least 4 digits long.
+After all 5 values have been entered, the SIM starts emulating that subscriber data.
+If one of the input values is out of range, the SIM card will emulate a fictitious number "3333333".
+This is displayed on the phone. This means that the input was wrong. Check the values and start over again.
+<br><br>
+Example for PIN input:<br>
+Miniporty monitor mode: 8881, 2222002, 0001, 0001, 0900, 1728
+
 </p>
 
 <p>

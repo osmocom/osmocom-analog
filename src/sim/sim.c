@@ -103,7 +103,7 @@ static void write_flags(sim_sim_t *sim)
 }
 
 /* encode EBDT from strings */
-int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const char *karten, const char *sonder, const char *wartung)
+int encode_ebdt(uint8_t *data, const char *futln, int32_t sicherung, int32_t karten, int32_t sonder, int32_t wartung)
 {
 	uint32_t temp;
 	int i;
@@ -144,46 +144,46 @@ int encode_ebdt(uint8_t *data, const char *futln, const char *sicherung, const c
 		}
 		temp = my_strtoul(futln, NULL, 10);
 		if (i < 5 || temp > 65535) {
-			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' has invalid last digits. (Must be '00000' .. '65535')\n", futln);
+			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%d' has invalid last digits. (Must be '00000' .. '65535')\n", temp);
 			return -EINVAL;
 		}
 		data[1] = temp >> 8;
 		data[2] = temp;
 	}
 
-	if (sicherung) {
-		temp = my_strtoul(sicherung, NULL, 10);
+	if (sicherung >= 0) {
+		temp = sicherung;
 		if (temp > 65535) {
-			LOGP(DSIM7, LOGL_NOTICE, "Given security code '%s' has invalid digits. (Must be '0' .. '65535')\n", sicherung);
+			LOGP(DSIM7, LOGL_NOTICE, "Given security code '%d' has invalid digits. (Must be '0' .. '65535')\n", temp);
 			return -EINVAL;
 		}
 		data[3] = temp >> 8;
 		data[4] = temp;
 	}
 
-	if (karten) {
-		temp = my_strtoul(karten, NULL, 10);
+	if (karten >= 0) {
+		temp = karten;
 		if (temp > 7) {
-			LOGP(DSIM7, LOGL_NOTICE, "Given card number '%s' has invalid digit. (Must be '0' .. '7')\n", karten);
+			LOGP(DSIM7, LOGL_NOTICE, "Given card number '%d' has invalid digit. (Must be '0' .. '7')\n", temp);
 			return -EINVAL;
 		}
-		data[5] = (data[5] & 0x1f) | ((karten[0] - '0') << 5);
+		data[5] = (data[5] & 0x1f) | (temp << 5);
 	}
 
-	if (sonder) {
-		temp = my_strtoul(sonder, NULL, 10);
+	if (sonder >= 0) {
+		temp = sonder;
 		if (temp > 8191) {
-			LOGP(DSIM7, LOGL_NOTICE, "Given spacial code '%s' has invalid digits. (Must be '0' .. '8191')\n", sonder);
+			LOGP(DSIM7, LOGL_NOTICE, "Given spacial code '%d' has invalid digits. (Must be '0' .. '8191')\n", temp);
 			return -EINVAL;
 		}
 		data[5] = (data[5] & 0xe0) | (temp >> 8);
 		data[6] = temp;
 	}
 
-	if (wartung) {
-		temp = my_strtoul(wartung, NULL, 10);
+	if (wartung >= 0) {
+		temp = wartung;
 		if (temp > 65535) {
-			LOGP(DSIM7, LOGL_NOTICE, "Given maintenance code '%s' has invalid digits. (Must be '0' .. '65535')\n", wartung);
+			LOGP(DSIM7, LOGL_NOTICE, "Given maintenance code '%d' has invalid digits. (Must be '0' .. '65535')\n", temp);
 			return -EINVAL;
 		}
 		data[7] = temp >> 8;
@@ -358,27 +358,76 @@ static uint8_t get_aprc(sim_sim_t *sim)
 /* validate PIN and change states */
 static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 {
-	uint8_t valid = 0, program_mode = 0;
-	int i;
+	uint8_t valid = 0;
+	int i, rc;
 
 	if (!sim->pin_required)
 		return 0;
 
+	/* in PIN programming mode retrieve data from pin input */
+	if (sim->sim_mode == SIM_MODE_PIN) {
+		if (sim->pin_program_index == 0) {
+			memcpy(sim->pin_program_futln, data, length);
+			sim->pin_program_futln[length] = '\0';
+		} else {
+			uint8_t value_str[9];
+			memcpy(value_str, data, length);
+			value_str[length] = '\0';
+			sim->pin_program_values[sim->pin_program_index - 1] = my_strtoul((char *)value_str, NULL, 10);
+		}
+		sim->pin_program_index++;
+		valid = 1;
+		uint8_t ebdt_data[9];
+		rc = encode_ebdt(ebdt_data,
+				 sim->pin_program_futln,
+				 (sim->pin_program_index > 1) ? sim->pin_program_values[0] : -1,
+				 (sim->pin_program_index > 2) ? sim->pin_program_values[1] : -1,
+				 (sim->pin_program_index > 3) ? sim->pin_program_values[2] : -1,
+				 (sim->pin_program_index > 4) ? sim->pin_program_values[3] : -1);
+		if (rc < 0) {
+			LOGP(DSIM1, LOGL_INFO, "Invalid data has been entered, using special FUTLN to indicate error.\n");
+			sim->sim_mode = SIM_MODE_ERROR;
+		} else if (sim->pin_program_index == 5) {
+			LOGP(DSIM1, LOGL_INFO, "Entering card #%d via PIN input is complete valid.\n", sim->card + 1);
+			sim->sim_mode = SIM_MODE_NONE;
+			eeprom_write(EEPROM_FUTLN_H + sim->card, ebdt_data[0]);
+			eeprom_write(EEPROM_FUTLN_M + sim->card, ebdt_data[1]);
+			eeprom_write(EEPROM_FUTLN_L + sim->card, ebdt_data[2]);
+			eeprom_write(EEPROM_SICH_H + sim->card, ebdt_data[3]);
+			eeprom_write(EEPROM_SICH_L + sim->card, ebdt_data[4]);
+			eeprom_write(EEPROM_SONDER_H + sim->card, ebdt_data[5]);
+			eeprom_write(EEPROM_SONDER_L + sim->card, ebdt_data[6]);
+			eeprom_write(EEPROM_WARTUNG_H + sim->card, ebdt_data[7]);
+			eeprom_write(EEPROM_WARTUNG_L + sim->card, ebdt_data[8]);
+		}
+	}
+
 	/* no PIN mode */
-	if (length == 4 && data[0] == '0' && data[1] == '0' && data[2] == '0' && data[3] >= '0' && data[3] <= '0' + MAX_CARDS) {
+	if (!valid && length == 4 && data[0] == '0' && data[1] == '0' && data[2] == '0' && data[3] >= '0' && data[3] <= '0' + MAX_CARDS) {
+		sim->sim_mode = SIM_MODE_NONE;
 		valid = 1;
 		if (data[3] > '0')
 			sim->card = data[3] - '1';
 		LOGP(DSIM1, LOGL_INFO, "System PIN '000%c' entered. Selecting card #%d.\n", data[3], sim->card + 1);
 	}
 
-	/* programming mode */
-	if (length == 4 && data[0] == '9' && data[1] == '9' && data[2] == '9' && data[3] >= '0' && data[3] <= '0' + MAX_CARDS) {
-		program_mode = 1;
+	/* phonebook programming mode (use phonebook to program card) */
+	if (!valid && length == 4 && data[0] == '9' && data[1] == '9' && data[2] == '9' && data[3] >= '0' && data[3] <= '0' + MAX_CARDS) {
+		sim->sim_mode = SIM_MODE_PHONEBOOK;
 		valid = 1;
 		if (data[3] > '0')
 			sim->card = data[3] - '1';
-		LOGP(DSIM1, LOGL_INFO, "Configuration PIN '999%c' entered. Selecting card #%d in configuration mode.\n", data[3], sim->card + 1);
+		LOGP(DSIM1, LOGL_INFO, "Configuration PIN '999%c' entered. Selecting card #%d in phonebook programming mode.\n", data[3], sim->card + 1);
+	}
+
+	/* PIN programming mode (use pin entering to program card) */
+	if (!valid && length == 4 && data[0] == '8' && data[1] == '8' && data[2] == '8' && data[3] >= '0' && data[3] <= '0' + MAX_CARDS) {
+		sim->sim_mode = SIM_MODE_PIN;
+		sim->pin_program_index = 0;
+		valid = 1;
+		if (data[3] > '0')
+			sim->card = data[3] - '1';
+		LOGP(DSIM1, LOGL_INFO, "Configuration PIN '888%c' entered. Selecting card #%d in PIN programming mode.\n", data[3], sim->card + 1);
 	}
 
 	/* if not 'program mode' and PIN matches EEPROM */
@@ -399,10 +448,10 @@ static int validate_pin(sim_sim_t *sim, uint8_t *data, int length)
 			sim->pin_try = MAX_PIN_TRY;
 			write_flags(sim);
 		}
-		sim->pin_required = 0;
-		if (program_mode)
-			sim->program_mode = 1;
-		return 0;
+		/* PIN is required in PIN programming mode */
+		sim->pin_required = (sim->sim_mode == SIM_MODE_PIN) ? 1 : 0;
+		/* Indicate 'invalid PIN' in PIN programming mode, so phone can provide next PIN */
+		return (sim->sim_mode == SIM_MODE_PIN) ? -EINVAL : 0;
 	} else {
 		LOGP(DSIM1, LOGL_INFO, "Wrong PIN was entered.\n");
 #ifndef ARDUINO
@@ -561,8 +610,9 @@ static void rd_ebdt(sim_sim_t *sim)
 
 	/* respond */
 	data = alloc_msg(sim, 9);
-	if (sim->program_mode) {
-		/* SERVICE MODE */
+	switch (sim->sim_mode) {
+	case SIM_MODE_PHONEBOOK:
+		/* phonebook programming mode */
 		data[0] = 0;
 		data[1] = 0;
 		data[2] = sim->card + 1;
@@ -572,7 +622,13 @@ static void rd_ebdt(sim_sim_t *sim)
 		data[6] = 0;
 		data[7] = 0x0ff;
 		data[8] = 0x0ff;
-	} else {
+		break;
+	case SIM_MODE_ERROR:
+		/* display error mode */
+		encode_ebdt(data, "3333333", SICHERUNG_DEFAULT, KARTEN_DEFAULT, SONDER_DEFAULT, WARTUNG_DEFAULT);
+		break;
+	default:
+		/* emulation mode */
 		data[0] = eeprom_read(EEPROM_FUTLN_H + sim->card);
 		data[1] = eeprom_read(EEPROM_FUTLN_M + sim->card);
 		data[2] = eeprom_read(EEPROM_FUTLN_L + sim->card);
@@ -600,14 +656,14 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 
 	LOGP(DSIM7, LOGL_INFO, " RD-RUFN (loc=%d)\n", rufn);
 
-	/* SERVICE MODE */
-	if (sim->program_mode) {
+	/* PROGRAMMING MODE */
+	if (sim->sim_mode == SIM_MODE_PHONEBOOK) {
 		char number[16];
 
 		/* respond */
 		data = alloc_msg(sim, 24);
 		switch (rufn) {
-		case 0: /* send bitmap for service mode */ 
+		case 0: /* send bitmap for programming mode */
 			memset(data, 0xff, 24);
 			data[0] = 6; /* 6 entries */
 			data[1] = 0x03; /* upper 6 bits = 0 */
@@ -618,38 +674,38 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			data[2] = eeprom_read(EEPROM_FUTLN_L + sim->card);
 			decode_ebdt(data, number, NULL, NULL, NULL, NULL);
 			encode_directory(data, number, "FUTLN");
-			LOGP(DSIM7, LOGL_INFO, "service mode: FUTLN = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: FUTLN = %s\n", number);
 			break;
 		case 2: /* security code */
 			data[3] = eeprom_read(EEPROM_SICH_H + sim->card);
 			data[4] = eeprom_read(EEPROM_SICH_L + sim->card);
 			decode_ebdt(data, NULL, number, NULL, NULL, NULL);
 			encode_directory(data, number, "Sicherungscode");
-			LOGP(DSIM7, LOGL_INFO, "service mode: security = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: security = %s\n", number);
 			break;
 		case 3: /* card ID */
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
 			decode_ebdt(data, NULL, NULL, number, NULL, NULL);
 			encode_directory(data, number, "Kartenkennung");
-			LOGP(DSIM7, LOGL_INFO, "service mode: card = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: card = %s\n", number);
 			break;
 		case 4:	/* special key */
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
 			data[6] = eeprom_read(EEPROM_SONDER_L + sim->card);
 			decode_ebdt(data, NULL, NULL, NULL, number, NULL);
 			encode_directory(data, number, "Sonderheitsschl.");
-			LOGP(DSIM7, LOGL_INFO, "service mode: special = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: special = %s\n", number);
 			break;
 		case 5: /* maintenance key */
 			data[7] = eeprom_read(EEPROM_WARTUNG_H + sim->card);
 			data[8] = eeprom_read(EEPROM_WARTUNG_L + sim->card);
 			decode_ebdt(data, NULL, NULL, NULL, NULL, number);
 			encode_directory(data, number, "Wartungsschl.");
-			LOGP(DSIM7, LOGL_INFO, "service mode: maintenance = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: maintenance = %s\n", number);
 			break;
 		case 6: /* sim version */
 			encode_directory(data, SIM_VERSION, SIM_VERSION_NAME);
-			LOGP(DSIM7, LOGL_INFO, "service mode: display SIM version = %s\n", SIM_VERSION);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: display SIM version = %s\n", SIM_VERSION);
 			break;
 		}
 		tx_sdu(sim, 0, data, 24);
@@ -684,10 +740,11 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 
 	LOGP(DSIM7, LOGL_INFO, " WT-RUFN (loc=%d)\n", rufn);
 
-	/* SERVICE MODE */
-	if (sim->program_mode) {
+	/* PROGRAMMING MODE */
+	if (sim->sim_mode == SIM_MODE_PHONEBOOK) {
 		int rc;
 		char number[17];
+		int value;
 
 		decode_directory(data + 1, number, NULL);
 		/* if number is cleared (no digits), we ignore that */
@@ -695,8 +752,8 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			goto respond;
 		switch (rufn) {
 		case 1: /* FUTLN */
-			LOGP(DSIM7, LOGL_INFO, "service mode: FUTLN = %s\n", number);
-			rc = encode_ebdt(data, number, NULL, NULL, NULL, NULL);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: FUTLN = %s\n", number);
+			rc = encode_ebdt(data, number, -1, -1, -1, -1);
 			if (rc < 0)
 				break;
 			eeprom_write(EEPROM_FUTLN_H + sim->card, data[0]);
@@ -704,33 +761,37 @@ static void wt_rufn(sim_sim_t *sim, uint8_t *data, int length)
 			eeprom_write(EEPROM_FUTLN_L + sim->card, data[2]);
 			break;
 		case 2: /* security code */
-			LOGP(DSIM7, LOGL_INFO, "service mode: security = %s\n", number);
-			rc = encode_ebdt(data, NULL, number, NULL, NULL, NULL);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: security = %s\n", number);
+			value = my_strtoul(number, NULL, 10);
+			rc = encode_ebdt(data, NULL, value, -1, -1, -1);
 			if (rc < 0)
 				break;
 			eeprom_write(EEPROM_SICH_H + sim->card, data[3]);
 			eeprom_write(EEPROM_SICH_L + sim->card, data[4]);
 			break;
 		case 3: /* card ID */
-			LOGP(DSIM7, LOGL_INFO, "service mode: card = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: card = %s\n", number);
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
-			rc = encode_ebdt(data, NULL, NULL, number, NULL, NULL);
+			value = my_strtoul(number, NULL, 10);
+			rc = encode_ebdt(data, NULL, -1, value, -1, -1);
 			if (rc < 0)
 				break;
 			eeprom_write(EEPROM_SONDER_H + sim->card, data[5]);
 			break;
 		case 4:	/* special key */
-			LOGP(DSIM7, LOGL_INFO, "service mode: special = %s\n", number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: special = %s\n", number);
 			data[5] = eeprom_read(EEPROM_SONDER_H + sim->card);
-			rc = encode_ebdt(data, NULL, NULL, NULL, number, NULL);
+			value = my_strtoul(number, NULL, 10);
+			rc = encode_ebdt(data, NULL, -1, -1, value, -1);
 			if (rc < 0)
 				break;
 			eeprom_write(EEPROM_SONDER_H + sim->card, data[5]);
 			eeprom_write(EEPROM_SONDER_L + sim->card, data[6]);
 			break;
 		case 5: /* maintenance key */
-			LOGP(DSIM7, LOGL_INFO, "service mode: maintenance = %s\n", number);
-			rc = encode_ebdt(data, NULL, NULL, NULL, NULL, number);
+			LOGP(DSIM7, LOGL_INFO, "programming mode: maintenance = %s\n", number);
+			value = my_strtoul(number, NULL, 10);
+			rc = encode_ebdt(data, NULL, -1, -1, -1, value);
 			if (rc < 0)
 				break;
 			eeprom_write(EEPROM_WARTUNG_H + sim->card, data[7]);
