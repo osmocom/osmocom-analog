@@ -87,13 +87,8 @@ static void dsp_init_ramp(cnetz_t *cnetz)
 
 	LOGP(DDSP, LOGL_DEBUG, "Generating smooth ramp table.\n");
 	for (i = 0; i < 256; i++) {
-		/* use square-root of cosine ramp. tests showed that phones are more
-		 * happy with that. (This is not correct pulse shaping!) */
+		/* Use raised cosine ramp. */
 		c = cos((double)i / 256.0 * PI);
-		if (c < 0)
-			c = -sqrt(-c);
-		else
-			c = sqrt(c);
 		cnetz->fsk_ramp_down[i] = c * (double)cnetz->fsk_deviation;
 		cnetz->fsk_ramp_up[i] = -cnetz->fsk_ramp_down[i];
 	}
