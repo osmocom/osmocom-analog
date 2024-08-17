@@ -8,6 +8,7 @@ radiocom2000_SOURCES = \
 	dsp.c \
 	frame.c \
 	tones.c \
+	outoforder.c \
 	image.c \
 	main.c
 radiocom2000_LDADD = \
