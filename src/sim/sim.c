@@ -110,6 +110,10 @@ int encode_ebdt(uint8_t *data, const char *futln, int32_t sicherung, int32_t kar
 
 	if (futln) {
 		temp = strlen(futln);
+		if (temp >= 7 + 4 && !strncmp(futln, "0161", 4)) {
+			futln += 4;
+			temp -= 4;
+		}
 		if (temp < 7 || temp > 8) {
 			LOGP(DSIM7, LOGL_NOTICE, "Given FUTLN '%s' invalid length. (Must be 7 or 8 Digits)\n", futln);
 			return -EINVAL;
@@ -198,6 +202,8 @@ void decode_ebdt(uint8_t *data, char *futln, char *sicherung, char *karten, char
 {
 	if (futln) {
 		/* second value becomes two digits automatically, if > 9 */
+		strcpy(futln, "0161");
+		futln += 4;
 		my_ultostr(futln++, data[0] >> 5, 1);
 		my_ultostr(futln++, data[0] & 0x1f, 1);
 		if (*futln)
@@ -658,7 +664,7 @@ static void rd_rufn(sim_sim_t *sim, uint8_t *data, int length)
 
 	/* PROGRAMMING MODE */
 	if (sim->sim_mode == SIM_MODE_PHONEBOOK) {
-		char number[16];
+		char number[16 + 1];
 
 		/* respond */
 		data = alloc_msg(sim, 24);
