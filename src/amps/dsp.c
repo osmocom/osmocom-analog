@@ -964,7 +964,7 @@ void amps_set_dsp_mode(amps_t *amps, enum dsp_mode mode, int frame_length)
 	if (mode == DSP_MODE_AUDIO_RX_AUDIO_TX && amps->dsp_mode != mode)
 		jitter_reset(&amps->sender.dejitter);
 
-	LOGP_CHAN(DDSP, LOGL_DEBUG, "Reset FSK frame transmitter, due to setting dsp mode.\n");
+	LOGP_CHAN(DDSP, LOGL_DEBUG, "Reset FSK frame transmitter, due to setting DSP mode.\n");
 
 	amps->dsp_mode = mode;
 	if (frame_length)

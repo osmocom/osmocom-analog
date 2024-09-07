@@ -3512,7 +3512,7 @@ int amps_encode_frame_focc(amps_t *amps, char *bits)
 	if (++amps->tx_focc_frame_count >= amps->si.overhead_repeat)
 		amps->tx_focc_frame_count = 0;
 	if (debug)
-		LOGP_CHAN(DFRAME, LOGL_INFO, "Subsequent system/filler frames are not show, to prevent flooding the output.\n");
+		LOGP_CHAN(DFRAME, LOGL_INFO, "Subsequent system/filler frames are not shown, to prevent flooding the output.\n");
 	amps->tx_focc_debugged = 1;
 
 send:

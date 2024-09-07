@@ -1227,7 +1227,7 @@ const char *r2000_get_frame(r2000_t *r2000)
 	if (debug)
 		LOGP_CHAN(DR2000, LOGL_DEBUG, "Sending frame %s.\n", r2000_frame_name(frame.message, REL_TO_SM));
 	if (debug && r2000->tx_last_frame_idle)
-		LOGP_CHAN(DR2000, LOGL_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
+		LOGP_CHAN(DR2000, LOGL_DEBUG, "Subsequent IDLE frames are not shown, to prevent flooding the output.\n");
 	return bits;
 }
 
