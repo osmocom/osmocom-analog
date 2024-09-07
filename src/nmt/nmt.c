@@ -1790,7 +1790,7 @@ const char *nmt_get_frame(nmt_t *nmt)
 	if (debug)
 		LOGP_CHAN(DNMT, LOGL_DEBUG, "Sending frame %s.\n", nmt_frame_name(frame.mt));
 	if (debug && nmt->tx_last_frame_idle)
-		LOGP_CHAN(DNMT, LOGL_DEBUG, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
+		LOGP_CHAN(DNMT, LOGL_DEBUG, "Subsequent IDLE frames are not shown, to prevent flooding the output.\n");
 	return bits;
 }
 

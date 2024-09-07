@@ -304,7 +304,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 			   This is correct, since there is no bandwidth
 			   below new center frequency.
 			 */
-			LOGP(DSDR, LOGL_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
+			LOGP(DSDR, LOGL_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlapping with DC level.\n", bandwidth / 2.0 / 1e3);
 		} else {
 			/* find two channels that are aside the center */
 			double low_dist = 0, high_dist = 0, dist;
@@ -342,7 +342,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 				tx_center_frequency =
 					((sdr->chan[low_c].tx_frequency) +
 					 (sdr->chan[high_c].tx_frequency)) / 2.0;
-				LOGP(DSDR, LOGL_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
+				LOGP(DSDR, LOGL_INFO, "We move center frequency between the two channels in the middle, to prevent them from overlapping with DC level.\n");
 			}
 		}
 
@@ -354,7 +354,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 		low_side = (tx_center_frequency - tx_low_frequency) + bandwidth / 2.0;
 		high_side = (tx_high_frequency - tx_center_frequency) + bandwidth / 2.0;
 		range = ((low_side > high_side) ? low_side : high_side) * 2.0;
-		LOGP(DSDR, LOGL_INFO, "Total bandwidth (two side bands) for all TX Frequencies: %.0f Hz\n", range);
+		LOGP(DSDR, LOGL_INFO, "Total bandwidth (two sidebands) for all TX Frequencies: %.0f Hz\n", range);
 		if (range > samplerate * USABLE_BANDWIDTH) {
 			LOGP(DSDR, LOGL_NOTICE, "*******************************************************************************\n");
 			LOGP(DSDR, LOGL_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
@@ -430,7 +430,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 			   This is correct, since there is no bandwidth
 			   below new center frequency.
 			 */
-			LOGP(DSDR, LOGL_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlap with DC level.\n", bandwidth / 2.0 / 1e3);
+			LOGP(DSDR, LOGL_INFO, "We shift center frequency %.0f KHz down (half bandwidth), to prevent channel from overlapping with DC level.\n", bandwidth / 2.0 / 1e3);
 		} else {
 			/* find two channels that are aside the center */
 			double low_dist, high_dist, dist;
@@ -454,7 +454,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 				rx_center_frequency =
 					((sdr->chan[low_c].rx_frequency) +
 					 (sdr->chan[high_c].rx_frequency)) / 2.0;
-				LOGP(DSDR, LOGL_INFO, "We move center freqeuency between the two channels in the middle, to prevent them from overlap with DC level.\n");
+				LOGP(DSDR, LOGL_INFO, "We move center frequency between the two channels in the middle, to prevent them from overlapping with DC level.\n");
 			}
 		}
 
@@ -466,7 +466,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 		low_side = (rx_center_frequency - rx_low_frequency) + bandwidth / 2.0;
 		high_side = (rx_high_frequency - rx_center_frequency) + bandwidth / 2.0;
 		range = ((low_side > high_side) ? low_side : high_side) * 2.0;
-		LOGP(DSDR, LOGL_INFO, "Total bandwidth (two side bands) for all RX Frequencies: %.0f Hz\n", range);
+		LOGP(DSDR, LOGL_INFO, "Total bandwidth (two sidebands) for all RX Frequencies: %.0f Hz\n", range);
 		if (range > samplerate * USABLE_BANDWIDTH) {
 			LOGP(DSDR, LOGL_NOTICE, "*******************************************************************************\n");
 			LOGP(DSDR, LOGL_NOTICE, "The required bandwidth of %.0f Hz exceeds %.0f%% of the sample rate.\n", range, USABLE_BANDWIDTH * 100.0);
@@ -484,7 +484,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 			if (am[c])
 				rc = am_demod_init(&sdr->chan[c].am_demod, samplerate, rx_offset, bandwidth / 2.0, 1.0 / modulation_index); /* bandwidth is only one side band */
 			else
-				rc = fm_demod_init(&sdr->chan[c].fm_demod, samplerate, rx_offset, bandwidth); /* bandwidth are deviation and both side bands */
+				rc = fm_demod_init(&sdr->chan[c].fm_demod, samplerate, rx_offset, bandwidth); /* bandwidth are deviation and both sidebands */
 			if (rc < 0)
 				goto error;
 		}
@@ -522,7 +522,7 @@ void *sdr_open(int __attribute__((__unused__)) direction, const char __attribute
 	display_iq_init(samplerate);
 	display_spectrum_init(samplerate, rx_center_frequency);
 
-	LOGP(DSDR, LOGL_INFO, "Using local oscillator offseet: %.0f Hz\n", sdr_config->lo_offset);
+	LOGP(DSDR, LOGL_INFO, "Using local oscillator offset: %.0f Hz\n", sdr_config->lo_offset);
 
 #ifdef HAVE_UHD
 	if (sdr_config->uhd) {

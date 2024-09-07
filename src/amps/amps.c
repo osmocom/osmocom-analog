@@ -555,10 +555,10 @@ int amps_create(const char *kanal, enum amps_chan_type chan_type, const char *de
 	/* check if channel type matches channel number */
 	ct = amps_channel2type(atoi(kanal));
 	if (ct == CHAN_TYPE_CC && chan_type != CHAN_TYPE_PC && chan_type != CHAN_TYPE_CC_PC && chan_type != CHAN_TYPE_CC_PC_VC) {
-		LOGP(DAMPS, LOGL_NOTICE, "Channel number %s belongs to a control channel, but your channel type '%s' requires to be on a voice channel number. Some phone may reject this, but all my phones don't.\n", kanal, chan_type_long_name(chan_type));
+		LOGP(DAMPS, LOGL_NOTICE, "Channel number %s belongs to a control channel, but your channel type '%s' requires it to be on a voice channel number. Some phones may reject this, but all my phones don't.\n", kanal, chan_type_long_name(chan_type));
 	}
 	if (ct == CHAN_TYPE_VC && chan_type != CHAN_TYPE_VC) {
-		LOGP(DAMPS, LOGL_ERROR, "Channel number %s belongs to a voice channel, but your channel type '%s' requires to be on a control channel number. Please use correct channel.\n", kanal, chan_type_long_name(chan_type));
+		LOGP(DAMPS, LOGL_ERROR, "Channel number %s belongs to a voice channel, but your channel type '%s' requires it to be on a control channel number. Please use correct channel.\n", kanal, chan_type_long_name(chan_type));
 		return -EINVAL;
 	}
 	/* only even channels */

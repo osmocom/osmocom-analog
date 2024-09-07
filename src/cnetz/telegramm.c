@@ -1622,7 +1622,7 @@ const char *cnetz_encode_telegramm(cnetz_t *cnetz)
 		cnetz->sched_lr_debugged = 1;
 	if (opcode == OPCODE_MLR_M && !cnetz->sched_mlr_debugged) {
 		cnetz->sched_mlr_debugged = 1;
-		LOGP(DFRAME, LOGL_INFO, "Subsequent IDLE frames are not show, to prevent flooding the output.\n");
+		LOGP(DFRAME, LOGL_INFO, "Subsequent IDLE frames are not shown, to prevent flooding the output.\n");
 	}
 
 	return bits;
