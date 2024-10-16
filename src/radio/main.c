@@ -421,7 +421,7 @@ int main(int argc, char *argv[])
 	rc = radio_start(&radio);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to start radio's streaming, exitting!\n");
-		goto error;
+		goto error_start;
 	}
 
 	int tosend, got;
@@ -500,11 +500,17 @@ next_char:
 		}
 	}
 
+error_start:
 	/* reset signals */
 	signal(SIGINT, SIG_DFL);
 	signal(SIGHUP, SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGPIPE, SIG_DFL);
+
+	display_measurements_on(0);
+	display_spectrum_on(0);
+	display_wave_on(0);
+	display_iq_on(0);
 
 	/* reset terminal */
 	tcsetattr(0, TCSANOW, &term_orig);
