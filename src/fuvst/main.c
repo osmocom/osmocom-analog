@@ -29,9 +29,6 @@
 #include <osmocom/core/timer.h>
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
-#include "../anetz/freiton.h"
-#include "../anetz/besetztton.h"
-#include "../cnetz/ansage.h"
 #include "fuvst.h"
 
 static int num_chan_type = 0;
@@ -176,16 +173,11 @@ int main(int argc, char *argv[])
 	int i = 0;
 	int any_zzk = 0, any_spk = 0;
 
-	/* init system specific tones */
-        init_freiton();
-        init_besetzton();
-        init_ansage();
-
 	/* init mobile interface */
 	allow_sdr = 0;
 	uses_emphasis = 0;
 	check_channel = 0;
-	main_mobile_init("0123456789", number_lengths, number_prefixes, cnetz_number_valid);
+	main_mobile_init("0123456789", number_lengths, number_prefixes, cnetz_number_valid, "german");
 
 	config_init();
 

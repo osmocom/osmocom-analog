@@ -12,10 +12,9 @@ fuvst_SOURCES = \
 	main.c
 fuvst_LDADD = \
 	$(COMMON_LA) \
-	../anetz/libgermanton.a \
-	../cnetz/libcnetztones.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
@@ -41,6 +40,7 @@ fuvst_sniffer_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libjitter/libjitter.a \

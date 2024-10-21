@@ -16,14 +16,13 @@ nmt_SOURCES = \
 	dsp.c \
 	frame.c \
 	image.c \
-	tones.c \
-	announcement.c \
 	main.c
 nmt_LDADD = \
 	$(COMMON_LA) \
 	libdmssms.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \

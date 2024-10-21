@@ -32,11 +32,6 @@
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
-#include "../amps/tones.h"
-#include "../amps/noanswer.h"
-#include "../amps/outoforder.h"
-#include "../amps/invalidnumber.h"
-#include "../amps/congestion.h"
 #include "golay.h"
 
 #define MSG_SEND "/tmp/golay_msg_send"
@@ -192,19 +187,12 @@ int main(int argc, char *argv[])
 	/* GSC does not use emphasis, so disable it */
 	uses_emphasis = 0;
 
-	/* init common tones */
-	init_tones();
-	init_outoforder();
-	init_noanswer();
-	init_invalidnumber();
-	init_congestion();
-
 	/* init coding tables */
 	init_golay();
 	init_bch();
 
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, NULL);
+	main_mobile_init("0123456789", number_lengths, NULL, NULL, "american");
 
 	/* handle options / config file */
 	add_options();

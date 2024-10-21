@@ -93,6 +93,7 @@ AC_CONFIG_FILES([src/liblogging/Makefile
     src/libv27/Makefile
     src/libmtp/Makefile
     src/libaaimage/Makefile
+    src/libtones/Makefile
     src/anetz/Makefile
     src/bnetz/Makefile
     src/cnetz/Makefile

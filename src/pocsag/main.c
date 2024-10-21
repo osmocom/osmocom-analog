@@ -32,7 +32,6 @@
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
-#include "../anetz/besetztton.h"
 #include "pocsag.h"
 #include "dsp.h"
 
@@ -274,11 +273,8 @@ int main(int argc, char *argv[])
 	/* pocsag does not use emphasis, so disable it */
 	uses_emphasis = 0;
 
-	/* init common tones */
-	init_besetzton();
-
 	/* init mobile interface */
-	main_mobile_init("0123456789ABCD", number_lengths, NULL, pocsag_number_valid);
+	main_mobile_init("0123456789ABCD", number_lengths, NULL, pocsag_number_valid, "german");
 
 	/* handle options / config file */
 	add_options();

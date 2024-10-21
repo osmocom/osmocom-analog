@@ -73,6 +73,7 @@ static int use_osmocc_sock = 0;
 static int cc_argc = 0;
 static const char *cc_argv[MAX_CC_ARGS];
 int no_l16 = 0;
+static const char *call_toneset = NULL;
 int send_patterns = 1;
 static int release_on_disconnect = 1;
 int loopback = 0;
@@ -165,7 +166,7 @@ const char *mobile_number_check_digits(const char *number)
 
 const char *(*mobile_number_check_valid)(const char *);
 
-void main_mobile_init(const char *digits, const struct number_lengths lengths[], const char *prefixes[], const char *(*check_valid)(const char *))
+void main_mobile_init(const char *digits, const struct number_lengths lengths[], const char *prefixes[], const char *(*check_valid)(const char *), const char *toneset)
 {
 	logging_init();
 
@@ -175,6 +176,7 @@ void main_mobile_init(const char *digits, const struct number_lengths lengths[],
 	number_lengths = lengths;
 	number_prefixes = prefixes;
 	mobile_number_check_valid = check_valid;
+	call_toneset = toneset;
 
 	got_init = 1;
 #ifdef HAVE_SDR
@@ -677,7 +679,7 @@ void main_mobile_loop(const char *name, int *quit, void (*myhandler)(void), cons
 		console_init(call_device, call_samplerate, call_buffer, loopback, echo_test, number_digits, number_lengths, station_id);
 
 	/* init call control instance */
-	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv, no_l16);
+	rc = call_init(name, (use_osmocc_sock) ? send_patterns : 0, release_on_disconnect, use_osmocc_sock, cc_argc, cc_argv, no_l16, call_toneset);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to create call control instance. Quitting!\n");
 		return;

@@ -3,7 +3,7 @@ AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes)
 bin_PROGRAMS = \
 	amps tacs jtacs
 
-noinst_LIBRARIES = libamps.a libusatone.a
+noinst_LIBRARIES = libamps.a
 
 libamps_a_SOURCES = \
 	main_common.c \
@@ -14,13 +14,6 @@ libamps_a_SOURCES = \
 	sysinfo.c \
 	esn.c
 
-libusatone_a_SOURCES = \
-	usa_tones.c \
-	usa_noanswer.c \
-	usa_outoforder.c \
-	usa_invalidnumber.c \
-	usa_congestion.c
-
 amps_SOURCES = \
 	amps_stations.c \
 	amps_image.c \
@@ -29,9 +22,9 @@ amps_SOURCES = \
 amps_LDADD = \
 	$(COMMON_LA) \
 	libamps.a \
-	libusatone.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
@@ -64,8 +57,6 @@ amps_LDADD += \
 endif
 
 tacs_SOURCES = \
-	tacs_tones.c \
-	tacs_outoforder.c \
 	tacs_stations.c \
 	tacs_image.c \
 	tacs_main.c
@@ -75,6 +66,7 @@ tacs_LDADD = \
 	libamps.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
@@ -107,7 +99,6 @@ tacs_LDADD += \
 endif
 
 jtacs_SOURCES = \
-	jtacs_tones.c \
 	jtacs_stations.c \
 	jtacs_image.c \
 	jtacs_main.c
@@ -117,6 +108,7 @@ jtacs_LDADD = \
 	libamps.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libcompandor/libcompandor.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \

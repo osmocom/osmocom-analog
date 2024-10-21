@@ -30,8 +30,6 @@
 #include "../libmobile/call.h"
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
-#include "freiton.h"
-#include "besetztton.h"
 #include "anetz.h"
 #include "dsp.h"
 #include "stations.h"
@@ -135,11 +133,7 @@ int main(int argc, char *argv[])
 	/* a-netz does not use emphasis, so disable it */
 	uses_emphasis = 0;
 
-	/* init common tones */
-	init_freiton();
-	init_besetzton();
-
-	main_mobile_init("0123456789", number_lengths, NULL, anetz_number_valid);
+	main_mobile_init("0123456789", number_lengths, NULL, anetz_number_valid, "oldgerman");
 
 	/* handle options / config file */
 	add_options();

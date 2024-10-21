@@ -64,6 +64,7 @@ test_dms_SOURCES = test_dms.c dummy.c
 test_dms_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/nmt/libdmssms.a \
@@ -100,6 +101,7 @@ test_sms_SOURCES = dummy.c test_sms.c
 test_sms_LDADD = \
 	$(COMMON_LA) \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/nmt/libdmssms.a \

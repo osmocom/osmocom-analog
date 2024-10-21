@@ -26,8 +26,6 @@
 #include "../libmobile/main_mobile.h"
 #include "../liblogging/logging.h"
 #include "../libmobile/call.h"
-#include "../anetz/freiton.h"
-#include "../anetz/besetztton.h"
 #include "../liboptions/options.h"
 #include "../libfm/fm.h"
 #include "cnetz.h"
@@ -35,7 +33,6 @@
 #include "sysinfo.h"
 #include "dsp.h"
 #include "telegramm.h"
-#include "ansage.h"
 #include "stations.h"
 
 /* settings */
@@ -510,14 +507,9 @@ int main(int argc, char *argv[])
 	int anzahl_gesperrter_teilnehmergruppen = 0;
 	int i;
 
-	/* init common tones */
-	init_freiton();
-	init_besetzton();
-	init_ansage();
-
 	init_station();
 
-	main_mobile_init("0123456789", number_lengths, number_prefixes, cnetz_number_valid);
+	main_mobile_init("0123456789", number_lengths, number_prefixes, cnetz_number_valid, "german");
 
 	/* handle options / config file */
 	add_options();
