@@ -48,15 +48,13 @@ src/libserial/libserial.a
 src/libv27/libv27.a
 src/libmtp/libmtp.a
 src/libaaimage/libaaimage.a
-src/anetz/libgermanton.a
+src/libtones/libtones.a
 src/anetz/anetz
 src/bnetz/bnetz
 src/bnetz/bnetz-dialer
-src/cnetz/libcnetztones.a
 src/cnetz/cnetz
 src/nmt/libdmssms.a
 src/nmt/nmt
-src/amps/libusatone.a
 src/amps/libamps.a
 src/amps/amps
 src/amps/tacs
@@ -92,3 +90,8 @@ src/test/test_sms
 src/test/test_performance
 src/test/test_hagelbarger
 src/test/test_v27scrambler
+
+installiere_es.sh
+jolly.sh
+layout/kicad/magnetkarte-backups/
+make-test.sh

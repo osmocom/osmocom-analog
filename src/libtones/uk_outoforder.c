@@ -1,7 +1,9 @@
 #include <stdint.h>
-#include "outoforder.h"
+#include <stdlib.h>
+#include "tones.h"
+#include "uk_outoforder.h"
 
-static int16_t pattern[] = {
+static uint16_t slin16_outoforder[] = {
 	0x0000, 0x0000, 0xffff, 0x0002, 0xfffe, 0x0003, 0xfffd, 0x0001,
 	0x0001, 0xfffd, 0x0004, 0xfffb, 0x0004, 0xfffe, 0x0000, 0x0002,
 	0xfffc, 0x0003, 0xfffd, 0x0001, 0x0000, 0x0000, 0x0002, 0x0001,
@@ -8187,14 +8189,8 @@ static int16_t pattern[] = {
 	0xff69, 0xff9f, 0xffbe, 0xffb2, 0xffe9, 0x0003, 0x0062, 0x0111,
 };
 
-extern int16_t *outoforder_spl;
-extern int outoforder_size;
-extern int outoforder_max;
-
-void init_outoforder(void)
-{
-	outoforder_spl = pattern;
-	outoforder_size = sizeof(pattern) / sizeof(pattern[0]);
-	outoforder_max = outoforder_size;
-}
+tones_seq_t seq_uk_outoforder[] = {
+        { TONES_TDATA_SLIN16HOST, TONES_DURATION_AUTO, slin16_outoforder, sizeof(slin16_outoforder), -6.0 },
+        { TONES_TDATA_EOL, 0, NULL, 0, 0.0 }
+};
 

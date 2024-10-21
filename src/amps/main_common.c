@@ -254,7 +254,7 @@ static int handle_options(int short_option, int argi, char **argv)
 
 extern const struct number_lengths number_lengths[];
 
-int main_amps_tacs(const char *name, int argc, char *argv[])
+int main_amps_tacs(const char *name, int argc, char *argv[], const char *toneset)
 {
 	int rc, argi;
 	const char *station_id = "";
@@ -268,7 +268,7 @@ int main_amps_tacs(const char *name, int argc, char *argv[])
 	/* override default */
 	dsp_samplerate = 96000;
 
-	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL);
+	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL, toneset);
 
 	/* handle options / config file */
 	add_options();

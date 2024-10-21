@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 	allow_sdr = 0;
 	uses_emphasis = 0;
 	check_channel = 0;
-	main_mobile_init(NULL, NULL, NULL, NULL);
+	main_mobile_init(NULL, NULL, NULL, NULL, NULL);
 
 	/* handle options / config file */
 	add_options();

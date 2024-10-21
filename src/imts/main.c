@@ -29,11 +29,6 @@
 #include <osmocom/core/timer.h>
 #include "../libmobile/call.h"
 #include "../liboptions/options.h"
-#include "../amps/tones.h"
-#include "../amps/outoforder.h"
-#include "../amps/noanswer.h"
-#include "../amps/invalidnumber.h"
-#include "../amps/congestion.h"
 #include "imts.h"
 #include "dsp.h"
 
@@ -156,15 +151,8 @@ int main(int argc, char *argv[])
 	const char *station_id = "";
 	int i;
 
-	/* init common tones */
-	init_tones();
-	init_outoforder();
-	init_noanswer();
-	init_invalidnumber();
-	init_congestion();
-
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL);
+	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL, "oldamerican");
 
 	/* handle options / config file */
 	add_options();

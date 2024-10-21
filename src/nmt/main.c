@@ -33,8 +33,6 @@
 #include "nmt.h"
 #include "frame.h"
 #include "dsp.h"
-#include "tones.h"
-#include "announcement.h"
 #include "countries.h"
 
 #define SMS_DELIVER "/tmp/nmt_sms_deliver"
@@ -277,12 +275,8 @@ int main(int argc, char *argv[])
 	int mandatory = 0;
 	int i;
 
-	/* init common tones */
-	init_nmt_tones();
-	init_announcement();
-
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, NULL);
+	main_mobile_init("0123456789", number_lengths, NULL, NULL, "denmark");
 
 	/* handle options / config file */
 	add_options();

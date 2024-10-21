@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	init_samples();
 
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, NULL);
+	main_mobile_init("0123456789", number_lengths, NULL, NULL, NULL);
 
 	/* handle options / config file */
 	add_options();

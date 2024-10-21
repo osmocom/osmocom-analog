@@ -1,7 +1,9 @@
 #include <stdint.h>
-#include "invalidnumber.h"
+#include <stdlib.h>
+#include "tones.h"
+#include "american_invalidnumber.h"
 
-static int16_t pattern[] = {
+static uint16_t slin16_invalidnumber[] = {
 	0xfffe, 0x0001, 0xffff, 0x0001, 0xffff, 0x0002, 0xfffe, 0x0002,
 	0xfffd, 0x0002, 0xffff, 0xfffe, 0x0002, 0xfffc, 0x0003, 0xfffc,
 	0x0002, 0xfffe, 0x0003, 0xffff, 0x0001, 0xfffc, 0x0002, 0xfffd,
@@ -7209,15 +7211,8 @@ static int16_t pattern[] = {
 	0xfffc, 0x00c0, 0x005c, 0xff41, 0xff90, 0x0021, 0xff10, 0xff27,
 };
 
-extern int16_t *invalidnumber_spl;
-extern int invalidnumber_size;
-extern int invalidnumber_max;
-
-void init_invalidnumber(void)
-{
-	invalidnumber_spl = pattern;
-	invalidnumber_size = sizeof(pattern) / sizeof(pattern[0]);
-	invalidnumber_max = invalidnumber_size;
-}
-
+tones_seq_t seq_american_invalidnumber[] = {
+        { TONES_TDATA_SLIN16HOST, TONES_DURATION_AUTO, slin16_invalidnumber, sizeof(slin16_invalidnumber), -6.0 },
+        { TONES_TDATA_EOL, 0, NULL, 0, 0.0 }
+};
 

@@ -1,7 +1,9 @@
 #include <stdint.h>
-#include "noanswer.h"
+#include <stdlib.h>
+#include "tones.h"
+#include "american_congestion.h"
 
-static int16_t pattern[] = {
+static uint16_t slin16_noanswer[] = {
 	0xfe24, 0xfd20, 0xfd2c, 0xfdb5, 0xfeba, 0xfe20, 0xfd41, 0xfe32,
 	0xfea5, 0xfddf, 0xfde3, 0xfdda, 0xfd0c, 0xfe04, 0xff6d, 0xfec7,
 	0xfca2, 0xfcb7, 0xfe65, 0xfe99, 0xfe9c, 0xfe2e, 0xfd18, 0xfd7a,
@@ -5092,15 +5094,8 @@ static int16_t pattern[] = {
 	0xfe6a, 0xfe18, 0xff14, 0xff4e, 0xfe2d, 0xfdd9, 0xfde3, 0xfdd8,
 };
 
-extern int16_t *noanswer_spl;
-extern int noanswer_size;
-extern int noanswer_max;
-
-void init_noanswer(void)
-{
-	noanswer_spl = pattern;
-	noanswer_size = sizeof(pattern) / sizeof(pattern[0]);
-	noanswer_max = noanswer_size;
-}
-
+tones_seq_t seq_american_noanswer[] = {
+        { TONES_TDATA_SLIN16HOST, TONES_DURATION_AUTO, slin16_noanswer, sizeof(slin16_noanswer), -6.0 },
+        { TONES_TDATA_EOL, 0, NULL, 0, 0.0 }
+};
 

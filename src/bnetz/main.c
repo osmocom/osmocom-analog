@@ -27,13 +27,10 @@
 #include "../liblogging/logging.h"
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
-#include "../anetz/freiton.h"
-#include "../anetz/besetztton.h"
 #include "../liboptions/options.h"
 #include "bnetz.h"
 #include "dsp.h"
 #include "stations.h"
-#include "ansage.h"
 
 int gfs = 2;
 int metering = 20;
@@ -141,12 +138,7 @@ int main(int argc, char *argv[])
 	const char *station_id = "";
 	int i;
 
-	/* init common tones */
-	init_freiton();
-	init_besetzton();
-	init_ansage();
-
-	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL);
+	main_mobile_init("0123456789", number_lengths, number_prefixes, NULL, "oldgerman");
 
 	/* handle options / config file */
 	add_options();

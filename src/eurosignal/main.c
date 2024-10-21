@@ -29,7 +29,6 @@
 #include "../liboptions/options.h"
 #include "eurosignal.h"
 #include "dsp.h"
-#include "../anetz/besetztton.h"
 #include "es_mitte.h"
 #include "es_ges.h"
 #include "es_teilges.h"
@@ -166,9 +165,6 @@ int main(int argc, char *argv[])
 	/* eurosignal does not use emphasis, so disable it */
 	uses_emphasis = 0;
 
-	/* init common tones */
-	init_besetzton();
-
 	/* init system specific tones */
 	init_es_mitte();
 	init_es_ges();
@@ -176,7 +172,7 @@ int main(int argc, char *argv[])
 	init_es_kaudn();
 
 	/* init mobile interface */
-	main_mobile_init("0123456789ABCDEabcde", number_lengths, number_prefixes, NULL);
+	main_mobile_init("0123456789ABCDEabcde", number_lengths, number_prefixes, NULL, "oldgerman");
 
 	/* handle options / config file */
 	add_options();

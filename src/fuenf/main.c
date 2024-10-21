@@ -31,7 +31,6 @@
 #include "../libmobile/call.h"
 #include "../libmobile/main_mobile.h"
 #include "../liboptions/options.h"
-#include "../anetz/besetztton.h"
 #include "fuenf.h"
 #include "dsp.h"
 
@@ -179,11 +178,8 @@ int main(int argc, char *argv[])
 	/* BOS does not use emphasis, so disable it */
 	uses_emphasis = 0;
 
-	/* init common tones */
-	init_besetzton();
-
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, bos_number_valid);
+	main_mobile_init("0123456789", number_lengths, NULL, bos_number_valid, "german");
 
 	/* handle options / config file */
 	add_options();

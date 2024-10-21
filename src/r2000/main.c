@@ -33,8 +33,6 @@
 #include "r2000.h"
 #include "dsp.h"
 #include "frame.h"
-#include "tones.h"
-#include "outoforder.h"
 
 /* settings */
 static int band = 1;
@@ -260,12 +258,8 @@ int main(int argc, char *argv[])
 	int mandatory = 0;
 	int i;
 
-	/* init tones */
-	init_radiocom_tones();
-	init_outoforder();
-
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, r2000_number_valid);
+	main_mobile_init("0123456789", number_lengths, NULL, r2000_number_valid, "france");
 
 	/* handle options / config file */
 	add_options();

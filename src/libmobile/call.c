@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
+#include "../libtones/tones.h"
 #include <osmocom/core/timer.h>
 #include <osmocom/core/select.h>
 #include <osmocom/cc/endpoint.h>
@@ -61,6 +62,8 @@ static int connect_on_setup;		/* send patterns towards fixed network */
 static int release_on_disconnect;	/* release towards mobile phone, if OSMO-CC call disconnects, don't send disconnect tone */
 
 osmo_cc_endpoint_t endpoint, *ep;
+
+static tones_data_t call_tones;
 
 void encode_l16(uint8_t *src_data, int src_len, uint8_t **dst_data, int *dst_len, void __attribute__((unused)) *arg)
 {
@@ -99,142 +102,6 @@ static struct osmo_cc_helper_audio_codecs codecs[] = {
 
 static int no_l16 = 0;
 
-/* stream patterns/announcements */
-int16_t *ringback_spl = NULL;
-int ringback_size = 0;
-int ringback_max = 0;
-int16_t *hangup_spl = NULL;
-int hangup_size = 0;
-int hangup_max = 0;
-int16_t *busy_spl = NULL;
-int busy_size = 0;
-int busy_max = 0;
-int16_t *noanswer_spl = NULL;
-int noanswer_size = 0;
-int noanswer_max = 0;
-int16_t *outoforder_spl = NULL;
-int outoforder_size = 0;
-int outoforder_max = 0;
-int16_t *invalidnumber_spl = NULL;
-int invalidnumber_size = 0;
-int invalidnumber_max = 0;
-int16_t *congestion_spl = NULL;
-int congestion_size = 0;
-int congestion_max = 0;
-int16_t *recall_spl = NULL;
-int recall_size = 0;
-int recall_max = 0;
-
-enum audio_pattern {
-	PATTERN_NONE = 0,
-	PATTERN_TEST,
-	PATTERN_RINGBACK,
-	PATTERN_HANGUP,
-	PATTERN_BUSY,
-	PATTERN_NOANSWER,
-	PATTERN_OUTOFORDER,
-	PATTERN_INVALIDNUMBER,
-	PATTERN_CONGESTION,
-	PATTERN_RECALL,
-};
-
-static void get_pattern(const int16_t **spl, int *size, int *max, enum audio_pattern pattern)
-{
-	*spl = NULL;
-	*size = 0;
-	*max = 0;
-
-	switch (pattern) {
-	case PATTERN_RINGBACK:
-no_recall:
-		*spl = ringback_spl;
-		*size = ringback_size;
-		*max = ringback_max;
-		break;
-	case PATTERN_HANGUP:
-		if (!hangup_spl)
-			goto no_hangup;
-		*spl = hangup_spl;
-		*size = hangup_size;
-		*max = hangup_max;
-		break;
-	case PATTERN_BUSY:
-no_hangup:
-no_noanswer:
-		*spl = busy_spl;
-		*size = busy_size;
-		*max = busy_max;
-		break;
-	case PATTERN_NOANSWER:
-		if (!noanswer_spl)
-			goto no_noanswer;
-		*spl = noanswer_spl;
-		*size = noanswer_size;
-		*max = noanswer_max;
-		break;
-	case PATTERN_OUTOFORDER:
-		if (!outoforder_spl)
-			goto no_outoforder;
-		*spl = outoforder_spl;
-		*size = outoforder_size;
-		*max = outoforder_max;
-		break;
-	case PATTERN_INVALIDNUMBER:
-		if (!invalidnumber_spl)
-			goto no_invalidnumber;
-		*spl = invalidnumber_spl;
-		*size = invalidnumber_size;
-		*max = invalidnumber_max;
-		break;
-	case PATTERN_CONGESTION:
-no_outoforder:
-no_invalidnumber:
-		*spl = congestion_spl;
-		*size = congestion_size;
-		*max = congestion_max;
-		break;
-	case PATTERN_RECALL:
-		if (!recall_spl)
-			goto no_recall;
-		*spl = recall_spl;
-		*size = recall_size;
-		*max = recall_max;
-		break;
-	default:
-		;
-	}
-}
-
-static enum audio_pattern cause2pattern(int cause)
-{
-	int pattern;
-
-	switch (cause) {
-	case CAUSE_NORMAL:
-		pattern = PATTERN_HANGUP;
-		break;
-	case CAUSE_BUSY:
-		pattern = PATTERN_BUSY;
-		break;
-	case CAUSE_NOANSWER:
-		pattern = PATTERN_NOANSWER;
-		break;
-	case CAUSE_OUTOFORDER:
-		pattern = PATTERN_OUTOFORDER;
-		break;
-	case CAUSE_INVALNUMBER:
-		pattern = PATTERN_INVALIDNUMBER;
-		break;
-	case CAUSE_NOCHANNEL:
-		pattern = PATTERN_CONGESTION;
-		break;
-	default:
-		pattern = PATTERN_HANGUP;
-	}
-
-	return pattern;
-}
-
 enum process_state {
 	PROCESS_IDLE = 0,	/* IDLE */
 	PROCESS_SETUP_RO,	/* call from radio to OSMO-CC */
@@ -251,8 +118,7 @@ typedef struct process {
 	int callref;
 	enum process_state state;
 	int audio_disconnected; /* if not associated with transceiver anymore */
-	enum audio_pattern pattern;
-	int audio_pos;
+	tones_t tones;
 	uint8_t cause;
 	struct osmo_timer_list timer;
 	osmo_cc_session_t *session;
@@ -279,6 +145,7 @@ static process_t *create_process(int callref, enum process_state state)
 
 	process->callref = callref;
 	process->state = state;
+	tones_set_tone(&call_tones, &process->tones, TONES_TONE_OFF);
 
 	return process;
 }
@@ -327,7 +194,7 @@ static void new_state_process(int callref, enum process_state state)
 	process->state = state;
 }
 
-static void set_pattern_process(int callref, enum audio_pattern pattern)
+static void set_tone_process(int callref, enum tones_tone tone)
 {
 	process_t *process = get_process(callref);
 
@@ -335,44 +202,7 @@ static void set_pattern_process(int callref, enum audio_pattern pattern)
 		LOGP(DCALL, LOGL_ERROR, "Process with callref %d not found!\n", callref);
 		return;
 	}
-	process->pattern = pattern;
-	process->audio_pos = 0;
-}
-
-/* disconnect audio, now send audio directly from pattern/announcement, not from transceiver */
-static void disconnect_process(int callref, int cause)
-{
-	process_t *process = get_process(callref);
-
-	if (!process) {
-		LOGP(DCALL, LOGL_ERROR, "Process with callref %d not found!\n", callref);
-		return;
-	}
-	process->pattern = cause2pattern(cause);
-	process->audio_disconnected = 1;
-	process->audio_pos = 0;
-	process->cause = cause;
-	osmo_timer_schedule(&process->timer, DISC_TIMEOUT);
-}
-
-static void get_process_patterns(process_t *process, int16_t *samples, int length)
-{
-	const int16_t *spl;
-	int size, max, pos;
-
-	get_pattern(&spl, &size, &max, process->pattern);
-
-	/* stream sample */
-	pos = process->audio_pos;
-	while(length--) {
-		if (pos >= size)
-			*samples++ = 0;
-		else
-			*samples++ = spl[pos] >> 2;
-		if (++pos == max)
-			pos = 0;
-	}
-	process->audio_pos = pos;
+	tones_set_tone(&call_tones, &process->tones, tone);
 }
 
 static void process_timeout(void *data)
@@ -395,8 +225,8 @@ static void down_audio(struct osmo_cc_session_codec *codec, uint8_t marker, uint
 	process_t *process = codec->media->session->priv;
 //	sample_t samples[len / 2];
 
-	/* if we are disconnected, ignore audio */
-	if (!process || process->pattern != PATTERN_NONE)
+	/* if we are disconnected or if a tone is played, ignore audio */
+	if (!process || process->tones.tone != TONES_TONE_OFF)
 		return;
 #if 0
 	int16_to_samples_speech(samples, (int16_t *)data, len / 2);
@@ -532,14 +362,14 @@ void call_up_alerting(int callref)
 
 	if (!connect_on_setup)
 		indicate_alerting(callref);
-	set_pattern_process(callref, PATTERN_RINGBACK);
+	set_tone_process(callref, TONES_TONE_RINGBACK);
 	new_state_process(callref, PROCESS_ALERTING_RT);
 }
 
 /* Transceiver indicates early audio */
 void call_up_early(int callref)
 {
-	set_pattern_process(callref, PATTERN_NONE);
+	set_tone_process(callref, TONES_TONE_OFF);
 }
 
 /* Transceiver indicates answer. */
@@ -554,7 +384,7 @@ void call_up_answer(int callref, const char *connect_id)
 
 	if (!connect_on_setup)
 		indicate_answer(callref, NULL, connect_id);
-	set_pattern_process(callref, PATTERN_NONE);
+	set_tone_process(callref, TONES_TONE_OFF);
 	new_state_process(callref, PROCESS_CONNECT);
 }
 
@@ -577,7 +407,7 @@ void call_up_release(int callref, int cause)
 		if (connect_on_setup
 		 && process->state != PROCESS_SETUP_RO
 		 && process->state != PROCESS_ALERTING_RO)
-			disconnect_process(callref, cause);
+			set_tone_process(callref, cause);
 		else
 		/* if no tones shall be sent, release on disconnect
 		 * or RO setup states */
@@ -588,7 +418,7 @@ void call_up_release(int callref, int cause)
 			indicate_disconnect_release(callref, cause, OSMO_CC_MSG_REL_IND);
 		/* if no tones shall be sent, disconnect on all other states */
 		} else {
-			disconnect_process(callref, cause);
+			set_tone_process(callref, cause);
 			indicate_disconnect_release(callref, cause, OSMO_CC_MSG_DISC_IND);
 		}
 	} else {
@@ -600,7 +430,7 @@ void call_up_release(int callref, int cause)
 /* turn recall tone on or off */
 void call_tone_recall(int callref, int on)
 {
-	set_pattern_process(callref, (on) ? PATTERN_RECALL : PATTERN_NONE);
+	set_tone_process(callref, (on) ? TONES_TONE_RECALL : TONES_TONE_OFF);
 }
 
 /* forward audio to OSMO-CC or call instance */
@@ -618,9 +448,9 @@ void call_up_audio(int callref, sample_t *samples, int len)
 	if (!callref)
 		return;
 
-	/* if we are disconnected, ignore audio */
+	/* if we are disconnected or if a tone is played, ignore audio */
 	process = get_process(callref);
-	if (!process || process->pattern != PATTERN_NONE)
+	if (!process || process->tones.tone != TONES_TONE_OFF)
 		return;
 
 	/* no codec negotiated (yet) */
@@ -649,12 +479,12 @@ void call_clock(void)
 	call_down_clock();
 
 	while(process) {
-		if (process->pattern != PATTERN_NONE) {
+		if (process->tones.tone != TONES_TONE_OFF) {
 			int16_t spl[160];
 			uint8_t *payload;
 			int payload_len;
 			/* try to get patterns, else copy the samples we got */
-			get_process_patterns(process, spl, 160);
+			tones_read_tone(&process->tones, spl, 160);
 #ifdef DEBUG_LEVEL
 			sample_t samples[160];
 			int16_to_samples(samples, (int16_t *)spl->data, 160);
@@ -733,7 +563,7 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 		/* sdp accept */
 		sdp = osmo_cc_helper_audio_accept(&ep->session_config, process, codecs + no_l16, down_audio, msg, &process->session, &process->codec, 0);
 		if (!sdp) {
-			disconnect_process(callref, 47);
+			set_tone_process(callref, 47);
 			indicate_disconnect_release(callref, 47, OSMO_CC_MSG_REJ_IND);
 			break;
 		}
@@ -787,7 +617,7 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 		invalid = mobile_number_check_length(suffix);
 		if (invalid) {
 			LOGP(DCALL, LOGL_NOTICE, "Mobile number '%s' has invalid length: %s\n", suffix, invalid);
-			disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+			set_tone_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 			if (!connect_on_setup) {
 				LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 				indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
@@ -799,7 +629,7 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 		invalid = mobile_number_check_digits(suffix);
 		if (invalid) {
 			LOGP(DCALL, LOGL_NOTICE, "Mobile number '%s' has invalid digit: %s.\n", suffix, invalid);
-			disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+			set_tone_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 			if (!connect_on_setup) {
 				LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 				indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
@@ -812,7 +642,7 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 			invalid = mobile_number_check_valid(suffix);
 			if (invalid) {
 				LOGP(DCALL, LOGL_NOTICE, "Mobile number '%s' is invalid for this network: %s\n", suffix, invalid);
-				disconnect_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
+				set_tone_process(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 				if (!connect_on_setup) {
 					LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT);
 					indicate_disconnect_release(callref, OSMO_CC_ISDN_CAUSE_INV_NR_FORMAT, OSMO_CC_MSG_DISC_IND);
@@ -829,7 +659,7 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 				LOGP(DCALL, LOGL_INFO, "Disconnecting OSMO-CC call towards fixed network (cause=%d)\n", -rc);
 				indicate_disconnect_release(callref, -rc, OSMO_CC_MSG_DISC_IND);
 			}
-			disconnect_process(callref, -rc);
+			set_tone_process(callref, -rc);
 			break;
 		}
 		break;
@@ -921,7 +751,7 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 	osmo_cc_free_msg(msg);
 }
 
-int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[], int _no_l16)
+int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[], int _no_l16, const char *toneset)
 {
 	int rc;
 
@@ -929,6 +759,11 @@ int call_init(const char *name, int _send_patterns, int _release_on_disconnect, 
 	release_on_disconnect = _release_on_disconnect;
 
 	g711_init();
+	rc = tones_init(&call_tones, toneset, TONES_TDATA_SLIN16HOST);
+	if (rc > 0) {
+		LOGP(DCALL, LOGL_INFO, "Failed to initialize tone set '%s'. Please fix!\n", toneset);
+		return -EINVAL;
+	}
 
 	no_l16 = !!_no_l16;
 	ep = &endpoint;
@@ -943,6 +778,7 @@ int call_init(const char *name, int _send_patterns, int _release_on_disconnect, 
 
 void call_exit(void)
 {
+	tones_exit(&call_tones);
 	if (ep) {
 		osmo_cc_delete(ep);
 		ep = NULL;

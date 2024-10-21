@@ -1,7 +1,9 @@
 #include <stdint.h>
-#include "ansage.h"
+#include <stdlib.h>
+#include "tones.h"
+#include "german_outoforder.h"
 
-static int16_t pattern[] = {
+static uint16_t slin16_outoforder[] = {
 	0x0012, 0x0019, 0x0016, 0x0019, 0x0015, 0x0008, 0xfffd, 0x0005,
 	0x000e, 0x0018, 0x000d, 0xfff4, 0xfffa, 0x0004, 0x0004, 0x0011,
 	0x0007, 0x0003, 0xffff, 0xffff, 0x0009, 0x000d, 0x001c, 0x0015,
@@ -5415,14 +5417,9 @@ static int16_t pattern[] = {
 	0xfff6, 0xfff7, 0x0007, 0x000e, 0x0015, 0x0005, 0x0002, 0xfff5,
 	0xfff8, 0x0003, 0x0002, 0x001c, 0x000d, 0x0004, 0xfff0, 0xfff6,
 };
-extern int16_t *outoforder_spl;
-extern int outoforder_size;
-extern int outoforder_max;
 
-void init_ansage(void)
-{
-	outoforder_spl = pattern;
-	outoforder_size = sizeof(pattern) / sizeof(pattern[0]);
-	outoforder_max = outoforder_size;
-}
+tones_seq_t seq_german_outoforder[] = {
+        { TONES_TDATA_SLIN16HOST, TONES_DURATION_AUTO, slin16_outoforder, sizeof(slin16_outoforder), -6.0 },
+        { TONES_TDATA_EOL, 0, NULL, 0, 0.0 }
+};
 

@@ -31,8 +31,6 @@
 #include "../libmobile/main_mobile.h"
 #include "../liblogging/logging.h"
 #include <osmocom/core/timer.h>
-#include "../anetz/freiton.h"
-#include "../anetz/besetztton.h"
 #include "../liboptions/options.h"
 #include "mpt1327.h"
 #include "dsp.h"
@@ -262,13 +260,8 @@ int main(int argc, char *argv[])
 	int mandatory = 0;
 	int i;
 
-	/* init tones */
-	init_freiton();
-	init_besetzton();
-//	init_ansage();
-
 	/* init mobile interface */
-	main_mobile_init("0123456789", number_lengths, NULL, mpt1327_number_valid);
+	main_mobile_init("0123456789", number_lengths, NULL, mpt1327_number_valid, "oldgerman");
 
 	/* handle options / config file */
 	add_options();

@@ -27,7 +27,8 @@ SUBDIRS = \
 	libserial \
 	libv27 \
 	libmtp \
-	libaaimage
+	libaaimage \
+	libtones
 
 if HAVE_ALSA
 SUBDIRS += \

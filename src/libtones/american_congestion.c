@@ -1,7 +1,9 @@
 #include <stdint.h>
-#include "congestion.h"
+#include <stdlib.h>
+#include "tones.h"
+#include "american_congestion.h"
 
-static int16_t pattern[] = {
+static uint16_t slin16_congestion[] = {
 	0xfffd, 0x0004, 0xfffb, 0x0004, 0xfffe, 0x0001, 0x0001, 0xfffe,
 	0x0001, 0xfffe, 0x0002, 0xfffe, 0xffff, 0x0001, 0xfffd, 0x0001,
 	0xffff, 0x0000, 0x0001, 0x0001, 0xfffe, 0xffff, 0x0000, 0xfffe,
@@ -6632,15 +6634,8 @@ static int16_t pattern[] = {
 	0xfee3, 0xff0f, 0x0007, 0xff7b, 0xfee5, 0xfefe, 0xff93, 0x0033,
 };
 
-extern int16_t *congestion_spl;
-extern int congestion_size;
-extern int congestion_max;
-
-void init_congestion(void)
-{
-	congestion_spl = pattern;
-	congestion_size = sizeof(pattern) / sizeof(pattern[0]);
-	congestion_max = congestion_size;
-}
-
+tones_seq_t seq_american_congestion[] = {
+        { TONES_TDATA_SLIN16HOST, TONES_DURATION_AUTO, slin16_congestion, sizeof(slin16_congestion), -6.0 },
+        { TONES_TDATA_EOL, 0, NULL, 0, 0.0 }
+};
 

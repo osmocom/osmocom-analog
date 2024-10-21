@@ -3,12 +3,6 @@ AM_CPPFLAGS = -Wall -Wextra -Wmissing-prototypes -g $(all_includes)
 bin_PROGRAMS = \
 	anetz
 
-noinst_LIBRARIES = libgermanton.a
-
-libgermanton_a_SOURCES = \
-	freiton.c\
-	besetztton.c
-
 anetz_SOURCES = \
 	anetz.c \
 	dsp.c \
@@ -17,9 +11,9 @@ anetz_SOURCES = \
 	main.c
 anetz_LDADD = \
 	$(COMMON_LA) \
-	libgermanton.a \
 	$(top_builddir)/src/liboptions/liboptions.a \
 	$(top_builddir)/src/libmobile/libmobile.a \
+	$(top_builddir)/src/libtones/libtones.a \
 	$(top_builddir)/src/libdisplay/libdisplay.a \
 	$(top_builddir)/src/libgoertzel/libgoertzel.a \
 	$(top_builddir)/src/libjitter/libjitter.a \
