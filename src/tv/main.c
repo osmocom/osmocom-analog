@@ -31,9 +31,9 @@ enum paging_signal;
 #include "../libsample/sample.h"
 #include "../libfilter/iir_filter.h"
 #include "../libfm/fm.h"
-#include "../libwave/wave.h"
 #include "../libimage/img.h"
 #include "../liblogging/logging.h"
+#include "../libmobile/sender.h"
 #ifdef HAVE_SDR
 #include "../libsdr/sdr_config.h"
 #include "../libsdr/sdr.h"
@@ -46,13 +46,12 @@ enum paging_signal;
 
 #define DEFAULT_LO_OFFSET -3000000.0
 
-void *sender_head = NULL;
+sender_t *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 int rt_prio = 0;
 
-void *get_sender_by_empfangsfrequenz(void);
-void *get_sender_by_empfangsfrequenz() { return NULL; }
+sender_t *get_sender_by_empfangsfrequenz(double __attribute__((unused)) freq) { return NULL; }
 
 static double __attribute__((__unused__)) modulation = 0.7; /* level of modulation for I/Q amplitudes */
 static double frequency = 0.0, audio_offset;

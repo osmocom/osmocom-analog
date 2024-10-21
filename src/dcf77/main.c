@@ -31,7 +31,6 @@
 #include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libsample/sample.h"
-#include "../libsound/sound.h"
 #include "../libaaimage/aaimage.h"
 #include <osmocom/cc/misc.h>
 #include "dcf77.h"
@@ -661,6 +660,5 @@ error:
 
 void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 
-void *get_sender_by_empfangsfrequenz(void);
-void *get_sender_by_empfangsfrequenz(void) { return NULL; }
+sender_t *get_sender_by_empfangsfrequenz(double __attribute__((unused)) freq) { return NULL; }
 

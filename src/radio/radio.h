@@ -1,11 +1,7 @@
 
-#include "../libwave/wave.h"
-#include "../libsamplerate/samplerate.h"
-#include "../libemphasis/emphasis.h"
-#include "../libjitter/jitter.h"
+#include "../libmobile/sender.h"
 #include "../libfm/fm.h"
 #include "../libam/am.h"
-#include "../libdisplay/display.h"
 
 enum modulation {
 	MODULATION_NONE = 0,

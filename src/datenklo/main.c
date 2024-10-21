@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
@@ -26,13 +27,12 @@
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
+#include "../libmobile/sender.h"
 #include <osmocom/core/timer.h>
 #include <osmocom/cc/misc.h>
 #include "../liboptions/options.h"
 #include "../liblogging/logging.h"
 #include "../libfsk/fsk.h"
-#include "../libwave/wave.h"
-#include "../libdisplay/display.h"
 #include "am791x.h"
 #include "uart.h"
 #include "datenklo.h"
@@ -50,8 +50,7 @@
 
 /* dummy functions */
 int num_kanal = 1; /* only one channel used for debugging */
-void *get_sender_by_empfangsfrequenz(void);
-void *get_sender_by_empfangsfrequenz() { return "void"; }
+sender_t *get_sender_by_empfangsfrequenz(double __attribute__((unused)) freq) { return NULL; }
 
 static datenklo_t datenklo[MAX_DEVICES];
 static enum am791x_type am791x_type = AM791X_TYPE_7911;

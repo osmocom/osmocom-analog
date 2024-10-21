@@ -40,14 +40,13 @@ enum paging_signal;
 
 #define DEFAULT_LO_OFFSET -1000000.0
 
-void *sender_head = NULL;
+sender_t *sender_head = NULL;
 int use_sdr = 0;
 int num_kanal = 1; /* only one channel used for debugging */
 int rt_prio = 0;
 int fast_math = 0;
 
-void *get_sender_by_empfangsfrequenz(void);
-void *get_sender_by_empfangsfrequenz() { return NULL; }
+sender_t *get_sender_by_empfangsfrequenz(double __attribute__((unused)) freq) { return NULL; }
 
 static double frequency = 0.0;
 static int dsp_samplerate = 100000;

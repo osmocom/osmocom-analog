@@ -25,11 +25,8 @@
 #include <math.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libwave/wave.h"
 #include "../liblogging/logging.h"
-#ifdef HAVE_ALSA
-#include "../libsound/sound.h"
-#endif
+#include "../libmobile/sender.h"
 #include "../liboptions/options.h"
 
 /* presets */
@@ -62,12 +59,9 @@ wave_rec_t wave_tx_rec;
 
 /* dummy functions */
 int num_kanal = 1; /* only one channel used for debugging */
-void *get_sender_by_empfangsfrequenz(void);
-void *get_sender_by_empfangsfrequenz() { return NULL; }
-void display_measurements_add(void);
-void display_measurements_add() {}
-void display_measurements_update(void);
-void display_measurements_update() {}
+sender_t *get_sender_by_empfangsfrequenz(double __attribute__((unused)) freq) { return NULL; }
+dispmeasparam_t *display_measurements_add(dispmeas_t __attribute__((unused)) *disp, char __attribute__((unused)) *name, char __attribute__((unused)) *format, enum display_measurements_type __attribute__((unused)) type, enum display_measurements_bar __attribute__((unused)) bar, double __attribute__((unused)) min, double __attribute__((unused)) max, double __attribute__((unused)) mark) { return NULL; }
+void display_measurements_update(dispmeasparam_t __attribute__((unused)) *param, double __attribute__((unused)) value, double __attribute__((unused)) value2) { }
 
 static void print_help(const char *arg0)
 {

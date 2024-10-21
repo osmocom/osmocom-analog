@@ -1,6 +1,4 @@
-#ifdef HAVE_ALSA
 #include "../libsound/sound.h"
-#endif
 #ifdef HAVE_SDR
 #include "../libsdr/sdr.h"
 #endif

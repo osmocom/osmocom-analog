@@ -1,7 +1,7 @@
 
 #include "../libsample/sample.h"
+#include "../libmobile/sender.h"
 #include "../libfilter/iir_filter.h"
-#include "../libdisplay/display.h"
 #include <time.h>
 
 typedef struct dcf77_tx {

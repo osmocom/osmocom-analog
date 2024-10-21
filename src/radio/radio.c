@@ -26,7 +26,6 @@
 #include <pthread.h>
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
-#include "../libsound/sound.h"
 #include "../libclipper/clipper.h"
 #include "radio.h"
 
@@ -417,18 +416,29 @@ void radio_exit(radio_t *radio)
 
 int radio_start(radio_t __attribute__((unused)) *radio)
 {
-	int rc = 0;
-
 #ifdef HAVE_ALSA
+	int rc;
+
 	/* start rx sound */
-	if (radio->rx_sound) 
+	if (radio->rx_sound) {
 		rc = sound_start(radio->rx_sound);
+		if (rc < 0) {
+			LOGP(DRADIO, LOGL_ERROR, "Failed to start receiving from audio device..\n");
+			return rc;
+		}
+	}
+
 	/* start tx sound, if different device */
-	if (radio->tx_sound && radio->tx_sound != radio->rx_sound) 
+	if (radio->tx_sound && radio->tx_sound != radio->rx_sound)  {
 		rc = sound_start(radio->tx_sound);
+		if (rc < 0) {
+			LOGP(DRADIO, LOGL_ERROR, "Failed to start transmitting to audio device..\n");
+			return rc;
+		}
+	}
 #endif
 
-	return rc;
+	return 0;
 }
 
 int radio_tx(radio_t *radio, float *baseband, int signal_num)
@@ -439,7 +449,9 @@ int radio_tx(radio_t *radio, float *baseband, int signal_num)
 	sample_t *audio_samples[2];
 	sample_t *signal_samples[3];
 	uint8_t *signal_power;
+#ifdef HAVE_ALSA
 	jitter_frame_t *jf;
+#endif
 
 	if (signal_num > radio->buffer_size) {
 		LOGP(DRADIO, LOGL_ERROR, "signal_num > buffer_size, please fix!.\n");
@@ -622,7 +634,9 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 	int audio_num;
 	sample_t *samples[3];
 	double p;
+#ifdef HAVE_ALSA
 	jitter_frame_t *jf;
+#endif
 
 	if (signal_num > radio->buffer_size) {
 		LOGP(DRADIO, LOGL_ERROR, "signal_num > buffer_size, please fix!.\n");
@@ -748,9 +762,17 @@ int radio_rx(radio_t *radio, float *baseband, int signal_num)
 			radio->rx_timestamp[1] += audio_num;
 		}
 		audio_num = sound_get_tosend(radio->rx_sound, radio->signal_buffer_size);
+		if (audio_num < 0) {
+			LOGP(DDSP, LOGL_ERROR, "Failed to get number of samples in buffer (rc = %d)!\n", audio_num);
+			if (audio_num == -EPIPE)
+				LOGP(DRADIO, LOGL_ERROR, "Trying to recover.\n");
+			else
+				return 0;
+		}
 		jitter_load_samples(&radio->rx_dejitter[0], (uint8_t *)samples[0], audio_num, sizeof(*samples), NULL, NULL);
 		if (radio->rx_audio_channels == 2)
 			jitter_load_samples(&radio->rx_dejitter[1], (uint8_t *)samples[1], audio_num, sizeof(*samples), NULL, NULL);
+		printf("channels=%d num=%d\n", radio->rx_audio_channels, audio_num);
 		audio_num = sound_write(radio->rx_sound, samples, NULL, audio_num, NULL, NULL, radio->rx_audio_channels);
 		if (audio_num < 0) {
 			LOGP(DRADIO, LOGL_ERROR, "Failed to write to sound device (rc = %d)!\n", audio_num);

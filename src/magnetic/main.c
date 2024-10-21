@@ -22,13 +22,13 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
 #include "../libsample/sample.h"
-#include "../libsound/sound.h"
-#include "../libwave/wave.h"
+#include "../libmobile/sender.h"
 #include "../liblogging/logging.h"
 #include "../liboptions/options.h"
 #include "../libaaimage/aaimage.h"
@@ -367,11 +367,8 @@ done:
 
 void osmo_cc_set_log_cat(int __attribute__((unused)) cc_log_cat) {}
 
-void display_measurements_add(void);
-void *display_measurements_update(void);
-void *get_sender_by_empfangsfrequenz(void);
-void display_measurements_add(void) {}
-void *display_measurements_update(void) { return NULL; }
-void *get_sender_by_empfangsfrequenz(void) { return NULL; }
+sender_t *get_sender_by_empfangsfrequenz(double __attribute__((unused)) freq) { return NULL; }
+dispmeasparam_t *display_measurements_add(dispmeas_t __attribute__((unused)) *disp, char __attribute__((unused)) *name, char __attribute__((unused)) *format, enum display_measurements_type __attribute__((unused)) type, enum display_measurements_bar __attribute__((unused)) bar, double __attribute__((unused)) min, double __attribute__((unused)) max, double __attribute__((unused)) mark) { return NULL; }
+void display_measurements_update(dispmeasparam_t __attribute__((unused)) *param, double __attribute__((unused)) value, double __attribute__((unused)) value2) { }
 
 #endif /* ARDUINO */
