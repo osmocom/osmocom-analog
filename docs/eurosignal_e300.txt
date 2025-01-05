@@ -1,0 +1,86 @@
+Kennungsspeicher SEL/Motorola/Compur E300 oder E300-1  
+
+Chip mit den Pins:
+------------------
+
+K = Kathode, A = Anode
+     ___ ___
+  1 o   U   o A 18
+K 2 o       o A 17
+K 3 o       o A 16
+K 4 o       o A 15
+  5 o       o K 14
+A 6 o       o K 13
+A 7 o       o K 12
+A 8 o       o K 11
+A 9 o_______o K 10
+
+Es können 4 Rufzeichen kodiert werden, wobei die Ziffern 2, 3, 4 für alle Rufzeichen gleich sind. Nur die Ziffern 1, 5, 6 dürfen sich unterscheiden.
+
+
+Kathoden 2,3,4,10:
+------------------
+
+Eine, mehrere oder keine der folgenden Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
+
+K 2 : Bit 0 (Wertigkeit 1)
+K 3 : Bit 1 (Wertigkeit 2)
+K 4 : Bit 2 (Wertigkeit 4)
+K 10: Bit 3 (Wertigkeit 8)
+
+Ziffer 1 Rufzeichen 1: Verbunden mit A 18
+Ziffer 1 Rufzeichen 3: Verbunden mit A 6
+Ziffer 2             : Verbunden mit A 7
+Ziffer 4             : Verbunden mit A 8
+Ziffer 5 Rufzeichen 1: Verbunden mit A 9
+Ziffer 5 Rufzeichen 3: Verbunden mit A 15
+Ziffer 6 Rufzeichen 1: Verbunden mit A 16
+Ziffer 6 Rufzeichen 3: Verbunden mit A 17
+
+
+Kathoden 11,12,13,14:
+---------------------
+
+Eine, mehrere oder keine der folgenden Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
+
+K 11: Bit 0 (Wertigkeit 1)
+K 12: Bit 1 (Wertigkeit 2)
+K 13: Bit 2 (Wertigkeit 4)
+K 14: Bit 3 (Wertigkeit 8)
+
+Ziffer 1 Rufzeichen 2: Verbunden mit A 18
+Ziffer 1 Rufzeichen 4: Verbunden mit A 6
+Ziffer 3             : Verbunden mit A 7
+Ziffer 5 Rufzeichen 2: Verbunden mit A 9
+Ziffer 5 Rufzeichen 4: Verbunden mit A 15
+Ziffer 6 Rufzeichen 2: Verbunden mit A 16
+Ziffer 6 Rufzeichen 4: Verbunden mit A 17
+
+
+Ziffern:
+--------
+0:	Wert 0 (alle 4 Bits ohne Diode)
+1:	Wert 1 (Diode nach Bit 0)
+2:	Wert 2 (Diode nach Bit 1)
+3:	Wert 3 (Diode nach Bits 1,0)
+4:	Wert 4 (Diode nach Bit 2)
+5:	Wert 5 (Diode nach Bits 2,0)
+6:	Wert 6 (Diode nach Bits 2,1)
+7:	Wert 7 (Diode nach Bits 2,1,0)
+8:	Wert 8 (Diode nach Bit 3)
+9:	Wert 9 (Diode nach Bits 3,0)
+W:	Wert 13 (Diode nach Bits 3,2,0)
+W ist die Widerholziffer
+
+
+Beispiel: (minimale Diodenzahl, Anode+Kathode liegen nah beieinander)
+
+Rufnummer: 102080
+
+A18 ->|- K2
+A7 ->|- K12
+A9 ->|- K10
+
+
+
+

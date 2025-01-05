@@ -18,7 +18,7 @@ A 7 o_______o A 8
 Kathoden 2,3,11,12:
 -------------------
 
-Die Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
+Eine, mehrere oder keine der folgenden Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
 
 K 2 : Bit 0 (Wertigkeit 1)
 K 12: Bit 1 (Wertigkeit 2)
@@ -36,7 +36,7 @@ Ziffer 6: Verbunden mit A 13 (weitere Ziffer 6)
 Kathoden 4,5,6,10:
 ------------------
 
-Die Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
+Eine, mehrere oder keine der folgenden Kathoden werden jeweils mit Dioden zu einer Anode verbunden und stellen somit eine Ziffer dar.
 
 K 4 : Bit 0 (Wertigkeit 1)
 K 10: Bit 1 (Wertigkeit 2)
