@@ -45,6 +45,8 @@ enum {
 	DJITTER,
 };
 
+#define DLCC_DEFINED
+
 extern struct log_info_cat log_categories[];
 extern size_t log_categories_size;
 

@@ -23,6 +23,9 @@
 #include <osmocom/core/utils.h>
 #include <osmocom/core/application.h>
 #include "logging.h"
+#ifdef DLCC_DEFINED
+#include <osmocom/cc/misc.h>
+#endif
 
 int loglevel = LOGL_INFO;
 
@@ -248,7 +251,7 @@ void logging_init(void)
 		.num_cat = log_categories_size,
 	};
 
-#ifdef DLCC
+#ifdef DLCC_DEFINED
 	osmo_cc_set_log_cat(DLCC);
 #endif
 
