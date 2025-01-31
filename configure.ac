@@ -62,6 +62,8 @@ SOAPY_CFLAGS="$soapy_0_8_0_or_higher"
 
 AM_CONDITIONAL(HAVE_MOBILE, true)
 
+AC_SUBST([ARFLAGS], [rc])
+
 AC_CONFIG_FILES([src/liblogging/Makefile
     src/liboptions/Makefile
     src/libmobile/Makefile
