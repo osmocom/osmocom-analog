@@ -47,7 +47,7 @@ void samples_to_int16_speech(int16_t *spl, sample_t *samples, int length)
 	int32_t value;
 
 	while (length--) {
-		value = *samples++ * int_16_speech_level * 32768.0;
+		value = *samples++ * int_16_speech_level * 32767.0;
 		if (value > 32767.0)
 			*spl++ = 32767;
 		else if (value < -32767.0)
@@ -70,7 +70,7 @@ void samples_to_int16_1mw(int16_t *spl, sample_t *samples, int length)
 	int32_t value;
 
 	while (length--) {
-		value = *samples++ * int_16_1mw_level * 32768.0;
+		value = *samples++ * int_16_1mw_level * 32767.0;
 		if (value > 32767.0)
 			*spl++ = 32767;
 		else if (value < -32767.0)
@@ -84,6 +84,29 @@ void int16_to_samples_1mw(sample_t *samples, int16_t *spl, int length)
 {
 	while (length--) {
 		*samples++ = (double)(*spl++) / 32767.0 / int_16_1mw_level;
+	}
+}
+
+/* sample conversion relative to full scale (3mW) level */
+void samples_to_int16_fullscale(int16_t *spl, sample_t *samples, int length)
+{
+	int32_t value;
+
+	while (length--) {
+		value = *samples++ * 32767.0;
+		if (value > 32767.0)
+			*spl++ = 32767;
+		else if (value < -32767.0)
+			*spl++ = -32767;
+		else
+			*spl++ = (uint16_t)value;
+	}
+}
+
+void int16_to_samples_fullscale(sample_t *samples, int16_t *spl, int length)
+{
+	while (length--) {
+		*samples++ = (double)(*spl++) / 32767.0;
 	}
 }
 
