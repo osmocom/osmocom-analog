@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include <inttypes.h>
@@ -3534,7 +3535,7 @@ int amps_encode_frame_fvc(amps_t *amps, char *bits)
 			amps->tx_fvc_ordq = trans->ordq;
 			amps->tx_fvc_order = trans->order;
 			amps->tx_fvc_chan = trans->chan;
-			strncpy(amps->tx_fvc_callerid, trans->caller_id, sizeof(amps->tx_fvc_callerid) - 1);
+			strlcpy(amps->tx_fvc_callerid, trans->caller_id, sizeof(amps->tx_fvc_callerid));
 			amps->tx_fvc_callerid_signal = 1;
 			amps->tx_fvc_callerid_screen = 3;
 			if (trans->caller_id[0])

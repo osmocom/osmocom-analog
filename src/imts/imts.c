@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
@@ -497,7 +498,7 @@ static void imts_paging(imts_t *imts, const char *dial_string, int loopback)
 	else
 		LOGP_CHAN(DIMTS, LOGL_INFO, "Entering paging state, sending phone's ID '%s'.\n", dial_string);
 	/* set station ID before state change, so status is shown correctly */
-	strncpy(imts->station_id, dial_string, sizeof(imts->station_id) - 1);
+	strlcpy(imts->station_id, dial_string, sizeof(imts->station_id));
 	imts->tx_page_index = 0;
 	imts->tx_page_pulse = 0;
 	imts_new_state(imts, (loopback) ? IMTS_PAGING_TEST : IMTS_PAGING);

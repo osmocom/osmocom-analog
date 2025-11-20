@@ -139,6 +139,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include <inttypes.h>
@@ -1269,7 +1270,7 @@ void cnetz_receive_telegramm_ogk(cnetz_t *cnetz, telegramm_t *telegramm, int blo
 			break;
 		}
 		rufnummer = transaction2rufnummer(trans);
-		strncpy(trans->dialing, telegramm->wahlziffern, sizeof(trans->dialing) - 1);
+		strlcpy(trans->dialing, telegramm->wahlziffern, sizeof(trans->dialing));
 		LOGP_CHAN(DCNETZ, LOGL_INFO, "Received dialing digits 'Wahluebertragung' message from Subscriber '%s' to Number '%s'\n", rufnummer, trans->dialing);
 		osmo_timer_del(&trans->timer);
 		trans_new_state(trans, TRANS_WBP);

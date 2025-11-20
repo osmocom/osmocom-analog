@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -160,8 +161,7 @@ static int handle_options(int short_option, int argi, char **argv)
 			return 0;
 		}
 		/* digits */
-		strncpy(country, argv[argi], sizeof(country) - 1);
-		country[sizeof(country) - 1] = '\0';
+		strlcpy(country, argv[argi], sizeof(country));
 		p = strchr(country, ',');
 		if (!p) {
 			fprintf(stderr, "Illegal traffic area '%s', see '-h' for help\n", argv[argi]);

@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 
@@ -144,7 +145,7 @@ void set_speech_string(jolly_t *jolly, char announcement, const char *number)
 {
 	jolly->speech_string[0] = announcement;
 	jolly->speech_string[1] = '\0';
-	strncat(jolly->speech_string, number, sizeof(jolly->speech_string) - strlen(jolly->speech_string) - 1);
+	strlcat(jolly->speech_string, number, sizeof(jolly->speech_string));
 	jolly->speech_digit = 0;
 	jolly->speech_pos = 0;
 }

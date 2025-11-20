@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include "../safestring.h"
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
@@ -289,8 +290,8 @@ dispmeasparam_t *display_measurements_add(dispmeas_t *disp, char *name, char *fo
 	if (!*param_p)
 		return NULL;
 	param = *param_p;
-	strncpy(param->name, name, sizeof(param->name) - 1);
-	strncpy(param->format, format, sizeof(param->format) - 1);
+	strlcpy(param->name, name, sizeof(param->name));
+	strlcpy(param->format, format, sizeof(param->format));
 	param->type = type;
 	param->bar = bar;
 	param->min = min;

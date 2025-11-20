@@ -41,6 +41,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
@@ -902,7 +903,7 @@ reject:
 		}
 		if (!trans) {
 			trans = create_transaction(amps, TRANS_CALL_MO_ASSIGN, min1, min2, esn, 0, 0, 0, atoi(vc->sender.kanal));
-			strncpy(trans->dialing, dialing, sizeof(trans->dialing) - 1);
+			strlcpy(trans->dialing, dialing, sizeof(trans->dialing));
 			if (!trans) {
 				LOGP(DAMPS, LOGL_ERROR, "Failed to create transaction\n");
 				return;
@@ -983,9 +984,9 @@ int call_down_setup(int callref, const char __attribute__((unused)) *caller_id, 
 	trans->page_retry = 1;
 	if (caller_type == TYPE_INTERNATIONAL) {
 		trans->caller_id[0] = '+';
-		strncpy(trans->caller_id + 1, caller_id, sizeof(trans->caller_id) - 2);
+		strlcpy(trans->caller_id + 1, caller_id, sizeof(trans->caller_id) - 1);
 	} else
-		strncpy(trans->caller_id, caller_id, sizeof(trans->caller_id) - 1);
+		strlcpy(trans->caller_id, caller_id, sizeof(trans->caller_id));
 
 	return 0;
 }

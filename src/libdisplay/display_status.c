@@ -108,7 +108,6 @@ void display_status_channel(const char *kanal, const char *type, const char *sta
 		snprintf(line, sizeof(line), "Channel: %s Type: %s State: %s", kanal, type, state);
 	else
 		snprintf(line, sizeof(line), "Channel: %s State: %s", kanal, state);
-	line[sizeof(line) - 1] = '\0';
 	memcpy(screen[line_count++], line, strlen(line));
 }
 
@@ -123,7 +122,6 @@ void display_status_subscriber(const char *number, const char *state)
 		snprintf(line, sizeof(line), "  Subscriber: %s State: %s", number, state);
 	else
 		snprintf(line, sizeof(line), "  Subscriber: %s", number);
-	line[sizeof(line) - 1] = '\0';
 	memcpy(screen[line_count++], line, strlen(line));
 }
 

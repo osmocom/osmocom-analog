@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <time.h>
 #include "../libsample/sample.h"
@@ -323,7 +324,7 @@ int nmt_create(int nmt_system, const char *country, const char *kanal, enum nmt_
 	nmt->supervisory = supervisory;
 	nmt->send_callerid = send_callerid;
 	nmt->send_clock = send_clock;
-	strncpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number) - 1);
+	strlcpy(nmt->smsc_number, smsc_number, sizeof(nmt->smsc_number));
 
 	/* init audio processing */
 	rc = dsp_init_sender(nmt, deviation_factor);
@@ -1848,13 +1849,13 @@ static int _out_setup(int callref, const char *caller_id, enum number_type calle
 	}
 	trans->callref = callref;
 	if (sms) {
-		strncpy(trans->sms_string, sms, sizeof(trans->sms_string) - 1);
+		strlcpy(trans->sms_string, sms, sizeof(trans->sms_string));
 	}
 	if (caller_type == TYPE_INTERNATIONAL) {
 		trans->caller_id[0] = '+'; /* not done by phone */
-		strncpy(trans->caller_id + 1, caller_id, sizeof(trans->caller_id) - 2);
+		strlcpy(trans->caller_id + 1, caller_id, sizeof(trans->caller_id) - 1);
 	} else
-		strncpy(trans->caller_id, caller_id, sizeof(trans->caller_id) - 1);
+		strlcpy(trans->caller_id, caller_id, sizeof(trans->caller_id));
 	trans->caller_type = caller_type;
 	nmt_page(trans, 1);
 
@@ -1977,8 +1978,7 @@ int sms_submit(nmt_t *nmt, uint8_t ref, const char *orig_address, uint8_t __attr
 
 	LOGP_CHAN(DNMT, LOGL_NOTICE, "Received SMS from '%s' to '%s' (ref=%d)\n", orig_address, dest_address, ref);
 	printf("SMS received '%s' -> '%s': %s\n", orig_address, dest_address, message);
-	snprintf(sms, sizeof(sms) - 1, "%s,%s,%s", orig_address, dest_address, message);
-	sms[sizeof(sms) - 1] = '\0';
+	snprintf(sms, sizeof(sms), "%s,%s,%s", orig_address, dest_address, message);
 
 	return submit_sms(sms);
 }

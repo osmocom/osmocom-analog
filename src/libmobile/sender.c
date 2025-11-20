@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include "../safestring.h"
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
 #include "sender.h"
@@ -49,7 +50,7 @@ int sender_create(sender_t *sender, const char *kanal, double sendefrequenz, dou
 	sender->kanal = kanal;
 	sender->sendefrequenz = sendefrequenz;
 	sender->empfangsfrequenz = (loopback) ? sendefrequenz : empfangsfrequenz;
-	strncpy(sender->device, device, sizeof(sender->device) - 1);
+	strlcpy(sender->device, device, sizeof(sender->device));
 	sender->samplerate = samplerate;
 	sender->rx_gain = rx_gain;
 	sender->tx_gain = tx_gain;

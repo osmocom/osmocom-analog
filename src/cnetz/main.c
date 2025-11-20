@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include "../libsample/sample.h"
 #include "../libmobile/main_mobile.h"
@@ -438,8 +439,7 @@ error_fuz:
 		} else
 		if (!strncasecmp(argv[argi], "futln-sperre=", p - argv[argi])) {
 			char value[128], *v, *q;
-			strncpy(value, p, sizeof(value) - 1);
-			value[sizeof(value) - 1] = '\0';
+			strlcpy(value, p, sizeof(value));
 			v = value;
 			q = strchr(value, '-');
 			if (q)

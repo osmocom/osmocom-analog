@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
@@ -122,8 +123,7 @@ static int handle_options(int short_option, int argi, char **argv)
 		ptt = 1;
 		break;
 	case 'O':
-		strncpy(operator, argv[argi], sizeof(operator) - 1);
-		operator[sizeof(operator) - 1] = '\0';
+		strlcpy(operator, argv[argi], sizeof(operator));
 		break;
 	default:
 		return main_mobile_handle_options(short_option, argi, argv);

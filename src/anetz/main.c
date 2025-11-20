@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
@@ -84,8 +85,7 @@ static int handle_options(int short_option, int argi, char **argv)
 
 	switch (short_option) {
 	case 'O':
-		strncpy(operator, argv[argi], sizeof(operator) - 1);
-		operator[sizeof(operator) - 1] = '\0';
+		strlcpy(operator, argv[argi], sizeof(operator));
 		break;
 	case 'G':
 		if (!strcasecmp(argv[argi], "list")) {

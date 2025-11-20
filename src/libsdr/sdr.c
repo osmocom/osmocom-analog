@@ -23,6 +23,7 @@ enum paging_signal;
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #define __USE_GNU
@@ -715,8 +716,7 @@ int sdr_start(void *inst)
 			return rc;
 		}
 		pthread_getname_np(tid, tname, sizeof(tname));
-		strncat(tname, "-sdr_tx", sizeof(tname) - 7 - 1);
-		tname[sizeof(tname) - 1] = '\0';
+		strlcat(tname, "-sdr_tx", sizeof(tname));
 		pthread_setname_np(tid, tname);
 		sdr->thread_read.running = 1;
 		sdr->thread_read.exit = 0;
@@ -727,8 +727,7 @@ int sdr_start(void *inst)
 			return rc;
 		}
 		pthread_getname_np(tid, tname, sizeof(tname));
-		strncat(tname, "-sdr_rx", sizeof(tname) - 7 - 1);
-		tname[sizeof(tname) - 1] = '\0';
+		strlcat(tname, "-sdr_rx", sizeof(tname));
 		pthread_setname_np(tid, tname);
 	}
 

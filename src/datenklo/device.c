@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <unistd.h>
 #include <errno.h>
 #include "../liblogging/logging.h"
@@ -467,7 +468,7 @@ static void *device_child(void *arg)
 	const char *dev_info_argv[] = { dev_name };
 	struct cuse_info ci;
 
-	strncat(dev_name, device->name, sizeof(dev_name) - strlen(dev_name) - 1);
+	strlcat(dev_name, device->name, sizeof(dev_name));
 
 	memset(&ci, 0, sizeof(ci));
 	ci.dev_major = device->major;
@@ -520,8 +521,7 @@ void *device_init(void *inst, const char *name, int (*open)(void *inst, int flag
 	}
 
 	pthread_getname_np(device->thread, tname, sizeof(tname));
-	strncat(tname, "-device", sizeof(tname) - strlen(tname) - 1);
-	tname[sizeof(tname) - 1] = '\0';
+	strlcat(tname, "-device", sizeof(tname));
 	pthread_setname_np(device->thread, tname);
 
 	while (!device->thread_started)

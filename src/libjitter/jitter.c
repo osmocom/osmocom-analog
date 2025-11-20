@@ -98,9 +98,9 @@ int jitter_create(jitter_t *jb, const char *name, double samplerate, double targ
 
 	/* optionally give a string to be show with the debug */
 	if (name && *name)
-		snprintf(jb->name, sizeof(jb->name) - 1, "(%s) ", name);
+		snprintf(jb->name, sizeof(jb->name), "(%s) ", name);
 	else
-		snprintf(jb->name, sizeof(jb->name) - 1, "(unnamed %d) ", unnamed_count++);
+		snprintf(jb->name, sizeof(jb->name), "(unnamed %d) ", unnamed_count++);
 
 	jb->sample_duration = 1.0 / samplerate;
 	jb->samples_20ms = samplerate / 50;

@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include "../libsample/sample.h"
 #include "../liblogging/logging.h"
@@ -196,7 +197,7 @@ int bnetz_create(const char *kanal, const char *device, int use_sdr, int sampler
 	else {
 		char *p;
 
-		strncpy(paging_file, paging, sizeof(paging_file) - 1);
+		strlcpy(paging_file, paging, sizeof(paging_file));
 		p = strchr(paging_file, '=');
 		if (!p) {
 error_paging:
@@ -204,12 +205,12 @@ error_paging:
 			return -EINVAL;
 		}
 		*p++ = '\0';
-		strncpy(paging_on, p, sizeof(paging_on) - 1);
+		strlcpy(paging_on, p, sizeof(paging_on));
 		p = strchr(paging_on, ':');
 		if (!p)
 			goto error_paging;
 		*p++ = '\0';
-		strncpy(paging_off, p, sizeof(paging_off) - 1);
+		strlcpy(paging_off, p, sizeof(paging_off));
 	}
 
 	bnetz = calloc(1, sizeof(bnetz_t));
@@ -237,9 +238,9 @@ error_paging:
 
 	bnetz->gfs = gfs;
 	bnetz->metering = metering;
-	strncpy(bnetz->paging_file, paging_file, sizeof(bnetz->paging_file) - 1);
-	strncpy(bnetz->paging_on, paging_on, sizeof(bnetz->paging_on) - 1);
-	strncpy(bnetz->paging_off, paging_off, sizeof(bnetz->paging_off) - 1);
+	strlcpy(bnetz->paging_file, paging_file, sizeof(bnetz->paging_file));
+	strlcpy(bnetz->paging_on, paging_on, sizeof(bnetz->paging_on));
+	strlcpy(bnetz->paging_off, paging_off, sizeof(bnetz->paging_off));
 	osmo_timer_setup(&bnetz->timer, bnetz_timeout, bnetz);
 
 	/* go into idle state */

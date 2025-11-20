@@ -131,6 +131,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include "../libsample/sample.h"
@@ -300,7 +301,7 @@ static void jolly_page(jolly_t *jolly, const char *dial_string)
 {
 	LOGP_CHAN(DJOLLY, LOGL_INFO, "Entering paging state, sending paging sequence to '%s'.\n", dial_string);
 	/* set station ID before state change, so status is shown correctly */
-	strncpy(jolly->station_id, dial_string, sizeof(jolly->station_id) - 1);
+	strlcpy(jolly->station_id, dial_string, sizeof(jolly->station_id));
 	osmo_timer_schedule(&jolly->timer, T_PAGING);
 	osmo_timer_schedule(&jolly->speech_timer, SPEECH_DELAY_PAGING);
 	jolly_new_state(jolly, STATE_IN_PAGING);

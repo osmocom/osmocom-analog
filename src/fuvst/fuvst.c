@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include <time.h>
@@ -269,7 +270,7 @@ void add_emergency(const char *number)
 		return;
 	}
 
-	strncpy(emerg->number, number, sizeof(emerg->number) - 1);
+	strlcpy(emerg->number, number, sizeof(emerg->number));
 
 	/* attach to end of list, so first transaction is served first */
 	emergp = &emerg_list;

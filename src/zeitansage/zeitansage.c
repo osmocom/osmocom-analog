@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <errno.h>
 #include <math.h>
 #include <time.h>
@@ -182,7 +183,7 @@ static zeit_call_t *zeit_call_create(uint32_t callref, const char *id)
 
 	/* init */
 	call->callref = callref;
-	strncpy(call->caller_id, id, sizeof(call->caller_id) - 1);
+	strlcpy(call->caller_id, id, sizeof(call->caller_id));
 	osmo_timer_setup(&call->timer, call_timeout, call);
 	now = get_time();
 	time_offset = fmod(now, 10.0);

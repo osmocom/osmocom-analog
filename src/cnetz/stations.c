@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../safestring.h"
 #include <stdint.h>
 #include "stations.h"
 
@@ -2150,8 +2151,8 @@ void station_list(void)
 		memcpy(name, cnetz_stations[i].name, strlen(cnetz_stations[i].name));
 		name[8] = '\0';
 		printf("%s", name);
-		memset(name, ' ', sizeof(name));
-		memcpy(name, cnetz_stations[i].long_name, strlen(cnetz_stations[i].long_name));
+		strlcpy(name, cnetz_stations[i].long_name, sizeof(name));
+		memset(name + strlen(name), ' ', sizeof(name) - strlen(name) - 1);
 		name[sizeof(name) - 1] = '\0';
 		printf("%s%d\t%d\t%d\n", name, cnetz_stations[i].nat, cnetz_stations[i].fuvst, cnetz_stations[i].rest);
 	}

@@ -122,7 +122,6 @@ int soapy_open(size_t channel, const char *_device_args, const char *_stream_arg
 	if (lo_offset) {
 		char val[32];
 		snprintf(val, sizeof(val), "%.0f", lo_offset);
-		val[sizeof(val) - 1] = '\0';
 		SoapySDRKwargs_set(&tune_args, "OFFSET", val);
 	}
 
