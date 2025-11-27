@@ -22,11 +22,15 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <unistd.h>
 #include <uhd.h>
 #include <uhd/usrp/usrp.h>
 #include "uhd.h"
 #include "../liblogging/logging.h"
 #include "../liboptions/options.h"
+
+/* HACK: Set to 1 to trigger a one-time TX underrun after 5 seconds for testing recovery */
+#define TEST_UNDERRUN_RECOVERY 0
 
 extern int sdr_rx_overflow;
 
@@ -580,19 +584,19 @@ int uhd_receive(float *buff, int max)
 {
     	void *buffs_ptr[1];
 	size_t count;
+	size_t num_to_read;
 	uhd_error error;
 	bool has_time_spec;
 	int rc;
 
-	if (max < (int)rx_samps_per_buff) {
-		/* no more space this time */
-		sdr_rx_overflow = 1;
-		return -ENOSPC;
-	}
+	if (max <= 0)
+		return 0;
+	/* read up to MTU, but no more than available buffer space */
+	num_to_read = ((size_t)max < rx_samps_per_buff) ? (size_t)max : rx_samps_per_buff;
 	/* read RX stream */
 	buffs_ptr[0] = buff;
 	count = 0;
-	error = uhd_rx_streamer_recv(rx_streamer, buffs_ptr, rx_samps_per_buff, &rx_metadata, 0.0, false, &count);
+	error = uhd_rx_streamer_recv(rx_streamer, buffs_ptr, num_to_read, &rx_metadata, 0.0, false, &count);
 	if (error) {
 		LOGP(DUHD, LOGL_ERROR, "Failed to read from UHD device.\n");
 		return -EIO;
@@ -626,10 +630,22 @@ int uhd_get_tosend(int buffer_size)
 {
 	double advance;
 	int tosend;
+#if TEST_UNDERRUN_RECOVERY
+	static int underrun_triggered = 0;
+#endif
 
 	/* we need the rx time stamp to determine how much data is already sent in advance */
 	if (rx_time_secs == 0 && rx_time_fract_sec == 0.0)
 		return 0;
+
+#if TEST_UNDERRUN_RECOVERY
+	/* HACK: Trigger underrun after 5 seconds of operation, only once */
+	if (!underrun_triggered && rx_time_secs >= 5) {
+		underrun_triggered = 1;
+		LOGP(DUHD, LOGL_NOTICE, "HACK: Triggering artificial TX underrun by sleeping 200ms...\n");
+		usleep(200000); /* 200ms delay to cause underrun */
+	}
+#endif
 
 	/* if we have not yet sent any data, we set initial tx time stamp */
 	if (tx_time_secs == 0 && tx_time_fract_sec == 0.0) {
@@ -646,12 +662,23 @@ int uhd_get_tosend(int buffer_size)
 
 	/* we check how advance our transmitted time stamp is */
 	advance = ((double)tx_time_secs + tx_time_fract_sec) - ((double)rx_time_secs + rx_time_fract_sec);
-	/* in case of underrun: */
-	if (advance < 0) {
-		LOGP(DSOAPY, LOGL_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
-		advance = 0;
-	}
 	tosend = buffer_size - (int)(advance * samplerate);
+
+	/* in case of underrun: tosend will exceed buffer_size */
+	if (tosend > buffer_size) {
+		LOGP(DUHD, LOGL_ERROR, "SDR TX underrun (%.1f ms behind), seems we are too slow. Use lower SDR sample rate.\n",
+			-advance * 1000.0);
+		if (!tx_timestamps) {
+			/* When TX timestamps are disabled, we must resync to recover.
+			 * This causes a slip in the transmit stream. */
+			tx_time_secs = rx_time_secs;
+			tx_time_fract_sec = rx_time_fract_sec;
+		}
+		/* When TX timestamps are enabled, the UHD driver drops late packets.
+		 * The TX timestamp naturally catches up without causing a slip.
+		 * We just cap tosend to buffer_size and let recovery happen. */
+		tosend = buffer_size;
+	}
 	if (tosend < 0)
 		tosend = 0;
 

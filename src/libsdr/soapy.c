@@ -515,15 +515,15 @@ int soapy_receive(float *buff, int max)
 	int count;
 	long long timeNs;
 	int flags = 0;
+	int num_to_read;
 
-	if (max < rx_samps_per_buff) {
-		/* no more space this time */
-		sdr_rx_overflow = 1;
-		return -ENOSPC;
-	}
+	if (max <= 0)
+		return 0;
+	/* read up to MTU, but no more than available buffer space */
+	num_to_read = (max < rx_samps_per_buff) ? max : rx_samps_per_buff;
 	/* read RX stream */
 	buffs_ptr[0] = buff;
-	count = SoapySDRDevice_readStream(sdr, rxStream, buffs_ptr, rx_samps_per_buff, &flags, &timeNs, 0);
+	count = SoapySDRDevice_readStream(sdr, rxStream, buffs_ptr, num_to_read, &flags, &timeNs, 0);
 	if (count > 0) {
 		if (!use_time_stamps || !(flags & SOAPY_SDR_HAS_TIME)) {
 			if (use_time_stamps) {
@@ -566,13 +566,21 @@ int soapy_get_tosend(int buffer_size)
 	/* we check how advance our transmitted time stamp is */
 	pthread_mutex_lock(&timestamp_mutex);
 	tosend = buffer_size - (tx_timeNs - rx_timeNs) / Ns_per_sample;
-	pthread_mutex_unlock(&timestamp_mutex);
 
-	/* in case of underrun */
+	/* in case of underrun, resync TX timestamp */
 	if (tosend > buffer_size) {
 		LOGP(DSOAPY, LOGL_ERROR, "SDR TX underrun, seems we are too slow. Use lower SDR sample rate.\n");
+		if (!use_time_stamps) {
+			/* When TX timestamps are disabled, we must resync to recover.
+			 * This causes a slip in the transmit stream. */
+			tx_timeNs = rx_timeNs;
+		}
+		/* When TX timestamps are enabled, the driver drops late packets.
+		 * The TX timestamp naturally catches up without causing a slip.
+		 * We just cap tosend to buffer_size and let recovery happen. */
 		tosend = buffer_size;
 	}
+	pthread_mutex_unlock(&timestamp_mutex);
 
 	/* race condition and routing errors may cause TX time stamps to be in advance of slightly more than buffer_size */
 	if (tosend < 0)
