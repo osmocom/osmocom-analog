@@ -1259,12 +1259,21 @@ transaction_t *amps_tx_frame_fvc(amps_t *amps)
 		trans->chan = 0;
 		trans->msg_type = 0;
 		trans->ordq = 0;
-		// "Alert with caller ID" causes older phones to interrupt the connection for some reason, therefore we don't use order 17 when no caller ID is set
+		/* "Alert with caller ID" causes older phones to interrupt the connection for some reason,
+		 * therefore we don't use order 17 when no caller ID is set.
+		 * If the system does not receive a confirmation for an Alert With Info order, in addition,
+		 * the system shall send an Alert order to provide backwards compatibility for
+		 * ANSI EIA/TIA 553 (1989) mobile stations.
+		 */
 		if (amps->send_callerid && trans->alert_retry == 1 && trans->caller_id[0]) {
-			LOGP_CHAN(DAMPS, LOGL_INFO, "Sending alerting with caller ID\n");
+			LOGP_CHAN(DAMPS, LOGL_INFO, "Sending Alert With Info (order 17) with caller ID\n");
 			trans->order = 17;
 		} else {
-			LOGP_CHAN(DAMPS, LOGL_INFO, "Sending alerting\n");
+			if (amps->send_callerid && trans->alert_retry > 1 && trans->caller_id[0]) {
+				LOGP_CHAN(DAMPS, LOGL_INFO, "No confirmation for Alert With Info order, sending Alert order for backwards compatibility with ANSI EIA/TIA 553 (1989) mobile stations\n");
+			} else {
+				LOGP_CHAN(DAMPS, LOGL_INFO, "Sending Alert order\n");
+			}
 			trans->order = 1;
 		}
 		trans_new_state(trans, TRANS_CALL_MT_ALERT_SEND);
