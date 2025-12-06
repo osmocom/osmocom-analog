@@ -400,8 +400,8 @@ int console_open_audio(int __attribute__((unused)) buffer_size, double __attribu
 
 #ifdef HAVE_ALSA
 	/* open sound device for call control */
-	/* use factor 1.4 of speech level for complete range of sound card */
-	console.sound = sound_open(SOUND_DIR_DUPLEX, console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, buffer_size, interval, 1.4, 4000.0, 2.0);
+	/* use factor 1.0 of fullscale level for complete scale of sound card */
+	console.sound = sound_open(SOUND_DIR_DUPLEX, console.audiodev, NULL, NULL, NULL, 1, 0.0, console.samplerate, buffer_size, interval, 1.0, 4000.0, 2.0);
 	if (!console.sound) {
 		LOGP(DSENDER, LOGL_ERROR, "No sound device!\n");
 		return -EIO;
@@ -589,7 +589,7 @@ void process_console(int c)
 		{
 			int16_t spl[input_num];
 			jitter_load_samples(&console.dejitter, (uint8_t *)spl, input_num, sizeof(*spl), jitter_conceal_s16, NULL);
-			int16_to_samples_speech(samples, spl, input_num);
+			int16_to_samples_fullscale(samples, spl, input_num);
 		}
 		samplerate_upsample(&console.srstate, samples, input_num, samples, count);
 		/* write to sound device */
@@ -626,7 +626,7 @@ void process_console(int c)
 					int16_t spl[160];
 					uint8_t *payload;
 					int payload_len;
-					samples_to_int16_speech(spl, console.tx_buffer, 160);
+					samples_to_int16_fullscale(spl, console.tx_buffer, 160);
 					console.codec->encoder((uint8_t *)spl, 160 * 2, &payload, &payload_len, &console);
 					osmo_cc_rtp_send(console.codec, payload, payload_len, 0, 1, 160);
 				}
