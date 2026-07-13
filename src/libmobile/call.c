@@ -1,6 +1,7 @@
 /* interface between mobile network/phone implementation and OsmoCC
  *
  * (C) 2016 by Andreas Eversberg <jolly@eversberg.eu>
+ * (C) 2026 by Dave Davies <dodegkr@gmail.com> - lib mobilre rewrite support
  * All Rights Reserved
  *
  * This program is free software: you can redistribute it and/or modify
@@ -60,6 +61,9 @@ static double level_of(double *samples, int count)
 
 static int connect_on_setup;		/* send patterns towards fixed network */
 static int release_on_disconnect;	/* release towards mobile phone, if OSMO-CC call disconnects, don't send disconnect tone */
+
+static char called_rewrite_from[33];
+static char called_rewrite_to[33];
 
 osmo_cc_endpoint_t endpoint, *ep;
 
@@ -630,6 +634,14 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 		/* remove prefix, if any */
 		suffix = mobile_number_remove_prefix(number);
 
+		/* optional called-number rewrite, e.g. --cc "called-rewrite=38227=2342367689" */
+		if (called_rewrite_from[0] && called_rewrite_to[0] && !strcmp(suffix, called_rewrite_from)) {
+			LOGP(DCALL, LOGL_INFO, "Rewriting called mobile number '%s' to '%s'\n", suffix, called_rewrite_to);
+			strncpy(number, called_rewrite_to, sizeof(number) - 1);
+			number[sizeof(number) - 1] = '\0';
+			suffix = number;
+		}
+
 		/* check suffix length */
 		invalid = mobile_number_check_length(suffix);
 		if (invalid) {
@@ -770,6 +782,36 @@ static void ll_msg_cb(osmo_cc_endpoint_t __attribute__((unused)) *ep, uint32_t c
 
 int call_init(const char *name, int _send_patterns, int _release_on_disconnect, int use_socket, int argc, const char *argv[], int _no_l16, const char *toneset)
 {
+
+	int i, j = 0;
+	const char *cc_argv[argc ? argc : 1];
+
+	called_rewrite_from[0] = '\0';
+	called_rewrite_to[0] = '\0';
+
+	for (i = 0; i < argc; i++) {
+		if (!strncmp(argv[i], "called-rewrite=", 15)) {
+			const char *from = argv[i] + 15;
+			const char *sep = strchr(from, '=');
+
+			if (!sep || sep == from || !sep[1]) {
+				fprintf(stderr, "Invalid called-rewrite format. Use --cc \"called-rewrite=FROM=TO\"\n");
+				return -EINVAL;
+			}
+			if ((sep - from) >= (int)sizeof(called_rewrite_from) || strlen(sep + 1) >= sizeof(called_rewrite_to)) {
+				fprintf(stderr, "called-rewrite values too long. Max 32 digits each.\n");
+				return -EINVAL;
+			}
+
+			memcpy(called_rewrite_from, from, sep - from);
+			called_rewrite_from[sep - from] = '\0';
+			strcpy(called_rewrite_to, sep + 1);
+
+			LOGP(DCALL, LOGL_INFO, "Called-number rewrite enabled: '%s' -> '%s'\n", called_rewrite_from, called_rewrite_to);
+			continue;
+		}
+		cc_argv[j++] = argv[i];
+	}
 	int rc;
 
 	connect_on_setup = _send_patterns;
@@ -784,7 +826,7 @@ int call_init(const char *name, int _send_patterns, int _release_on_disconnect, 
 
 	no_l16 = !!_no_l16;
 	ep = &endpoint;
-	rc = osmo_cc_new(ep, OSMO_CC_VERSION, name, OSMO_CC_LOCATION_PRIV_SERV_LOC_USER, ll_msg_cb, (use_socket) ? NULL : console_msg, NULL, argc, argv);
+	rc = osmo_cc_new(ep, OSMO_CC_VERSION, name, OSMO_CC_LOCATION_PRIV_SERV_LOC_USER, ll_msg_cb, (use_socket) ? NULL : console_msg, NULL, j, cc_argv);
 	if (rc > 0)
 		return -EINVAL;
 	if (rc < 0)
